@@ -7,6 +7,66 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-11 — One credential store for every external system; HSMs that hold keys are credentials (8.0.0-beta)
+
+**Owner directive (2026-10-10).** Credentials for anything external
+(cloud BYOK accounts, EKM, HSMs, discovery sources, mail) are added in one
+place before a feature can use them, "under playbooks credentials". HSMs
+have two roles: the root of trust stays in the HSM tab; an HSM added as a
+credential is offered when a key is created, formed or imported, listing
+"the HSM HA group or single HSM".
+
+**Chosen: widen compliance's sealed connections; no new service.** The
+store, sealing, per-service admission, audited release, exposure register
+and in-use delete guard already existed for playbooks, streams and scans.
+New credential types and three migrations reuse them.
+- *Rejected: a dedicated credentials service.* Cleaner ownership, but a new
+  master key, mTLS identity, cluster component and a migration of what
+  works, for no capability the store lacks.
+- *Rejected: one page over each service's own store.* Not one store, and
+  three of them were plaintext.
+- *Cost accepted:* Cloud BYOK, Azure EKM, governance mail and HSM
+  credentials now need the `compliance_dashboard` profile. Without it they
+  say "no credential store" and refuse; nothing falls back to a local copy.
+
+**Inline secrets are refused, not silently accepted** (breaking, hence the
+major version). A feature's form or API that still took a secret would be
+a second place to add one. Existing rows are migrated by the primary and
+keep working from their own copy until the store has taken them.
+
+**A separate permission to attach.** `compliance.connection.use` is checked
+by the owning service on the caller's own verified token. Managing
+credentials stays on the playbook permissions, so no existing role loses
+access to the store. *Rejected:* new manage permissions, which would have
+locked out custom roles holding only `compliance.playbook.*`.
+
+**The tenant HSM profile's PIN stays on the connector host.** Sealing it
+under a keycore key would make the root of trust depend on a key it may
+itself protect. An HSM credential's PIN is sealed like any other credential
+and held by the connector in memory only.
+
+**Several HSMs per tenant, chosen per key.** This reverses "one HSM per
+tenant, never a choice at key creation" for key-holding HSMs. A key records
+its HSM in `hsm*` labels the caller can't set, and never moves. "HA group"
+is what the operator declares: the vendor library presents a group as one
+slot, the KMS can't see behind it, and it does not replicate keys across
+credentials itself (it could only do so for extractable keys).
+
+**Import into an HSM is AES only, by `C_CreateObject`.** It reverses "no
+import of outside material into the HSM" for the case the owner asked for
+(forming and importing). The material crosses the internal network once.
+*Not built:* HSM-side unwrap (`C_UnwrapKey` under an HSM RSA key), which
+HSMs that forbid key injection need, and asymmetric import.
+
+**Private mail relays reuse private endpoints.** The first draft of this
+change had its own approved-network list; 7.40.0-beta shipped one first and
+this change uses it, extended to `smtp`. Notification, ticketing and SIEM
+types stay public-only, as 7.40.0-beta decided.
+
+**Owner decisions still open.** Identity provider secrets in auth (seal in
+auth with `pkg/mek`, or accept auth depending on the store). Whether the
+tenant HSM should stop holding keys altogether now that credentials do.
+
 ## 2026-10-11 — Private addresses for source connections: a root administrator's allowlist, enforced at the dial (7.40.0-beta)
 
 - **Decision:** private address ranges are approved per tenant by a root

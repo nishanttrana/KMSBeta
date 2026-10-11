@@ -64,6 +64,9 @@ var Catalog = map[string]ServiceTables{
 		Tables: []Table{{
 			Name: "cloud_accounts", Keys: []string{"tenant_id", "id"}, Tenant: "tenant_id",
 			Item: "id", ItemType: "cloud_account_credentials", WrappedDEK: "creds_wrapped_dek", WrappedIV: "creds_wrapped_dek_iv",
+			// Only accounts not yet moved into the credential store still
+			// hold sealed credentials here (8.0.0-beta).
+			Where: "creds_wrapped_dek IS NOT NULL",
 		}},
 		DevSeed:   "vecta-cloud-dev-mek",
 		LegacyEnv: "CLOUD_MEK_B64",

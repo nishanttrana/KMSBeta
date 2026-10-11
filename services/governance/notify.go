@@ -122,14 +122,14 @@ func (h *Handler) notifyEmail(c *route.Call) {
 		c.Error(http.StatusInternalServerError, "internal_error", "read settings failed")
 		return
 	}
-	if strings.TrimSpace(settings.SMTPHost) == "" || strings.TrimSpace(settings.SMTPPort) == "" {
-		c.Error(http.StatusConflict, "smtp_not_configured", "configure SMTP in Governance settings to send email")
+	if !mailConfigured(settings) {
+		c.Error(http.StatusConflict, "smtp_not_configured", "add an SMTP credential in Playbooks, Credentials and choose it in Governance settings to send email")
 		return
 	}
-	sender := h.svc.email
-	if sender == nil {
-		sender = NewSMTPMailer(SMTPConfig{Host: settings.SMTPHost, Port: settings.SMTPPort, Username: settings.SMTPUsername,
-			Password: settings.SMTPPassword, From: settings.SMTPFrom, StartTLS: settings.SMTPStartTLS})
+	sender, err := h.svc.mailer(c.R.Context(), settings)
+	if err != nil {
+		c.Error(http.StatusServiceUnavailable, "mail_relay_unavailable", err.Error())
+		return
 	}
 	var failed []string
 	for _, to := range recipients {

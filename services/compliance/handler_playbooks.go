@@ -148,6 +148,7 @@ func (h *Handler) playbookRoutes(rt *route.Router) {
 	rt.Handle("POST /compliance/playbook-runs/{run_id}/retry", route.Spec{Action: "playbook_run_retried", Permission: permPlaybookRun, Resource: "playbook_run", TargetParam: "run_id", Severity: "warning"}, h.retryRun)
 	h.connectionRoutes(rt)
 	h.serviceConnectionRoutes(rt)
+	h.credentialRoutes(rt)
 }
 
 func (h *Handler) playbookCatalog(c *route.Call) {

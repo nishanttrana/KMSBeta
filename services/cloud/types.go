@@ -21,6 +21,10 @@ type CloudAccount struct {
 	Status        string    `json:"status"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
+	// ConnectionID is the account's credential in the credential store
+	// (Playbooks → Credentials). Empty only for an account an earlier
+	// release registered that has not been migrated yet.
+	ConnectionID string `json:"connection_id"`
 
 	CredentialsWrappedDEK   []byte `json:"-"`
 	CredentialsWrappedDEKIV []byte `json:"-"`
@@ -38,36 +42,36 @@ type RegionMapping struct {
 }
 
 type CloudKeyBinding struct {
-	ID           string    `json:"id"`
-	TenantID     string    `json:"tenant_id"`
-	KeyID        string    `json:"key_id"`
-	Provider     string    `json:"provider"`
-	AccountID    string    `json:"account_id"`
-	CloudKeyID   string    `json:"cloud_key_id"`
-	CloudKeyRef  string    `json:"cloud_key_ref"`
-	Region       string    `json:"region"`
-	SyncStatus   string    `json:"sync_status"`
-	LastSyncedAt time.Time `json:"last_synced_at"`
-	MetadataJSON string    `json:"metadata_json"`
-	OperationStatus  string `json:"operation_status,omitempty"`
-	ApprovalRequestID string `json:"approval_request_id,omitempty"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID                string    `json:"id"`
+	TenantID          string    `json:"tenant_id"`
+	KeyID             string    `json:"key_id"`
+	Provider          string    `json:"provider"`
+	AccountID         string    `json:"account_id"`
+	CloudKeyID        string    `json:"cloud_key_id"`
+	CloudKeyRef       string    `json:"cloud_key_ref"`
+	Region            string    `json:"region"`
+	SyncStatus        string    `json:"sync_status"`
+	LastSyncedAt      time.Time `json:"last_synced_at"`
+	MetadataJSON      string    `json:"metadata_json"`
+	OperationStatus   string    `json:"operation_status,omitempty"`
+	ApprovalRequestID string    `json:"approval_request_id,omitempty"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 type SyncJob struct {
-	ID           string    `json:"id"`
-	TenantID     string    `json:"tenant_id"`
-	Provider     string    `json:"provider"`
-	AccountID    string    `json:"account_id"`
-	Mode         string    `json:"mode"`
-	Status       string    `json:"status"`
-	SummaryJSON  string    `json:"summary_json"`
-	ErrorMessage string    `json:"error_message"`
-	ApprovalRequestID string `json:"approval_request_id,omitempty"`
-	StartedAt    time.Time `json:"started_at"`
-	CompletedAt  time.Time `json:"completed_at"`
-	CreatedAt    time.Time `json:"created_at"`
+	ID                string    `json:"id"`
+	TenantID          string    `json:"tenant_id"`
+	Provider          string    `json:"provider"`
+	AccountID         string    `json:"account_id"`
+	Mode              string    `json:"mode"`
+	Status            string    `json:"status"`
+	SummaryJSON       string    `json:"summary_json"`
+	ErrorMessage      string    `json:"error_message"`
+	ApprovalRequestID string    `json:"approval_request_id,omitempty"`
+	StartedAt         time.Time `json:"started_at"`
+	CompletedAt       time.Time `json:"completed_at"`
+	CreatedAt         time.Time `json:"created_at"`
 }
 
 type InventoryItem struct {
@@ -82,10 +86,15 @@ type InventoryItem struct {
 }
 
 type RegisterCloudAccountRequest struct {
-	TenantID        string `json:"tenant_id"`
-	Provider        string `json:"provider"`
-	Name            string `json:"name"`
-	DefaultRegion   string `json:"default_region"`
+	TenantID      string `json:"tenant_id"`
+	Provider      string `json:"provider"`
+	Name          string `json:"name"`
+	DefaultRegion string `json:"default_region"`
+	// ConnectionID names the credential (Playbooks → Credentials) the
+	// account uses. It is required.
+	ConnectionID string `json:"connection_id"`
+	// CredentialsJSON was how credentials were sent before 8.0.0-beta. It
+	// is no longer accepted: a request carrying it is refused.
 	CredentialsJSON string `json:"credentials_json"`
 }
 
@@ -97,13 +106,13 @@ type SetRegionMappingRequest struct {
 }
 
 type ImportKeyToCloudRequest struct {
-	TenantID     string `json:"tenant_id"`
-	KeyID        string `json:"key_id"`
-	Provider     string `json:"provider"`
-	AccountID    string `json:"account_id"`
-	VectaRegion  string `json:"vecta_region"`
-	CloudRegion  string `json:"cloud_region"`
-	MetadataJSON string `json:"metadata_json"`
+	TenantID          string `json:"tenant_id"`
+	KeyID             string `json:"key_id"`
+	Provider          string `json:"provider"`
+	AccountID         string `json:"account_id"`
+	VectaRegion       string `json:"vecta_region"`
+	CloudRegion       string `json:"cloud_region"`
+	MetadataJSON      string `json:"metadata_json"`
 	RequesterID       string `json:"requester_id,omitempty"`
 	RequesterEmail    string `json:"requester_email,omitempty"`
 	RequesterIP       string `json:"requester_ip,omitempty"`
@@ -112,9 +121,9 @@ type ImportKeyToCloudRequest struct {
 }
 
 type RotateCloudKeyRequest struct {
-	TenantID  string `json:"tenant_id"`
-	BindingID string `json:"binding_id"`
-	Reason    string `json:"reason"`
+	TenantID          string `json:"tenant_id"`
+	BindingID         string `json:"binding_id"`
+	Reason            string `json:"reason"`
 	RequesterID       string `json:"requester_id,omitempty"`
 	RequesterEmail    string `json:"requester_email,omitempty"`
 	RequesterIP       string `json:"requester_ip,omitempty"`
@@ -123,10 +132,10 @@ type RotateCloudKeyRequest struct {
 }
 
 type SyncCloudKeysRequest struct {
-	TenantID  string `json:"tenant_id"`
-	Provider  string `json:"provider"`
-	AccountID string `json:"account_id"`
-	Mode      string `json:"mode"`
+	TenantID          string `json:"tenant_id"`
+	Provider          string `json:"provider"`
+	AccountID         string `json:"account_id"`
+	Mode              string `json:"mode"`
 	RequesterID       string `json:"requester_id,omitempty"`
 	RequesterEmail    string `json:"requester_email,omitempty"`
 	RequesterIP       string `json:"requester_ip,omitempty"`

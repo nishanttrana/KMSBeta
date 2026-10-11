@@ -17,8 +17,10 @@ import (
 	"runtime/trace"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"vecta-kms/pkg/credstore"
 	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgfips "vecta-kms/pkg/fips"
 )
@@ -44,6 +46,12 @@ type Service struct {
 	// conns opens Slack/Teams connections through compliance
 	// (notify_connections.go).
 	conns notifyConnections
+	// creds is the credential store, for the mail relay
+	// (mail_credentials.go); nil when the deployment has none.
+	creds credstore.Store
+	// smtpReported: tenants whose mail relay migration refusal was audited.
+	smtpMu       sync.Mutex
+	smtpReported map[string]bool
 }
 
 var runtimeCryptoLibraryLabel, runtimeCryptoLibraryValidated = detectRuntimeCryptoLibrary()
@@ -154,6 +162,7 @@ func NewService(store Store, events EventPublisher, email EmailSender, callback 
 		http: &http.Client{
 			Timeout: 15 * time.Second,
 		},
+		smtpReported: map[string]bool{},
 	}
 	for _, opt := range opts {
 		if opt != nil {
@@ -324,18 +333,10 @@ func (s *Service) CreateApprovalRequest(ctx context.Context, in CreateApprovalRe
 		if !settings.NotifyEmail {
 			continue
 		}
-		sender := s.email
-		if sender == nil && strings.TrimSpace(settings.SMTPHost) != "" && strings.TrimSpace(settings.SMTPPort) != "" {
-			sender = NewSMTPMailer(SMTPConfig{
-				Host:     settings.SMTPHost,
-				Port:     settings.SMTPPort,
-				Username: settings.SMTPUsername,
-				Password: settings.SMTPPassword,
-				From:     settings.SMTPFrom,
-				StartTLS: settings.SMTPStartTLS,
-			})
-		}
-		if sender == nil {
+		sender, err := s.mailer(ctx, settings)
+		if err != nil {
+			// No relay, or its credential can't be opened: the approval
+			// still waits in the dashboard queue.
 			continue
 		}
 		body := buildApprovalEmailBody(s.baseURL, req, tok.approve, tok.deny, challengeCodes[email], settings.ChallengeResponseEnabled)
@@ -540,9 +541,10 @@ func (s *Service) UpdateSettings(ctx context.Context, settings GovernanceSetting
 	if err != nil {
 		return GovernanceSettings{}, err
 	}
-	// Keep existing SMTP secret unless explicitly provided.
-	if strings.TrimSpace(settings.SMTPPassword) == "" {
-		settings.SMTPPassword = existing.SMTPPassword
+	// The mail relay is chosen by naming an SMTP credential; nothing of it
+	// is taken inline (mail_credentials.go).
+	if err := s.applyMailSettings(ctx, &settings, existing); err != nil {
+		return GovernanceSettings{}, err
 	}
 	// A plaintext URL an earlier release stored is kept until the migration
 	// moves it, unless the channel now names a connection.
@@ -578,9 +580,7 @@ func (s *Service) UpdateSettings(ctx context.Context, settings GovernanceSetting
 		return GovernanceSettings{}, err
 	}
 	_ = s.publishAudit(ctx, "audit.governance.settings_updated", normalized.TenantID, map[string]interface{}{
-		"smtp_host":        normalized.SMTPHost,
-		"smtp_port":        normalized.SMTPPort,
-		"smtp_from":        normalized.SMTPFrom,
+		"smtp_connection":  normalized.SMTPConnectionID,
 		"approval_expiry":  normalized.ApprovalExpiryMinutes,
 		"notify_email":     normalized.NotifyEmail,
 		"notify_slack":     normalized.NotifySlack,
@@ -596,20 +596,13 @@ func (s *Service) TestSMTP(ctx context.Context, tenantID string, to string) erro
 	if err != nil {
 		return err
 	}
-	if strings.TrimSpace(settings.SMTPHost) == "" || strings.TrimSpace(settings.SMTPPort) == "" {
-		return errors.New("smtp settings are not configured")
-	}
 	if strings.TrimSpace(to) == "" {
 		return errors.New("recipient email is required")
 	}
-	sender := NewSMTPMailer(SMTPConfig{
-		Host:     settings.SMTPHost,
-		Port:     settings.SMTPPort,
-		Username: settings.SMTPUsername,
-		Password: settings.SMTPPassword,
-		From:     settings.SMTPFrom,
-		StartTLS: settings.SMTPStartTLS,
-	})
+	sender, err := s.mailer(ctx, settings)
+	if err != nil {
+		return err
+	}
 	if err := sender.Send(ctx, EmailMessage{
 		To:      to,
 		Subject: "[Vecta KMS] SMTP configuration test",
@@ -803,7 +796,7 @@ func (s *Service) SystemIntegrity(ctx context.Context, tenantID string) (SystemI
 	case fips140.Enabled():
 		checks["fips"] = "on"
 	}
-	if strings.TrimSpace(settings.SMTPHost) != "" && strings.TrimSpace(settings.SMTPPort) != "" {
+	if mailConfigured(settings) {
 		checks["smtp"] = "configured"
 	}
 	if backups, err := s.ListBackups(ctx, tenantID, "", "completed", 1); err != nil {
@@ -940,6 +933,7 @@ func sanitizeSettingsForSNMP(settings GovernanceSettings, settingsErr error) map
 		"approval_expiry_minutes":          settings.ApprovalExpiryMinutes,
 		"expiry_check_interval_seconds":    settings.ExpiryCheckIntervalSeconds,
 		"approval_delivery_mode":           settings.ApprovalDeliveryMode,
+		"smtp_connection_id":               settings.SMTPConnectionID,
 		"smtp_host":                        settings.SMTPHost,
 		"smtp_port":                        settings.SMTPPort,
 		"smtp_username":                    settings.SMTPUsername,

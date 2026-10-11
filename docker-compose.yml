@@ -512,6 +512,10 @@ services:
       <<: *kms-common-env
       HSM_MODE: ${HSM_MODE:-software}
       HSM_ENDPOINT: ${HSM_ENDPOINT:-hsm-connector:18430}
+      # HSM credentials a key can be created on come from the credential
+      # store (compliance); without that profile only the tenant HSM is offered.
+      COMPLIANCE_URL: https://compliance:8110
+      VECTA_DEPLOYED_PROFILES: ${COMPOSE_PROFILES:-}
       GOVERNANCE_URL: https://governance:8050
       # Without this keycore has no policy evaluator and, being fail-closed by
       # default (KEYCORE_POLICY_FAIL_CLOSED), denies every key operation with
@@ -757,6 +761,10 @@ services:
       <<: *kms-common-env
       APP_BASE_URL: https://localhost
       CERTS_URL: https://certs:8030
+      # The mail relay and notice webhooks are opened from the credential
+      # store (compliance); without that profile there is none.
+      COMPLIANCE_URL: https://compliance:8110
+      VECTA_DEPLOYED_PROFILES: ${COMPOSE_PROFILES:-}
       HTTP_PORT: "8050"
       GRPC_PORT: "18050"
     ports:
@@ -782,6 +790,8 @@ services:
       <<: *kms-common-env
       KEYCORE_URL: https://keycore:8010
       KEY_ACCESS_URL: https://keyaccess:8270
+      # Account credentials are opened from the credential store (compliance).
+      COMPLIANCE_URL: https://compliance:8110
       # Key access is evaluated only when the key_access_justifications
       # profile is deployed; an empty list is unknown and fails closed.
       VECTA_DEPLOYED_PROFILES: ${COMPOSE_PROFILES:-}
@@ -873,6 +883,8 @@ services:
       <<: *kms-common-env
       KEYCORE_URL: https://keycore:8010
       KEY_ACCESS_URL: https://keyaccess:8270
+      # Azure EKM app registrations are opened from the credential store.
+      COMPLIANCE_URL: https://compliance:8110
       # Key access is evaluated only when the key_access_justifications
       # profile is deployed; an empty list is unknown and fails closed.
       VECTA_DEPLOYED_PROFILES: ${COMPOSE_PROFILES:-}
@@ -1036,6 +1048,12 @@ services:
       REPORTING_URL: https://reporting:8140
       POSTURE_URL: https://posture:8220
       DISCOVERY_URL: https://discovery:8100
+      # The credential store asks these where a credential is used and has
+      # them test it; a service the deployment leaves out is not asked.
+      CLOUD_URL: https://cloud:8080
+      EKM_URL: https://ekm:8130
+      HSM_CONNECTOR_URL: https://hsm-connector:8430
+      VECTA_DEPLOYED_PROFILES: ${COMPOSE_PROFILES:-}
       HTTP_PORT: "8110"
       GRPC_PORT: "18110"
     ports:
@@ -1303,6 +1321,8 @@ services:
       HTTP_PORT: "8430"
       GRPC_PORT: "18430"
       HSM_LIBRARY_ROOTS: /var/lib/vecta/hsm/providers
+      # HSM credentials (Playbooks, Credentials) are opened from compliance.
+      COMPLIANCE_URL: https://compliance:8110
     volumes:
       # Libraries and vendor client files uploaded through hsm-integration.
       - hsm-integration-data:/var/lib/vecta/hsm:ro

@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 // Event streaming lives in Playbooks (2.10.0-beta): a stream names a
 // connection, never a URL or credential, and SIEM types sit beside Slack and
-// Teams in Connections. The APIs are stubbed; delivery is tested in
+// Teams in Credentials. The APIs are stubbed; delivery is tested in
 // services/audit and pkg/siem.
 
 const SHOTS = process.env.PLAYBOOK_SHOTS_DIR || "";
@@ -58,7 +58,7 @@ async function stub(page: Page, created: unknown[]): Promise<void> {
     if (p.endsWith("/compliance/private-endpoints/pvt_1") && req.method() === "DELETE") return route.fulfill(json({ error: { code: "internal_error", message: "remove private endpoint failed" } }, 500));
     if (p.endsWith("/compliance/private-endpoints")) return route.fulfill(json(privateEndpoints));
     if (p.endsWith("/compliance/playbooks/catalog")) return route.fulfill(json({ data: catalog }));
-    if (p.endsWith("/compliance/playbooks/connections")) return route.fulfill(json({ data: connections }));
+    if (p.endsWith("/compliance/playbooks/connections")) return route.fulfill(json({ data: connections, types: catalog.connection_types }));
     if (p.endsWith("/compliance/playbooks/summary")) return route.fulfill(json({ data: {} }));
     if (p.endsWith("/compliance/playbooks") || p.includes("/playbook-runs") || p.includes("/incidents")) return route.fulfill(json({ data: [], items: [] }));
     return route.fulfill(json({}));
@@ -101,17 +101,15 @@ test("a new stream names a stream-capable connection and sends no URL or secret"
   expect(created[0]).toEqual({ name: "new", connection_id: "pbconn_splunk", events: ["audit.key.*"] });
 });
 
-test("SIEM connection types are grouped with masked credentials", async ({ page }) => {
+test("SIEM credential types sit beside the others, with masked secrets", async ({ page }) => {
   await stub(page, []);
-  await openPlaybooks(page, "Connections");
-  await page.getByRole("button", { name: "New connection" }).click();
-  const type = page.locator("select").filter({ hasText: "Splunk HTTP Event Collector" });
-  await expect(type.locator("optgroup[label='SIEM'] option")).toHaveCount(2);
-  await type.selectOption("splunk_hec");
+  await openPlaybooks(page, "Credentials");
+  await page.getByRole("button", { name: "Add credential" }).click();
+  await page.getByRole("button", { name: "Slack incoming webhook", exact: true }).click();
+  await expect(page.getByRole("option", { name: "Syslog over TLS, CEF (QRadar, ArcSight)" })).toBeVisible();
+  await page.getByRole("option", { name: "Splunk HTTP Event Collector" }).click();
   await expect(page.getByPlaceholder("https://…")).toHaveAttribute("type", "text");
-  const token = page.locator("input[type='password']");
-  await expect(token).toHaveCount(1);
-  await expect(page.getByText("Test sends one labelled event to the SIEM.", { exact: false })).toBeVisible();
+  await expect(page.locator("input[type='password']")).toHaveCount(1);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/siem-connection.png`, fullPage: true });
 });
 
@@ -119,7 +117,7 @@ test("a root administrator approves a private range; a refusal is shown, not swa
   privateEndpoints = { data: approved, can_approve: true };
   const created: any[] = [];
   await stub(page, created);
-  await openPlaybooks(page, "Connections");
+  await openPlaybooks(page, "Credentials");
   await expect(page.getByText("Private endpoints", { exact: true })).toBeVisible();
   await expect(page.getByText("10.4.0.0/24", { exact: true })).toBeVisible();
   await expect(page.getByText("MinIO, data centre A")).toBeVisible();
@@ -140,13 +138,13 @@ test("a root administrator approves a private range; a refusal is shown, not swa
 test("a tenant sees its approved ranges and cannot change them", async ({ page }) => {
   privateEndpoints = { data: approved, can_approve: false };
   await stub(page, []);
-  await openPlaybooks(page, "Connections");
+  await openPlaybooks(page, "Credentials");
   await expect(page.getByText("10.4.0.0/24", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Withdraw/ })).toHaveCount(0);
   privateEndpoints = { data: [], can_approve: false };
   await page.reload();
   await page.getByText("Playbooks", { exact: true }).first().click();
-  await page.getByRole("button", { name: "Connections" }).first().click();
+  await page.getByRole("button", { name: "Credentials" }).first().click();
   await expect(page.getByText("No private ranges approved for this tenant. A root administrator approves them here.")).toBeVisible();
 });

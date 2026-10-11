@@ -73,6 +73,9 @@ type Service struct {
 	attestKP     *crypto.KeyPair
 	attestMu     sync.Mutex
 	hsm          HSMBackend // nil when the platform runs no hsm-connector
+	// hsmCreds lists the tenant's HSM credentials (hsm_targets.go); nil
+	// when the deployment has no credential store.
+	hsmCreds HSMCredentials
 }
 
 // SetCryptoperiodPolicy installs the NIST SP 800-57 cryptoperiod table.
@@ -168,9 +171,12 @@ type CreateKeyRequest struct {
 	ExportAllowed    bool              `json:"export_allowed"`
 	ApprovalRequired bool              `json:"approval_required"`
 	ApprovalPolicyID string            `json:"approval_policy_id"`
-	// HSM creates the key in the tenant's HSM: generated there, never
-	// exported, and every operation runs there (hsm.go).
+	// HSM creates the key in an HSM: generated there, never exported, and
+	// every operation runs there (hsm.go).
 	HSM bool `json:"hsm"`
+	// HSMConnectionID names the HSM credential to create it on (Playbooks →
+	// Credentials); empty is the tenant's HSM profile. It implies HSM.
+	HSMConnectionID string `json:"hsm_connection_id"`
 }
 
 type ImportKeyRequest struct {
@@ -611,9 +617,8 @@ func (s *Service) createKeyFromMaterial(
 	if req.TenantID == "" || req.Name == "" || req.Algorithm == "" {
 		return Key{}, errors.New("tenant_id, name, algorithm are required")
 	}
-	if req.HSM {
-		return Key{}, s.refuseHSM(ctx, req.TenantID, "", policyOperation, http.StatusBadRequest, "hsm_import_not_supported",
-			"key material from outside can't be placed in the HSM: create the key in the HSM instead")
+	if req.HSM || strings.TrimSpace(req.HSMConnectionID) != "" {
+		return s.importHSMKey(ctx, req, raw, expectedKCV, firstNonEmptyString(policyOperation, "key.create"), auditSubject)
 	}
 	if err := s.enforceFIPSKeyAlgorithm(ctx, req.TenantID, req.Algorithm, policyOperation); err != nil {
 		return Key{}, err
@@ -821,7 +826,7 @@ func (s *Service) resolvePublicMaterialFromPair(ctx context.Context, req CreateK
 }
 
 func (s *Service) CreateKey(ctx context.Context, req CreateKeyRequest) (Key, error) {
-	if req.HSM {
+	if req.HSM || strings.TrimSpace(req.HSMConnectionID) != "" {
 		return s.createHSMKey(ctx, req)
 	}
 	// Refuse before generating: in strict mode the module itself refuses some
@@ -2086,6 +2091,25 @@ func (s *Service) GetKey(ctx context.Context, tenantID string, keyID string) (Ke
 func (s *Service) UpdateKey(ctx context.Context, tenantID string, keyID string, req UpdateKeyRequest) error {
 	req.IVMode = defaultIV(req.IVMode)
 	req.Tags = normalizeTags(req.Tags)
+	// The hsm* labels record where the key's objects are (hsm.go,
+	// hsm_targets.go). A metadata update replaces the label set, so they
+	// are carried over from the stored key and never taken from the caller.
+	current, err := s.store.GetKey(ctx, tenantID, keyID)
+	if err != nil {
+		return err
+	}
+	labels := KeyLabels{}
+	for k, v := range req.Labels {
+		if !strings.HasPrefix(k, "hsm") {
+			labels[k] = v
+		}
+	}
+	for k, v := range current.Labels {
+		if strings.HasPrefix(k, "hsm") {
+			labels[k] = v
+		}
+	}
+	req.Labels = labels
 	if err := s.store.UpdateKeyMetadata(ctx, tenantID, keyID, req); err != nil {
 		return err
 	}
@@ -2922,7 +2946,7 @@ func (s *Service) Encrypt(ctx context.Context, keyID string, req EncryptRequest)
 				return CryptoTxResult{}, s.refuseHSM(ctx, req.TenantID, keyID, operation, http.StatusBadRequest, "iv_mode_not_supported",
 					"an HSM key generates every IV inside the HSM (iv_mode internal)")
 			}
-			iv, ciphertext, err := s.hsm.Encrypt(ctx, req.TenantID, kv.HSMLabel, plain, aad)
+			iv, ciphertext, err := s.hsmOf(k).Encrypt(ctx, req.TenantID, kv.HSMLabel, plain, aad)
 			if err != nil {
 				return CryptoTxResult{}, s.hsmKeyFailure(ctx, k, operation, err)
 			}
@@ -3018,7 +3042,7 @@ func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest)
 	}
 	result, err := s.runCryptoTxAt(ctx, req.TenantID, keyID, operation, req.Version, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
 		if kv.Protection == protectionHSMResident {
-			plain, err := s.hsm.Decrypt(ctx, req.TenantID, kv.HSMLabel, iv, cipherRaw, aad)
+			plain, err := s.hsmOf(k).Decrypt(ctx, req.TenantID, kv.HSMLabel, iv, cipherRaw, aad)
 			if err != nil {
 				return CryptoTxResult{}, s.hsmKeyFailure(ctx, k, operation, err)
 			}
@@ -3110,7 +3134,7 @@ func (s *Service) Sign(ctx context.Context, keyID string, req SignRequest) (_ Cr
 			if err != nil {
 				return CryptoTxResult{}, err
 			}
-			signature, err := s.hsm.Sign(ctx, req.TenantID, kv.HSMLabel, hash, digest)
+			signature, err := s.hsmOf(k).Sign(ctx, req.TenantID, kv.HSMLabel, hash, digest)
 			if err != nil {
 				return CryptoTxResult{}, s.hsmKeyFailure(ctx, k, operation, err)
 			}
@@ -3211,7 +3235,7 @@ func (s *Service) Verify(ctx context.Context, keyID string, req VerifyRequest) (
 			if err != nil {
 				return CryptoTxResult{}, err
 			}
-			ok, err := s.hsm.Verify(ctx, req.TenantID, kv.HSMLabel, hash, digest, sig)
+			ok, err := s.hsmOf(k).Verify(ctx, req.TenantID, kv.HSMLabel, hash, digest, sig)
 			if err != nil {
 				return CryptoTxResult{}, s.hsmKeyFailure(ctx, k, operation, err)
 			}

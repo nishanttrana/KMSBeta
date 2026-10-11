@@ -120,6 +120,10 @@ type CreateCARequest struct {
 	KeyRef       string `json:"key_ref"`
 	Subject      string `json:"subject"`
 	ValidityDays int64  `json:"validity_days"`
+	// HSMConnectionID, with key_backend "hsm", names the HSM credential
+	// (Playbooks → Credentials) the CA key is generated on; empty is the
+	// tenant's HSM profile.
+	HSMConnectionID string `json:"hsm_connection_id"`
 }
 
 type RenewCertificateRequest struct {

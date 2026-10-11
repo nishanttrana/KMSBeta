@@ -27,6 +27,19 @@ func (h *Handler) handleCreateAzureConfig(w http.ResponseWriter, r *http.Request
 	}
 	req.TenantID = tenantID
 
+	if req.AuthMode == "" {
+		req.AuthMode = "client_secret"
+	}
+	// The app registration is a credential added in Playbooks, Credentials;
+	// its tenant and client ID are read from it.
+	cred, err := h.azureCredentialFor(r.Context(), tenantID, req)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	if req.AuthMode != "managed_identity" {
+		req.AzureTenantID, req.ClientID = cred.Fields["tenant_id"], cred.Fields["client_id"]
+	}
 	if strings.TrimSpace(req.AzureTenantID) == "" {
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "azure_tenant_id is required"), reqID, tenantID)
 		return
@@ -38,10 +51,6 @@ func (h *Handler) handleCreateAzureConfig(w http.ResponseWriter, r *http.Request
 	if strings.TrimSpace(req.VaultURL) == "" {
 		req.VaultURL = fmt.Sprintf("https://%s.vault.azure.net", req.VaultName)
 	}
-	if req.AuthMode == "" {
-		req.AuthMode = "client_secret"
-	}
-
 	cfg := AzureEKMConfig{
 		ID:             newID("azcfg"),
 		TenantID:       tenantID,
@@ -53,7 +62,7 @@ func (h *Handler) handleCreateAzureConfig(w http.ResponseWriter, r *http.Request
 		ManagedHSMName: strings.TrimSpace(req.ManagedHSMName),
 		ManagedHSMURL:  strings.TrimSpace(req.ManagedHSMURL),
 		ClientID:       strings.TrimSpace(req.ClientID),
-		ClientSecret:   strings.TrimSpace(req.ClientSecret),
+		ConnectionID:   strings.TrimSpace(req.ConnectionID),
 		AuthMode:       req.AuthMode,
 		Status:         "active",
 		KeyMappings:    0,
@@ -66,8 +75,6 @@ func (h *Handler) handleCreateAzureConfig(w http.ResponseWriter, r *http.Request
 
 	h.publishAuditEvent(r.Context(), tenantID, "azure_ekm.config.created", cfg.ID)
 
-	// Mask secret in response
-	cfg.ClientSecret = maskSecret(cfg.ClientSecret)
 	writeJSON(w, http.StatusCreated, map[string]interface{}{"config": cfg, "request_id": reqID})
 }
 
@@ -82,10 +89,6 @@ func (h *Handler) handleListAzureConfigs(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
-	}
-	// Mask secrets in response
-	for i := range items {
-		items[i].ClientSecret = maskSecret(items[i].ClientSecret)
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
 }
@@ -102,7 +105,6 @@ func (h *Handler) handleGetAzureConfig(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
 	}
-	cfg.ClientSecret = maskSecret(cfg.ClientSecret)
 	writeJSON(w, http.StatusOK, map[string]interface{}{"config": cfg, "request_id": reqID})
 }
 
@@ -132,11 +134,21 @@ func (h *Handler) handleUpdateAzureConfig(w http.ResponseWriter, r *http.Request
 	existing.VaultURL = coalesceStr(strings.TrimSpace(req.VaultURL), existing.VaultURL)
 	existing.ManagedHSMName = coalesceStr(strings.TrimSpace(req.ManagedHSMName), existing.ManagedHSMName)
 	existing.ManagedHSMURL = coalesceStr(strings.TrimSpace(req.ManagedHSMURL), existing.ManagedHSMURL)
-	existing.ClientID = coalesceStr(strings.TrimSpace(req.ClientID), existing.ClientID)
-	if strings.TrimSpace(req.ClientSecret) != "" {
-		existing.ClientSecret = strings.TrimSpace(req.ClientSecret)
-	}
 	existing.AuthMode = coalesceStr(req.AuthMode, existing.AuthMode)
+	// Changing the credential attaches a different one: the same checks as
+	// at creation. A request that names none keeps the one it has.
+	if strings.TrimSpace(req.ClientSecret) != "" || (strings.TrimSpace(req.ConnectionID) != "" && strings.TrimSpace(req.ConnectionID) != existing.ConnectionID) {
+		req.AuthMode = existing.AuthMode
+		cred, err := h.azureCredentialFor(r.Context(), tenantID, req)
+		if err != nil {
+			h.writeServiceError(w, err, reqID, tenantID)
+			return
+		}
+		existing.ConnectionID = strings.TrimSpace(req.ConnectionID)
+		if existing.AuthMode != "managed_identity" {
+			existing.AzureTenantID, existing.ClientID = cred.Fields["tenant_id"], cred.Fields["client_id"]
+		}
+	}
 
 	if err := h.svc.store.UpdateAzureEKMConfig(r.Context(), existing); err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)
@@ -145,7 +157,6 @@ func (h *Handler) handleUpdateAzureConfig(w http.ResponseWriter, r *http.Request
 
 	h.publishAuditEvent(r.Context(), tenantID, "azure_ekm.config.updated", existing.ID)
 
-	existing.ClientSecret = maskSecret(existing.ClientSecret)
 	writeJSON(w, http.StatusOK, map[string]interface{}{"config": existing, "request_id": reqID})
 }
 
@@ -174,7 +185,7 @@ func (h *Handler) handleTestAzureConnection(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	cfg, err := h.svc.store.GetAzureEKMConfig(r.Context(), tenantID, r.PathValue("id"))
+	cfg, err := h.azureConfigForUse(r.Context(), tenantID, r.PathValue("id"))
 	if err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
@@ -182,6 +193,7 @@ func (h *Handler) handleTestAzureConnection(w http.ResponseWriter, r *http.Reque
 
 	token, authErr := azureProvider.Authenticate(cfg)
 	if authErr != nil {
+		h.reportAzureTest(r.Context(), cfg, authErr)
 		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"connected":  false,
 			"error":      authErr.Error(),
@@ -192,6 +204,7 @@ func (h *Handler) handleTestAzureConnection(w http.ResponseWriter, r *http.Reque
 
 	// Verify vault access by listing keys
 	_, listErr := azureProvider.ListKeysInVault(r.Context(), token, cfg.VaultURL)
+	h.reportAzureTest(r.Context(), cfg, listErr)
 	if listErr != nil {
 		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"connected":       false,
@@ -219,7 +232,7 @@ func (h *Handler) handleSyncAzureKeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg, err := h.svc.store.GetAzureEKMConfig(r.Context(), tenantID, r.PathValue("id"))
+	cfg, err := h.azureConfigForUse(r.Context(), tenantID, r.PathValue("id"))
 	if err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
@@ -396,7 +409,7 @@ func (h *Handler) handleImportKeyToAzure(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	cfg, err := h.svc.store.GetAzureEKMConfig(r.Context(), tenantID, mapping.ConfigID)
+	cfg, err := h.azureConfigForUse(r.Context(), tenantID, mapping.ConfigID)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
@@ -599,7 +612,7 @@ func (h *Handler) resolveAzureMapping(r *http.Request, tenantID, mappingID strin
 		return AzureKeyMapping{}, AzureEKMConfig{}, newServiceError(http.StatusNotFound, "not_found", "mapping not found")
 	}
 
-	cfg, err := h.svc.store.GetAzureEKMConfig(r.Context(), tenantID, mapping.ConfigID)
+	cfg, err := h.azureConfigForUse(r.Context(), tenantID, mapping.ConfigID)
 	if err != nil {
 		return AzureKeyMapping{}, AzureEKMConfig{}, err
 	}
@@ -619,14 +632,6 @@ func (h *Handler) publishAuditEvent(ctx context.Context, tenantID, subject, reso
 	if err := h.svc.events.Publish(ctx, subject, payload); err != nil {
 		log.Printf("[azure-ekm] failed to publish audit event %s: %v", subject, err)
 	}
-}
-
-// maskSecret returns a masked version of a secret string for safe display.
-func maskSecret(s string) string {
-	if len(s) <= 4 {
-		return "****"
-	}
-	return s[:2] + strings.Repeat("*", len(s)-4) + s[len(s)-2:]
 }
 
 // coalesceStr returns the first non-empty string.

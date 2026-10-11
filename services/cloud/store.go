@@ -18,6 +18,12 @@ type Store interface {
 	ListAccounts(ctx context.Context, tenantID string, provider string) ([]CloudAccount, error)
 	DeleteAccountCascade(ctx context.Context, tenantID string, accountID string) (DeleteCloudAccountResult, error)
 	UpdateAccountStatus(ctx context.Context, tenantID string, accountID string, status string) error
+	// ListLegacyCredentialAccounts returns, across tenants, the accounts
+	// that still hold their own sealed credentials.
+	ListLegacyCredentialAccounts(ctx context.Context) ([]CloudAccount, error)
+	// SetAccountConnection points an account at a credential and clears
+	// its own sealed copy.
+	SetAccountConnection(ctx context.Context, tenantID, accountID, connectionID string) error
 
 	SetRegionMapping(ctx context.Context, mapping RegionMapping) error
 	ListRegionMappings(ctx context.Context, tenantID string, provider string) ([]RegionMapping, error)
@@ -46,22 +52,69 @@ func (s *SQLStore) CreateAccount(ctx context.Context, account CloudAccount) erro
 INSERT INTO cloud_accounts (
 	id, tenant_id, provider, name, default_region, status,
 	creds_wrapped_dek, creds_wrapped_dek_iv, creds_ciphertext, creds_data_iv,
-	created_at, updated_at
+	connection_id, created_at, updated_at
 ) VALUES (
 	$1,$2,$3,$4,$5,$6,
 	$7,$8,$9,$10,
-	CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
+	$11,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
 )
 `, account.ID, account.TenantID, account.Provider, account.Name, account.DefaultRegion, account.Status,
-		account.CredentialsWrappedDEK, account.CredentialsWrappedDEKIV, account.CredentialsCiphertext, account.CredentialsDataIV)
+		nullBytes(account.CredentialsWrappedDEK), nullBytes(account.CredentialsWrappedDEKIV), nullBytes(account.CredentialsCiphertext), nullBytes(account.CredentialsDataIV),
+		account.ConnectionID)
 	return err
+}
+
+// nullBytes stores an absent sealed column as NULL, which pkg/mek skips.
+func nullBytes(b []byte) interface{} {
+	if len(b) == 0 {
+		return nil
+	}
+	return b
+}
+
+func (s *SQLStore) ListLegacyCredentialAccounts(ctx context.Context) ([]CloudAccount, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT id, tenant_id, provider, name, default_region, status,
+	   creds_wrapped_dek, creds_wrapped_dek_iv, creds_ciphertext, creds_data_iv,
+	   connection_id, created_at, updated_at
+FROM cloud_accounts
+WHERE connection_id = '' AND creds_wrapped_dek IS NOT NULL
+ORDER BY tenant_id, id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := []CloudAccount{}
+	for rows.Next() {
+		item, err := scanAccount(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) SetAccountConnection(ctx context.Context, tenantID, accountID, connectionID string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE cloud_accounts
+SET connection_id = $3, creds_wrapped_dek = NULL, creds_wrapped_dek_iv = NULL, creds_ciphertext = NULL, creds_data_iv = NULL,
+    updated_at = CURRENT_TIMESTAMP
+WHERE tenant_id = $1 AND id = $2`, tenantID, accountID, connectionID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errNotFound
+	}
+	return nil
 }
 
 func (s *SQLStore) GetAccount(ctx context.Context, tenantID string, accountID string) (CloudAccount, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
 SELECT id, tenant_id, provider, name, default_region, status,
 	   creds_wrapped_dek, creds_wrapped_dek_iv, creds_ciphertext, creds_data_iv,
-	   created_at, updated_at
+	   connection_id, created_at, updated_at
 FROM cloud_accounts
 WHERE tenant_id = $1 AND id = $2
 `, tenantID, accountID)
@@ -76,7 +129,7 @@ func (s *SQLStore) ListAccounts(ctx context.Context, tenantID string, provider s
 	q := `
 SELECT id, tenant_id, provider, name, default_region, status,
 	   creds_wrapped_dek, creds_wrapped_dek_iv, creds_ciphertext, creds_data_iv,
-	   created_at, updated_at
+	   connection_id, created_at, updated_at
 FROM cloud_accounts
 WHERE tenant_id = $1
 `
@@ -417,7 +470,7 @@ func scanAccount(scanner interface {
 	err := scanner.Scan(
 		&out.ID, &out.TenantID, &out.Provider, &out.Name, &out.DefaultRegion, &out.Status,
 		&out.CredentialsWrappedDEK, &out.CredentialsWrappedDEKIV, &out.CredentialsCiphertext, &out.CredentialsDataIV,
-		&createdRaw, &updatedRaw,
+		&out.ConnectionID, &createdRaw, &updatedRaw,
 	)
 	if err != nil {
 		return CloudAccount{}, err

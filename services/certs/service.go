@@ -219,7 +219,7 @@ func (s *Service) CreateCA(ctx context.Context, req CreateCARequest) (CA, error)
 	if req.KeyBackend == "hsm" {
 		// The CA key is generated in the tenant's HSM and never leaves it
 		// (hsm_ca.go); certs keeps no private key for it.
-		hsmKey, err := s.newHSMCAKey(ctx, req.TenantID, req.Algorithm, req.Name+"-ca")
+		hsmKey, err := s.newHSMCAKey(ctx, req.TenantID, req.Algorithm, req.Name+"-ca", req.HSMConnectionID)
 		if err != nil {
 			return CA{}, err
 		}

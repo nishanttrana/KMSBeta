@@ -494,22 +494,27 @@ type BitLockerNetworkScanResult struct {
 
 // Azure EKM — Vecta KMS acts as external key provider for Azure services
 type AzureEKMConfig struct {
-	ID             string    `json:"id"`
-	TenantID       string    `json:"tenant_id"`
-	AzureTenantID  string    `json:"azure_tenant_id"`
-	SubscriptionID string    `json:"subscription_id"`
-	ResourceGroup  string    `json:"resource_group"`
-	VaultName      string    `json:"vault_name"`
-	VaultURL       string    `json:"vault_url"`
-	ManagedHSMName string    `json:"managed_hsm_name,omitempty"`
-	ManagedHSMURL  string    `json:"managed_hsm_url,omitempty"`
-	ClientID       string    `json:"client_id"`
-	ClientSecret   string    `json:"client_secret"`
-	AuthMode       string    `json:"auth_mode"`
-	Status         string    `json:"status"`
-	KeyMappings    int       `json:"key_mappings"`
-	LastSyncAt     time.Time `json:"last_sync_at"`
-	CreatedAt      time.Time `json:"created_at"`
+	ID             string `json:"id"`
+	TenantID       string `json:"tenant_id"`
+	AzureTenantID  string `json:"azure_tenant_id"`
+	SubscriptionID string `json:"subscription_id"`
+	ResourceGroup  string `json:"resource_group"`
+	VaultName      string `json:"vault_name"`
+	VaultURL       string `json:"vault_url"`
+	ManagedHSMName string `json:"managed_hsm_name,omitempty"`
+	ManagedHSMURL  string `json:"managed_hsm_url,omitempty"`
+	ClientID       string `json:"client_id"`
+	// ClientSecret is filled in memory, from the credential, for a call to
+	// Azure. It is never stored (8.0.0-beta) and never returned.
+	ClientSecret string `json:"-"`
+	// ConnectionID is the "azure" credential (Playbooks → Credentials) that
+	// holds the app registration: tenant, client ID and client secret.
+	ConnectionID string    `json:"connection_id"`
+	AuthMode     string    `json:"auth_mode"`
+	Status       string    `json:"status"`
+	KeyMappings  int       `json:"key_mappings"`
+	LastSyncAt   time.Time `json:"last_sync_at"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 type AzureKeyMapping struct {
@@ -543,8 +548,13 @@ type CreateAzureEKMConfigRequest struct {
 	ManagedHSMName string `json:"managed_hsm_name,omitempty"`
 	ManagedHSMURL  string `json:"managed_hsm_url,omitempty"`
 	ClientID       string `json:"client_id"`
-	ClientSecret   string `json:"client_secret"`
-	AuthMode       string `json:"auth_mode"`
+	// ClientSecret was how the secret was sent before 8.0.0-beta. It is no
+	// longer accepted: a request carrying it is refused.
+	ClientSecret string `json:"client_secret"`
+	// ConnectionID names the "azure" credential; required unless auth_mode
+	// is managed_identity.
+	ConnectionID string `json:"connection_id"`
+	AuthMode     string `json:"auth_mode"`
 }
 
 type CreateAzureKeyMappingRequest struct {
@@ -567,7 +577,7 @@ type GoogleCSEConfig struct {
 	TenantID                  string    `json:"tenant_id"`
 	GoogleWorkspaceCustomerID string    `json:"google_workspace_customer_id"`
 	ServiceAccountEmail       string    `json:"service_account_email"`
-	ServiceAccountKeyJSON     string    `json:"service_account_key_json"`  // encrypted at rest
+	ServiceAccountKeyJSON     string    `json:"-"`                         // not stored since 8.0.0-beta: nothing used it
 	AllowedDomains            []string  `json:"allowed_domains"`           // e.g., ["company.com"]
 	AuthenticationClientIDs   []string  `json:"authentication_client_ids"` // OAuth client IDs the authentication token's aud must name
 	KACLSEndpoint             string    `json:"kacls_endpoint"`            // public URL where Google calls us

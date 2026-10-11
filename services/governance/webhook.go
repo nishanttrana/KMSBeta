@@ -57,9 +57,6 @@ func normalizeGovernanceSettings(in GovernanceSettings, strict bool) (Governance
 
 	in.SMTPHost = strings.TrimSpace(in.SMTPHost)
 	in.SMTPPort = strings.TrimSpace(in.SMTPPort)
-	if in.SMTPPort == "" {
-		in.SMTPPort = "587"
-	}
 	in.SMTPUsername = strings.TrimSpace(in.SMTPUsername)
 	in.SMTPFrom = strings.TrimSpace(in.SMTPFrom)
 	in.SlackConnectionID = strings.TrimSpace(in.SlackConnectionID)

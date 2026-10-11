@@ -46,6 +46,7 @@ import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 import { B, Bar, Btn, Card, Chk, FG, Inp, Modal, Radio, Row2, Section, Sel, Stat, Txt, usePromptDialog } from "../legacyPrimitives";
 import { HSMPartitionTable } from "../../../modules/hsm/HSMPartitionTable";
+import { HSMTargetPicker } from "../../../modules/hsm/HSMTargetPicker";
 import { getHSMOverview } from "../../../lib/keycore";
 
 function sanitizeDisplayText(value: unknown): string {
@@ -70,7 +71,7 @@ function formatDestroyAt(value: string): string {
   }
   return dt.toLocaleString();
 }
-export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
+export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
   const [modal,setModal]=useState(null);
   const [loading,setLoading]=useState(false);
   const [submitting,setSubmitting]=useState(false);
@@ -90,6 +91,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
   // "hsm": the CA key is generated in the tenant's HSM and every signature is
   // made there (ECDSA P-256/P-384); "software": envelope-encrypted in certs.
   const [caBackend,setCABackend]=useState("software");
+  const [caHSMConn,setCAHSMConn]=useState(""); // "" is the tenant's HSM; else an HSM credential
   const [hsmKeysEnabled,setHsmKeysEnabled]=useState(false);
   const [hsmConfigured,setHsmConfigured]=useState(false);
   const [hsmName,setHsmName]=useState("");
@@ -754,6 +756,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
         ca_level:caType as any,
         algorithm:caAlgorithm,
         key_backend:caBackend==="hsm"&&caHSMCapable(caAlgorithm)?"hsm":"software",
+        hsm_connection_id:caBackend==="hsm"&&caHSMCapable(caAlgorithm)?caHSMConn:"",
         subject,
         validity_days:validity
       });
@@ -2129,18 +2132,9 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
         <FG label="Subject DN" required><Inp value={caSubject} onChange={(e)=>setCASubject(e.target.value)} placeholder="CN=Vecta Root CA, O=Bank Corp, C=CH"/></FG>
         <FG label="Validity"><Sel value={caValidity} onChange={(e)=>setCAValidity(e.target.value)}><option value="3650">10 years (Root CA)</option><option value="1825">5 years (Intermediate)</option><option value="1095">3 years</option><option value="365">1 year</option></Sel></FG>
       </Row2>
-      {hsmKeysEnabled&&<div style={{padding:"8px 10px",marginBottom:8,borderRadius:6,border:`1px solid ${caBackend==="hsm"&&caHSMCapable(caAlgorithm)?C.accent:C.amber}`,fontSize:11,color:C.text}}>
-        <b>HSM available for CA keys</b>{hsmName?`: ${hsmName}`:""}.{" "}
-        {caBackend==="hsm"&&caHSMCapable(caAlgorithm)
-          ? "The CA key will be generated inside the HSM and never leave it; every certificate, CRL and OCSP response is signed in the HSM."
-          : caHSMCapable(caAlgorithm)
-            ? "Key storage is Software: this CA key will not be in the HSM."
-            : "HSM CA keys are ECDSA P-256 or P-384; with this algorithm the CA key is stored in software."}
-      </div>}
-      <FG label="Key Storage">
-        {hsmKeysEnabled&&caHSMCapable(caAlgorithm)&&<Radio label="In the tenant's HSM (generated and used only inside the HSM)" selected={caBackend==="hsm"} onSelect={()=>setCABackend("hsm")}/>}
-        {!hsmKeysEnabled&&<div style={{fontSize:10,color:C.muted,marginBottom:4}}>To keep CA keys in your HSM, turn on HSM keys in HSM → KMS integration.</div>}
-        <Radio label="Software vault (envelope-encrypted)" selected={caBackend!=="hsm"||!caHSMCapable(caAlgorithm)} onSelect={()=>setCABackend("software")}/>
+      <FG label="Key Storage" hint={caBackend==="hsm"&&caHSMCapable(caAlgorithm)?"Every certificate, CRL and OCSP response is signed in the HSM.":"Software vault (envelope-encrypted)."}>
+        <HSMTargetPicker session={session} material="generated" supported={caHSMCapable(caAlgorithm)} unsupportedReason="HSM CA keys are ECDSA P-256 or P-384; with this algorithm the CA key is stored in software."
+          checked={caBackend==="hsm"} onChecked={(on)=>setCABackend(on?"hsm":"software")} connection={caHSMConn} onConnection={setCAHSMConn} onNavigate={onNavigate}/>
       </FG>
       <FG label="Path Length Constraint" hint="Max depth of CA chain below this CA"><Inp value={caPathLength} onChange={(e)=>setCAPathLength(e.target.value)} placeholder="1" type="number"/></FG>
       <FG label="Key Usage">

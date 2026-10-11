@@ -1989,7 +1989,64 @@ recorded in the exposure register: rotate those webhook URLs and tokens.
 | `GET /compliance/private-endpoints` | `compliance.playbook.read`; a tenant gets the ranges approved for it, the root tenant every tenant's (`{"data": [{id, tenant_id, cidr, note, created_by, created_at}], "can_approve"}`) | `private_endpoints_listed` |
 | `POST /compliance/private-endpoints` | a person in the root tenant with `compliance.private_endpoint.approve`; body `{"for_tenant", "cidr", "note"}`; `cidr` is an address or range inside private address space, at most a /16 (IPv4) or /48 (IPv6); refusals `403 platform_tenant_required`, `400 invalid_private_endpoint`, `409 private_endpoint_exists`, `409 private_endpoint_limit` (64 per tenant) | `private_endpoint_added` |
 | `DELETE /compliance/private-endpoints/{id}` | the same caller; withdraws the approval | `private_endpoint_removed` |
-| `POST /compliance/connections/import` | `kms-audit`, `kms-governance` | `connection_imported` |
+| `POST /compliance/connections/import` | `kms-audit`, `kms-governance`; since 8.0.0-beta also `kms-cloud`, `kms-ekm` (each for its own types) | `connection_imported` |
+| `POST /compliance/connections/{id}/tested` | the service that uses the credential's type; body `{"ok", "error"}`; records the result of a test it ran. `409 connection_use_unsupported` for another type (8.0.0-beta) | `connection_test_reported` |
+
+**Credentials (8.0.0-beta).** Connections are the platform's one store of
+external credentials ([SECURITY/CONNECTIONS.md](SECURITY/CONNECTIONS.md)).
+New types: `aws`, `azure`, `gcp`, `oci`, `alibaba`, `salesforce` (cloud),
+`smtp` (mail) and `pkcs11_hsm` (hsm); `servicenow` also takes `username`
+and `password`. `resolve` additionally admits `kms-cloud` (cloud types and
+`servicenow`), `kms-ekm` (`azure`), `kms-hsm` (`pkcs11_hsm`) and
+`kms-governance` for `smtp`, and returns `private_ranges` for `smtp` too.
+
+A connection now also carries `attributes` (the values of its type's
+public fields), `credentials_changed_at`, `expires_at`,
+`rotate_after_days`, `last_tested_at`, `last_test_ok` and
+`last_test_error`. Create and update take `expires_at` (RFC 3339 or null)
+and `rotate_after_days` (0 to 3650). `POST …/connections/{id}/test` records
+its result; for cloud and HSM types compliance has the cloud service or the
+HSM connector run it.
+
+| Route | Caller | Audit action |
+|---|---|---|
+| `GET /compliance/connections?type=` or `?category=` | `compliance.connection.use`; the credentials a feature's picker offers, no field value | `connection_choices_listed` |
+| `GET /compliance/connections/{id}` | `compliance.connection.use`; one credential's record, for a service checking that the caller (whose token it forwards) may attach it | `connection_use_checked` |
+| `GET /compliance/connections/{id}/usage` | `compliance.playbook.read`; `{"data": {"used_by": [...]}}`, or `503 connection_usage_unverified` when a service that could be using it can't answer | `connection_usage_read` |
+
+Reminder events, raised by the primary once per secret (not routes):
+`audit.compliance.credential_expiring` (`reminder` `expiring_30` or
+`expiring_7`, `days_left`), `credential_expired`,
+`credential_rotation_due`, and `credential_test_failed` on a failed test.
+
+**Where a credential is chosen (8.0.0-beta).** Each takes the credential's
+ID and refuses a secret sent inline (`400 inline_credentials_not_accepted`),
+a missing one (`credential_required`), one that doesn't exist or is the
+wrong type (`credential_not_found`, `credential_wrong_type`), and a caller
+without `compliance.connection.use` (`403 credential_use_not_permitted`):
+
+| Route | Field | Notes |
+|---|---|---|
+| `POST /cloud/accounts` | `connection_id` (was `credentials_json`) | audit `audit.cloud.account_refused` on a refusal |
+| `POST /cloud/accounts/{id}/test` | | `cloud.write`; lists the provider's keys with the account's credential and records the result on it (`audit.cloud.account_test_requested`, `audit.cloud.account_tested`) |
+| `POST /ekm/azure/configs`, `PUT /ekm/azure/configs/{id}` | `connection_id` (was `client_secret`; `azure_tenant_id` and `client_id` are read from the credential) | `audit.ekm.azure_config_refused`; `auth_mode: managed_identity` needs none |
+| `PUT /governance/settings` | `smtp_connection_id` (was `smtp_host`, `smtp_port`, `smtp_username`, `smtp_password`, `smtp_from`, `smtp_starttls`) | `audit.governance.mail_settings_refused`; also `mail_relay_is_a_credential` |
+| `POST /keys`, `POST /keys/form`, `POST /keys/import` | `hsm_connection_id` with `hsm: true` | the HSM credential the key goes on; empty is the tenant's HSM. Form and import: AES-128/192/256 only |
+| `POST /certs/ca` | `hsm_connection_id` with `key_backend: "hsm"` | `403 hsm_credential_not_permitted` (`audit.cert.hsm_credential_refused`) |
+| `GET /hsm/targets` (keycore) | | `key.hsm.read`; `{"targets": [{id, kind, name, topology, vendor, usable, reason, status}], "credentials_state"}` where `credentials_state` is `listed`, `not_deployed`, `not_permitted` or `unavailable` (`audit.key.hsm_targets_listed`) |
+| `GET /hsm/objects?connection_id=` (keycore) | | lists an HSM credential's partition |
+| `POST /ekm/google-cse/configs` | | `service_account_key_json` is refused (`400 service_account_key_not_used`): nothing used it |
+
+Internal lookups, callable only by `kms-compliance` (others:
+`403 caller_not_allowed`): `GET /cloud/credential-usage`,
+`POST /cloud/credentials/{id}/test`, `GET /ekm/credential-usage`,
+`GET /keys/hsm/credential-usage`. The HSM connector takes
+`?connection_id=` on every route and adds `POST /hsm/keys/import`
+(`audit.hsm.key_imported`).
+
+The Cloud BYOK and Autokey services now require a verified bearer token on
+every route (`401`, audited as `audit.cloud.request_refused` /
+`audit.autokey.request_refused`).
 
 `resolve` returns `{id, name, type, endpoint, fields}` with the opened
 fields. Any other caller, users and administrators included, is refused
@@ -4129,9 +4186,12 @@ from the code; do not edit by hand.
 - `GET /svc/cloud/cloud/accounts`
 - `POST /svc/cloud/cloud/accounts`
 - `DELETE /svc/cloud/cloud/accounts/{id}`
+- `POST /svc/cloud/cloud/accounts/{id}/test`
 - `GET /svc/cloud/cloud/bindings`
 - `GET /svc/cloud/cloud/bindings/{id}`
 - `POST /svc/cloud/cloud/bindings/{id}/rotate`
+- `GET /svc/cloud/cloud/credential-usage`
+- `POST /svc/cloud/cloud/credentials/{id}/test`
 - `POST /svc/cloud/cloud/import`
 - `GET /svc/cloud/cloud/inventory`
 - `GET /svc/cloud/cloud/region-mappings`
@@ -4178,8 +4238,12 @@ from the code; do not edit by hand.
 - `GET /svc/compliance/compliance/cbom/export`
 - `GET /svc/compliance/compliance/cbom/pqc-readiness`
 - `GET /svc/compliance/compliance/cbom/summary`
+- `GET /svc/compliance/compliance/connections`
 - `POST /svc/compliance/compliance/connections/import`
+- `GET /svc/compliance/compliance/connections/{id}`
 - `POST /svc/compliance/compliance/connections/{id}/resolve`
+- `POST /svc/compliance/compliance/connections/{id}/tested`
+- `GET /svc/compliance/compliance/connections/{id}/usage`
 - `GET /svc/compliance/compliance/evidence/export`
 - `GET /svc/compliance/compliance/frameworks`
 - `GET /svc/compliance/compliance/frameworks/{id}/controls`
@@ -4349,6 +4413,7 @@ from the code; do not edit by hand.
 - `POST /svc/ekm/ekm/bitlocker/clients/{id}/operations`
 - `POST /svc/ekm/ekm/bitlocker/network/scan`
 - `GET /svc/ekm/ekm/bitlocker/recovery`
+- `GET /svc/ekm/ekm/credential-usage`
 - `GET /svc/ekm/ekm/databases`
 - `POST /svc/ekm/ekm/databases`
 - `GET /svc/ekm/ekm/databases/{id}`
@@ -4539,6 +4604,7 @@ from the code; do not edit by hand.
 - `GET /svc/keycore/hsm/objects`
 - `GET /svc/keycore/hsm/settings`
 - `PUT /svc/keycore/hsm/settings`
+- `GET /svc/keycore/hsm/targets`
 - `GET /svc/keycore/inventory/dependencies`
 - `POST /svc/keycore/inventory/dependencies`
 - `GET /svc/keycore/inventory/duplicates`
@@ -4552,6 +4618,7 @@ from the code; do not edit by hand.
 - `POST /svc/keycore/keys/bulk-rotate`
 - `GET /svc/keycore/keys/due-for-lifecycle`
 - `POST /svc/keycore/keys/form`
+- `GET /svc/keycore/keys/hsm/credential-usage`
 - `POST /svc/keycore/keys/import`
 - `GET /svc/keycore/keys/{id}`
 - `PUT /svc/keycore/keys/{id}`

@@ -4,6 +4,124 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [8.0.0-beta] — 2026-10-11
+
+### Credentials: one place to add every external credential, before a feature can use it
+Owner directive, 2026-10-10. **Breaking:** cloud accounts, Azure EKM vaults
+and the governance mail relay no longer take a secret themselves. Add the
+credential in **Playbooks → Credentials**, then choose it where it is used.
+Existing deployments are migrated automatically (see Upgrade).
+
+- **Added: Playbooks → Credentials** replaces Connections. It holds every
+  credential the KMS uses to reach an external system: notification,
+  ticketing, SIEM and scan sources as before, and now cloud provider accounts
+  (AWS, Azure, Google Cloud, Oracle, Alibaba, Salesforce, ServiceNow), the
+  Microsoft Entra app registration for Azure EKM, the SMTP mail relay, and
+  PKCS#11 HSMs. Values are sealed under the compliance master key and never
+  shown again. Each feature holds only the credential's ID and opens it for
+  each use; only the one service that uses a type can open it, and every
+  release is audited.
+- **Added: health, age and expiry.** Saving a credential runs its real test
+  (a provider key listing, an HSM login, an SMTP sign-in over TLS, a test
+  message). The page shows cards and bar charts by use, type, health, expiry
+  and secret age; every card and bar lists exactly the credentials it
+  counts, and each opens its detail with everything that uses it. A changed
+  secret restarts its age and clears its test result.
+- **Added: reminders.** A credential can record its own expiry and a
+  rotation interval. The KMS raises `credential_expiring` 30 and 7 days
+  before, `credential_expired`, `credential_rotation_due` and
+  `credential_test_failed`, each once per secret. All are playbook triggers.
+- **Added: permission to attach.** `compliance.connection.use` lets a
+  person choose a credential for a cloud account, vault, mail relay, key or
+  CA without being able to create, change or read one. Managing credentials
+  stays with the playbook permissions.
+- **Added: short-lived AWS credentials.** An AWS credential with a
+  `role_arn` (and optional `external_id`) only calls `sts:AssumeRole`; AWS
+  KMS is called with the role's temporary credentials.
+- **Changed: a credential in use can't be deleted**, now including cloud
+  accounts, Azure EKM vaults, the mail relay and HSM keys. If the service
+  that could be using it can't answer, the delete is refused.
+- **Changed: private mail relays.** A relay on the customer's own network
+  is accepted only inside a private range a root administrator approved for
+  the tenant (Private endpoints, 7.40.0-beta), and governance dials it only
+  there.
+
+### HSMs: choose the HSM when creating, forming or importing a key
+- **Added: HSMs as credentials.** A tenant can add any number of PKCS#11
+  HSMs in Credentials, each declared as a single HSM or the vendor's HA
+  group. The tenant's HSM profile in the HSM tab stays the KMS's root of
+  trust (the tenant key) and is not a credential.
+- **Added: "Create in HSM" lists the HSMs.** The create-key and CA dialogs
+  show the tenant HSM and every HSM credential with what the library
+  reports now (model, token, serial, connected or why not). The key is
+  generated on the one chosen, records it, and every later operation,
+  rotation, verification and destruction goes back to it.
+- **Added: forming and importing into an HSM.** A key formed from
+  components, or imported AES-128/192/256 material, can be placed in an HSM
+  as a sensitive, never-extractable object. The KMS keeps no copy. The HSM
+  reports such a key as not generated on the token, and the key says
+  "imported". Other algorithms are refused (`hsm_import_not_supported`); an
+  HSM whose policy forbids key injection refuses it (`hsm_import_refused`).
+- **Security: a second credential can't ride an open HSM login.** A token
+  stays logged in for the connector's lifetime, so a credential or profile
+  naming the same slot with a different PIN is refused (`pin_mismatch`).
+- **Fixed: editing a key's details could detach it from its HSM.** A
+  metadata update replaced every label, including the ones that say the key
+  is in an HSM and which one. Those labels are now kept and can't be set by
+  a caller.
+
+### Security fixes found on the way
+- **Fixed: the Cloud BYOK and Autokey services verified no token.** Both
+  answered any request that reached them and took the tenant from the
+  request. They now require a verified bearer token on every request, and
+  Cloud BYOK refuses a body naming another tenant. Treat cloud account
+  configuration and key bindings created before this release as
+  unverified: review them.
+- **Fixed: three secrets were stored in plaintext.** The Azure EKM client
+  secret and the governance SMTP password are moved into Credentials and
+  recorded as exposed: database copies and backups made before still hold
+  them, so **rotate both** and enter the new values on the credentials.
+- **Removed: the Google CSE service account key.** The dialog collected a
+  key file, stored it in plaintext, and nothing ever used it. Stored keys
+  are deleted and the field is refused. **Delete that key in Google Cloud**:
+  older backups still hold it.
+- **Changed: mail is always sent over TLS.** STARTTLS (or implicit TLS on
+  port 465) is required; a relay offering neither is refused before the
+  password or message is sent. The "Enable STARTTLS" switch is gone.
+- **Removed: the "Certificate" sign-in option for Azure EKM**, which was
+  offered and never implemented.
+
+### Upgrade
+- Restart auth with this release before the HSM connector: auth provisions
+  the connector's new service identity (`kms-hsm`), which it needs to open
+  HSM credentials.
+- Deploy the `compliance_dashboard` profile wherever Cloud BYOK, Azure EKM,
+  governance mail or HSM credentials are used: it is the credential store.
+  Without it those features say so and refuse; nothing falls back.
+- On the primary, within 15 minutes of start, each cloud account, Azure EKM
+  vault and mail relay is moved into Credentials and its own copy cleared.
+  One the store won't take (a mail relay on an unapproved private address,
+  for example) keeps working as before and is reported once
+  (`credentials_migration_refused`, `smtp_migration_refused`).
+- API: `POST /cloud/accounts` takes `connection_id` (not
+  `credentials_json`); Azure EKM vaults take `connection_id` (not
+  `client_secret`); governance settings take `smtp_connection_id` (not the
+  `smtp_*` fields). Requests carrying the old fields are refused with
+  `inline_credentials_not_accepted`.
+- Custom roles that register cloud accounts, vaults, the mail relay, or
+  create HSM keys on a credential need `compliance.connection.use`.
+
+### Not included
+- Identity provider secrets (LDAP bind password, OIDC client secret) are
+  still stored by the auth service in plaintext JSON. Moving them needs an
+  owner decision: auth can't depend on compliance to sign users in.
+- The tokenization external vault's `password_ref` still resolves nothing.
+- Notification, ticketing and SIEM credentials still can't name a private
+  address.
+- Asymmetric key import into an HSM, and import by HSM-side unwrap for
+  HSMs that forbid key injection.
+- Vendor HSMs remain untested from this repository (SoftHSM2 only).
+
 ## [7.40.0-beta] — 2026-10-11
 
 ### Git servers and object stores on a private network can have a connection

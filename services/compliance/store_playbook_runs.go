@@ -141,11 +141,22 @@ func scanPlaybookRunRow(row rowScanner) (PlaybookRun, error) {
 // ---- connections ----
 
 const connColumns = `id, tenant_id, name, type, endpoint, fields_set, created_by, created_at, updated_at,
-       creds_ciphertext, creds_data_iv, creds_wrapped_dek, creds_wrapped_dek_iv`
+       creds_ciphertext, creds_data_iv, creds_wrapped_dek, creds_wrapped_dek_iv,
+       attributes, credentials_changed_at, expires_at, rotate_after_days,
+       last_tested_at, last_test_ok, last_test_error, notified`
 
 func (s *SQLStore) ListConnections(ctx context.Context, tenantID string) ([]Connection, error) {
+	return s.queryConnections(ctx, `WHERE tenant_id=$1 ORDER BY name`, tenantID)
+}
+
+// ListAllConnections returns every tenant's connections (the reminder sweep).
+func (s *SQLStore) ListAllConnections(ctx context.Context) ([]Connection, error) {
+	return s.queryConnections(ctx, `ORDER BY tenant_id, name`)
+}
+
+func (s *SQLStore) queryConnections(ctx context.Context, tail string, args ...interface{}) ([]Connection, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `SELECT `+connColumns+`
-FROM compliance_playbook_connections WHERE tenant_id=$1 ORDER BY name`, tenantID)
+FROM compliance_playbook_connections `+tail, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -171,18 +182,28 @@ FROM compliance_playbook_connections WHERE tenant_id=$1 AND id=$2`, tenantID, id
 	return c, err
 }
 
+func nullTime(t *time.Time) interface{} {
+	if t == nil || t.IsZero() {
+		return nil
+	}
+	return t.UTC()
+}
+
 func (s *SQLStore) CreateConnection(ctx context.Context, c Connection) (Connection, error) {
 	if c.Sealed == nil {
 		return Connection{}, errors.New("connection fields must be sealed before storing")
 	}
 	fields, _ := json.Marshal(c.FieldSet)
+	attrs, _ := json.Marshal(nonNilMap(c.Attributes))
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO compliance_playbook_connections
   (id, tenant_id, name, type, endpoint, fields_set, created_by, created_at, updated_at,
-   creds_ciphertext, creds_data_iv, creds_wrapped_dek, creds_wrapped_dek_iv)
-VALUES ($1,$2,$3,$4,$5,$6,$7,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,$8,$9,$10,$11)
+   creds_ciphertext, creds_data_iv, creds_wrapped_dek, creds_wrapped_dek_iv,
+   attributes, credentials_changed_at, expires_at, rotate_after_days)
+VALUES ($1,$2,$3,$4,$5,$6,$7,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,$8,$9,$10,$11,$12,CURRENT_TIMESTAMP,$13,$14)
 `, c.ID, c.TenantID, c.Name, c.Type, c.Endpoint, string(fields), c.CreatedBy,
-		c.Sealed.Ciphertext, c.Sealed.DataIV, c.Sealed.WrappedDEK, c.Sealed.WrappedDEKIV)
+		c.Sealed.Ciphertext, c.Sealed.DataIV, c.Sealed.WrappedDEK, c.Sealed.WrappedDEKIV,
+		string(attrs), nullTime(c.ExpiresAt), c.RotateAfterDays)
 	if err != nil {
 		return Connection{}, err
 	}
@@ -191,18 +212,29 @@ VALUES ($1,$2,$3,$4,$5,$6,$7,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,$8,$9,$10,$11)
 	return out, err
 }
 
-func (s *SQLStore) UpdateConnection(ctx context.Context, c Connection) (Connection, error) {
+// UpdateConnection stores c. secretChanged restarts the credential's age and
+// clears its test result; either it or resetReminders clears the reminders
+// already raised, so the new secret or the new dates are reminded afresh.
+func (s *SQLStore) UpdateConnection(ctx context.Context, c Connection, secretChanged, resetReminders bool) (Connection, error) {
 	if c.Sealed == nil {
 		return Connection{}, errors.New("connection fields must be sealed before storing")
 	}
 	fields, _ := json.Marshal(c.FieldSet)
+	attrs, _ := json.Marshal(nonNilMap(c.Attributes))
 	res, err := s.db.SQL().ExecContext(ctx, `
 UPDATE compliance_playbook_connections
 SET name=$3, endpoint=$4, fields_set=$5, updated_at=CURRENT_TIMESTAMP,
-    creds_ciphertext=$6, creds_data_iv=$7, creds_wrapped_dek=$8, creds_wrapped_dek_iv=$9
+    creds_ciphertext=$6, creds_data_iv=$7, creds_wrapped_dek=$8, creds_wrapped_dek_iv=$9,
+    attributes=$10, expires_at=$11, rotate_after_days=$12,
+    credentials_changed_at = CASE WHEN $13 THEN CURRENT_TIMESTAMP ELSE credentials_changed_at END,
+    last_tested_at = CASE WHEN $13 THEN NULL ELSE last_tested_at END,
+    last_test_ok = CASE WHEN $13 THEN FALSE ELSE last_test_ok END,
+    last_test_error = CASE WHEN $13 THEN '' ELSE last_test_error END,
+    notified = CASE WHEN $14 THEN '[]' ELSE notified END
 WHERE tenant_id=$1 AND id=$2
 `, c.TenantID, c.ID, c.Name, c.Endpoint, string(fields),
-		c.Sealed.Ciphertext, c.Sealed.DataIV, c.Sealed.WrappedDEK, c.Sealed.WrappedDEKIV)
+		c.Sealed.Ciphertext, c.Sealed.DataIV, c.Sealed.WrappedDEK, c.Sealed.WrappedDEKIV,
+		string(attrs), nullTime(c.ExpiresAt), c.RotateAfterDays, secretChanged, secretChanged || resetReminders)
 	if err != nil {
 		return Connection{}, err
 	}
@@ -214,6 +246,24 @@ WHERE tenant_id=$1 AND id=$2
 	return out, err
 }
 
+// RecordConnectionTest stores the result of a real test.
+func (s *SQLStore) RecordConnectionTest(ctx context.Context, tenantID, id string, ok bool, errMsg string) error {
+	if len(errMsg) > 500 {
+		errMsg = errMsg[:500]
+	}
+	_, err := s.db.SQL().ExecContext(ctx, `
+UPDATE compliance_playbook_connections SET last_tested_at=CURRENT_TIMESTAMP, last_test_ok=$3, last_test_error=$4
+WHERE tenant_id=$1 AND id=$2`, tenantID, id, ok, errMsg)
+	return err
+}
+
+// SetConnectionNotified stores the reminders raised for the current secret.
+func (s *SQLStore) SetConnectionNotified(ctx context.Context, tenantID, id string, notified []string) error {
+	raw, _ := json.Marshal(notified)
+	_, err := s.db.SQL().ExecContext(ctx, `UPDATE compliance_playbook_connections SET notified=$3 WHERE tenant_id=$1 AND id=$2`, tenantID, id, string(raw))
+	return err
+}
+
 func (s *SQLStore) DeleteConnection(ctx context.Context, tenantID, id string) error {
 	res, err := s.db.SQL().ExecContext(ctx, `DELETE FROM compliance_playbook_connections WHERE tenant_id=$1 AND id=$2`, tenantID, id)
 	if err != nil {
@@ -223,6 +273,49 @@ func (s *SQLStore) DeleteConnection(ctx context.Context, tenantID, id string) er
 		return errNotFound
 	}
 	return nil
+}
+
+func nonNilMap(m map[string]string) map[string]string {
+	if m == nil {
+		return map[string]string{}
+	}
+	return m
+}
+
+func scanConnection(row rowScanner) (Connection, error) {
+	var c Connection
+	var fields, attrs, notified string
+	var changed, expires, tested sql.NullTime
+	env := &pkgcrypto.EnvelopeCiphertext{}
+	if err := row.Scan(&c.ID, &c.TenantID, &c.Name, &c.Type, &c.Endpoint, &fields, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
+		&env.Ciphertext, &env.DataIV, &env.WrappedDEK, &env.WrappedDEKIV,
+		&attrs, &changed, &expires, &c.RotateAfterDays, &tested, &c.LastTestOK, &c.LastTestError, &notified); err != nil {
+		return Connection{}, err
+	}
+	_ = json.Unmarshal([]byte(fields), &c.FieldSet)
+	if c.FieldSet == nil {
+		c.FieldSet = []string{}
+	}
+	_ = json.Unmarshal([]byte(attrs), &c.Attributes)
+	c.Attributes = nonNilMap(c.Attributes)
+	_ = json.Unmarshal([]byte(notified), &c.Notified)
+	c.CreatedAt, c.UpdatedAt = c.CreatedAt.UTC(), c.UpdatedAt.UTC()
+	c.CredentialsChangedAt = c.CreatedAt
+	if changed.Valid {
+		c.CredentialsChangedAt = changed.Time.UTC()
+	}
+	if expires.Valid {
+		t := expires.Time.UTC()
+		c.ExpiresAt = &t
+	}
+	if tested.Valid {
+		t := tested.Time.UTC()
+		c.LastTestedAt = &t
+	}
+	if len(env.WrappedDEK) > 0 {
+		c.Sealed = env
+	}
+	return c, nil
 }
 
 func (s *SQLStore) ListPrivateEndpoints(ctx context.Context, tenantID string) ([]PrivateEndpoint, error) {
@@ -271,25 +364,6 @@ func (s *SQLStore) DeletePrivateEndpoint(ctx context.Context, id string) (Privat
 	}
 	_, err = s.db.SQL().ExecContext(ctx, `DELETE FROM compliance_private_endpoints WHERE id=$1`, id)
 	return e, err
-}
-
-func scanConnection(row rowScanner) (Connection, error) {
-	var c Connection
-	var fields string
-	env := &pkgcrypto.EnvelopeCiphertext{}
-	if err := row.Scan(&c.ID, &c.TenantID, &c.Name, &c.Type, &c.Endpoint, &fields, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
-		&env.Ciphertext, &env.DataIV, &env.WrappedDEK, &env.WrappedDEKIV); err != nil {
-		return Connection{}, err
-	}
-	_ = json.Unmarshal([]byte(fields), &c.FieldSet)
-	if c.FieldSet == nil {
-		c.FieldSet = []string{}
-	}
-	c.CreatedAt, c.UpdatedAt = c.CreatedAt.UTC(), c.UpdatedAt.UTC()
-	if len(env.WrappedDEK) > 0 {
-		c.Sealed = env
-	}
-	return c, nil
 }
 
 // CountThresholdHit records one matching event for a threshold trigger and

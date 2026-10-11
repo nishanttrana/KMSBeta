@@ -25,7 +25,10 @@ import (
 // connector's HTTP API. CI installs it (apt softhsm2); the tests skip only
 // when it is missing. SOFTHSM_LIB overrides the library path.
 
-const testPIN = "481516"
+const (
+	testPIN = "481516"
+	credPIN = "161803"
+)
 
 var softhsmLib string
 
@@ -47,6 +50,10 @@ func TestMain(m *testing.M) {
 			if err != nil {
 				panic(fmt.Sprintf("softhsm2-util: %v %s", err, out))
 			}
+		}
+		// vecta-c is reached only through an HSM credential, with its own PIN.
+		if out, err := exec.Command("softhsm2-util", "--init-token", "--free", "--label", "vecta-c", "--pin", credPIN, "--so-pin", "1234567").CombinedOutput(); err != nil {
+			panic(fmt.Sprintf("softhsm2-util: %v %s", err, out))
 		}
 		real, _ := filepath.EvalSymlinks(softhsmLib)
 		os.Setenv("HSM_LIBRARY_ROOTS", filepath.Dir(real)) //nolint:errcheck

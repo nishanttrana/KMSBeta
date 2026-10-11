@@ -74,6 +74,9 @@ var playbookTriggers = []TriggerSpec{
 	{Type: "workload_svid_issued", Label: "Workload SVID issued", Group: "Access", Subjects: []string{"audit.workload.svid_issued"}, SuccessOnly: true},
 	{Type: "workload_trust_changed", Label: "Workload identity trust changed (settings, federation)", Group: "Access", Subjects: []string{"audit.workload.settings_updated", "audit.workload.federation_bundle_upserted", "audit.workload.federation_bundle_deleted"}, SuccessOnly: true},
 	{Type: "posture_changed", Label: "Compliance posture score changed", Group: "Compliance", Subjects: []string{"audit.compliance.posture_changed"}},
+	{Type: "credential_expiring", Label: "Credential expiring or expired", Group: "Credentials", Subjects: []string{"audit.compliance.credential_expiring", "audit.compliance.credential_expired"}},
+	{Type: "credential_rotation_due", Label: "Credential due for rotation", Group: "Credentials", Subjects: []string{"audit.compliance.credential_rotation_due"}},
+	{Type: "credential_test_failed", Label: "Credential test failed", Group: "Credentials", Subjects: []string{"audit.compliance.credential_test_failed"}},
 	{Type: "fips_mode_changed", Label: "Platform FIPS mode changed", Group: "Platform", Subjects: []string{"audit.governance.fips_mode_changed"}},
 	{Type: "backup_restored", Label: "Backup restored", Group: "Platform", Subjects: []string{"audit.governance.backup_restored"}},
 	{Type: "cluster_member_joined", Label: "Cluster member joined", Group: "Platform", Subjects: []string{"audit.cluster.member_joined"}},
@@ -339,7 +342,11 @@ func (e urlError) Error() string { return e.err.Error() }
 // checkOutboundURL refuses endpoints a playbook may not call: anything but
 // HTTPS, a platform service host (the compliance service's mTLS client
 // certificate would be presented to it), and addresses ssrfguard blocks.
-func checkOutboundURL(raw string) error {
+func checkOutboundURL(raw string) error { return checkOutboundURLAllowing(raw, nil) }
+
+// checkOutboundURLAllowing is checkOutboundURL for a tenant whose approved
+// private networks are allow.
+func checkOutboundURLAllowing(raw string, allow ssrfguard.Allow) error {
 	u, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil || u.Hostname() == "" {
 		return urlError{errors.New("must be an absolute https URL")}
@@ -350,7 +357,7 @@ func checkOutboundURL(raw string) error {
 	if svctls.IsInternalHost(u.Hostname()) {
 		return urlError{fmt.Errorf("%s is a platform service, not an external endpoint", u.Hostname())}
 	}
-	if err := ssrfguard.ValidateWebhookURL(u.String()); err != nil {
+	if err := allow.ValidateURL(u.String()); err != nil {
 		return urlError{err}
 	}
 	return nil

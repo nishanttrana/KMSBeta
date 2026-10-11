@@ -1,17 +1,22 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"golang.org/x/crypto/ocsp"
 
+	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/hsm"
 	"vecta-kms/pkg/hsmconnector/softhsmtest"
 )
@@ -24,6 +29,9 @@ type hsmKeycore struct {
 	usages []string // usage of each HSM signature (pkg/delegation)
 	client *hsm.Client
 	n      int
+	// connections is the HSM credential each CA key was created on ("" is
+	// the tenant's HSM profile).
+	connections map[string]string
 }
 
 func (k *hsmKeycore) EnsureKey(context.Context, string, string, string, string) (string, error) {
@@ -32,15 +40,20 @@ func (k *hsmKeycore) EnsureKey(context.Context, string, string, string, string) 
 func (k *hsmKeycore) Sign(context.Context, string, string, []byte) ([]byte, error) {
 	return nil, errors.New("not used")
 }
-func (k *hsmKeycore) CreateHSMSigningKey(ctx context.Context, tenantID, algorithm, _ string) (string, []byte, error) {
+func (k *hsmKeycore) CreateHSMSigningKey(ctx context.Context, tenantID, algorithm, _, connectionID string) (string, []byte, error) {
 	k.n++
 	keyID := fmt.Sprintf("key_ca_%d", k.n)
-	res, err := k.client.Generate(ctx, tenantID, hsm.KeyLabel(tenantID, keyID, 1), algorithm)
+	if k.connections == nil {
+		k.connections = map[string]string{}
+	}
+	k.connections[keyID] = connectionID
+	res, err := k.client.On(connectionID).Generate(ctx, tenantID, hsm.KeyLabel(tenantID, keyID, 1), algorithm)
 	return keyID, res.PublicKey, err
 }
 func (k *hsmKeycore) SignDigest(ctx context.Context, tenantID, keyID, hash string, digest []byte, usage string) ([]byte, error) {
 	k.usages = append(k.usages, usage)
-	return k.client.Sign(ctx, tenantID, hsm.KeyLabel(tenantID, keyID, 1), hash, digest)
+	// As keycore does: the signature is made on the HSM the key is on.
+	return k.client.On(k.connections[keyID]).Sign(ctx, tenantID, hsm.KeyLabel(tenantID, keyID, 1), hash, digest)
 }
 
 func certFromPEM(t *testing.T, s string) *x509.Certificate {
@@ -166,5 +179,58 @@ func TestHSMCACRLFailureAudited(t *testing.T) {
 	}
 	if rec.count("audit.cert.crl_generated") != 0 {
 		t.Fatal("a failed CRL must not be audited as generated")
+	}
+}
+
+// A CA key can be created on an HSM credential: the request needs the
+// compliance.connection.use permission, the key is generated on that
+// credential's token, and the CA's certificates are signed there.
+func TestHSMCAOnACredentialNeedsTheUsePermission(t *testing.T) {
+	srv := softhsmtest.StartWith(t, "kms-keycore", softhsmtest.Connections{"t-cred": {"pbconn_ca_hsm"}}, "t-cred")
+	h, svc := newCertsHandler(t)
+	kc := &hsmKeycore{client: hsm.New(srv.URL)}
+	svc.keycore = kc
+	events := &subjectRecorder{}
+	svc.events = events
+	create := func(claims *pkgauth.Claims) *httptest.ResponseRecorder {
+		raw, _ := json.Marshal(map[string]interface{}{"tenant_id": "t-cred", "name": "Cred Root", "ca_level": "root", "algorithm": "ECDSA-P384",
+			"key_backend": "hsm", "subject": "CN=Cred Root", "hsm_connection_id": "pbconn_ca_hsm"})
+		req := httptest.NewRequest(http.MethodPost, "/certs/ca", bytes.NewReader(raw))
+		req = req.WithContext(pkgauth.ContextWithClaims(req.Context(), claims))
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		return w
+	}
+	// A PKI operator who was not given the use permission.
+	w := create(&pkgauth.Claims{UserID: "u-pki", TenantID: "t-cred", Role: "ops", Permissions: []string{"cert.*"}})
+	if w.Code != http.StatusForbidden || len(kc.connections) != 0 {
+		t.Fatalf("CA key created on an HSM credential without the use permission: %d %s", w.Code, w.Body.String())
+	}
+	ev := events.last(t, "audit.cert.hsm_credential_refused")
+	if ev["result"] != "refused" || ev["reason"] != "permission_denied" || ev["hsm_connection_id"] != "pbconn_ca_hsm" {
+		t.Fatalf("refusal not audited: %+v", ev)
+	}
+	w = create(&pkgauth.Claims{UserID: "u-pki", TenantID: "t-cred", Role: "ops", Permissions: []string{"cert.*", "compliance.connection.use"}})
+	if w.Code != http.StatusCreated {
+		t.Fatalf("create: %d %s", w.Code, w.Body.String())
+	}
+	var out struct {
+		CA CA `json:"ca"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &out)
+	if kc.connections[out.CA.KeyRef] != "pbconn_ca_hsm" {
+		t.Fatalf("the CA key was created on %q", kc.connections[out.CA.KeyRef])
+	}
+	// The key is on the credential's token, not the tenant profile's.
+	label := hsm.KeyLabel("t-cred", out.CA.KeyRef, 1)
+	if _, id, err := kc.client.On("pbconn_ca_hsm").Inspect(context.Background(), "t-cred", label); err != nil || id.TokenLabel != softhsmtest.CredentialToken {
+		t.Fatalf("CA key not on the credential's token: %v %+v", err, id)
+	}
+	if _, _, err := kc.client.Inspect(context.Background(), "t-cred", label); err != hsm.ErrNotFound {
+		t.Fatalf("CA key is on the tenant's HSM profile: %v", err)
+	}
+	root := certFromPEM(t, out.CA.CertPEM)
+	if err := root.CheckSignatureFrom(root); err != nil {
+		t.Fatalf("root signed on the credential's HSM does not verify: %v", err)
 	}
 }

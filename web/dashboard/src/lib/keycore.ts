@@ -258,6 +258,9 @@ export type CreateKeyInput = {
   approval_required?: boolean;
   // Generate the key in the tenant's HSM; it never leaves it (docs/SECURITY/HSM_INTEGRATION.md).
   hsm?: boolean;
+  // The HSM credential (Playbooks → Credentials) the key goes on; empty is
+  // the tenant's HSM.
+  hsm_connection_id?: string;
 };
 
 export type FormKeyInput = CreateKeyInput & {
@@ -293,6 +296,10 @@ export type ImportKeyInput = {
   wrapping_key_id?: string;
   material_iv?: string;
   origin?: string;
+  // Place the material in an HSM (AES only): the tenant's, or the HSM
+  // credential hsm_connection_id names.
+  hsm?: boolean;
+  hsm_connection_id?: string;
 };
 
 export type ActivationUpdateInput = {
@@ -561,7 +568,8 @@ export async function createKey(session: AuthSession, input: CreateKeyInput): Pr
       ops_limit: Number(input.ops_limit || 0),
       ops_limit_window: input.ops_limit_window || "total",
       approval_required: Boolean(input.approval_required),
-      hsm: Boolean(input.hsm)
+      hsm: Boolean(input.hsm),
+      hsm_connection_id: input.hsm ? String(input.hsm_connection_id || "") : ""
     })
   });
 }
@@ -685,6 +693,8 @@ export async function formKey(session: AuthSession, input: FormKeyInput): Promis
       ops_limit: Math.trunc(Number(input.ops_limit || 0)),
       ops_limit_window: input.ops_limit_window || "total",
       approval_required: Boolean(input.approval_required),
+      hsm: Boolean(input.hsm),
+      hsm_connection_id: input.hsm ? String(input.hsm_connection_id || "") : "",
       component_mode: input.component_mode,
       parity: input.parity || "none",
       components: Array.isArray(input.components) ? input.components.map((component) => ({
@@ -716,6 +726,8 @@ export async function importKey(session: AuthSession, input: ImportKeyInput): Pr
       ops_limit: Math.trunc(Number(input.ops_limit || 0)),
       ops_limit_window: input.ops_limit_window || "total",
       approval_required: Boolean(input.approval_required),
+      hsm: Boolean(input.hsm),
+      hsm_connection_id: input.hsm ? String(input.hsm_connection_id || "") : "",
       material: input.material,
       expected_kcv: input.expected_kcv || "",
       import_method: input.import_method || "raw",

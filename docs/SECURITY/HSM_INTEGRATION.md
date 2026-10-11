@@ -10,6 +10,62 @@
 - Only the `kms-keycore` and `kms-governance` identities may use HSM keys.
   Every operation and refusal is audited.
 
+## Two roles for an HSM (8.0.0-beta)
+
+Owner directive, 2026-10-10.
+
+1. **Root of trust.** The tenant's HSM profile, set in the HSM tab, holds
+   the tenant key that encrypts the KMS's own key material (switch 1
+   below). There is one per tenant and its PIN is on the connector host.
+2. **HSMs that hold keys.** Any number of PKCS#11 HSMs added as
+   credentials in Playbooks → Credentials (type `pkcs11_hsm`:
+   library path, slot or token label, PIN, and whether it is a single HSM
+   or the vendor's HA group). The PIN is sealed in the credential store
+   ([CONNECTIONS.md](CONNECTIONS.md)); the connector opens it as `kms-hsm`
+   and holds it in memory only, as it does a profile's.
+
+When a key is created, formed, imported, or a CA is created, the dialog
+offers **Create in HSM** and lists every target (`GET /hsm/targets`): the
+tenant HSM (usable when its HSM keys switch is on) and each HSM credential,
+with what the library reports now. The API takes `hsm_connection_id`; empty
+is the tenant HSM. Choosing a credential needs `compliance.connection.use`.
+
+- **A key records its HSM** in the labels `hsm_connection`,
+  `hsm_connection_name` and `hsm_topology`, beside the device labels. Every
+  operation, rotation, verification and destruction goes to that HSM
+  (`?connection_id=` on the connector). Nothing is re-created elsewhere.
+- **The `hsm*` labels can't be set or dropped by a caller.** A metadata
+  update used to replace every label, which detached an HSM key from its
+  HSM; they are now carried over from the stored key.
+- **HA group or single** is what the operator declared: the library
+  presents a vendor HA group as one slot and the KMS can't see behind it,
+  so it is shown as declared beside the live token identity.
+- **One login per token.** A token stays logged in for the connector's
+  lifetime. A second credential or profile naming the same slot with a
+  different PIN is refused (`pin_mismatch`), so it can't ride that login.
+- **The tenant key never goes on a credential**
+  (`root_of_trust_is_the_profile`).
+- **An HSM credential in use by a live key can't be deleted.**
+
+### Forming and importing into an HSM
+
+`POST /keys/form` and `POST /keys/import` take `hsm` and
+`hsm_connection_id`. AES-128/192/256 material is placed with
+`C_CreateObject` as a token object, sensitive and not extractable, with the
+usages a generated key gets. Keycore keeps no material
+(`protection = hsm_resident`), checks the caller's expected KCV before
+anything reaches the HSM, and compares the HSM's own KCV for the new object
+with the material's (a mismatch removes the object, `hsm_kcv_mismatch`).
+
+- The HSM reports such a key honestly: `CKA_LOCAL` is false, and the key
+  carries `hsm_origin: imported`.
+- Other algorithms are refused (`hsm_import_not_supported`).
+- An HSM whose policy forbids `C_CreateObject` for secret keys (some
+  FIPS-mode partitions) refuses it (`hsm_import_refused`); import by
+  HSM-side unwrap is not built.
+- The material crosses the internal network (mTLS) from keycore to the
+  connector once, and is zeroized there after the call.
+
 ## Architecture
 
 ```
@@ -47,8 +103,9 @@ dashboard ──► governance┘   (cgo, glibc)     │     Entrust nShield, Ut
 - **PIN.** The PIN is in the connector's environment under the profile's
   `pin_env_var` (upper case, containing `PIN`, e.g. `SECUROSYS_HSM_PIN`), or
   in the file named by `<var>_FILE`. Operators put it in
-  `hsm-connector.env`. The PIN is never stored in the database or sent to
-  the dashboard.
+  `hsm-connector.env`. The profile's PIN is never stored in the database or
+  sent to the dashboard. (An HSM credential's PIN is sealed in the
+  credential store; see "Two roles for an HSM".)
 - **Sessions.** Each library is initialised once. Per slot, one session
   stays open after `C_Login` (a token logs out when its last session
   closes). Each request opens its own short session.
@@ -131,11 +188,12 @@ software key in certs and only added a keycore side signature. It has been
 removed from the dialog. CAs created with it are labelled "Software key,
 keycore co-signed", and `key_backend: "hsm"` is no longer folded into it.
 
-## One HSM per tenant
+## One HSM profile per tenant
 
 A tenant (domain) has **one** HSM profile: one library and one slot or
-token. That is where its tenant key and all its HSM keys are generated, so
-there is never a choice to make at key creation. For availability, use the
+token. That is where its tenant key is, and where HSM keys go when no HSM
+credential is named. Further HSMs are credentials (see "Two roles for an
+HSM"). For availability, use the
 vendor's own HA behind that one profile (Luna HA group, a Primus cluster,
 CloudHSM cluster). The library presents it as one slot, and the objects are
 replicated by the HSM. Different tenants can use different HSMs, even from
@@ -200,7 +258,11 @@ gone.
 |---|---|
 | `audit.hsm.<action>` (connector kernel): `key_generated` (with the HSM serial and token), `tenant_key_ensured`, `encrypt`, `decrypt`, `sign`, `verify`, `key_destroyed`, `key_inspected`, `objects_listed`, `status_read` | Every connector request. Refusals carry `result: refused` and a `reason`: `unauthenticated`, `permission_denied`, `tenant_mismatch`, `caller_not_allowed`, `foreign_label`, `hsm_not_configured`, `library_not_allowed`, `pin_not_provided`, `integrity_check_failed`, `tenant_key_protected`, `algorithm_not_supported` |
 | `audit.key.hsm_settings_updated` | A tenant's switches changed (before and after values) |
-| `audit.key.hsm_refused` | Keycore refused an HSM operation (`reason`: `hsm_key_not_found`, `hsm_keys_disabled`, `hsm_not_configured`, `hsm_not_connected`, `hsm_unavailable`, `algorithm_not_supported`, `hsm_import_not_supported`, `iv_mode_not_supported`, `material_in_hsm`) |
+| `audit.key.hsm_refused` | Keycore refused an HSM operation (`reason`: `hsm_key_not_found`, `hsm_keys_disabled`, `hsm_not_configured`, `hsm_not_connected`, `hsm_unavailable`, `algorithm_not_supported`, `hsm_import_not_supported`, `iv_mode_not_supported`, `material_in_hsm`; 8.0.0-beta: `hsm_connection_not_found`, `hsm_credential_not_permitted`, `hsm_credentials_unavailable`, `hsm_credentials_not_deployed`, `hsm_import_refused`, `hsm_kcv_mismatch`) |
+| `audit.hsm.key_imported` | The connector placed AES material in an HSM (8.0.0-beta). Connector refusals added: `hsm_connection_not_found`, `pin_mismatch`, `root_of_trust_is_the_profile`, `hsm_import_refused` |
+| `audit.key.hsm_targets_listed`, `audit.key.hsm_credential_usage_read` | The HSMs a key can be created on were listed; the credential store asked which keys are on an HSM credential (refused for any other caller: `caller_not_allowed`) |
+| `audit.key.import`, `audit.key.form` | Carry `hsm: true`, the device and `hsm_connection` when the material was placed in an HSM |
+| `audit.cert.hsm_credential_refused` | A CA key on an HSM credential was asked for without `compliance.connection.use` |
 | `audit.key.hsm_objects_destroyed` / `audit.key.hsm_destroy_failed` | A destroyed key's HSM objects were removed, or some couldn't be |
 | `audit.key.hsm_status_read`, `audit.key.hsm_settings_update`, `audit.key.hsm_objects_listed`, `audit.key.hsm_key_inspected` | Kernel events for keycore's HSM routes |
 | `audit.hsm.key_inspected`, `audit.hsm.objects_listed` | The connector read a key's attributes, or listed the partition |
@@ -247,6 +309,13 @@ normal setup. A node-local HSM would not see objects made on the primary.
     sensitive, never extractable and usages, read back from the HSM.
   - `TestPartitionListing`: a key and a certificate created outside the KMS
     are listed; another tenant's KMS key is not.
+- **HSM credentials (8.0.0-beta)**, on a second SoftHSM2 token with its own
+  PIN: `TestHSMCredentialSelectsTheToken` and
+  `TestImportedAESKeyIsNotExtractable` (connector);
+  `TestHSMKeyOnACredential`, `TestHSMCredentialRefusals`,
+  `TestImportAndFormIntoHSM` and
+  `TestHSMCredentialUsageIsForTheCredentialStore` (keycore);
+  `TestHSMCAOnACredentialNeedsTheUsePermission` (certs).
 - **Keycore** against a real connector (`pkg/hsmconnector/softhsmtest`):
   `TestHSMResidentKeyLifecycle`, `TestHSMResidentSigningKeys`,
   `TestTenantHSMKeyProtectsNewKeys`, `TestHSMSettingsNeedAConfiguredHSM`,
@@ -276,9 +345,11 @@ normal setup. A node-local HSM would not see objects made on the primary.
   - an HSM that refuses ECB (the AES KCV is left empty).
 - **Algorithms not in the HSM:** RSA encryption, Ed25519, ML-DSA/ML-KEM,
   HMAC and non-GCM AES modes can't be HSM-resident.
-- **No existing-key migration** into the tenant key (new keys only), and no
-  import of outside material into the HSM (the owner accepts this, FIPS mode
-  included).
+- **No existing-key migration** into the tenant key (new keys only). Import
+  of outside material into an HSM is AES only, by `C_CreateObject`
+  (8.0.0-beta); asymmetric import and HSM-side unwrap are not built.
+- **A key can't be moved between HSMs**, and the KMS does not replicate
+  keys across HSM credentials: availability is the vendor's HA group.
 - **Objects already in the partition are listed, not used.** Using a key the
   KMS didn't create would need an explicit "adopt" step. It would have to
   bind the object to one tenant, because its label doesn't carry the

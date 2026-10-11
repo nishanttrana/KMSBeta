@@ -318,6 +318,15 @@ func createComplianceSchemaForTest(conn *pkgdb.DB) error {
 			creds_data_iv BLOB,
 			creds_wrapped_dek BLOB,
 			creds_wrapped_dek_iv BLOB,
+			-- migration 010
+			credentials_changed_at TIMESTAMP,
+			expires_at TIMESTAMP,
+			rotate_after_days INTEGER NOT NULL DEFAULT 0,
+			last_tested_at TIMESTAMP,
+			last_test_ok BOOLEAN NOT NULL DEFAULT FALSE,
+			last_test_error TEXT NOT NULL DEFAULT '',
+			notified TEXT NOT NULL DEFAULT '[]',
+			attributes TEXT NOT NULL DEFAULT '{}',
 			PRIMARY KEY (tenant_id, id)
 		);`,
 		// migration 007

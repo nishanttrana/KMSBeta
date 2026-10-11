@@ -62,7 +62,34 @@ func setup() {
 		initErr = fmt.Errorf("softhsm2-util: %v %s", err, out)
 		return
 	}
+	// A second token, reached only through an HSM credential.
+	if out, err := exec.Command("softhsm2-util", "--init-token", "--free", "--label", CredentialToken,
+		"--pin", credentialPIN, "--so-pin", "3141592").CombinedOutput(); err != nil {
+		initErr = fmt.Errorf("softhsm2-util: %v %s", err, out)
+		return
+	}
 	provider = hsmconnector.NewProvider()
+}
+
+// CredentialToken is the label of the token HSM credentials point at; the
+// tenants' profiles are on "vecta-test".
+const (
+	CredentialToken = "vecta-cred"
+	credentialPIN   = "161803"
+)
+
+// Connections is the HSM credential store for a test connector: tenant →
+// credential ID. Each resolves to the second token, as a pkcs11_hsm
+// credential's fields would.
+type Connections map[string][]string
+
+func (c Connections) LoadConnection(_ context.Context, tenant, id string) (hsmconnector.TenantConfig, error) {
+	for _, known := range c[tenant] {
+		if known == id {
+			return hsmconnector.FromCredential(tenant, id, map[string]string{"library_path": lib, "token_label": CredentialToken, "pin": credentialPIN})
+		}
+	}
+	return hsmconnector.TenantConfig{}, hsmconnector.ErrConnectionNotFound
 }
 
 // Configs gives the listed tenants an HSM profile on the test token.
@@ -80,6 +107,12 @@ func (c Configs) Load(_ context.Context, tenant string) (hsmconnector.TenantConf
 // Start serves a connector for tenants. Requests arrive as the platform
 // service caller (the connector's own tests cover authentication).
 func Start(t testing.TB, caller string, tenants ...string) *httptest.Server {
+	return StartWith(t, caller, nil, tenants...)
+}
+
+// StartWith is Start with HSM credentials: conns' tenants can also create
+// keys on the second token by naming a credential.
+func StartWith(t testing.TB, caller string, conns Connections, tenants ...string) *httptest.Server {
 	t.Helper()
 	once.Do(setup)
 	if initErr != nil {
@@ -90,6 +123,7 @@ func Start(t testing.TB, caller string, tenants ...string) *httptest.Server {
 		configs[tn] = true
 	}
 	h := hsmconnector.NewHandler(configs, provider, nil, nil)
+	h.SetConnections(conns)
 	claims := &pkgauth.Claims{TenantID: "root", Role: "client-service", ClientID: caller, Permissions: []string{"service.internal"}}
 	claims.Subject = caller
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

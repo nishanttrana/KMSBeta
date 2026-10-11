@@ -29,6 +29,9 @@ var connectionUsers = map[string]string{
 	"kms-audit":      "stream",
 	"kms-governance": "approval_notice",
 	"kms-discovery":  "scan_source",
+	"kms-cloud":      "cloud_account",
+	"kms-ekm":        "azure_ekm",
+	"kms-hsm":        "hsm_session",
 }
 
 const (
@@ -44,22 +47,24 @@ func connectionCaller(c *route.Call) (string, bool) {
 			return use, true
 		}
 	}
-	c.Refuse(http.StatusForbidden, reasonConnectionCaller, "only the audit, governance and discovery services may open connections")
+	c.Refuse(http.StatusForbidden, reasonConnectionCaller, "only the platform services that use a connection may open one")
 	return "", false
 }
 
 // usable reports whether connection type typ serves a caller's use: event
-// streams take any stream type; approval notices go to Slack or Teams.
+// streams take any stream type; governance sends approval notices to Slack
+// or Teams and mail through an SMTP relay; the rest are in
+// credentialUseTypes.
 func usable(use, typ string) bool {
 	switch use {
 	case "stream":
 		return connectionByType[typ].Stream
 	case "approval_notice":
-		return typ == "slack" || typ == "teams"
+		return typ == "slack" || typ == "teams" || typ == "smtp"
 	case "scan_source":
 		return connectionByType[typ].Category == categorySource
 	}
-	return false
+	return contains(credentialUseTypes[use], typ)
 }
 
 func (h *Handler) serviceConnectionRoutes(rt *route.Router) {
@@ -104,7 +109,9 @@ func (h *Handler) resolveConnection(c *route.Call) {
 		return
 	}
 	out := resolvedConnection{ID: conn.ID, Name: conn.Name, Type: conn.Type, Endpoint: conn.Endpoint, Fields: opened.Fields, PrivateRanges: []string{}}
-	if connectionByType[conn.Type].Category == categorySource {
+	// A mail relay may be on the customer's own network too: governance
+	// dials it only inside these ranges (8.0.0-beta).
+	if cat := connectionByType[conn.Type].Category; cat == categorySource || cat == categoryMail {
 		// Fail closed: without the list, discovery would have to treat
 		// every private address as unapproved or as approved.
 		_, ranges, err := h.approvedRanges(c.R.Context(), c.Tenant)
@@ -196,6 +203,7 @@ type ConnectionUsage interface {
 // service identity.
 type platformUsage struct {
 	auditURL, governanceURL, discoveryURL string
+	cloudURL, ekmURL, keycoreURL, hsmURL  string
 	http                                  *http.Client
 }
 
@@ -254,6 +262,7 @@ func (p platformUsage) Users(ctx context.Context, tenantID, connID string) ([]st
 		Settings struct {
 			SlackConnectionID string `json:"slack_connection_id"`
 			TeamsConnectionID string `json:"teams_connection_id"`
+			SMTPConnectionID  string `json:"smtp_connection_id"`
 		} `json:"settings"`
 	}
 	if _, err := callJSON(ctx, p.http, http.MethodGet, p.governanceURL+"/governance/settings?tenant_id="+neturl.QueryEscape(tenantID), tenantID, "", nil, &gov); err != nil {
@@ -261,6 +270,9 @@ func (p platformUsage) Users(ctx context.Context, tenantID, connID string) ([]st
 	}
 	if gov.Settings.SlackConnectionID == connID || gov.Settings.TeamsConnectionID == connID {
 		users = append(users, "governance approval notices")
+	}
+	if gov.Settings.SMTPConnectionID == connID {
+		users = append(users, "governance mail")
 	}
 	return users, nil
 }

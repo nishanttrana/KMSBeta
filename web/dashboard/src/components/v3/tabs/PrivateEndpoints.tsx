@@ -68,8 +68,8 @@ export function PrivateEndpoints({ session }: { session: AuthSession }) {
         <Network size={14} color={C.accentFg} />
         <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Private endpoints</span>
         <span style={{ fontSize: 11, color: C.muted }}>{items.length} approved</span>
-        <span style={{ marginLeft: "auto", fontSize: 10.5, color: C.muted }} title="A Git or storage connection may name a host inside an approved range, and its credential is sent to a private address only inside one. Loopback, link-local, metadata and KMS platform addresses can never be approved.">
-          For Git and storage connections on your own network
+        <span style={{ marginLeft: "auto", fontSize: 10.5, color: C.muted }} title="A Git, storage or mail relay credential may name a host inside an approved range, and its credential is sent to a private address only inside one. Loopback, link-local, metadata and KMS platform addresses can never be approved.">
+          For Git, storage and mail relay credentials on your own network
         </span>
       </div>
       {canApprove && (

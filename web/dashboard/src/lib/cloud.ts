@@ -10,6 +10,9 @@ export type CloudAccount = {
   name: string;
   default_region: string;
   status: string;
+  // Empty only for an account registered before credentials moved to
+  // Playbooks → Credentials and not migrated yet.
+  connection_id?: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -89,7 +92,8 @@ export type RegisterCloudAccountInput = {
   provider: CloudProvider;
   name: string;
   defaultRegion?: string;
-  credentialsJson: string;
+  // The provider's credential, added in Playbooks → Credentials.
+  connectionId: string;
 };
 
 export type SetCloudRegionMappingInput = {
@@ -139,7 +143,7 @@ export async function registerCloudAccount(
       provider: normalizeCloudProvider(input.provider),
       name: String(input.name || "").trim(),
       default_region: String(input.defaultRegion || "").trim(),
-      credentials_json: String(input.credentialsJson || "").trim() || "{}"
+      connection_id: String(input.connectionId || "").trim()
     })
   });
   return payload.account;

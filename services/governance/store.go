@@ -48,6 +48,8 @@ type Store interface {
 	UpsertSettings(ctx context.Context, s GovernanceSettings) error
 	ListLegacyNotifyURLs(ctx context.Context) ([]GovernanceSettings, error)
 	SetNotifyConnection(ctx context.Context, tenantID, channel, connID string) error
+	ListLegacySMTP(ctx context.Context) ([]GovernanceSettings, error)
+	SetSMTPConnection(ctx context.Context, tenantID, connID string) error
 	GetSystemState(ctx context.Context, tenantID string) (GovernanceSystemState, error)
 	UpsertSystemState(ctx context.Context, state GovernanceSystemState) error
 }
@@ -637,7 +639,8 @@ SELECT tenant_id, approval_expiry_minutes, expiry_check_interval_seconds, COALES
        COALESCE(smtp_from,''), COALESCE(smtp_starttls,true), COALESCE(notify_dashboard,true), COALESCE(notify_email,true),
        COALESCE(notify_slack,false), COALESCE(notify_teams,false), COALESCE(slack_webhook_url,''), COALESCE(teams_webhook_url,''),
        COALESCE(delivery_webhook_timeout_seconds,5), COALESCE(challenge_response_enabled,false),
-       COALESCE(updated_by,''), updated_at, COALESCE(slack_connection_id,''), COALESCE(teams_connection_id,'')
+       COALESCE(updated_by,''), updated_at, COALESCE(slack_connection_id,''), COALESCE(teams_connection_id,''),
+       COALESCE(smtp_connection_id,'')
 FROM governance_settings
 WHERE tenant_id=$1
 `, tenantID)
@@ -666,6 +669,7 @@ WHERE tenant_id=$1
 		&updatedRaw,
 		&out.SlackConnectionID,
 		&out.TeamsConnectionID,
+		&out.SMTPConnectionID,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		// default fallback row when not configured
@@ -708,8 +712,8 @@ func (s *SQLStore) UpsertSettings(ctx context.Context, settings GovernanceSettin
 	    approval_delivery_mode, smtp_host, smtp_port, smtp_username, smtp_password, smtp_from, smtp_starttls,
 	    notify_dashboard, notify_email, notify_slack, notify_teams, slack_webhook_url, teams_webhook_url,
 	    delivery_webhook_timeout_seconds, challenge_response_enabled,
-	    updated_by, updated_at, slack_connection_id, teams_connection_id
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,CURRENT_TIMESTAMP,$20,$21)
+	    updated_by, updated_at, slack_connection_id, teams_connection_id, smtp_connection_id
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,CURRENT_TIMESTAMP,$20,$21,$22)
 ON CONFLICT (tenant_id) DO UPDATE
 SET approval_expiry_minutes=EXCLUDED.approval_expiry_minutes,
     expiry_check_interval_seconds=EXCLUDED.expiry_check_interval_seconds,
@@ -731,13 +735,48 @@ SET approval_expiry_minutes=EXCLUDED.approval_expiry_minutes,
     updated_by=EXCLUDED.updated_by,
     updated_at=CURRENT_TIMESTAMP,
     slack_connection_id=EXCLUDED.slack_connection_id,
-    teams_connection_id=EXCLUDED.teams_connection_id
+    teams_connection_id=EXCLUDED.teams_connection_id,
+    smtp_connection_id=EXCLUDED.smtp_connection_id
 `, settings.TenantID, settings.ApprovalExpiryMinutes, settings.ExpiryCheckIntervalSeconds,
 		settings.ApprovalDeliveryMode, nullable(settings.SMTPHost), nullable(settings.SMTPPort), nullable(settings.SMTPUsername),
 		nullable(settings.SMTPPassword), nullable(settings.SMTPFrom), settings.SMTPStartTLS,
 		settings.NotifyDashboard, settings.NotifyEmail, settings.NotifySlack, settings.NotifyTeams,
 		nullable(settings.SlackWebhookURL), nullable(settings.TeamsWebhookURL), settings.DeliveryWebhookTimeoutSec,
-		settings.ChallengeResponseEnabled, nullable(settings.UpdatedBy), settings.SlackConnectionID, settings.TeamsConnectionID)
+		settings.ChallengeResponseEnabled, nullable(settings.UpdatedBy), settings.SlackConnectionID, settings.TeamsConnectionID,
+		settings.SMTPConnectionID)
+	return err
+}
+
+// ListLegacySMTP returns tenants whose settings still hold a mail relay of
+// their own (an earlier release stored it, password included, in plaintext).
+func (s *SQLStore) ListLegacySMTP(ctx context.Context) ([]GovernanceSettings, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT tenant_id, COALESCE(smtp_host,''), COALESCE(smtp_port,''), COALESCE(smtp_username,''), COALESCE(smtp_password,''), COALESCE(smtp_from,'')
+FROM governance_settings
+WHERE COALESCE(smtp_host,'') <> '' AND COALESCE(smtp_connection_id,'') = ''
+ORDER BY tenant_id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	var out []GovernanceSettings
+	for rows.Next() {
+		var g GovernanceSettings
+		if err := rows.Scan(&g.TenantID, &g.SMTPHost, &g.SMTPPort, &g.SMTPUsername, &g.SMTPPassword, &g.SMTPFrom); err != nil {
+			return nil, err
+		}
+		out = append(out, g)
+	}
+	return out, rows.Err()
+}
+
+// SetSMTPConnection points the settings at an SMTP credential and clears
+// the relay the row held itself.
+func (s *SQLStore) SetSMTPConnection(ctx context.Context, tenantID, connID string) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+UPDATE governance_settings
+SET smtp_connection_id=$1, smtp_host=NULL, smtp_port=NULL, smtp_username=NULL, smtp_password=NULL, smtp_from=NULL
+WHERE tenant_id=$2`, connID, tenantID)
 	return err
 }
 

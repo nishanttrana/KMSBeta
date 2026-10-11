@@ -23,6 +23,7 @@ import (
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/clusterstate"
+	"vecta-kms/pkg/credstore"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgcrypto "vecta-kms/pkg/crypto"
@@ -98,8 +99,12 @@ func main() {
 		WithCertsURL(certsURL),
 		WithSNMPPublisher(snmpPublisher),
 		WithNotifyConnections(newComplianceConnections(envOr("COMPLIANCE_URL", "https://compliance:8110"))),
+		WithCredentials(credstore.FromEnv()),
 	)
 	go svc.migrateNotifyURLsLoop(ctx, clusterstate.RunsPrimaryJobs, 15*time.Minute, logger.Printf)
+	// The mail relay an earlier release stored in plaintext moves into the
+	// credential store the same way.
+	go svc.migrateSMTPLoop(ctx, clusterstate.RunsPrimaryJobs, 15*time.Minute, logger.Printf)
 	handler := NewHandler(svc)
 	handler.SetAuditClient(kernelAudit)
 	// Every service reads the platform FIPS mode from this file before any

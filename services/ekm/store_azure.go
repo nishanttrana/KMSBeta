@@ -12,23 +12,62 @@ func (s *SQLStore) CreateAzureEKMConfig(ctx context.Context, cfg AzureEKMConfig)
 INSERT INTO ekm_azure_configs (
 	tenant_id, id, azure_tenant_id, subscription_id, resource_group,
 	vault_name, vault_url, managed_hsm_name, managed_hsm_url,
-	client_id, client_secret, auth_mode, status, key_mappings, last_sync_at, created_at
+	client_id, client_secret, auth_mode, status, key_mappings, last_sync_at, created_at, connection_id
 ) VALUES (
 	$1,$2,$3,$4,$5,
 	$6,$7,$8,$9,
-	$10,$11,$12,$13,$14,$15,CURRENT_TIMESTAMP
+	$10,$11,$12,$13,$14,$15,CURRENT_TIMESTAMP,$16
 )
 `, cfg.TenantID, cfg.ID, cfg.AzureTenantID, cfg.SubscriptionID, cfg.ResourceGroup,
 		cfg.VaultName, cfg.VaultURL, cfg.ManagedHSMName, cfg.ManagedHSMURL,
-		cfg.ClientID, cfg.ClientSecret, cfg.AuthMode, cfg.Status, cfg.KeyMappings, nullableTime(cfg.LastSyncAt))
+		cfg.ClientID, cfg.ClientSecret, cfg.AuthMode, cfg.Status, cfg.KeyMappings, nullableTime(cfg.LastSyncAt), cfg.ConnectionID)
 	return err
+}
+
+// ListLegacyAzureSecrets returns, across tenants, the configurations that
+// still hold a client secret of their own.
+func (s *SQLStore) ListLegacyAzureSecrets(ctx context.Context) ([]AzureEKMConfig, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT tenant_id, id, azure_tenant_id, subscription_id, resource_group,
+       vault_name, vault_url, managed_hsm_name, managed_hsm_url,
+       client_id, client_secret, auth_mode, status, key_mappings, last_sync_at, created_at, connection_id
+FROM ekm_azure_configs
+WHERE client_secret <> ''
+ORDER BY tenant_id, id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := []AzureEKMConfig{}
+	for rows.Next() {
+		item, err := scanAzureEKMConfig(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+// SetAzureConfigConnection points a configuration at a credential and
+// empties its own client secret.
+func (s *SQLStore) SetAzureConfigConnection(ctx context.Context, tenantID, configID, connectionID string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE ekm_azure_configs SET connection_id = $3, client_secret = '' WHERE tenant_id = $1 AND id = $2`, tenantID, configID, connectionID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errNotFound
+	}
+	return nil
 }
 
 func (s *SQLStore) GetAzureEKMConfig(ctx context.Context, tenantID, configID string) (AzureEKMConfig, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
 SELECT tenant_id, id, azure_tenant_id, subscription_id, resource_group,
        vault_name, vault_url, managed_hsm_name, managed_hsm_url,
-       client_id, client_secret, auth_mode, status, key_mappings, last_sync_at, created_at
+       client_id, client_secret, auth_mode, status, key_mappings, last_sync_at, created_at, connection_id
 FROM ekm_azure_configs
 WHERE tenant_id = $1 AND id = $2
 `, tenantID, configID)
@@ -43,7 +82,7 @@ func (s *SQLStore) ListAzureEKMConfigs(ctx context.Context, tenantID string) ([]
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT tenant_id, id, azure_tenant_id, subscription_id, resource_group,
        vault_name, vault_url, managed_hsm_name, managed_hsm_url,
-       client_id, client_secret, auth_mode, status, key_mappings, last_sync_at, created_at
+       client_id, client_secret, auth_mode, status, key_mappings, last_sync_at, created_at, connection_id
 FROM ekm_azure_configs
 WHERE tenant_id = $1
 ORDER BY created_at DESC
@@ -75,16 +114,16 @@ SET azure_tenant_id = $1,
     managed_hsm_name = $6,
     managed_hsm_url = $7,
     client_id = $8,
-    client_secret = CASE WHEN $9 = '' THEN client_secret ELSE $9 END,
-    auth_mode = $10,
-    status = $11,
-    key_mappings = $12,
-    last_sync_at = COALESCE($13, last_sync_at)
+    auth_mode = $9,
+    status = $10,
+    key_mappings = $11,
+    last_sync_at = COALESCE($12, last_sync_at),
+    connection_id = $13
 WHERE tenant_id = $14 AND id = $15
 `, cfg.AzureTenantID, cfg.SubscriptionID, cfg.ResourceGroup,
 		cfg.VaultName, cfg.VaultURL, cfg.ManagedHSMName, cfg.ManagedHSMURL,
-		cfg.ClientID, cfg.ClientSecret, cfg.AuthMode, cfg.Status, cfg.KeyMappings,
-		nullableTime(cfg.LastSyncAt), cfg.TenantID, cfg.ID)
+		cfg.ClientID, cfg.AuthMode, cfg.Status, cfg.KeyMappings,
+		nullableTime(cfg.LastSyncAt), cfg.ConnectionID, cfg.TenantID, cfg.ID)
 	if err != nil {
 		return err
 	}
@@ -198,7 +237,7 @@ func scanAzureEKMConfig(scanner interface {
 	err := scanner.Scan(
 		&out.TenantID, &out.ID, &out.AzureTenantID, &out.SubscriptionID, &out.ResourceGroup,
 		&out.VaultName, &out.VaultURL, &out.ManagedHSMName, &out.ManagedHSMURL,
-		&out.ClientID, &out.ClientSecret, &out.AuthMode, &out.Status, &out.KeyMappings, &lastSync, &createdRaw,
+		&out.ClientID, &out.ClientSecret, &out.AuthMode, &out.Status, &out.KeyMappings, &lastSync, &createdRaw, &out.ConnectionID,
 	)
 	if err != nil {
 		return AzureEKMConfig{}, err

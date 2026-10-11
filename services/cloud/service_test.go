@@ -10,12 +10,12 @@ func TestServiceImportRotateSyncAndInventory(t *testing.T) {
 	ctx := context.Background()
 	keycore.Seed("tenant-1", "key-1", "AES-256")
 
-	account, err := svc.RegisterAccount(ctx, RegisterCloudAccountRequest{
-		TenantID:        "tenant-1",
-		Provider:        ProviderAWS,
-		Name:            "aws-prod",
-		DefaultRegion:   "us-east-1",
-		CredentialsJSON: `{"access_key":"abc","secret":"xyz"}`,
+	account, err := svc.RegisterAccount(attachCtx("tenant-1"), RegisterCloudAccountRequest{
+		TenantID:      "tenant-1",
+		Provider:      ProviderAWS,
+		Name:          "aws-prod",
+		DefaultRegion: "us-east-1",
+		ConnectionID:  "cred-aws",
 	})
 	if err != nil {
 		t.Fatal(err)

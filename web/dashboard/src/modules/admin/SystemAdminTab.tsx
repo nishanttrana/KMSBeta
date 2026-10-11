@@ -87,6 +87,7 @@ import {
   updateKeyAccessSettings,
   upsertTag
 } from "../../lib/keycore";
+import { CredentialPicker } from "../../components/v3/CredentialPicker";
 import { errMsg } from "../../components/v3/runtimeUtils";
 import { C } from "../../components/v3/theme";
 import type { AdminTabProps } from "./types";
@@ -190,12 +191,11 @@ const GOV_DEFAULT={
   notify_email:false,
   notify_slack:false,
   notify_teams:false,
+  smtp_connection_id:"",
   smtp_host:"",
-  smtp_port:"587",
+  smtp_port:"",
   smtp_username:"",
-  smtp_password:"",
   smtp_from:"",
-  smtp_starttls:true,
   slack_connection_id:"",
   teams_connection_id:"",
   delivery_webhook_timeout_seconds:10,
@@ -809,7 +809,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     if(!session?.token){setGov(GOV_DEFAULT);return;}
     setGovLoading(true);
     listNotifyConnections(session).then((c)=>{setGovConns(c);setGovConnsErr("");}).catch((e)=>{setGovConns(null);setGovConnsErr(errMsg(e));});
-    try{const s=(await getGovernanceSettings(session)) as GovernanceSettings; setGov({...GOV_DEFAULT,...s,smtp_password:""});}
+    try{const s=(await getGovernanceSettings(session)) as GovernanceSettings; setGov({...GOV_DEFAULT,...s});}
     catch(error){if(!sessionGuard(error)) onToast(`Governance settings load failed: ${errMsg(error)}`);} 
     finally{setGovLoading(false);} 
   },[onToast,session,sessionGuard]);
@@ -1346,9 +1346,8 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     gov.notify_slack ? "slack" : "",
     gov.notify_teams ? "teams" : ""
   ].filter(Boolean).join(", ") || "none"}`;
-  const smtpSummary = String(gov.smtp_host||"").trim()
-    ? `${String(gov.smtp_host)}:${String(gov.smtp_port||"587")}`
-    : "SMTP not configured";
+  const smtpSummary = gov.smtp_connection_id ? "SMTP credential set"
+    : String(gov.smtp_host||"").trim() ? `${String(gov.smtp_host)} (moving to Credentials)` : "SMTP not configured";
   const hardeningSummary = accessSettingsLoading
     ? "loading..."
     : `${String(accessSettings?.grant_default_type||"creator-default")} / replay ${Number(accessSettings?.replay_window_seconds||300)}s / interface ${Boolean(accessSettings?.interface_binding_required)?"required":"optional"}`;
@@ -1923,9 +1922,8 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       <Row2><FG label="Approval Expiry (minutes)"><Inp type="number" value={String(gov.approval_expiry_minutes)} onChange={(e)=>setGov((p)=>({...p,approval_expiry_minutes:Math.max(1,Number(e.target.value||60))}))}/></FG><FG label="Expiry Check Interval (seconds)"><Inp type="number" value={String(gov.expiry_check_interval_seconds)} onChange={(e)=>setGov((p)=>({...p,expiry_check_interval_seconds:Math.max(5,Number(e.target.value||60))}))}/></FG></Row2>
       <Row2><FG label="Delivery Mode"><Sel value={String(gov.approval_delivery_mode||"kms_only")} onChange={(e)=>setGov((p)=>({...p,approval_delivery_mode:String(e.target.value||"kms_only")}))}><option value="kms_only">KMS only</option><option value="notify">Notify + KMS queue</option></Sel></FG><FG label="Webhook Timeout (seconds)"><Inp type="number" value={String(gov.delivery_webhook_timeout_seconds)} onChange={(e)=>setGov((p)=>({...p,delivery_webhook_timeout_seconds:Math.max(2,Number(e.target.value||10))}))}/></FG></Row2>
       <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}><Chk label="Dashboard approvals" checked={Boolean(gov.notify_dashboard)} onChange={()=>setGov((p)=>({...p,notify_dashboard:!p.notify_dashboard}))}/><Chk label="Email notifications" checked={Boolean(gov.notify_email)} onChange={()=>setGov((p)=>({...p,notify_email:!p.notify_email}))}/><Chk label="Slack notifications" checked={Boolean(gov.notify_slack)} onChange={()=>setGov((p)=>({...p,notify_slack:!p.notify_slack}))}/><Chk label="Teams notifications" checked={Boolean(gov.notify_teams)} onChange={()=>setGov((p)=>({...p,notify_teams:!p.notify_teams}))}/></div>
-      <Row2><FG label="SMTP Host"><Inp value={String(gov.smtp_host||"")} onChange={(e)=>setGov((p)=>({...p,smtp_host:e.target.value}))}/></FG><FG label="SMTP Port"><Inp value={String(gov.smtp_port||"")} onChange={(e)=>setGov((p)=>({...p,smtp_port:e.target.value}))}/></FG></Row2>
-      <Row2><FG label="SMTP Username"><Inp value={String(gov.smtp_username||"")} onChange={(e)=>setGov((p)=>({...p,smtp_username:e.target.value}))}/></FG><FG label="SMTP Password (optional)"><Inp type="password" value={String(gov.smtp_password||"")} onChange={(e)=>setGov((p)=>({...p,smtp_password:e.target.value}))}/></FG></Row2>
-      <Row2><FG label="SMTP From"><Inp value={String(gov.smtp_from||"")} onChange={(e)=>setGov((p)=>({...p,smtp_from:e.target.value}))}/></FG><FG label="SMTP Test Recipient"><div style={{display:"flex",gap:8}}><Inp value={smtpTo} onChange={(e)=>setSmtpTo(e.target.value)} placeholder="admin@domain.tld"/><Btn small onClick={async()=>{if(!session?.token||!String(smtpTo||"").trim()){onToast("Provide SMTP test recipient email."); return;} setSmtpTesting(true); try{await testGovernanceSMTP(session,String(smtpTo||"").trim()); onToast("SMTP test sent.");}catch(error){if(!sessionGuard(error)) onToast(`SMTP test failed: ${errMsg(error)}`);} finally{setSmtpTesting(false);}}} disabled={smtpTesting}>{smtpTesting?"Testing...":"Send"}</Btn></div></FG></Row2>
+      <FG label="Mail relay (SMTP credential)" hint={!gov.smtp_connection_id&&gov.smtp_host?`Now using ${String(gov.smtp_host)}, stored here by an earlier release; it is moved into Credentials automatically.`:"Mail is always sent over TLS."}><CredentialPicker session={session} type="smtp" value={String(gov.smtp_connection_id||"")} onChange={(id:string)=>setGov((p)=>({...p,smtp_connection_id:id}))}/></FG>
+      <Row2><FG label="SMTP Test Recipient"><div style={{display:"flex",gap:8}}><Inp value={smtpTo} onChange={(e)=>setSmtpTo(e.target.value)} placeholder="admin@domain.tld"/><Btn small onClick={async()=>{if(!session?.token||!String(smtpTo||"").trim()){onToast("Provide SMTP test recipient email."); return;} setSmtpTesting(true); try{await testGovernanceSMTP(session,String(smtpTo||"").trim()); onToast("SMTP test sent.");}catch(error){if(!sessionGuard(error)) onToast(`SMTP test failed: ${errMsg(error)}`);} finally{setSmtpTesting(false);}}} disabled={smtpTesting}>{smtpTesting?"Testing...":"Send"}</Btn></div></FG></Row2>
       {govConnsErr&&<div style={{fontSize:11,color:C.red,marginBottom:8}}>Connections unavailable: {govConnsErr}</div>}
       {([["slack","Slack","slack_connection_id"],["teams","Teams","teams_connection_id"]] as const).map(([ch,label,field])=>(
         <FG key={ch} label={`${label} connection`} hint="Approval notices go through this connection; its webhook URL is sealed under Playbooks → Connections"><div style={{display:"flex",gap:8}}>

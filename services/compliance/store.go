@@ -64,7 +64,7 @@ type Store interface {
 	ListConnections(ctx context.Context, tenantID string) ([]Connection, error)
 	GetConnection(ctx context.Context, tenantID, id string) (Connection, error)
 	CreateConnection(ctx context.Context, c Connection) (Connection, error)
-	UpdateConnection(ctx context.Context, c Connection) (Connection, error)
+	UpdateConnection(ctx context.Context, c Connection, secretChanged, resetReminders bool) (Connection, error)
 	DeleteConnection(ctx context.Context, tenantID, id string) error
 
 	// Private endpoints approved for source connections. tenantID "" lists
@@ -72,6 +72,11 @@ type Store interface {
 	ListPrivateEndpoints(ctx context.Context, tenantID string) ([]PrivateEndpoint, error)
 	CreatePrivateEndpoint(ctx context.Context, e PrivateEndpoint) error
 	DeletePrivateEndpoint(ctx context.Context, id string) (PrivateEndpoint, error)
+
+	// Credential health and reminders (credentials.go).
+	ListAllConnections(ctx context.Context) ([]Connection, error)
+	RecordConnectionTest(ctx context.Context, tenantID, id string, ok bool, errMsg string) error
+	SetConnectionNotified(ctx context.Context, tenantID, id string, notified []string) error
 }
 
 type SQLStore struct {

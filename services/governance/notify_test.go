@@ -68,7 +68,9 @@ func TestNotifyEmailOnlyToTenantUsers(t *testing.T) {
 	if code, body := notifyCall(h, "compliance", ok); code != http.StatusConflict {
 		t.Fatalf("without SMTP: %d %s", code, body)
 	}
-	if _, err := svc.UpdateSettings(context.Background(), GovernanceSettings{TenantID: "t1", SMTPHost: "smtp.t1.test", SMTPPort: "587", SMTPFrom: "kms@t1.test", ApprovalExpiryMinutes: 60}); err != nil {
+	// A mail relay stored by an earlier release (the row's own smtp_* columns).
+	if err := svc.store.UpsertSettings(context.Background(), GovernanceSettings{TenantID: "t1", SMTPHost: "smtp.t1.test", SMTPPort: "587", SMTPFrom: "kms@t1.test",
+		ApprovalExpiryMinutes: 60, ExpiryCheckIntervalSeconds: 60, ApprovalDeliveryMode: "notify", DeliveryWebhookTimeoutSec: 5}); err != nil {
 		t.Fatal(err)
 	}
 	code, body := notifyCall(h, "compliance", ok)

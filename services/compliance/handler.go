@@ -26,6 +26,10 @@ type Handler struct {
 	// sourceUsage names the discovery repositories and buckets that use a
 	// source connection (git, s3, azure_blob).
 	sourceUsage func(ctx context.Context, tenantID, connID string) ([]string, error)
+	// credUsage names the cloud accounts, Azure EKM vaults and HSM keys
+	// that use a credential; credTest has the owning service test one.
+	credUsage CredentialUsage
+	credTest  CredentialTester
 	// dispatch runs a playbook execution; tests run it inline.
 	dispatch func(func())
 }

@@ -187,6 +187,8 @@ func main() {
 	// The customer's HSM, through the hsm-connector (HSM_CONNECTOR_URL).
 	// Unused until a tenant turns on its tenant key or HSM keys.
 	svc.SetHSMBackend(hsm.FromEnv())
+	// HSM credentials (Playbooks → Credentials) a key can be created on.
+	svc.SetHSMCredentials(hsmCredentialsFromEnv())
 
 	governanceURL := stringsTrimSpace(os.Getenv("GOVERNANCE_URL"))
 	if governanceURL != "" {

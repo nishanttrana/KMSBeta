@@ -693,6 +693,8 @@ func (e *PlaybookExecutor) testConnection(ctx context.Context, conn Connection) 
 	f := opened.Fields
 	msg := "Vecta KMS connection test (" + conn.Name + ")"
 	switch conn.Type {
+	case "smtp":
+		err = e.testSMTP(ctx, conn)
 	case "slack":
 		_, err = e.outboundCall(ctx, http.MethodPost, f["webhook_url"], map[string]any{"text": msg}, nil)
 	case "teams":

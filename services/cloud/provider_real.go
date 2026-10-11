@@ -14,8 +14,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awscfg "github.com/aws/aws-sdk-go-v2/config"
 	awscreds "github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	awskms "github.com/aws/aws-sdk-go-v2/service/kms"
 	awskmstypes "github.com/aws/aws-sdk-go-v2/service/kms/types"
+	awssts "github.com/aws/aws-sdk-go-v2/service/sts"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
@@ -250,6 +252,18 @@ func (p *awsProvider) client(ctx context.Context, regionHint string, account Clo
 	cfg, err := awscfg.LoadDefaultConfig(ctx, loadOpts...)
 	if err != nil {
 		return nil, "", err
+	}
+	// With a role_arn the stored access key only calls sts:AssumeRole, and
+	// AWS KMS is called with the role's short-lived credentials, which the
+	// SDK refreshes before they expire. Nothing but the access key is stored.
+	if roleARN := strings.TrimSpace(anyToString(creds["role_arn"])); roleARN != "" {
+		externalID := strings.TrimSpace(anyToString(creds["external_id"]))
+		cfg.Credentials = aws.NewCredentialsCache(stscreds.NewAssumeRoleProvider(awssts.NewFromConfig(cfg), roleARN, func(o *stscreds.AssumeRoleOptions) {
+			o.RoleSessionName = "vecta-kms"
+			if externalID != "" {
+				o.ExternalID = aws.String(externalID)
+			}
+		}))
 	}
 	endpoint := strings.TrimSpace(defaultString(anyToString(creds["endpoint_url"]), anyToString(creds["endpoint"])))
 	client := awskms.NewFromConfig(cfg, func(o *awskms.Options) {

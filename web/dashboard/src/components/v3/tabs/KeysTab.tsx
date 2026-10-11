@@ -33,6 +33,7 @@ import { C } from "../theme";
 import { B, Btn, Chk, FG, Inp, Modal, Radio, Row2, Row3, Section, Sel, Stat, Txt } from "../legacyPrimitives";
 import { HSMPartitionTable } from "../../../modules/hsm/HSMPartitionTable";
 import { HSMKeyCheckPanel } from "../../../modules/hsm/HSMKeyCheckPanel";
+import { HSMTargetPicker } from "../../../modules/hsm/HSMTargetPicker";
 import { KeyHistoryPanel } from "../../../modules/keys/KeyHistoryPanel";
 import { CanaryKeysPanel } from "./CanaryKeysPanel";
 
@@ -424,7 +425,7 @@ function renderKeyOptions(keyChoices: any[]): any[] {
   ));
 }
 
-export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})=>{
+export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast,onNavigate})=>{
 
   const [modal,setModal]=useState(null);
   const [selectedKey,setSelectedKey]=useState(null);
@@ -444,6 +445,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
   const [exportable,setExportable]=useState(false);
   // "Create in HSM" is offered only when the tenant turned HSM keys on (HSM tab).
   const [inHSM,setInHSM]=useState(false);
+  const [hsmConn,setHsmConn]=useState(""),[matHSM,setMatHSM]=useState({on:false,conn:""}); // HSM target ("" is the tenant's HSM): create; form and import
   const [hsmKeysEnabled,setHsmKeysEnabled]=useState(false);
   const [hsmTenantKey,setHsmTenantKey]=useState(false);
   const [hsmConfigured,setHsmConfigured]=useState(false);
@@ -1000,7 +1002,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
           ops_limit:opsLimit,
           ops_limit_window:opsLimitWindow,
           approval_required:approvalReq,
-          hsm:true
+          hsm:true,hsm_connection_id:hsmConn
         });
         focusKeyId=createdKey.key_id;
       }else if(algoType==="asymmetric"){
@@ -1143,6 +1145,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         ops_limit:Math.trunc(parsedLimit),
         ops_limit_window:formOpsWindow,
         approval_required:formApprovalReq,
+        hsm:matHSM.on,hsm_connection_id:matHSM.conn,
         component_mode:mode==="clear-user"?"clear-user":mode==="encrypted-user"?"encrypted-user":"clear-generated",
         parity:(String(formAlgorithm||"").toUpperCase().includes("DES")?(formParity as any):"none"),
         components:components.map((component)=>({
@@ -1245,7 +1248,8 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         import_password:importPassword.trim(),
         wrapping_key_id:importWrappingKeyId.trim(),
         material_iv:importMaterialIV.trim(),
-        origin:importOrigin.trim()
+        origin:importOrigin.trim(),
+        hsm:matHSM.on,hsm_connection_id:matHSM.conn
       });
       const mapped=await refreshKeyCatalog(response.key_id);
       const imported=mapped.find((k)=>k.id===response.key_id);
@@ -2123,16 +2127,9 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
     </div>}
     {showHSMPartition&&<HSMPartitionTable session={session} kind="keys" onToast={onToast}/>}
     <Modal open={modal==="create"} onClose={()=>setModal(null)} title="Create New Key" width={920}>
-      {hsmKeysEnabled&&<div style={{padding:"8px 10px",marginBottom:10,borderRadius:6,border:`1px solid ${inHSM?C.accent:C.amber}`,background:`${inHSM?C.accent:C.amber}14`,fontSize:11,color:C.text}}>
-        <b>HSM available for key generation</b>{hsmName?`: ${hsmName}`:""}.{" "}
-        {inHSM
-          ? "This key will be generated inside the HSM and will never leave it; encrypt, decrypt, sign and verify run in the HSM."
-          : hsmSupportsAlgorithm(algo)
-            ? "\"Create in HSM\" is off: this key will be generated in the KMS, not the HSM."
-            : "This algorithm can't be generated in the HSM (AES-GCM, RSA or ECDSA P-256/P-384 can): the key will be created in the KMS."}
-        {!inHSM&&hsmTenantKey&&" Its material will be encrypted by this tenant's key in the HSM."}
-      </div>}
-      {!hsmKeysEnabled&&hsmTenantKey&&<div style={{padding:"8px 10px",marginBottom:10,borderRadius:6,border:`1px solid ${C.accent}`,fontSize:11,color:C.text}}>
+      <HSMTargetPicker session={session} material="generated" supported={hsmSupportsAlgorithm(algo)} unsupportedReason="This algorithm can't be generated in an HSM (AES-GCM, RSA or ECDSA P-256/P-384 can): the key will be created in the KMS."
+        checked={inHSM} onChecked={(on)=>{setInHSM(on);setExportable(false);}} connection={hsmConn} onConnection={setHsmConn} onNavigate={onNavigate}/>
+      {!inHSM&&hsmTenantKey&&<div style={{padding:"8px 10px",marginBottom:10,borderRadius:6,border:`1px solid ${C.accent}`,fontSize:11,color:C.text}}>
         The key's material will be encrypted by this tenant's key in the HSM{hsmName?` (${hsmName})`:""}.
       </div>}
       <Row2>
@@ -2197,7 +2194,6 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         <FG label="Security Options">
           <Chk label="Require governance approval for all operations" checked={approvalReq} onChange={()=>setApprovalReq(!approvalReq)}/>
           {!inHSM&&<Chk label="Allow key export (wrapped)" checked={exportable} onChange={()=>setExportable(!exportable)}/>}
-          {hsmKeysEnabled&&hsmSupportsAlgorithm(algo)&&<Chk label="Create in HSM (generated and used only inside the tenant's HSM; AES-GCM, RSA-PSS or ECDSA P-256/P-384)" checked={inHSM} onChange={()=>{setInHSM(!inHSM);setExportable(false);}}/>}
           <Chk label="FIPS-only algorithms enforced" checked={true}/>
         </FG>
         <FG label="Activation">
@@ -2268,6 +2264,8 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
 
     {/*  FORM KEY MODAL  */}
     <Modal open={modal==="form-key"} onClose={()=>setModal(null)} title="Form Key from Components" width={920}>
+      <HSMTargetPicker session={session} material="imported" supported={/^AES-(128|192|256)/i.test(formAlgorithm)} unsupportedReason="Only AES-128/192/256 keys can be placed in an HSM."
+        checked={matHSM.on} onChecked={(on)=>setMatHSM((p)=>({...p,on}))} connection={matHSM.conn} onConnection={(conn)=>setMatHSM((p)=>({...p,conn}))} onNavigate={onNavigate}/>
       <Row2>
         <FG label="Key Name" required><Inp placeholder="Enter key name" value={formName} onChange={(e)=>setFormName(e.target.value)}/></FG>
         <FG label="Tenant" required><Sel><option>{session?.tenantId||"tenant"}</option></Sel></FG>
@@ -2390,6 +2388,8 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
 
     {/*  IMPORT KEY MODAL  */}
     <Modal open={modal==="import"} onClose={()=>setModal(null)} title="Import Key Material" width={920}>
+      <HSMTargetPicker session={session} material="imported" supported={/^AES-(128|192|256)/i.test(importAlgorithm)} unsupportedReason="Only AES-128/192/256 material can be placed in an HSM: choose the algorithm (not auto-detect)."
+        checked={matHSM.on} onChecked={(on)=>setMatHSM((p)=>({...p,on}))} connection={matHSM.conn} onConnection={(conn)=>setMatHSM((p)=>({...p,conn}))} onNavigate={onNavigate}/>
       <FG label="Import Method" required>
         <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
           {[

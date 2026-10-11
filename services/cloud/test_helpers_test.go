@@ -6,6 +6,9 @@ import (
 	"sync"
 	"testing"
 
+	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/credstore"
+	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 	pkgkeyaccess "vecta-kms/pkg/keyaccess"
 )
@@ -137,7 +140,88 @@ func newCloudService(t *testing.T) (*Service, *SQLStore, *fakeCloudKeyCore, *nop
 	mek := []byte("0123456789ABCDEF0123456789ABCDEF")
 	svc := NewService(store, keycore, newMockProviderRegistry(), publisher, mek)
 	svc.SetKeyAccess(pkgkeyaccess.NotDeployed())
+	svc.SetCredentials(newTestCredentials())
 	return svc, store, keycore, publisher
+}
+
+// testCredentials is the credential store as the cloud service sees it. It
+// starts with one credential per provider, "cred-<type>", in every tenant.
+type testCredentials struct {
+	mu       sync.Mutex
+	creds    map[string]credstore.Credential // by ID
+	imported map[string]bool                 // ID → exposed
+	tests    map[string]string               // ID → last reported error ("" ok)
+	err      error
+}
+
+func newTestCredentials() *testCredentials {
+	c := &testCredentials{creds: map[string]credstore.Credential{}, imported: map[string]bool{}, tests: map[string]string{}}
+	for _, typ := range credentialType {
+		c.creds["cred-"+typ] = credstore.Credential{ID: "cred-" + typ, Type: typ, Fields: map[string]string{"access_key_id": "AKIA", "secret_access_key": "from-the-store", "region": "us-east-1"}}
+	}
+	c.creds["cred-hsm"] = credstore.Credential{ID: "cred-hsm", Type: "pkcs11_hsm"}
+	return c
+}
+
+func (c *testCredentials) Resolve(_ context.Context, _, id string) (credstore.Credential, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.err != nil {
+		return credstore.Credential{}, c.err
+	}
+	cred, ok := c.creds[id]
+	switch {
+	case !ok:
+		return credstore.Credential{}, credstore.ErrNotFound
+	case providerOfCredential[cred.Type] == "":
+		// As compliance does: kms-cloud may not open another service's type.
+		return credstore.Credential{}, credstore.ErrWrongType
+	}
+	return cred, nil
+}
+
+func (c *testCredentials) Import(_ context.Context, _, sourceID, name, typ string, fields map[string]string, exposed bool) (string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.err != nil {
+		return "", c.err
+	}
+	id := "pbconn_cloud_" + sourceID
+	c.creds[id] = credstore.Credential{ID: id, Name: name, Type: typ, Fields: fields}
+	c.imported[id] = exposed
+	return id, nil
+}
+
+func (c *testCredentials) ReportTest(_ context.Context, _, id string, testErr error) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.tests[id] = ""
+	if testErr != nil {
+		c.tests[id] = testErr.Error()
+	}
+	return nil
+}
+
+// attachCtx is a request context whose verified caller may attach a
+// credential to a cloud account.
+func attachCtx(tenant string) context.Context {
+	return pkgauth.ContextWithClaims(context.Background(), &pkgauth.Claims{UserID: "tester", TenantID: tenant, Role: "admin", Permissions: []string{"*"}})
+}
+
+// legacyAccount stores an account the way a release before 8.0.0-beta did:
+// with its own credentials sealed under svc's master key.
+func legacyAccount(t *testing.T, svc *Service, tenant, provider, name, credentialsJSON string) CloudAccount {
+	t.Helper()
+	env, err := pkgcrypto.EncryptEnvelope(svc.mek, []byte(credentialsJSON))
+	if err != nil {
+		t.Fatal(err)
+	}
+	acc := CloudAccount{ID: newID("ca"), TenantID: tenant, Provider: provider, Name: name, DefaultRegion: "us-east-1", Status: "configured",
+		CredentialsWrappedDEK: env.WrappedDEK, CredentialsWrappedDEKIV: env.WrappedDEKIV, CredentialsCiphertext: env.Ciphertext, CredentialsDataIV: env.DataIV}
+	if err := svc.store.CreateAccount(context.Background(), acc); err != nil {
+		t.Fatal(err)
+	}
+	return acc
 }
 
 func newCloudHandler(t *testing.T) (*Handler, *Service, *fakeCloudKeyCore, *nopCloudPublisher) {
@@ -151,8 +235,9 @@ func createCloudSchemaForTest(conn *pkgdb.DB) error {
 		`CREATE TABLE cloud_accounts (
 			tenant_id TEXT NOT NULL, id TEXT NOT NULL, provider TEXT NOT NULL, name TEXT NOT NULL,
 			default_region TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'active',
-			creds_wrapped_dek BLOB NOT NULL, creds_wrapped_dek_iv BLOB NOT NULL,
-			creds_ciphertext BLOB NOT NULL, creds_data_iv BLOB NOT NULL,
+			creds_wrapped_dek BLOB, creds_wrapped_dek_iv BLOB,
+			creds_ciphertext BLOB, creds_data_iv BLOB,
+			connection_id TEXT NOT NULL DEFAULT '',
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, id), UNIQUE (tenant_id, provider, name)

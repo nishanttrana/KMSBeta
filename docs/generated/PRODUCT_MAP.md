@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-10T18:46:15Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-11T03:57:41Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `26`
 - Tab/component mappings: `33`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `877` across `28` services
-- Backend routes on the `pkg/route` kernel: `449` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `558`
-- Frontend call sites with exact backend route match: `514`
-- Frontend call sites needing review or dynamic/runtime confirmation: `44`
-- Clickable controls with static `onClick` handlers: `762`
-- Backend request flows with handler/service/package summaries: `877`
+- Backend HTTP routes discovered: `888` across `28` services
+- Backend routes on the `pkg/route` kernel: `460` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `564`
+- Frontend call sites with exact backend route match: `518`
+- Frontend call sites needing review or dynamic/runtime confirmation: `46`
+- Clickable controls with static `onClick` handlers: `764`
+- Backend request flows with handler/service/package summaries: `888`
 
 ## How To Use This For Launch
 
@@ -107,6 +107,10 @@ flowchart LR
   tab_sbom["SBOM / CBOM"]
   UI --> tab_sbom
   tab_sbom --> svc_sbom
+  tab_playbooks["Playbooks"]
+  UI --> tab_playbooks
+  tab_playbooks --> svc_compliance
+  tab_playbooks --> svc_keycore
   tab_cluster["Cluster"]
   UI --> tab_cluster
   tab_cluster --> svc_auth_edge
@@ -139,16 +143,16 @@ flowchart LR
   svc_autokey["autokey (15 routes)"]
   svc_backup["backup (11 routes)"]
   svc_certs["certs (69 routes)"]
-  svc_cloud["cloud (14 routes)"]
+  svc_cloud["cloud (17 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
-  svc_compliance["compliance (57 routes)"]
+  svc_compliance["compliance (61 routes)"]
   svc_confidential["confidential (7 routes)"]
   svc_discovery["discovery (24 routes)"]
-  svc_ekm["ekm (64 routes)"]
+  svc_ekm["ekm (65 routes)"]
   svc_governance["governance (35 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (174 routes)"]
+  svc_keycore["keycore (176 routes)"]
   svc_posture["posture (13 routes)"]
   svc_pqc["pqc (14 routes)"]
   svc_reporting["reporting (34 routes)"]
@@ -187,7 +191,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Security & compliance | Posture | posture | web/dashboard/src/components/v3/tabs/PostureTab.tsx | auth, autokey, keyaccess, posture, signing, workload | 96 |
 | Security & compliance | Compliance | compliance | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | compliance, pqc, reporting | 46 |
 | Security & compliance | SBOM / CBOM | sbom | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | sbom | 12 |
-| Security & compliance | Playbooks | playbooks | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | - | 0 |
+| Security & compliance | Playbooks | playbooks | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | compliance, keycore | 6 |
 | Platform | Cluster | cluster | web/dashboard/src/components/v3/tabs/ClusterTab.tsx | auth-edge, cluster-manager | 15 |
 | Platform | Backup & Restore | backup | web/dashboard/src/components/v3/tabs/BackupTab.tsx | backup | 10 |
 | Platform | Administration | admin | web/dashboard/src/components/v3/tabs/AdminTab.tsx | - | 0 |
@@ -208,18 +212,18 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | autokey | 15 | 11 |
 | backup | 11 | 10 |
 | certs | 69 | 52 |
-| cloud | 14 | 10 |
+| cloud | 17 | 10 |
 | cluster-manager | 21 | 11 |
-| compliance | 57 | 23 |
+| compliance | 61 | 28 |
 | confidential | 7 | 6 |
 | dataprotect | 50 | 29 |
 | discovery | 24 | 22 |
-| ekm | 64 | 44 |
+| ekm | 65 | 44 |
 | governance | 35 | 23 |
-| hsm-connector | 12 | 0 |
+| hsm-connector | 13 | 0 |
 | hyok | 21 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 174 | 118 |
+| keycore | 176 | 119 |
 | kmip | 12 | 11 |
 | policy | 12 | 0 |
 | posture | 13 | 10 |
@@ -250,15 +254,17 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | auth | GET | /auth/identity/providers/{param}/users{param}` : ""} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 933 |
 | auth | GET | /auth/identity/providers/{param}/groups{param}` : ""} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 963 |
 | auth | GET | /auth/identity/providers/{param}/groups/{param}/members{param}` : ""} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 989 |
-| cloud | GET | /cloud/accounts{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 127 |
-| cloud | GET | /cloud/region-mappings{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 163 |
-| cloud | GET | /cloud/inventory{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 242 |
-| cloud | GET | /cloud/bindings{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 263 |
+| cloud | GET | /cloud/accounts{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 131 |
+| cloud | GET | /cloud/region-mappings{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 167 |
+| cloud | GET | /cloud/inventory{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 246 |
+| cloud | GET | /cloud/bindings{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 267 |
 | keycore | GET | /cost/metrics | trackedFetch | web/dashboard/src/lib/costOptimization.ts | 6 |
 | keycore | GET | /cost/suggestions | trackedFetch | web/dashboard/src/lib/costOptimization.ts | 12 |
 | keycore | POST | /cost/suggestions/{param}/apply | trackedFetch | web/dashboard/src/lib/costOptimization.ts | 18 |
-| ekm | GET | /ekm/agents/{param}/validate-deploy | serviceRequest | web/dashboard/src/lib/ekm.ts | 958 |
-| tfe | GET | /tfe/file-encrypt/download | serviceRequest | web/dashboard/src/lib/ekm.ts | 1005 |
+| compliance | GET | /compliance/playbooks/connections/{param}/test | serviceRequest | web/dashboard/src/lib/credentials.ts | 72 |
+| compliance | GET | /compliance/playbooks/connections/{param} | serviceRequest | web/dashboard/src/lib/credentials.ts | 76 |
+| ekm | GET | /ekm/agents/{param}/validate-deploy | serviceRequest | web/dashboard/src/lib/ekm.ts | 956 |
+| tfe | GET | /tfe/file-encrypt/download | serviceRequest | web/dashboard/src/lib/ekm.ts | 1003 |
 | hyok | POST | /hyok/{param}/v1/keys/{param}/{param} | serviceRequest | web/dashboard/src/lib/hyok.ts | 180 |
 | keycore | GET | /analytics/keys | trackedFetch | web/dashboard/src/lib/keyAnalytics.ts | 7 |
 | keycore | GET | /analytics/report | trackedFetch | web/dashboard/src/lib/keyAnalytics.ts | 13 |
@@ -283,7 +289,7 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | secrets | GET | /{param}&format={param}{param}` : ""} | serviceRequest | web/dashboard/src/lib/secrets.ts | 170 |
 | secrets | DELETE | /secretURL(session, secretId, `/versions/{param}`) | serviceRequest | web/dashboard/src/lib/secrets.ts | 199 |
 
-Showing `44` of `44`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
+Showing `46` of `46`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
 
 ## Backend Routes Not Directly Called From Dashboard
 
@@ -350,20 +356,23 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | autokey | POST | /autokey/service-policies | h.handleUpsertServicePolicy |  | services/autokey/handler.go | 38 |
 | autokey | PUT | /autokey/service-policies/{service} | h.handleUpsertServicePolicy |  | services/autokey/handler.go | 39 |
 | backup | GET | /healthz | h.handleHealth |  | services/backup/handler.go | 48 |
-| certs | GET | /certs/{id} | h.handleGetCert |  | services/certs/handler.go | 45 |
-| certs | POST | /certs/profiles | h.handleCreateProfile |  | services/certs/handler.go | 50 |
-| certs | GET | /certs/profiles/{id} | h.handleGetProfile |  | services/certs/handler.go | 52 |
-| certs | POST | /certs/ocsp | h.handleOCSP |  | services/certs/handler.go | 55 |
-| certs | GET | /certs/clm/policy | h.handleGetCLMPolicy |  | services/certs/handler.go | 60 |
-| certs | GET | /acme/directory | h.handleACMEDirectory |  | services/certs/handler.go | 76 |
-| certs | HEAD | /acme/new-nonce | h.handleACMENonce |  | services/certs/handler.go | 77 |
-| certs | POST | /acme/new-nonce | h.handleACMENonce |  | services/certs/handler.go | 78 |
-| certs | GET | /acme/renewal-info/{id} | h.handleACMERenewalInfo |  | services/certs/handler.go | 81 |
-| certs | GET | /acme/cert/{id} | h.handleACMECertDownload |  | services/certs/handler.go | 85 |
-| certs | GET | /est/.well-known/est/cacerts | h.handleESTCACerts |  | services/certs/handler.go | 87 |
-| certs | POST | /est/.well-known/est/simplereenroll | h.handleESTSimpleReenroll |  | services/certs/handler.go | 90 |
+| certs | GET | /certs/{id} | h.handleGetCert |  | services/certs/handler.go | 47 |
+| certs | POST | /certs/profiles | h.handleCreateProfile |  | services/certs/handler.go | 52 |
+| certs | GET | /certs/profiles/{id} | h.handleGetProfile |  | services/certs/handler.go | 54 |
+| certs | POST | /certs/ocsp | h.handleOCSP |  | services/certs/handler.go | 57 |
+| certs | GET | /certs/clm/policy | h.handleGetCLMPolicy |  | services/certs/handler.go | 62 |
+| certs | GET | /acme/directory | h.handleACMEDirectory |  | services/certs/handler.go | 78 |
+| certs | HEAD | /acme/new-nonce | h.handleACMENonce |  | services/certs/handler.go | 79 |
+| certs | POST | /acme/new-nonce | h.handleACMENonce |  | services/certs/handler.go | 80 |
+| certs | GET | /acme/renewal-info/{id} | h.handleACMERenewalInfo |  | services/certs/handler.go | 83 |
+| certs | GET | /acme/cert/{id} | h.handleACMECertDownload |  | services/certs/handler.go | 87 |
+| certs | GET | /est/.well-known/est/cacerts | h.handleESTCACerts |  | services/certs/handler.go | 89 |
+| certs | POST | /est/.well-known/est/simplereenroll | h.handleESTSimpleReenroll |  | services/certs/handler.go | 92 |
 | certs | GET | /certs/edge-tls/measurement | s.handleEdgeMeasurement | authenticated | services/certs/internal_mtls_routes.go | 65 |
 | certs | POST | /v1/enroll | <inline func> | public | services/certs/internal_tls.go | 184 |
+| cloud | POST | /cloud/accounts/{id}/test | h.testAccount | cloud.write | services/cloud/credentials.go | 176 |
+| cloud | POST | /cloud/credentials/{id}/test | h.testCredential | authenticated | services/cloud/credentials.go | 177 |
+| cloud | GET | /cloud/credential-usage | h.credentialUsage | authenticated | services/cloud/credentials.go | 178 |
 | cloud | GET | /cloud/accounts | h.handleListAccounts |  | services/cloud/handler.go | 31 |
 | cloud | GET | /cloud/region-mappings | h.handleListRegionMappings |  | services/cloud/handler.go | 34 |
 | cloud | GET | /cloud/inventory | h.handleInventory |  | services/cloud/handler.go | 38 |
@@ -379,20 +388,22 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | cluster-manager | POST | /cluster/sync/events | h.handlePublishSyncEvent |  | services/cluster-manager/handler.go | 53 |
 | cluster-manager | POST | /cluster/sync/ack | h.handleSyncAck |  | services/cluster-manager/handler.go | 55 |
 | cluster-manager | GET | /cluster/replication/status | h.handleReplicationStatus |  | services/cluster-manager/handler.go | 58 |
-| compliance | POST | /compliance/connections/{id}/resolve | h.resolveConnection | authenticated | services/compliance/connections_service.go | 66 |
-| compliance | POST | /compliance/connections/import | h.importConnection | authenticated | services/compliance/connections_service.go | 67 |
-| compliance | GET | /compliance/posture | h.handlePosture |  | services/compliance/handler.go | 55 |
-| compliance | GET | /compliance/posture/history | h.handlePostureHistory |  | services/compliance/handler.go | 56 |
-| compliance | GET | /compliance/templates/{id} | h.handleGetComplianceTemplate |  | services/compliance/handler.go | 66 |
-| compliance | GET | /compliance/frameworks/{id}/controls | h.handleFrameworkControls |  | services/compliance/handler.go | 70 |
-| compliance | GET | /compliance/keys/orphaned | h.handleOrphaned |  | services/compliance/handler.go | 74 |
-| compliance | GET | /compliance/keys/expired | h.handleExpired |  | services/compliance/handler.go | 75 |
-| compliance | GET | /compliance/audit/correlations | h.handleAuditCorrelations |  | services/compliance/handler.go | 77 |
-| compliance | GET | /compliance/cbom | h.handleCBOM |  | services/compliance/handler.go | 80 |
-| compliance | GET | /compliance/cbom/summary | h.handleCBOMSummary |  | services/compliance/handler.go | 81 |
-| compliance | GET | /compliance/cbom/export | h.handleCBOMExport |  | services/compliance/handler.go | 82 |
-| compliance | GET | /compliance/cbom/pqc-readiness | h.handleCBOMPQCReadiness |  | services/compliance/handler.go | 83 |
-| compliance | GET | /compliance/cbom/diff | h.handleCBOMDiff |  | services/compliance/handler.go | 84 |
+| compliance | POST | /compliance/connections/{id}/resolve | h.resolveConnection | authenticated | services/compliance/connections_service.go | 71 |
+| compliance | POST | /compliance/connections/import | h.importConnection | authenticated | services/compliance/connections_service.go | 72 |
+| compliance | GET | /compliance/connections/{id} | h.checkConnectionUse | compliance.connection.use | services/compliance/credentials.go | 36 |
+| compliance | POST | /compliance/connections/{id}/tested | h.reportConnectionTest | authenticated | services/compliance/credentials.go | 38 |
+| compliance | GET | /compliance/posture | h.handlePosture |  | services/compliance/handler.go | 59 |
+| compliance | GET | /compliance/posture/history | h.handlePostureHistory |  | services/compliance/handler.go | 60 |
+| compliance | GET | /compliance/templates/{id} | h.handleGetComplianceTemplate |  | services/compliance/handler.go | 70 |
+| compliance | GET | /compliance/frameworks/{id}/controls | h.handleFrameworkControls |  | services/compliance/handler.go | 74 |
+| compliance | GET | /compliance/keys/orphaned | h.handleOrphaned |  | services/compliance/handler.go | 78 |
+| compliance | GET | /compliance/keys/expired | h.handleExpired |  | services/compliance/handler.go | 79 |
+| compliance | GET | /compliance/audit/correlations | h.handleAuditCorrelations |  | services/compliance/handler.go | 81 |
+| compliance | GET | /compliance/cbom | h.handleCBOM |  | services/compliance/handler.go | 84 |
+| compliance | GET | /compliance/cbom/summary | h.handleCBOMSummary |  | services/compliance/handler.go | 85 |
+| compliance | GET | /compliance/cbom/export | h.handleCBOMExport |  | services/compliance/handler.go | 86 |
+| compliance | GET | /compliance/cbom/pqc-readiness | h.handleCBOMPQCReadiness |  | services/compliance/handler.go | 87 |
+| compliance | GET | /compliance/cbom/diff | h.handleCBOMDiff |  | services/compliance/handler.go | 88 |
 | compliance | GET | /compliance/playbooks/catalog | h.playbookCatalog | compliance.playbook.read | services/compliance/handler_playbooks.go | 135 |
 | compliance | GET | /compliance/playbooks/summary | h.playbookSummary | compliance.playbook.read | services/compliance/handler_playbooks.go | 136 |
 | compliance | GET | /compliance/playbooks | h.listPlaybooks | compliance.playbook.read | services/compliance/handler_playbooks.go | 137 |
@@ -406,13 +417,8 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/playbook-runs | h.searchRuns | compliance.playbook.read | services/compliance/handler_playbooks.go | 145 |
 | compliance | GET | /compliance/playbook-runs/{run_id} | h.getRun | compliance.playbook.read | services/compliance/handler_playbooks.go | 146 |
 | compliance | POST | /compliance/playbook-runs/{run_id}/cancel | h.cancelRun | compliance.playbook.run | services/compliance/handler_playbooks.go | 147 |
-| compliance | POST | /compliance/playbook-runs/{run_id}/retry | h.retryRun | compliance.playbook.run | services/compliance/handler_playbooks.go | 148 |
-| compliance | POST | /compliance/playbooks/connections | h.createConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 377 |
-| compliance | PUT | /compliance/playbooks/connections/{id} | h.updateConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 378 |
-| compliance | DELETE | /compliance/playbooks/connections/{id} | h.deleteConnection | compliance.playbook.delete | services/compliance/playbook_connections.go | 379 |
-| compliance | POST | /compliance/playbooks/connections/{id}/test | h.testConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 380 |
 
-Showing `120` of `357`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `365`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

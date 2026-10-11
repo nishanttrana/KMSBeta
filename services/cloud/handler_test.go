@@ -17,10 +17,11 @@ func TestHandlerCloudFlow(t *testing.T) {
 		"provider":         ProviderAWS,
 		"name":             "aws-primary",
 		"default_region":   "us-east-1",
-		"credentials_json": `{"access_key":"abc","secret":"xyz"}`,
+		"connection_id":  "cred-aws",
 	}
 	accountBody, _ := json.Marshal(accountReq)
 	createAccount := httptest.NewRequest(http.MethodPost, "/cloud/accounts", bytes.NewReader(accountBody))
+	createAccount = createAccount.WithContext(attachCtx("tenant-1"))
 	createAccount.Header.Set("X-Request-ID", "req-1")
 	accountRR := httptest.NewRecorder()
 	h.ServeHTTP(accountRR, createAccount)

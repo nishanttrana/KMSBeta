@@ -32,7 +32,9 @@ const signerVersionHSM = "hsm"
 
 // HSMKeyStore is keycore's HSM key API as certs uses it.
 type HSMKeyStore interface {
-	CreateHSMSigningKey(ctx context.Context, tenantID, algorithm, name string) (keyID string, publicDER []byte, err error)
+	// CreateHSMSigningKey generates the key on the HSM credential
+	// connectionID, or on the tenant's HSM profile when it is "".
+	CreateHSMSigningKey(ctx context.Context, tenantID, algorithm, name, connectionID string) (keyID string, publicDER []byte, err error)
 	// SignDigest signs with an HSM key. A non-empty usage (certificate-sign,
 	// crl-sign) is performed for the user in ctx, whose grants keycore checks.
 	SignDigest(ctx context.Context, tenantID, keyID, hash string, digest []byte, usage string) ([]byte, error)
@@ -81,7 +83,7 @@ func (h *hsmSigner) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) ([]
 // newHSMCAKey creates a CA key in the tenant's HSM through keycore. Its
 // signer self-signs the new CA as the certs service: the user was already
 // authorized to create the CA, and holds no grant on a key made a moment ago.
-func (s *Service) newHSMCAKey(ctx context.Context, tenantID, algorithm, name string) (*hsmSigner, error) {
+func (s *Service) newHSMCAKey(ctx context.Context, tenantID, algorithm, name, connectionID string) (*hsmSigner, error) {
 	alg := hsmCAAlgorithm(algorithm)
 	if alg == "" {
 		return nil, errHSMCAAlgorithm
@@ -90,7 +92,7 @@ func (s *Service) newHSMCAKey(ctx context.Context, tenantID, algorithm, name str
 	if !ok {
 		return nil, errors.New("HSM CA keys need keycore, which is not configured")
 	}
-	keyID, pubDER, err := keys.CreateHSMSigningKey(ctx, tenantID, alg, name)
+	keyID, pubDER, err := keys.CreateHSMSigningKey(ctx, tenantID, alg, name, connectionID)
 	if err != nil {
 		return nil, fmt.Errorf("HSM CA key: %w", err)
 	}
@@ -117,13 +119,14 @@ func (s *Service) hsmCASigner(ctx context.Context, ca CA, usage string) (crypto.
 
 // CreateHSMSigningKey creates an HSM-resident signing key in keycore and
 // returns its public half.
-func (h *HTTPKeyCoreSigner) CreateHSMSigningKey(ctx context.Context, tenantID, algorithm, name string) (string, []byte, error) {
+func (h *HTTPKeyCoreSigner) CreateHSMSigningKey(ctx context.Context, tenantID, algorithm, name, connectionID string) (string, []byte, error) {
 	var created struct {
 		KeyID string `json:"key_id"`
 	}
 	if err := h.post(ctx, tenantID, "/keys", map[string]interface{}{
 		"tenant_id": tenantID, "name": name, "algorithm": algorithm, "key_type": "asymmetric-private",
 		"purpose": "sign", "owner": "kms-certs", "iv_mode": "internal", "created_by": "kms-certs", "hsm": true,
+		"hsm_connection_id": strings.TrimSpace(connectionID),
 	}, &created); err != nil {
 		return "", nil, err
 	}

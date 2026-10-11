@@ -26,6 +26,7 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -67,9 +68,11 @@ func main() {
 	}
 
 	var publisher EventPublisher
+	var auditClient *pkgaudit.Client
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.autokey.dead_letter")
+		auditClient, _ = pkgaudit.NewClient(js, "autokey")
 	} else {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
 	}
@@ -83,7 +86,11 @@ func main() {
 	handler := NewHandler(svc)
 
 	httpPort := envOr("HTTP_PORT", "8260")
-	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "autokey"))
+	// Every request carries a verified Bearer token: a person's from the
+	// dashboard or API, or a platform service's. Before 8.0.0-beta this
+	// service verified none and took the tenant from the request.
+	authed := pkgjwtauth.MustWrap("AUTOKEY", cfg.JWTIssuer, cfg.JWTAudience, handler, auditClient, logger)
+	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authed, publisher, "autokey"))
 	go func() {
 		logger.Printf("https (mTLS) listening on :%s", httpPort)
 		if err := httpSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {

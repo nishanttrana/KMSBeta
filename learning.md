@@ -5,6 +5,59 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### Credentials in one store (8.0.0-beta)
+- **Two services verified no token at all.** `cloud` and `autokey` wrapped
+  their handlers in the request-audit middleware and nothing else. Every
+  handler called `tenantcheck.Enforce`, which *skips* when no claims are in
+  the context, so the tenant check read as present and did nothing. How it
+  slipped through: each service's tests call the handler directly, the edge
+  only requires an `X-Tenant-ID` header, and nothing in conformance asks
+  "does `main` verify a token". **Rule:** a tenant check that passes on
+  missing claims is not a check; look for `jwtauth.MustWrap` (or
+  `platform.Boot`) in `main.go`, not for `Enforce` in handlers.
+- **"Masked in the API" is not "sealed".** The Azure EKM client secret and
+  the governance SMTP password were plaintext columns whose handlers
+  blanked or masked them on the way out. A reviewer reading the handler
+  sees a careful service. Check the migration and the INSERT.
+- **A collected secret nothing uses is still a stored secret.** The Google
+  CSE dialog asked for a service account key, the column comment said
+  "encrypted at rest", and no code read it. Removed, not migrated. Grep for
+  the field's *readers* before deciding how to protect it.
+- **A whole-object metadata update can erase system state kept in the same
+  object.** Keycore kept "this key is in an HSM, and which" in the key's
+  labels, and `UpdateKey` replaced every label. Editing a key's owner
+  could orphan its HSM objects at destroy time. System labels are now
+  carried over and never taken from the caller.
+- **A PKCS#11 login belongs to the process, not to the request.** The
+  connector keeps one logged-in session per slot. A second configuration
+  for the same slot inherited that login whatever PIN it carried. With
+  per-tenant credentials that is a way in, so the PIN used for the anchor
+  is remembered as a keyed digest and a different one is refused.
+- **Optional transport security is plaintext.** The mailer did STARTTLS
+  "if enabled and offered"; a relay that didn't offer it got the password
+  in the clear, silently. TLS is now required and the test speaks SMTP to
+  a real listener to prove nothing but EHLO reaches a plaintext relay.
+- **A test double at an interface hides everything behind it, including
+  whether the caller has a credential.** The HSM connector got a client for
+  the credential store and a fake of it in tests; it had never called
+  another service, so it had no service identity and auth provisioned none.
+  Every HSM credential would have been refused in a deployment, with every
+  test green. Conformance `service-token` checks that a call *attaches* a
+  token, not that the process can get one. Found by reading `main.go`, not
+  by a test; `TestEveryCredentialUserHasAServiceIdentity` now ties the
+  admission list to auth's identities and each service's `main`.
+- **Two sessions built the same thing.** While this change was open,
+  7.40.0-beta shipped approved private endpoints; this change had its own
+  list, table and UI. Rebased onto theirs and deleted mine. Fetch before
+  building anything cross-cutting, not only before pushing.
+- **Overwriting a file to replace one function loses the others.** Writing
+  a new `mailer.go` dropped `buildApprovalEmailBody`, which lived below the
+  function being replaced. The build caught it; a file with only helpers
+  and no caller in the package would not have.
+- **The shared `Chk` toggles on its box, not its label**, and the shared
+  `Sel` is a custom listbox over a hidden `<select>`. A smoke test that
+  clicks the label or calls `selectOption` does nothing and waits.
+
 ### Private endpoints for source connections (7.40.0-beta)
 - **Checking an address when a connection is saved says nothing about where
   its credential goes later.** The save-time check resolved the name once.

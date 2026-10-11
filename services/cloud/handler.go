@@ -48,6 +48,9 @@ func (h *Handler) handleRegisterAccount(w http.ResponseWriter, r *http.Request) 
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
+	if !bodyTenantAllowed(w, r, req.TenantID, reqID) {
+		return
+	}
 	out, err := h.svc.RegisterAccount(r.Context(), req)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, req.TenantID, "register_failed")
@@ -96,6 +99,9 @@ func (h *Handler) handleSetRegionMapping(w http.ResponseWriter, r *http.Request)
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
+	if !bodyTenantAllowed(w, r, req.TenantID, reqID) {
+		return
+	}
 	out, err := h.svc.SetRegionMapping(r.Context(), req)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, req.TenantID, "mapping_failed")
@@ -123,6 +129,9 @@ func (h *Handler) handleImportKey(w http.ResponseWriter, r *http.Request) {
 	var req ImportKeyToCloudRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	if !bodyTenantAllowed(w, r, req.TenantID, reqID) {
 		return
 	}
 	if strings.TrimSpace(req.RequesterIP) == "" {
@@ -190,6 +199,9 @@ func (h *Handler) handleSync(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
+	if !bodyTenantAllowed(w, r, req.TenantID, reqID) {
+		return
+	}
 	if strings.TrimSpace(req.RequesterIP) == "" {
 		req.RequesterIP = requestIP(r)
 	}
@@ -252,6 +264,16 @@ func (h *Handler) handleGetBinding(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"binding": out, "request_id": reqID})
+}
+
+// bodyTenantAllowed refuses a request whose body names a tenant other than
+// the verified token's (a platform service may act for any tenant).
+func bodyTenantAllowed(w http.ResponseWriter, r *http.Request, tenantID, reqID string) bool {
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
+		return false
+	}
+	return true
 }
 
 func decodeJSON(r *http.Request, out interface{}) error {

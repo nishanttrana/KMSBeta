@@ -1,10 +1,26 @@
-# Connections: the one store of outbound credentials
+# Credentials: the one store of external credentials
 
-Owner decision, 2026-09-28: webhooks and SIEM are part of Playbooks, not a
-separate tab. Every outbound integration is a **connection**. Playbook
-actions, audit event streams and governance approval notices all name one.
-Nothing else in the platform stores an outbound URL or credential
-(2.10.0-beta).
+Owner decisions. 2026-09-28: webhooks and SIEM are part of Playbooks, not a
+separate tab; every outbound integration is a **connection** (2.10.0-beta).
+2026-10-10: every credential the KMS uses to reach an external system is
+added in one place, **Playbooks → Credentials**, before a feature can use
+it (8.0.0-beta). A connection and a credential are the same thing: the API
+and tables keep the name connection.
+
+Nothing else in the platform stores an external URL, account, PIN, key or
+token. A feature holds a credential's ID, never a secret. Two things are
+deliberately outside the store:
+
+- **The tenant's HSM profile** (HSM tab), the KMS's root of trust. Its PIN
+  stays in the connector's environment or a file on that host: sealing it
+  under a keycore key would make the root of trust depend on what it
+  protects ([HSM_INTEGRATION.md](HSM_INTEGRATION.md)).
+- **Identity provider secrets** (LDAP bind password, OIDC client secret),
+  which the auth service still stores itself. See "What is still open".
+
+BitLocker and HYOK/DKE hold no outbound credential: the BitLocker agent
+signs in to the KMS with its own token, and HYOK verifies Entra tokens
+against published keys.
 
 ## What a connection is
 
@@ -21,8 +37,42 @@ keep one.
 | notify | `slack`, `teams`, `webhook` (optional `signing_secret`, HMAC-SHA256 from `pkg/crypto`) | playbook actions, event streams; Slack/Teams also approval notices |
 | ticketing | `jira`, `servicenow` | playbook actions |
 | siem | `splunk_hec`, `datadog`, `elastic`, `sentinel`, `syslog` (`pkg/siem`) | `send_siem_alert`, event streams |
+| cloud | `aws` (`access_key_id`, `secret_access_key`; optional `role_arn`, `external_id`, `region`, `endpoint_url`), `azure` (Entra app registration: `tenant_id`, `client_id`, `client_secret`), `gcp` (`service_account_json`), `oci`, `alibaba`, `salesforce`; `servicenow` with `username` and `password` (8.0.0-beta) | Cloud BYOK accounts; `azure` also Azure EKM vaults |
+| mail | `smtp`: `host`, `port`, `from`, optional `username`, `password`, `ca_pem` (8.0.0-beta) | governance approval and playbook mail |
+| hsm | `pkcs11_hsm`: `library_path`, `pin`, `slot_id` or `token_label`, optional `topology` (`single` or `ha_group`) and `vendor` (8.0.0-beta) | keys and CA keys created, formed or imported in an HSM |
 | source | `git`: the hosting site (`git_url`), an access `token`, optional `username` for Basic authentication (7.20.0-beta) | discovery's git repository scans |
 | source | `s3`: the storage service (`endpoint_url`), `access_key_id`, `secret_access_key` (at least 10 characters), optional `role_arn` and `external_id` (Amazon only). `azure_blob`: the storage account (`account_url`) and exactly one credential: a `sas_token` with read and list, an Entra ID application (`azure_tenant_id`, `client_id`, `client_secret`), or the `account_key` (with `account_name` if the address does not name the account). `gcs`: `gcs_url` and a `service_account_json` key file (7.34.0-beta; roles, Entra ID, account key and `gcs` 7.39.0-beta) | discovery's object storage scans |
+
+## What a credential records (8.0.0-beta)
+
+- **Attributes.** The values of the fields a type marks public (an HSM's
+  slot, token label and declared topology, a region, an app registration's
+  client ID) are returned, so a picker can show which is which. No other
+  field value is ever returned.
+- **Health.** The result of the last real test of the current secret:
+  passed, failed (with the error) or not tested. Saving in the dashboard
+  runs the test. A changed secret clears it.
+- **Age, expiry and rotation.** When a secret field last changed, an
+  optional expiry the operator records, and an optional rotation interval.
+  The primary's hourly sweep raises `audit.compliance.credential_expiring`
+  (30 and 7 days before), `credential_expired` and
+  `credential_rotation_due`, each once per secret; a failed test raises
+  `credential_test_failed`. All four are playbook triggers.
+- **Where it is used.** `GET /compliance/connections/{id}/usage` asks
+  playbooks, event streams, governance, discovery, cloud, ekm and keycore.
+  A service the deployment leaves out is not asked; one that can't answer
+  makes the answer "unavailable", never "unused".
+
+## Who can attach one (8.0.0-beta)
+
+Managing credentials (list, create, change, delete, test) needs the
+playbook permissions. **Attaching** one to a feature needs
+`compliance.connection.use`, and that permission alone neither lists the
+store nor changes it. The service that owns the feature checks it on the
+caller's own verified token when the credential is chosen (registering a
+cloud account, saving a vault or the mail relay, creating a key or CA on an
+HSM credential), refuses and audits when it is missing, and reads pickers
+from `GET /compliance/connections?type=`.
 
 ## Who can open one
 
@@ -68,6 +118,19 @@ keep one.
   delivery errors name the host, never the URL (a Slack or Teams URL is
   itself a credential).
 
+- **Cloud BYOK** (8.0.0-beta) is admitted as `kms-cloud` for the cloud
+  types. An account holds a credential ID; every provider call opens it and
+  keeps the fields in memory for that call. With an AWS `role_arn` the
+  access key only calls `sts:AssumeRole`.
+- **Azure EKM** (8.0.0-beta) is admitted as `kms-ekm` for `azure` only.
+- **The HSM connector** (8.0.0-beta) is admitted as `kms-hsm` for
+  `pkcs11_hsm` only, and caches an opened credential for 15 seconds, as it
+  does a profile. The library path is confined to the provider workspace
+  exactly as a profile's is.
+- **Governance** additionally opens `smtp` for mail.
+- Each service that tests a credential where it is used reports the result
+  with `POST /compliance/connections/{id}/tested`, for its own types only.
+
 ## Private endpoints (7.40.0-beta)
 
 The outbound guard refuses private addresses for every connection. Source
@@ -98,12 +161,21 @@ customer's own network:
   and the audit service dial those through `ssrfguard`, which refuses
   every private address.
 
+**Mail relays (8.0.0-beta).** An `smtp` credential may name a host inside
+a range approved for its tenant, checked when it is saved; governance is
+given the ranges with the credential and its dial guard refuses any other
+private address. Notification, ticketing and SIEM types are unchanged.
+
 ## Every call is TLS
 
 - HTTP types go through `ssrfguard.NewHTTPSClient`: HTTPS only, TLS 1.3, no
   redirects, no proxy, and the dialer refuses private, loopback, link-local
   and metadata addresses after resolving (no DNS rebinding). Platform hosts
   are refused when the connection is saved.
+- `smtp` (8.0.0-beta) always uses TLS: implicit on port 465, STARTTLS on
+  any other, refused if the relay offers neither (`pkg/smtpmail`). TLS 1.2
+  is the minimum (FIPS exception: external protocol mandate); a relay with
+  a private CA takes `ca_pem`.
 - `syslog` is RFC 5425 over TLS 1.3 through `ssrfguard.DialContext`,
   verified against the system roots or the connection's `ca_pem`. There is no
   plain UDP or TCP syslog. (The earlier `pkg/siem` QRadar exporter dialled
@@ -124,6 +196,11 @@ the audit service for its event streams and, for the root tenant, asks
 governance for its notice settings, as `kms-compliance`. If either service
 can't answer, the delete is refused (`connection_usage_unverified`): a
 silently broken SIEM feed is worse than a delayed delete.
+
+Since 8.0.0-beta the same guard covers cloud accounts and Azure EKM vaults
+(asked of the cloud and ekm services), the governance mail relay, and HSM
+keys (asked of keycore, which counts live keys only: a destroyed key's
+objects are gone from the HSM).
 
 ## Migration (2.10.0-beta)
 
@@ -149,6 +226,25 @@ again after a restore:
   still hold them. Rotate those webhooks in Slack/Teams, then enter the new
   URL on the connection. The warning clears when every field is replaced.
 
+## Migration (8.0.0-beta)
+
+Three more stores held their own credentials. The primary moves each into
+the store, retries every 15 minutes, and runs again after a restore. A row
+the store won't take keeps working from its own copy and is reported once.
+
+- **Cloud accounts** kept a sealed credentials document. Its keys map onto
+  the provider type's fields; any other key goes into `options_json`
+  unchanged. `pbconn_cloud_<account id>`; carried over as exposed if the
+  cloud exposure register listed it.
+- **Azure EKM vaults** kept the client secret in **plaintext**.
+  `pbconn_ekm_<config id>`, recorded as exposed: rotate the secret in Entra.
+- **Governance** kept the SMTP host, account and password in
+  **plaintext**. `pbconn_governance_governance_smtp`, recorded as exposed
+  when a password was stored: change it on the relay.
+
+The Google CSE service account key was stored in plaintext and never used.
+It is deleted, not migrated.
+
 ## What is still open
 
 - A SIEM on a private network (an on-premises QRadar or Splunk) can't be a
@@ -169,3 +265,15 @@ again after a restore:
   (7.39.0-beta). Entra ID supports the public Azure cloud only (the login
   host is fixed), and role assumption the standard AWS partition's regional
   STS endpoints.
+- Identity provider secrets (LDAP bind password, OIDC client secret) are
+  plaintext JSON in `auth_identity_provider_configs`. Auth can't depend on
+  compliance to sign users in (compliance depends on auth), so they need
+  either sealing inside auth with `pkg/mek` or an owner decision.
+- The tokenization external vault takes a `password_ref` that nothing
+  resolves; it should name a database credential type here.
+- Cloud credentials name public provider endpoints only: a custom endpoint
+  on a private address is refused, and the cloud service's own HTTP clients
+  don't go through the outbound guard.
+- The cloud and ekm services are still on the raw mux: they verify the
+  caller's token and tenant (8.0.0-beta) but have no per-route permission
+  except the credential routes.

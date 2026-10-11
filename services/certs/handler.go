@@ -16,6 +16,8 @@ import (
 
 	scepwire "github.com/smallstep/scep"
 
+	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/tenantcheck"
 )
 
@@ -107,6 +109,19 @@ func (h *Handler) handleCreateCA(w http.ResponseWriter, r *http.Request) {
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
+	}
+	// Putting a CA key on an HSM credential attaches that credential to the
+	// CA: the person needs compliance.connection.use, read from their own
+	// verified token (certs calls keycore as itself afterwards).
+	if id := strings.TrimSpace(req.HSMConnectionID); id != "" {
+		if claims, _ := pkgauth.ClaimsFromContext(r.Context()); !route.Allowed(claims, "compliance.connection.use") {
+			_ = h.svc.publishAudit(r.Context(), "audit.cert.hsm_credential_refused", req.TenantID, map[string]interface{}{
+				"result": "refused", "reason": "permission_denied", "severity": "warning", "hsm_connection_id": id, "ca_name": req.Name,
+				"description": "creating a CA key on an HSM credential needs the compliance.connection.use permission",
+			})
+			writeErr(w, http.StatusForbidden, "hsm_credential_not_permitted", "using an HSM credential needs the compliance.connection.use permission", reqID, req.TenantID)
+			return
+		}
 	}
 	out, err := h.svc.CreateCA(r.Context(), req)
 	if err != nil {

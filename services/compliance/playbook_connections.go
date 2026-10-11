@@ -20,6 +20,7 @@ import (
 	"vecta-kms/pkg/mek"
 	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/siem"
+	"vecta-kms/pkg/ssrfguard"
 	"vecta-kms/pkg/tenantcheck"
 )
 
@@ -42,8 +43,23 @@ type ConnectionSpec struct {
 	// URLField is the endpoint; its host is shown, and it must be public https.
 	URLField string   `json:"url_field"`
 	Optional []string `json:"optional,omitempty"`
-	// Category groups types: notify, ticketing, siem or source.
+	// Category groups types: notify, ticketing, siem, source, cloud, mail or
+	// hsm.
 	Category string `json:"category"`
+	// Use names the feature that uses the type (shown beside it).
+	Use string `json:"use,omitempty"`
+	// URLFields are further https addresses a type may name; each is
+	// checked like URLField. HostField is a non-HTTP host (a mail relay).
+	URLFields []string `json:"url_fields,omitempty"`
+	HostField string   `json:"host_field,omitempty"`
+	// DefaultEndpoint is shown when the type names no address of its own
+	// (the provider's service).
+	DefaultEndpoint string `json:"default_endpoint,omitempty"`
+	// Choices are the values a field accepts.
+	Choices map[string][]string `json:"choices,omitempty"`
+	// Public fields are returned as attributes: identifiers a picker has to
+	// show (an HSM's token and topology, a region). Never a secret.
+	Public []string `json:"public,omitempty"`
 	// Secrets are credential fields (the form masks them). No field value
 	// is ever returned, secret or not.
 	Secrets []string `json:"secrets"`
@@ -67,7 +83,9 @@ var connectionTypes = func() []ConnectionSpec {
 		{Type: "teams", Label: "Microsoft Teams webhook", Fields: []string{"webhook_url"}, URLField: "webhook_url", Category: categoryNotify, Secrets: []string{"webhook_url"}, Stream: true},
 		{Type: "webhook", Label: "HTTPS webhook", Fields: []string{"url"}, URLField: "url", Optional: []string{"headers", "signing_secret"}, Category: categoryNotify, Secrets: []string{"headers", "signing_secret"}, Stream: true},
 		{Type: "jira", Label: "Jira", Fields: []string{"base_url"}, URLField: "base_url", Optional: []string{"api_token"}, Category: categoryTicketing, Secrets: []string{"api_token"}},
-		{Type: "servicenow", Label: "ServiceNow", Fields: []string{"instance_url"}, URLField: "instance_url", Optional: []string{"auth_token"}, Category: categoryTicketing, Secrets: []string{"auth_token"}},
+		// username and password are the account cloud BYOK signs in with;
+		// playbook incidents use auth_token.
+		{Type: "servicenow", Label: "ServiceNow", Fields: []string{"instance_url"}, URLField: "instance_url", Optional: []string{"auth_token", "username", "password", optionsField}, Category: categoryTicketing, Use: "Playbooks, Cloud BYOK", Secrets: []string{"auth_token", "password", optionsField}},
 		// git_url is the hosting site (https://github.com); the token is
 		// sent only to that host. username is for hosts that take Basic
 		// authentication (a Bitbucket app password).
@@ -91,6 +109,10 @@ var connectionTypes = func() []ConnectionSpec {
 	for _, s := range siem.Specs {
 		out = append(out, ConnectionSpec{Type: s.Kind, Label: s.Label, Fields: s.Required, URLField: s.URLField, Optional: s.Optional,
 			Category: categorySIEM, Secrets: s.Secrets, Stream: true})
+	}
+	for _, c := range credentialTypes {
+		c.Public = publicFields[c.Type]
+		out = append(out, c)
 	}
 	return out
 }()
@@ -128,6 +150,24 @@ type Connection struct {
 	UpdatedAt time.Time                     `json:"updated_at"`
 	Fields    map[string]string             `json:"-"`
 	Sealed    *pkgcrypto.EnvelopeCiphertext `json:"-"`
+
+	// Attributes are the values of the type's public fields.
+	Attributes map[string]string `json:"attributes"`
+	// CredentialsChangedAt is when a secret field last changed: the
+	// credential's age counts from it.
+	CredentialsChangedAt time.Time `json:"credentials_changed_at"`
+	// ExpiresAt is when the operator says the credential stops working
+	// (a token's or client secret's own expiry); nil if it has none.
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+	// RotateAfterDays raises a reminder that many days after the secret
+	// last changed; 0 is no reminder.
+	RotateAfterDays int `json:"rotate_after_days"`
+	// The last real test: nil LastTestedAt means never tested.
+	LastTestedAt  *time.Time `json:"last_tested_at,omitempty"`
+	LastTestOK    bool       `json:"last_test_ok"`
+	LastTestError string     `json:"last_test_error,omitempty"`
+	// Notified are the reminders already raised for the current secret.
+	Notified []string `json:"-"`
 }
 
 var errConnKeyUnavailable = errors.New("connections unavailable: the compliance master key has not been opened from keycore")
@@ -229,8 +269,9 @@ func fieldNames(m map[string]string) []string {
 	return out
 }
 
-// validateConnection checks type, fields and the endpoint.
-func validateConnection(c Connection) error {
+// validateConnection checks type, fields and every address the connection
+// names. allow is the tenant's approved private networks.
+func validateConnection(c Connection, allow ssrfguard.Allow) error {
 	spec, ok := connectionByType[c.Type]
 	if !ok {
 		return fmt.Errorf("unsupported connection type %q", c.Type)
@@ -276,9 +317,15 @@ func validateConnection(c Connection) error {
 		if _, err := siem.New(c.Type, c.Fields, siem.Options{Client: http.DefaultClient}); err != nil {
 			return err
 		}
-		return checkOutboundURL(siem.ValidationURL(c.Type, c.Fields))
+		return checkOutboundURLAllowing(siem.ValidationURL(c.Type, c.Fields), allow)
 	}
-	return checkOutboundURL(c.Fields[spec.URLField])
+	if err := validateCredential(c, allow); err != nil {
+		return err
+	}
+	if spec.URLField == "" {
+		return nil
+	}
+	return checkOutboundURLAllowing(c.Fields[spec.URLField], allow)
 }
 
 var reIAMRole = regexp.MustCompile(`^arn:aws[a-z-]*:iam::\d{12}:role/[\w+=,.@/-]{1,512}$`)
@@ -347,6 +394,9 @@ func connectionEndpoint(c Connection) string {
 	if spec.Category == categorySIEM {
 		return endpointHost(siem.ValidationURL(c.Type, c.Fields))
 	}
+	if spec.URLField == "" {
+		return credentialEndpoint(c)
+	}
 	return endpointHost(c.Fields[spec.URLField])
 }
 
@@ -365,6 +415,21 @@ type connectionInput struct {
 	Name     string            `json:"name"`
 	Type     string            `json:"type"`
 	Fields   map[string]string `json:"fields"`
+	// ExpiresAt is the credential's own expiry, if it has one; a reminder
+	// is raised 30 and 7 days before and when it passes.
+	ExpiresAt *time.Time `json:"expires_at"`
+	// RotateAfterDays raises a reminder that long after the secret last
+	// changed (0: none).
+	RotateAfterDays int `json:"rotate_after_days"`
+}
+
+const maxRotateAfterDays = 3650
+
+func (in connectionInput) checkDates() error {
+	if in.RotateAfterDays < 0 || in.RotateAfterDays > maxRotateAfterDays {
+		return fmt.Errorf("rotate_after_days must be between 0 and %d", maxRotateAfterDays)
+	}
+	return nil
 }
 
 const keepField = "********"
@@ -395,7 +460,12 @@ func (h *Handler) createConnection(c *route.Call) {
 	if !c.Decode(&in) {
 		return
 	}
-	conn := Connection{ID: newID("pbconn"), TenantID: c.Tenant, Name: strings.TrimSpace(in.Name), Type: in.Type, Fields: in.Fields, CreatedBy: c.Actor()}
+	if err := in.checkDates(); err != nil {
+		c.Error(http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	conn := Connection{ID: newID("pbconn"), TenantID: c.Tenant, Name: strings.TrimSpace(in.Name), Type: in.Type, Fields: in.Fields, CreatedBy: c.Actor(),
+		ExpiresAt: in.ExpiresAt, RotateAfterDays: in.RotateAfterDays}
 	c.Target(conn.ID)
 	if !h.sealConnection(c, &conn) {
 		return
@@ -433,6 +503,10 @@ func (h *Handler) updateConnection(c *route.Call) {
 		c.Error(http.StatusServiceUnavailable, "connections_unavailable", err.Error())
 		return
 	}
+	if err := in.checkDates(); err != nil {
+		c.Error(http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
 	replacedAll := true
 	for k, v := range in.Fields {
 		if v == keepField {
@@ -440,11 +514,22 @@ func (h *Handler) updateConnection(c *route.Call) {
 			replacedAll = false
 		}
 	}
+	// A changed secret field restarts the credential's age and clears its
+	// test result: the last test was of the old secret.
+	secretChanged := false
+	for _, f := range connectionByType[stored.Type].Secrets {
+		if in.Fields[f] != opened.Fields[f] {
+			secretChanged = true
+		}
+	}
+	datesChanged := stored.RotateAfterDays != in.RotateAfterDays || !sameTime(stored.ExpiresAt, in.ExpiresAt)
 	stored.Name, stored.Fields = strings.TrimSpace(in.Name), in.Fields
+	stored.ExpiresAt, stored.RotateAfterDays = in.ExpiresAt, in.RotateAfterDays
 	if !h.sealConnection(c, &stored) {
 		return
 	}
-	updated, err := h.svc.store.UpdateConnection(c.R.Context(), stored)
+	c.Detail("secret_changed", secretChanged)
+	updated, err := h.svc.store.UpdateConnection(c.R.Context(), stored, secretChanged, datesChanged)
 	if err != nil {
 		c.Error(http.StatusInternalServerError, "internal_error", "update connection failed")
 		return
@@ -459,10 +544,19 @@ func (h *Handler) updateConnection(c *route.Call) {
 	c.JSON(http.StatusOK, map[string]interface{}{"data": updated})
 }
 
+func sameTime(a, b *time.Time) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return a.Equal(*b)
+}
+
 func (h *Handler) sealConnection(c *route.Call, conn *Connection) bool {
 	c.Detail("name", conn.Name)
 	c.Detail("type", conn.Type)
-	err := validateConnection(*conn)
+	// A mail relay is checked against the tenant's approved private ranges
+	// by the validator itself; every other address must be public here.
+	err := validateConnection(*conn, approvedAllow(c.R.Context(), h.svc.store, conn.TenantID, conn.Type))
 	var blocked urlError
 	if errors.As(err, &blocked) && connectionByType[conn.Type].Category == categorySource {
 		// A source connection may name a private address a root
@@ -475,7 +569,7 @@ func (h *Handler) sealConnection(c *route.Call, conn *Connection) bool {
 			err = nil
 			c.Detail("private_endpoint", true)
 		default:
-			err = urlError{fmt.Errorf("%v; a root administrator can approve a private range for this tenant (Playbooks, Connections, Private endpoints)", blocked.err)}
+			err = urlError{fmt.Errorf("%v; a root administrator can approve a private range for this tenant (Playbooks, Credentials, Private endpoints)", blocked.err)}
 		}
 	}
 	if err != nil {
@@ -489,6 +583,12 @@ func (h *Handler) sealConnection(c *route.Call, conn *Connection) bool {
 	}
 	conn.Endpoint = connectionEndpoint(*conn)
 	c.Detail("endpoint", conn.Endpoint)
+	conn.Attributes = map[string]string{}
+	for _, f := range connectionByType[conn.Type].Public {
+		if v := strings.TrimSpace(conn.Fields[f]); v != "" {
+			conn.Attributes[f] = v
+		}
+	}
 	if err := h.connVault.Seal(conn); err != nil {
 		c.Error(http.StatusServiceUnavailable, "connections_unavailable", err.Error())
 		return false
@@ -506,42 +606,13 @@ func (h *Handler) deleteConnection(c *route.Call) {
 		c.Error(http.StatusInternalServerError, "internal_error", "read connection failed")
 		return
 	}
-	pbs, err := h.svc.store.ListPlaybooks(c.R.Context(), c.Tenant)
+	// Fail closed: deleting a credential a stream, account or key still
+	// uses would silently stop it working.
+	users, err := h.usersOf(c.R.Context(), c.Tenant, conn)
 	if err != nil {
-		c.Error(http.StatusInternalServerError, "internal_error", "list playbooks failed")
+		c.Detail("error", err.Error())
+		c.Refuse(http.StatusServiceUnavailable, "connection_usage_unverified", "can't confirm the connection is unused: "+err.Error())
 		return
-	}
-	var users []string
-	for _, pb := range pbs {
-		for _, a := range pb.Actions {
-			if a.Parameters["connection_id"] == id {
-				users = append(users, pb.ID)
-				break
-			}
-		}
-	}
-	if h.usage != nil {
-		others, err := h.usage.Users(c.R.Context(), c.Tenant, id)
-		if err != nil {
-			// Fail closed: deleting a connection a stream still uses would
-			// silently stop the tenant's SIEM feed.
-			c.Detail("error", err.Error())
-			c.Refuse(http.StatusServiceUnavailable, "connection_usage_unverified", "can't confirm the connection is unused: "+err.Error())
-			return
-		}
-		users = append(users, others...)
-	}
-	// A source connection's users are discovery's repositories and
-	// buckets. Discovery is asked only for those types, so a deployment
-	// without it can still delete every other connection.
-	if connectionByType[conn.Type].Category == categorySource && h.sourceUsage != nil {
-		repos, err := h.sourceUsage(c.R.Context(), c.Tenant, id)
-		if err != nil {
-			c.Detail("error", err.Error())
-			c.Refuse(http.StatusServiceUnavailable, "connection_usage_unverified", "can't confirm the connection is unused: "+err.Error())
-			return
-		}
-		users = append(users, repos...)
 	}
 	if len(users) > 0 {
 		c.Detail("used_by", users)
@@ -590,8 +661,17 @@ func (h *Handler) testConnection(c *route.Call) {
 		c.Refuse(http.StatusConflict, "connection_test_elsewhere", "test this connection on "+where)
 		return
 	}
-	if err := h.executor.testConnection(c.R.Context(), conn); err != nil {
-		c.Error(http.StatusBadGateway, "connection_test_failed", err.Error())
+	// A cloud account's or HSM's real test is run by the service that uses
+	// it; compliance tests the types it sends through itself.
+	var testErr error
+	if spec := connectionByType[conn.Type]; (spec.Category == categoryCloud || spec.Category == categoryHSM || conn.Type == "servicenow" && contains(conn.FieldSet, "username")) && h.credTest != nil {
+		testErr = h.credTest(c.R.Context(), conn)
+	} else {
+		testErr = h.executor.testConnection(c.R.Context(), conn)
+	}
+	h.recordTest(c.R.Context(), conn, c.Actor(), testErr)
+	if testErr != nil {
+		c.Error(http.StatusBadGateway, "connection_test_failed", testErr.Error())
 		return
 	}
 	c.JSON(http.StatusOK, map[string]interface{}{"data": map[string]string{"status": "ok", "endpoint": conn.Endpoint}})

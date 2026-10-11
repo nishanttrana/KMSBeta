@@ -27,6 +27,9 @@ type TenantConfig struct {
 	PINEnvVar      string
 	PIN            string
 	ReadOnly       bool
+	// ConnectionID is set when the configuration comes from an HSM
+	// credential (connections.go) and not from the tenant's profile.
+	ConnectionID string
 }
 
 var (

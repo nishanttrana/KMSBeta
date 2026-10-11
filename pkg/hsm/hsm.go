@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -105,6 +106,11 @@ var (
 	ErrUnavailable   = errors.New("hsm: the HSM connector is unavailable")
 	ErrForeignLabel  = errors.New("hsm: the object label is outside the caller's tenant")
 	ErrNotFound      = errors.New("hsm: object not found in the HSM")
+	// ErrConnectionNotFound: the HSM credential named doesn't exist in the
+	// tenant, or isn't a PKCS#11 HSM credential.
+	ErrConnectionNotFound = errors.New("hsm: no such HSM credential for this tenant")
+	// ErrImportRefused: the HSM won't take key material from outside.
+	ErrImportRefused = errors.New("hsm: the HSM refused the key material")
 )
 
 // GenerateResult is a key generated in the HSM.
@@ -181,6 +187,19 @@ type Status struct {
 type Client struct {
 	base string
 	http *http.Client
+	// connection names an HSM credential; "" is the tenant's HSM profile.
+	connection string
+}
+
+// On returns a client whose calls go to the HSM credential connectionID
+// (Playbooks → Credentials); "" is the tenant's HSM profile.
+func (c *Client) On(connectionID string) *Client {
+	if c == nil {
+		return nil
+	}
+	cp := *c
+	cp.connection = strings.TrimSpace(connectionID)
+	return &cp
 }
 
 // New returns a client for the connector at base.
@@ -214,6 +233,13 @@ func (c *Client) call(ctx context.Context, method, path string, in, out interfac
 		}
 		body = bytes.NewReader(raw)
 	}
+	if c.connection != "" {
+		sep := "?"
+		if strings.Contains(path, "?") {
+			sep = "&"
+		}
+		path += sep + "connection_id=" + url.QueryEscape(c.connection)
+	}
 	req, err := http.NewRequestWithContext(ctx, method, c.base+path, body)
 	if err != nil {
 		return err
@@ -237,6 +263,10 @@ func (c *Client) call(ctx context.Context, method, path string, in, out interfac
 		switch e.Error.Code {
 		case "hsm_not_configured":
 			return ErrNotConfigured
+		case "hsm_connection_not_found":
+			return ErrConnectionNotFound
+		case "hsm_import_refused":
+			return fmt.Errorf("%w: %s", ErrImportRefused, strings.TrimSpace(e.Error.Message))
 		case "foreign_label":
 			return ErrForeignLabel
 		case "not_found":
@@ -251,6 +281,24 @@ func (c *Client) call(ctx context.Context, method, path string, in, out interfac
 		return nil
 	}
 	return json.Unmarshal(raw, out)
+}
+
+// Import places AES material in the HSM as a non-extractable key and
+// returns the KCV the HSM computed for it.
+func (c *Client) Import(ctx context.Context, tenant, label, algorithm string, material []byte) (GenerateResult, error) {
+	var out struct {
+		Label string   `json:"label"`
+		KCV   string   `json:"kcv_b64"`
+		HSM   Identity `json:"hsm"`
+	}
+	if err := c.call(ctx, http.MethodPost, "/hsm/keys/import", map[string]any{
+		"tenant_id": tenant, "label": label, "algorithm": algorithm, "material_b64": b64(material),
+	}, &out); err != nil {
+		return GenerateResult{}, err
+	}
+	res := GenerateResult{Label: out.Label, HSM: out.HSM}
+	res.KCV, _ = unb64(out.KCV)
+	return res, nil
 }
 
 // Generate creates a non-extractable key in tenant's HSM.

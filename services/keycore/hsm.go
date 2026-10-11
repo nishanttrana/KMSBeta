@@ -47,6 +47,7 @@ const (
 // HSMBackend is the connector client (pkg/hsm.Client).
 type HSMBackend interface {
 	Generate(ctx context.Context, tenant, label, algorithm string) (hsm.GenerateResult, error)
+	Import(ctx context.Context, tenant, label, algorithm string, material []byte) (hsm.GenerateResult, error)
 	EnsureTenantKey(ctx context.Context, tenant string) (string, error)
 	Encrypt(ctx context.Context, tenant, label string, plaintext, aad []byte) ([]byte, []byte, error)
 	Decrypt(ctx context.Context, tenant, label string, iv, ciphertext, aad []byte) ([]byte, error)
@@ -271,17 +272,6 @@ func (s *Service) createHSMKey(ctx context.Context, req CreateKeyRequest) (Key, 
 	if req.TenantID == "" || req.Name == "" || req.Algorithm == "" {
 		return Key{}, errors.New("tenant_id, name, algorithm are required")
 	}
-	settings, err := s.store.GetHSMSettings(ctx, req.TenantID)
-	if err != nil {
-		return Key{}, err
-	}
-	if !settings.HSMKeysEnabled {
-		return Key{}, s.refuseHSM(ctx, req.TenantID, "", "key.create", http.StatusConflict, "hsm_keys_disabled",
-			"HSM keys are off for this tenant: turn them on in the HSM tab")
-	}
-	if s.hsm == nil {
-		return Key{}, s.refuseHSM(ctx, req.TenantID, "", "key.create", http.StatusServiceUnavailable, "hsm_unavailable", "the HSM connector is not enabled on this platform")
-	}
 	alg := hsm.NormalizeAlgorithm(req.Algorithm)
 	if alg == "" || isPublicKeyType(req.KeyType) {
 		return Key{}, s.refuseHSM(ctx, req.TenantID, "", "key.create", http.StatusBadRequest, "algorithm_not_supported",
@@ -309,25 +299,24 @@ func (s *Service) createHSMKey(ctx context.Context, req CreateKeyRequest) (Key, 
 	}); err != nil {
 		return Key{}, err
 	}
+	// The tenant's HSM profile, or the HSM credential the request names.
+	backend, target, err := s.hsmTarget(ctx, req, "key.create")
+	if err != nil {
+		return Key{}, err
+	}
 	keyID := newID("key")
 	label := hsm.KeyLabel(req.TenantID, keyID, 1)
-	gen, err := s.hsm.Generate(ctx, req.TenantID, label, alg)
+	gen, err := backend.Generate(ctx, req.TenantID, label, alg)
 	if err != nil {
 		return Key{}, s.hsmFailure(ctx, req.TenantID, keyID, "key.create", err)
 	}
 	kcv, kcvMethod := hsmKCV(gen)
-	labels := KeyLabels{}
-	for k, v := range req.Labels {
-		labels[k] = v
-	}
-	labels[labelHSM] = labelHSMResident
-	labels[labelHSMSerial], labels[labelHSMToken] = gen.HSM.SerialNumber, gen.HSM.TokenLabel
-	labels[labelHSMModel], labels[labelHSMManufacturer] = gen.HSM.Model, gen.HSM.Manufacturer
+	labels := hsmKeyLabels(req.Labels, target, gen.HSM)
 	key := Key{
 		ID: keyID, TenantID: req.TenantID, Name: req.Name, Algorithm: req.Algorithm, KeyType: req.KeyType,
 		Purpose: req.Purpose, Status: initialStatus, ActivationDate: activationAt, CurrentVersion: 1,
 		KCV: kcv, KCVAlgorithm: kcvMethod, IVMode: req.IVMode, Owner: req.Owner, Cloud: req.Cloud, Region: req.Region,
-		Compliance: req.Compliance, Tags: req.Tags, Labels: map[string]string(labels),
+		Compliance: req.Compliance, Tags: req.Tags, Labels: labels,
 		ExportAllowed: false, // the key never leaves the HSM
 		OpsLimit:      req.OpsLimit, OpsLimitWindow: req.OpsLimitWindow,
 		ApprovalRequired: req.ApprovalRequired, ApprovalPolicyID: req.ApprovalPolicyID, CreatedBy: req.CreatedBy,
@@ -339,16 +328,12 @@ func (s *Service) createHSMKey(ctx context.Context, req CreateKeyRequest) (Key, 
 		Protection: protectionHSMResident, HSMLabel: label,
 	}
 	if err := s.store.CreateKeyWithVersion(ctx, key, ver); err != nil {
-		_ = s.hsm.Destroy(ctx, req.TenantID, label) // don't leave an orphan in the HSM
+		_ = backend.Destroy(ctx, req.TenantID, label) // don't leave an orphan in the HSM
 		return Key{}, err
 	}
 	s.exists.AddString(existsToken(req.TenantID, keyID))
 	_ = s.cache.Set(ctx, key)
-	_ = s.publishAudit(ctx, "audit.key.create", req.TenantID, map[string]any{
-		"key_id": keyID, "kcv": strings.ToUpper(fmt.Sprintf("%X", kcv)), "hsm": true, "hsm_label": label, "algorithm": alg,
-		"hsm_serial": gen.HSM.SerialNumber, "hsm_token": gen.HSM.TokenLabel, "hsm_model": gen.HSM.Model,
-		"hsm_manufacturer": gen.HSM.Manufacturer,
-	})
+	_ = s.publishAudit(ctx, "audit.key.create", req.TenantID, hsmAuditDetails(keyID, kcv, label, alg, labels, gen.HSM))
 	return key, nil
 }
 
@@ -372,7 +357,8 @@ func (s *Service) rotateHSMKey(ctx context.Context, key Key) (KeyVersion, error)
 	}
 	next := key.CurrentVersion + 1
 	label := hsm.KeyLabel(key.TenantID, key.ID, next)
-	gen, err := s.hsm.Generate(ctx, key.TenantID, label, hsm.NormalizeAlgorithm(key.Algorithm))
+	// The next version goes to the HSM the key is on.
+	gen, err := s.hsmOf(key).Generate(ctx, key.TenantID, label, hsm.NormalizeAlgorithm(key.Algorithm))
 	if err != nil {
 		return KeyVersion{}, s.hsmFailure(ctx, key.TenantID, key.ID, "key.rotate", err)
 	}
@@ -404,7 +390,7 @@ func (s *Service) destroyHSMObjects(ctx context.Context, tenantID string, delete
 		label := hsm.KeyLabel(tenantID, deleted.KeyID, v)
 		if s.hsm == nil {
 			failed, reason = append(failed, label), "hsm_not_configured"
-		} else if err := s.hsm.Destroy(ctx, tenantID, label); err != nil && !errors.Is(err, hsm.ErrNotFound) {
+		} else if err := s.hsmOn(deleted.Labels[labelHSMConnection]).Destroy(ctx, tenantID, label); err != nil && !errors.Is(err, hsm.ErrNotFound) {
 			failed = append(failed, label)
 		}
 	}
@@ -493,7 +479,11 @@ func (s *Service) InspectHSMKey(ctx context.Context, tenantID, keyID string) (HS
 			continue
 		}
 		check := HSMVersionCheck{Version: v.Version, Protection: v.Protection, Label: v.HSMLabel}
-		objs, id, err := s.hsm.Inspect(ctx, tenantID, v.HSMLabel)
+		backend := s.hsm // the tenant key is on the tenant's HSM profile
+		if v.Protection == protectionHSMResident {
+			backend = s.hsmOf(key)
+		}
+		objs, id, err := backend.Inspect(ctx, tenantID, v.HSMLabel)
 		if err != nil {
 			check.Error = err.Error()
 		} else {
@@ -519,11 +509,11 @@ type HSMObject struct {
 
 // ListHSMObjects lists the keys and certificates in the tenant's partition,
 // including ones created outside the KMS.
-func (s *Service) ListHSMObjects(ctx context.Context, tenantID string) ([]HSMObject, hsm.Identity, error) {
+func (s *Service) ListHSMObjects(ctx context.Context, tenantID, connectionID string) ([]HSMObject, hsm.Identity, error) {
 	if s.hsm == nil {
 		return nil, hsm.Identity{}, s.refuseHSM(ctx, tenantID, "", "hsm.objects", http.StatusServiceUnavailable, "hsm_unavailable", "the HSM connector is not enabled on this platform")
 	}
-	objs, id, err := s.hsm.Objects(ctx, tenantID)
+	objs, id, err := s.hsmOn(connectionID).Objects(ctx, tenantID)
 	if err != nil {
 		return nil, id, s.hsmFailure(ctx, tenantID, "", "hsm.objects", err)
 	}
@@ -557,6 +547,8 @@ func (h *Handler) hsmRouter(audit route.Emitter) *route.Router {
 	r := route.New("key", audit, nil)
 	r.Handle("GET /hsm/settings", route.Spec{Action: "hsm_status_read", Permission: "key.hsm.read", Resource: "hsm"}, h.getHSM)
 	r.Handle("PUT /hsm/settings", route.Spec{Action: "hsm_settings_update", Permission: "key.hsm.write", Resource: "hsm", Severity: "warning"}, h.putHSM)
+	r.Handle("GET /hsm/targets", route.Spec{Action: "hsm_targets_listed", Permission: "key.hsm.read", Resource: "hsm"}, h.listHSMTargets)
+	r.Handle("GET /keys/hsm/credential-usage", route.Spec{Action: "hsm_credential_usage_read", Permission: "key.hsm.read", Resource: "hsm"}, h.hsmCredentialUsage)
 	r.Handle("GET /hsm/objects", route.Spec{Action: "hsm_objects_listed", Permission: "key.hsm.read", Resource: "hsm"}, h.listHSMObjects)
 	r.Handle("GET /keys/{id}/hsm", route.Spec{Action: "hsm_key_inspected", Permission: "key.hsm.read", Resource: "key", TargetParam: "id"}, h.inspectHSMKey)
 	return r
@@ -598,7 +590,13 @@ func (h *Handler) putHSM(c *route.Call) {
 }
 
 func (h *Handler) listHSMObjects(c *route.Call) {
-	objs, id, err := h.svc.ListHSMObjects(c.R.Context(), c.Tenant)
+	// ?connection_id= lists an HSM credential's partition; without it, the
+	// tenant's HSM profile.
+	connectionID := strings.TrimSpace(c.R.URL.Query().Get("connection_id"))
+	if connectionID != "" {
+		c.Detail("connection_id", connectionID)
+	}
+	objs, id, err := h.svc.ListHSMObjects(c.R.Context(), c.Tenant, connectionID)
 	var refused *hsmRefusal
 	switch {
 	case errors.As(err, &refused):

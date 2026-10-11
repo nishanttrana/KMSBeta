@@ -294,6 +294,8 @@ var internalServiceClients = []string{
 	"kms-governance", "kms-posture", "kms-reporting", "kms-policy", "kms-audit",
 	"kms-cluster-manager", "kms-secrets", "kms-reconciler", "kms-confidential",
 	"kms-workload-identity",
+	// The HSM connector opens HSM credentials from compliance (8.0.0-beta).
+	"kms-hsm",
 }
 
 // retiredServiceClients are service identities of services removed from the

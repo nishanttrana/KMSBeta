@@ -31,6 +31,12 @@ type module struct {
 	ctx      *pkcs11.Ctx
 	mu       sync.Mutex
 	anchored map[uint]pkcs11.SessionHandle
+	// pins holds, per anchored slot, a keyed digest of the PIN the token
+	// was logged in with. A token stays logged in for the whole process,
+	// so without it a second configuration naming the same slot would ride
+	// that login whatever PIN it carried.
+	pins   map[uint][]byte
+	pinKey []byte
 }
 
 type Provider struct {
@@ -54,7 +60,12 @@ func (p *Provider) module(library string) (*module, error) {
 		ctx.Destroy()
 		return nil, fmt.Errorf("C_Initialize: %w", err)
 	}
-	m := &module{ctx: ctx, anchored: map[uint]pkcs11.SessionHandle{}}
+	pinKey, err := pkgcrypto.RandomBytes(32)
+	if err != nil {
+		ctx.Destroy()
+		return nil, err
+	}
+	m := &module{ctx: ctx, anchored: map[uint]pkcs11.SessionHandle{}, pins: map[uint][]byte{}, pinKey: pinKey}
 	p.modules[library] = m
 	return m, nil
 }
@@ -118,6 +129,10 @@ func (p *Provider) session(cfg TenantConfig) (*pkcs11.Ctx, pkcs11.SessionHandle,
 			return nil, 0, nil, fmt.Errorf("C_Login: %w", err)
 		}
 		m.anchored[slot] = anchor
+		m.pins[slot] = pkgcrypto.HMACSHA256(m.pinKey, []byte(cfg.PIN))
+	} else if !pkgcrypto.ConstantTimeEqual(m.pins[slot], pkgcrypto.HMACSHA256(m.pinKey, []byte(cfg.PIN))) {
+		m.mu.Unlock()
+		return nil, 0, nil, errPINMismatch
 	}
 	m.mu.Unlock()
 	sh, err := m.ctx.OpenSession(slot, flags)
@@ -266,6 +281,35 @@ func generate(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle, label, algorithm string)
 		return res, fmt.Errorf("algorithm %s can't be generated in the HSM", algorithm)
 	}
 	return res, nil
+}
+
+// errImportRefused is an HSM that won't take key material from outside.
+var errImportRefused = errors.New("the HSM refused the key material")
+
+// importAES creates an AES key from material: a token object, sensitive and
+// not extractable, with the usages a generated key gets. An HSM whose policy
+// forbids C_CreateObject for secret keys (some FIPS-mode partitions) refuses
+// it, and nothing is left behind.
+func importAES(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle, label string, material []byte) (hsm.GenerateResult, error) {
+	if objs, err := find(ctx, sh, -1, label); err != nil {
+		return hsm.GenerateResult{}, err
+	} else if len(objs) > 0 {
+		return hsm.GenerateResult{}, errExists
+	}
+	tmpl := append(privateTemplate(label),
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_SECRET_KEY),
+		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_AES),
+		pkcs11.NewAttribute(pkcs11.CKA_VALUE, material),
+		pkcs11.NewAttribute(pkcs11.CKA_ENCRYPT, true),
+		pkcs11.NewAttribute(pkcs11.CKA_DECRYPT, true),
+		pkcs11.NewAttribute(pkcs11.CKA_WRAP, false),
+		pkcs11.NewAttribute(pkcs11.CKA_UNWRAP, false),
+	)
+	obj, err := ctx.CreateObject(sh, tmpl)
+	if err != nil {
+		return hsm.GenerateResult{}, fmt.Errorf("%w: C_CreateObject: %v", errImportRefused, err)
+	}
+	return hsm.GenerateResult{Label: label, KCV: aesKCV(ctx, sh, obj)}, nil
 }
 
 // aesKCV is the key check value, E(K, 0^128)[:3], computed in the HSM. It's

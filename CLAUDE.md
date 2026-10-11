@@ -235,16 +235,32 @@ an approach, record it here or in the matching doc below.
   vault. A vendor listed in the UI must work through that same path. HSM
   tests run against a real PKCS#11 library (SoftHSM2), never a mock of the
   HSM API.
-- **Outbound integrations are Playbooks connections** (owner directive,
-  2026-09-28: webhooks and SIEM "should not be separate tab, just part of"
-  Playbooks). Every outbound URL or credential (Slack, Teams, webhook,
-  Jira, ServiceNow, SIEM) lives only in compliance's sealed connections. A
-  new integration is a connection type, and SIEM delivery goes through
-  `pkg/siem`. A service that sends through one holds its ID and opens it
-  with `POST /compliance/connections/{id}/resolve`: add its identity to
-  `connectionUsers`, never a local copy of the credential
-  ([docs/SECURITY/CONNECTIONS.md](docs/SECURITY/CONNECTIONS.md)). The UI for
-  it lives in Playbooks (Connections, Event streaming), not a new tab.
+  **Two roles** (owner directive, 2026-10-10): the tenant's HSM profile in
+  the HSM tab is the root of trust that protects the KMS's keys (it also
+  still holds keys where the tenant turned HSM keys on there). HSMs that
+  hold keys are added as `pkcs11_hsm` credentials; the
+  create, form and import key dialogs and the CA dialog offer "Create in
+  HSM" and list every HSM (single or HA group) with its live status. A key
+  records its HSM and never moves.
+- **Every external credential is added once, in Playbooks → Credentials**
+  (owner directive, 2026-09-28: webhooks and SIEM "should not be separate
+  tab, just part of" Playbooks; widened 2026-10-10: credentials for
+  "Bitlocker service account BYOK, HYOK, or crypto discovery or anything in
+  KMS, external HSM creds, EKM" are "in a tab centrally as a single location
+  where credentials to be added first before it can be used", "under
+  playbooks credentials"). Every URL, account, PIN, key or token the KMS
+  uses to reach an external system (notification, ticketing, SIEM, scan
+  sources, cloud accounts, Azure EKM, mail relay, PKCS#11 HSMs) lives only
+  in compliance's sealed connections. A feature never takes a secret in its
+  own form or API: it holds the credential's ID, checks the caller holds
+  `compliance.connection.use` when it is attached, and opens it for each use
+  through `pkg/credstore` (`POST /compliance/connections/{id}/resolve`). A
+  new integration is a credential type with its service added to
+  `connectionUsers`, a usage lookup for the delete guard, and a real test
+  ([docs/SECURITY/CONNECTIONS.md](docs/SECURITY/CONNECTIONS.md)). Its UI is
+  a `CredentialPicker`, linking to Credentials when none exists. The one
+  exception is the tenant's HSM profile (root of trust), whose PIN stays on
+  the connector host.
 - **Playbooks are the platform's response layer** (owner directive,
   2026-09-28: "playbook should be fundamental part of the KMS for any and
   every action incident"). An event that signals an incident or a

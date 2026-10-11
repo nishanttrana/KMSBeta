@@ -76,7 +76,7 @@ UPDATE ekm_google_cse_configs
 SET authentication_client_ids = $11,
     google_workspace_customer_id = $1,
     service_account_email = $2,
-    service_account_key_json = CASE WHEN $3 = '' THEN service_account_key_json ELSE $3 END,
+    service_account_key_json = $3,
     allowed_domains = $4,
     kacls_endpoint = $5,
     status = $6,

@@ -15,7 +15,7 @@ type usageRecorder struct {
 
 type ctxKeyProbe struct{}
 
-func (u *usageRecorder) CreateHSMSigningKey(context.Context, string, string, string) (string, []byte, error) {
+func (u *usageRecorder) CreateHSMSigningKey(context.Context, string, string, string, string) (string, []byte, error) {
 	return "", nil, errors.New("not used")
 }
 func (u *usageRecorder) SignDigest(ctx context.Context, _, _, _ string, _ []byte, usage string) ([]byte, error) {

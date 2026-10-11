@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Shield, CheckCircle2, XCircle, Clock, Settings, Bell, Users, ChevronDown, ChevronRight, Send } from "lucide-react";
 import { Btn, Card, Inp, Sel, Stat, Section, Tabs, Modal, FG, Row2, B, Chk, usePromptDialog } from "../legacyPrimitives";
 import { C } from "../theme";
+import { CredentialPicker } from "../CredentialPicker";
 import { errMsg } from "../runtimeUtils";
 import {
   getGovernanceSettings,
@@ -61,7 +62,7 @@ function expiresIn(iso: string) {
 
 /* ────── Main Component ────── */
 
-export const GovernanceTab = ({ session, onToast }: any) => {
+export const GovernanceTab = ({ session, onToast, onNavigate }: any) => {
   const [tab, setTab] = useState("requests");
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState("pending");
@@ -94,12 +95,8 @@ export const GovernanceTab = ({ session, onToast }: any) => {
   // Settings modal
   const [settingsModal, setSettingsModal] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
-  const [smtpHost, setSmtpHost] = useState("");
-  const [smtpPort, setSmtpPort] = useState("587");
-  const [smtpUser, setSmtpUser] = useState("");
-  const [smtpPass, setSmtpPass] = useState("");
-  const [smtpFrom, setSmtpFrom] = useState("");
-  const [smtpStarttls, setSmtpStarttls] = useState(true);
+  // The mail relay is an SMTP credential (Playbooks, Credentials).
+  const [smtpConn, setSmtpConn] = useState("");
   const [slackConn, setSlackConn] = useState("");
   const [teamsConn, setTeamsConn] = useState("");
   const [notifyConns, setNotifyConns] = useState<NotifyConnection[] | null>(null);
@@ -261,7 +258,7 @@ export const GovernanceTab = ({ session, onToast }: any) => {
     try {
       await updateGovernanceSettings(session, {
         approval_delivery_mode: deliveryMode,
-        smtp_host: smtpHost, smtp_port: smtpPort, smtp_username: smtpUser, smtp_password: smtpPass, smtp_from: smtpFrom, smtp_starttls: smtpStarttls,
+        smtp_connection_id: smtpConn,
         notify_dashboard: notifyDashboard, notify_email: notifyEmail, notify_slack: notifySlack, notify_teams: notifyTeams,
         slack_connection_id: slackConn, teams_connection_id: teamsConn,
         challenge_response_enabled: challengeEnabled,
@@ -275,9 +272,7 @@ export const GovernanceTab = ({ session, onToast }: any) => {
 
   const openSettingsModal = () => {
     if (settings) {
-      setSmtpHost(settings.smtp_host || ""); setSmtpPort(settings.smtp_port || "587");
-      setSmtpUser(settings.smtp_username || ""); setSmtpPass(""); setSmtpFrom(settings.smtp_from || "");
-      setSmtpStarttls(settings.smtp_starttls !== false);
+      setSmtpConn(settings.smtp_connection_id || "");
       setSlackConn(settings.slack_connection_id || ""); setTeamsConn(settings.teams_connection_id || "");
       listNotifyConnections(session).then((c) => { setNotifyConns(c); setNotifyConnsErr(""); }).catch((e) => { setNotifyConns(null); setNotifyConnsErr(errMsg(e)); });
       setChallengeEnabled(Boolean(settings.challenge_response_enabled));
@@ -480,7 +475,7 @@ export const GovernanceTab = ({ session, onToast }: any) => {
           <div style={{ display: "grid", gap: 6 }}>
             <SettingRow label="External Notifications" value={settings?.approval_delivery_mode === "kms_only" ? "Disabled (Dashboard Only)" : "Enabled (External + Dashboard)"} color={settings?.approval_delivery_mode === "kms_only" ? C.muted : C.green} />
             <SettingRow label="Challenge Response" value={settings?.challenge_response_enabled ? "Required" : "Disabled"} color={settings?.challenge_response_enabled ? C.amber : C.muted} />
-            <SettingRow label="SMTP Host" value={settings?.smtp_host || "Not set"} color={settings?.smtp_host ? C.green : C.muted} />
+            <SettingRow label="Mail relay" value={settings?.smtp_connection_id ? "Credential set" : settings?.smtp_host ? `${settings.smtp_host} (moving to Credentials)` : "Not set"} color={settings?.smtp_connection_id || settings?.smtp_host ? C.green : C.muted} />
             <SettingRow label="Expiry" value={`${settings?.approval_expiry_minutes || 2880} min`} color={C.dim} />
           </div>
         </Card>
@@ -580,19 +575,9 @@ export const GovernanceTab = ({ session, onToast }: any) => {
       </div>
 
       {notifyEmail && <>
-        <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginTop: 10, marginBottom: 8 }}>SMTP Configuration</div>
-        <Row2>
-          <FG label="SMTP Host"><Inp value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} placeholder="smtp.gmail.com" /></FG>
-          <FG label="SMTP Port"><Inp value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} placeholder="587" /></FG>
-        </Row2>
-        <Row2>
-          <FG label="Username"><Inp value={smtpUser} onChange={(e) => setSmtpUser(e.target.value)} placeholder="noreply@corp.com" /></FG>
-          <FG label="Password"><Inp type="password" value={smtpPass} onChange={(e) => setSmtpPass(e.target.value)} placeholder="********" /></FG>
-        </Row2>
-        <Row2>
-          <FG label="From Address"><Inp value={smtpFrom} onChange={(e) => setSmtpFrom(e.target.value)} placeholder="kms@corp.com" /></FG>
-          <FG label="TLS"><Chk label="Enable STARTTLS" checked={smtpStarttls} onChange={setSmtpStarttls} /></FG>
-        </Row2>
+        <FG label="Mail relay (SMTP credential)" hint={!smtpConn && settings?.smtp_host ? `Now using ${settings.smtp_host}, stored here by an earlier release; it is moved into Credentials automatically.` : "Mail is always sent over TLS."}>
+          <CredentialPicker session={session} type="smtp" value={smtpConn} onChange={setSmtpConn} onNavigate={onNavigate} />
+        </FG>
         <FG label="Send test email to"><Inp value={smtpTestTo} onChange={(e) => setSmtpTestTo(e.target.value)} placeholder="you@corp.com" /></FG>
         <Btn small onClick={async () => {
           if (!smtpTestTo.trim()) { onToast?.("Enter a recipient for the test email."); return; }

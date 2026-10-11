@@ -24,9 +24,11 @@ import (
 	"vecta-kms/pkg/clusterstate"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
+	"vecta-kms/pkg/credstore"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	pkgkeyaccess "vecta-kms/pkg/keyaccess"
 	"vecta-kms/pkg/mek"
 	"vecta-kms/pkg/route"
@@ -73,11 +75,12 @@ func main() {
 
 	var publisher EventPublisher
 	var audit mek.Emitter
+	var auditClient *pkgaudit.Client
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.cloud.dead_letter")
 		if c, err := pkgaudit.NewClient(js, "cloud"); err == nil {
-			audit = c
+			audit, auditClient = c, c
 		}
 	} else {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
@@ -108,16 +111,27 @@ func main() {
 		keyring.Current(),
 	)
 	svc.SetKeyring(keyring)
+	// Account credentials are credentials in the platform's store
+	// (Playbooks → Credentials). Accounts an earlier release registered
+	// with their own sealed copy are moved there by the primary, now and
+	// every 15 minutes (which also catches rows a restore brings back).
+	svc.SetCredentials(credstore.FromEnv())
+	go svc.migrateAccountCredentialsLoop(ctx, clusterstate.RunsPrimaryJobs, 15*time.Minute, logger.Printf)
 	keyAccess := pkgkeyaccess.GateFromEnv(3 * time.Second)
 	svc.SetKeyAccess(keyAccess)
 	logger.Printf("key access justifications deployed=%v (%s)", keyAccess.IsDeployed(), pkgkeyaccess.ProfilesEnv)
 	handler := NewHandler(svc)
 	kernel := route.New("cloud", audit, logger)
 	keyring.Routes(kernel, "cloud")
+	handler.credentialRoutes(kernel)
 	kernel.MountOn(handler.mux)
 
 	httpPort := envOr("HTTP_PORT", "8080")
-	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "cloud"))
+	// Every request carries a verified Bearer token: a person's from the
+	// dashboard or API, or a platform service's. Before 8.0.0-beta this
+	// service verified none and took the tenant from the request.
+	authed := pkgjwtauth.MustWrap("CLOUD", cfg.JWTIssuer, cfg.JWTAudience, handler, auditClient, logger)
+	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authed, publisher, "cloud"))
 	go func() {
 		logger.Printf("https (mTLS) listening on :%s", httpPort)
 		if err := httpSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {

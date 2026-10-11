@@ -177,6 +177,7 @@ func createGovernanceSchemaForTest(conn *pkgdb.DB) error {
 				slack_webhook_url TEXT,
 				teams_webhook_url TEXT,
 				slack_connection_id TEXT NOT NULL DEFAULT '',
+				smtp_connection_id TEXT NOT NULL DEFAULT '',
 				teams_connection_id TEXT NOT NULL DEFAULT '',
 				delivery_webhook_timeout_seconds INTEGER NOT NULL DEFAULT 5,
 				challenge_response_enabled INTEGER NOT NULL DEFAULT 0,
@@ -544,8 +545,10 @@ func TestSystemIntegrityReportsOnlyMeasuredChecks(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.UpdateSettings(context.Background(), GovernanceSettings{
-		TenantID: "t4", SMTPHost: "smtp.bank.local", SMTPPort: "587", SMTPStartTLS: true, ApprovalExpiryMinutes: 60, UpdatedBy: "admin",
+	// A mail relay stored by an earlier release (the row's own smtp_* columns).
+	if err := store.UpsertSettings(context.Background(), GovernanceSettings{
+		TenantID: "t4", SMTPHost: "smtp.bank.local", SMTPPort: "587", SMTPStartTLS: true, ApprovalExpiryMinutes: 60, ExpiryCheckIntervalSeconds: 60,
+		ApprovalDeliveryMode: "notify", DeliveryWebhookTimeoutSec: 5, UpdatedBy: "admin",
 	}); err != nil {
 		t.Fatal(err)
 	}

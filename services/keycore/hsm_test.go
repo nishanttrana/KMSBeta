@@ -344,7 +344,7 @@ func TestHSMKeyProvenance(t *testing.T) {
 		t.Fatalf("tenant-key inspection: %v %+v", err, c)
 	}
 
-	objs, id, err := svc.ListHSMObjects(ctx, "t3")
+	objs, id, err := svc.ListHSMObjects(ctx, "t3", "")
 	if err != nil || id.TokenLabel != "vecta-test" {
 		t.Fatalf("list: %v %+v", err, id)
 	}

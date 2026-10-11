@@ -656,7 +656,9 @@ export type AzureEKMConfig = {
   managed_hsm_name?: string;
   managed_hsm_url?: string;
   client_id: string;
-  client_secret: string;
+  // The "azure" credential (Playbooks → Credentials) holding the app
+  // registration. Empty for a managed identity.
+  connection_id?: string;
   auth_mode: string;
   status: string;
   key_mappings: number;
@@ -698,15 +700,14 @@ export async function getAzureEKMConfig(session: AuthSession, configID: string):
 }
 
 export async function createAzureEKMConfig(session: AuthSession, input: {
-  azure_tenant_id: string;
+  azure_tenant_id?: string;
   subscription_id?: string;
   resource_group?: string;
   vault_name: string;
   vault_url?: string;
   managed_hsm_name?: string;
   managed_hsm_url?: string;
-  client_id: string;
-  client_secret: string;
+  connection_id?: string;
   auth_mode?: string;
 }): Promise<AzureEKMConfig> {
   const out = await serviceRequest<{ config: AzureEKMConfig }>(session, "ekm", `/ekm/azure/configs`, {
@@ -724,8 +725,7 @@ export async function updateAzureEKMConfig(session: AuthSession, configID: strin
   vault_url: string;
   managed_hsm_name: string;
   managed_hsm_url: string;
-  client_id: string;
-  client_secret: string;
+  connection_id: string;
   auth_mode: string;
 }>): Promise<AzureEKMConfig> {
   const out = await serviceRequest<{ config: AzureEKMConfig }>(
@@ -823,7 +823,6 @@ export type GoogleCSEConfig = {
   tenant_id: string;
   google_workspace_customer_id: string;
   service_account_email: string;
-  service_account_key_json: string;
   allowed_domains: string[];
   authentication_client_ids: string[];
   kacls_endpoint: string;
@@ -858,7 +857,6 @@ export async function listGoogleCSEConfigs(session: AuthSession): Promise<Google
 export async function createGoogleCSEConfig(session: AuthSession, input: {
   google_workspace_customer_id: string;
   service_account_email?: string;
-  service_account_key_json?: string;
   allowed_domains: string[];
   authentication_client_ids: string[];
   kacls_endpoint?: string;

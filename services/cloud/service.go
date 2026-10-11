@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"vecta-kms/pkg/credstore"
 	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgkeyaccess "vecta-kms/pkg/keyaccess"
 	"vecta-kms/pkg/mek"
@@ -25,6 +26,12 @@ type Service struct {
 	mek       []byte
 	keyAccess pkgkeyaccess.Gate
 	exposure  *mek.Keyring // exposure register; nil in tests
+	// creds is the credential store (credentials.go); nil when the
+	// deployment has none.
+	creds credstore.Store
+	// migrationReported: accounts whose migration refusal was audited, so
+	// the 15-minute retry does not repeat the event.
+	migrationReported map[string]bool
 }
 
 func NewService(store Store, keycore KeyCoreClient, providers *ProviderRegistry, events EventPublisher, mek []byte) *Service {
@@ -41,6 +48,8 @@ func NewService(store Store, keycore KeyCoreClient, providers *ProviderRegistry,
 		providers: providers,
 		events:    events,
 		mek:       append([]byte{}, mek[:32]...),
+
+		migrationReported: map[string]bool{},
 	}
 }
 
@@ -60,31 +69,42 @@ func (s *Service) RegisterAccount(ctx context.Context, req RegisterCloudAccountR
 	req.Provider = normalizeProvider(rawProvider)
 	req.Name = strings.TrimSpace(req.Name)
 	req.DefaultRegion = strings.TrimSpace(req.DefaultRegion)
-	req.CredentialsJSON = validJSONOr(req.CredentialsJSON, "{}")
+	req.ConnectionID = strings.TrimSpace(req.ConnectionID)
 	if rawProvider != "" && req.Provider == "" {
 		return CloudAccount{}, errors.New("unsupported provider")
 	}
 	if req.TenantID == "" || req.Provider == "" || req.Name == "" {
 		return CloudAccount{}, errors.New("tenant_id, provider, name are required")
 	}
-	// Security: cloud credentials are envelope-encrypted before persistence and plaintext is zeroized.
-	raw := []byte(req.CredentialsJSON)
-	defer pkgcrypto.Zeroize(raw)
-	env, err := pkgcrypto.EncryptEnvelope(s.mek, raw)
-	if err != nil {
+	// Credentials are added once, in the credential store, and an account
+	// names one (owner directive 2026-10-10). The account holds no secret.
+	if strings.TrimSpace(req.CredentialsJSON) != "" {
+		return CloudAccount{}, s.refuseAccount(ctx, req, "inline_credentials_not_accepted",
+			"credentials are no longer sent with the account: add the credential in Playbooks, Credentials and pass its connection_id")
+	}
+	if req.ConnectionID == "" {
+		return CloudAccount{}, s.refuseAccount(ctx, req, "credential_required",
+			"connection_id is required: add the provider's credential in Playbooks, Credentials first")
+	}
+	if !mayAttach(ctx) {
+		return CloudAccount{}, s.refuseAccountStatus(ctx, req, http.StatusForbidden, "credential_use_not_permitted",
+			"attaching a credential to a cloud account needs the compliance.connection.use permission")
+	}
+	if err := s.checkAccountCredential(ctx, req.TenantID, req.Provider, req.ConnectionID); err != nil {
+		var se serviceError
+		if errors.As(err, &se) {
+			return CloudAccount{}, s.refuseAccountStatus(ctx, req, se.status, se.code, se.message)
+		}
 		return CloudAccount{}, err
 	}
 	account := CloudAccount{
-		ID:                      newID("ca"),
-		TenantID:                req.TenantID,
-		Provider:                req.Provider,
-		Name:                    req.Name,
-		DefaultRegion:           req.DefaultRegion,
-		Status:                  "configured",
-		CredentialsWrappedDEK:   env.WrappedDEK,
-		CredentialsWrappedDEKIV: env.WrappedDEKIV,
-		CredentialsCiphertext:   env.Ciphertext,
-		CredentialsDataIV:       env.DataIV,
+		ID:            newID("ca"),
+		TenantID:      req.TenantID,
+		Provider:      req.Provider,
+		Name:          req.Name,
+		DefaultRegion: req.DefaultRegion,
+		Status:        "configured",
+		ConnectionID:  req.ConnectionID,
 	}
 	if err := s.store.CreateAccount(ctx, account); err != nil {
 		return CloudAccount{}, err
@@ -94,12 +114,27 @@ func (s *Service) RegisterAccount(ctx context.Context, req RegisterCloudAccountR
 		return CloudAccount{}, err
 	}
 	_ = s.publishAudit(ctx, "audit.cloud.connector_configured", req.TenantID, map[string]interface{}{
-		"account_id": out.ID,
-		"provider":   out.Provider,
-		"name":       out.Name,
-		"action":     "register",
+		"account_id":    out.ID,
+		"provider":      out.Provider,
+		"name":          out.Name,
+		"connection_id": out.ConnectionID,
+		"action":        "register",
 	})
 	return out, nil
+}
+
+// refuseAccount audits a refused account registration and returns the
+// refusal (400 unless refuseAccountStatus is used).
+func (s *Service) refuseAccount(ctx context.Context, req RegisterCloudAccountRequest, reason, msg string) error {
+	return s.refuseAccountStatus(ctx, req, http.StatusBadRequest, reason, msg)
+}
+
+func (s *Service) refuseAccountStatus(ctx context.Context, req RegisterCloudAccountRequest, status int, reason, msg string) error {
+	_ = s.publishAudit(ctx, "audit.cloud.account_refused", req.TenantID, map[string]interface{}{
+		"provider": req.Provider, "name": req.Name, "connection_id": req.ConnectionID, "actor": actorOf(ctx),
+		"result": "refused", "reason": reason, "severity": "warning", "description": msg,
+	})
+	return newServiceError(status, reason, msg)
 }
 
 func (s *Service) ListAccounts(ctx context.Context, tenantID string, provider string) ([]CloudAccount, error) {
@@ -204,7 +239,7 @@ func (s *Service) ImportKeyToCloud(ctx context.Context, req ImportKeyToCloudRequ
 	if err != nil {
 		return CloudKeyBinding{}, err
 	}
-	creds, err := s.decryptAccountCredentials(account)
+	creds, err := s.accountCredentials(ctx, account)
 	if err != nil {
 		return CloudKeyBinding{}, err
 	}
@@ -345,7 +380,7 @@ func (s *Service) RotateCloudKey(ctx context.Context, req RotateCloudKeyRequest)
 	if err != nil {
 		return CloudKeyBinding{}, "", err
 	}
-	creds, err := s.decryptAccountCredentials(account)
+	creds, err := s.accountCredentials(ctx, account)
 	if err != nil {
 		return CloudKeyBinding{}, "", err
 	}
@@ -605,7 +640,7 @@ func (s *Service) SyncCloudKeys(ctx context.Context, req SyncCloudKeysRequest) (
 			failMsgs = append(failMsgs, b.ID+": "+err.Error())
 			continue
 		}
-		creds, err := s.decryptAccountCredentials(account)
+		creds, err := s.accountCredentials(ctx, account)
 		if err != nil {
 			failed++
 			failMsgs = append(failMsgs, b.ID+": "+err.Error())
@@ -689,7 +724,7 @@ func (s *Service) DiscoverInventory(ctx context.Context, req DiscoverInventoryRe
 	if err != nil {
 		return nil, err
 	}
-	creds, err := s.decryptAccountCredentials(account)
+	creds, err := s.accountCredentials(ctx, account)
 	if err != nil {
 		return nil, err
 	}

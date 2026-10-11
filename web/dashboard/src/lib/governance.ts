@@ -6,6 +6,8 @@ export type GovernanceSettings = {
   approval_expiry_minutes: number;
   expiry_check_interval_seconds: number;
   approval_delivery_mode: "notify" | "kms_only" | string;
+  // The "smtp" credential (Playbooks → Credentials) mail is sent through.
+  smtp_connection_id?: string;
   smtp_host: string;
   smtp_port: string;
   smtp_username: string;

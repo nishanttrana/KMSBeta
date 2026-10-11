@@ -6,15 +6,16 @@
 package hsmconnector
 
 import (
-	"fmt"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
 
 	"github.com/miekg/pkcs11"
 
+	pkgcrypto "vecta-kms/pkg/crypto"
 	"vecta-kms/pkg/hsm"
 	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/tenantcheck"
@@ -27,7 +28,27 @@ import (
 type Handler struct {
 	router  *route.Router
 	configs ConfigSource
-	p11     *Provider
+	// connections resolves an HSM credential named by ?connection_id=; nil
+	// refuses such requests (connections.go).
+	connections ConnectionSource
+	p11         *Provider
+}
+
+// SetConnections wires the HSM credential store.
+func (h *Handler) SetConnections(src ConnectionSource) { h.connections = src }
+
+// config is the session configuration for the request: the HSM credential
+// it names, or else the tenant's profile.
+func (h *Handler) config(c *route.Call) (TenantConfig, error) {
+	id := strings.TrimSpace(c.R.URL.Query().Get("connection_id"))
+	if id == "" {
+		return h.configs.Load(c.R.Context(), c.Tenant)
+	}
+	c.Detail("connection_id", id)
+	if h.connections == nil {
+		return TenantConfig{}, errConnectionsUnavailable
+	}
+	return h.connections.LoadConnection(c.R.Context(), c.Tenant, id)
 }
 
 // Only these services may use keys: keycore (tenant keys and HSM-resident
@@ -41,6 +62,7 @@ func NewHandler(configs ConfigSource, p11 *Provider, audit route.Emitter, logger
 	h := &Handler{router: route.New("hsm", audit, logger), configs: configs, p11: p11}
 	r := h.router
 	r.Handle("POST /hsm/keys", route.Spec{Action: "key_generated", Permission: "hsm.key.create", Resource: "hsm_key"}, h.generate)
+	r.Handle("POST /hsm/keys/import", route.Spec{Action: "key_imported", Permission: "hsm.key.create", Resource: "hsm_key", Severity: "warning"}, h.importKey)
 	r.Handle("POST /hsm/tenant-key", route.Spec{Action: "tenant_key_ensured", Permission: "hsm.key.create", Resource: "hsm_key"}, h.tenantKey)
 	r.Handle("POST /hsm/encrypt", route.Spec{Action: "encrypt", Permission: "hsm.key.use", Resource: "hsm_key"}, h.encrypt)
 	r.Handle("POST /hsm/decrypt", route.Spec{Action: "decrypt", Permission: "hsm.key.use", Resource: "hsm_key"}, h.decrypt)
@@ -87,6 +109,7 @@ type opRequest struct {
 	DigestB64     string `json:"digest_b64"`
 	SignatureB64  string `json:"signature_b64"`
 	Length        int    `json:"length"`
+	MaterialB64   string `json:"material_b64"`
 }
 
 // begin decodes the request, checks the caller and label, and opens a
@@ -112,7 +135,7 @@ func (h *Handler) begin(c *route.Call, ids []string, needLabel bool) (*opRequest
 }
 
 func (h *Handler) open(c *route.Call) (*pkcs11.Ctx, pkcs11.SessionHandle, func(), bool) {
-	cfg, err := h.configs.Load(c.R.Context(), c.Tenant)
+	cfg, err := h.config(c)
 	if err != nil {
 		h.fail(c, err)
 		return nil, 0, nil, false
@@ -135,6 +158,14 @@ func (h *Handler) fail(c *route.Call, err error) {
 		c.Refuse(http.StatusConflict, "library_not_allowed", err.Error())
 	case errors.Is(err, errPINMissing):
 		c.Refuse(http.StatusConflict, "pin_not_provided", err.Error())
+	case errors.Is(err, ErrConnectionNotFound):
+		c.Refuse(http.StatusConflict, "hsm_connection_not_found", err.Error())
+	case errors.Is(err, errPINMismatch):
+		c.Refuse(http.StatusConflict, "pin_mismatch", err.Error())
+	case errors.Is(err, errConnectionsUnavailable):
+		c.Error(http.StatusServiceUnavailable, "hsm_connections_unavailable", err.Error())
+	case errors.Is(err, errImportRefused):
+		c.Refuse(http.StatusConflict, "hsm_import_refused", err.Error())
 	case errors.Is(err, hsm.ErrNotFound):
 		c.Error(http.StatusNotFound, "not_found", err.Error())
 	case errors.Is(err, errExists):
@@ -181,7 +212,50 @@ func (h *Handler) generate(c *route.Call) {
 	})
 }
 
+// importKey places AES material in the HSM as a sensitive, never
+// extractable token object. The HSM reports it honestly afterwards:
+// CKA_LOCAL is false, because it was not generated there.
+func (h *Handler) importKey(c *route.Call) {
+	in, ctx, sh, release, ok := h.begin(c, keyManager, true)
+	if !ok {
+		return
+	}
+	defer release()
+	alg := hsm.NormalizeAlgorithm(in.Algorithm)
+	c.Detail("algorithm", alg)
+	if !strings.HasPrefix(alg, "AES-") {
+		c.Refuse(http.StatusBadRequest, "algorithm_not_supported", "only AES-128/192/256 material can be imported into the HSM")
+		return
+	}
+	material, ok := decode(c, "material_b64", in.MaterialB64)
+	if !ok {
+		return
+	}
+	defer pkgcrypto.Zeroize(material)
+	if want := map[string]int{"AES-128": 16, "AES-192": 24, "AES-256": 32}[alg]; len(material) != want {
+		c.Error(http.StatusBadRequest, "bad_request", fmt.Sprintf("%s material must be %d bytes", alg, want))
+		return
+	}
+	res, err := importAES(ctx, sh, in.Label, material)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	id := h.identity(c)
+	c.Detail("hsm_serial", id.SerialNumber)
+	c.Detail("hsm_token", id.TokenLabel)
+	c.JSON(http.StatusCreated, map[string]interface{}{
+		"label": res.Label, "kcv_b64": base64.StdEncoding.EncodeToString(res.KCV), "hsm": id,
+	})
+}
+
 func (h *Handler) tenantKey(c *route.Call) {
+	if c.R.URL.Query().Get("connection_id") != "" {
+		// The tenant key is the KMS's root of trust: it lives on the
+		// tenant's HSM profile (HSM tab), never on a key-holding credential.
+		c.Refuse(http.StatusConflict, "root_of_trust_is_the_profile", "the tenant key is created on the tenant's HSM profile, not on an HSM credential")
+		return
+	}
 	_, ctx, sh, release, ok := h.begin(c, keyUsers, false)
 	if !ok {
 		return
@@ -309,7 +383,7 @@ func (h *Handler) destroy(c *route.Call) {
 
 // identity names the token the tenant's profile points at.
 func (h *Handler) identity(c *route.Call) hsm.Identity {
-	cfg, err := h.configs.Load(c.R.Context(), c.Tenant)
+	cfg, err := h.config(c)
 	if err != nil {
 		return hsm.Identity{}
 	}
@@ -385,7 +459,7 @@ func (h *Handler) random(c *route.Call) {
 }
 
 func (h *Handler) status(c *route.Call) {
-	cfg, err := h.configs.Load(c.R.Context(), c.Tenant)
+	cfg, err := h.config(c)
 	if errors.Is(err, ErrNotConfigured) {
 		c.JSON(http.StatusOK, map[string]interface{}{"status": hsm.Status{}})
 		return

@@ -77,6 +77,10 @@ flowchart LR
   tab_sbom["SBOM / CBOM"]
   UI --> tab_sbom
   tab_sbom --> svc_sbom
+  tab_playbooks["Playbooks"]
+  UI --> tab_playbooks
+  tab_playbooks --> svc_compliance
+  tab_playbooks --> svc_keycore
   tab_cluster["Cluster"]
   UI --> tab_cluster
   tab_cluster --> svc_auth_edge
@@ -109,16 +113,16 @@ flowchart LR
   svc_autokey["autokey (15 routes)"]
   svc_backup["backup (11 routes)"]
   svc_certs["certs (69 routes)"]
-  svc_cloud["cloud (14 routes)"]
+  svc_cloud["cloud (17 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
-  svc_compliance["compliance (57 routes)"]
+  svc_compliance["compliance (61 routes)"]
   svc_confidential["confidential (7 routes)"]
   svc_discovery["discovery (24 routes)"]
-  svc_ekm["ekm (64 routes)"]
+  svc_ekm["ekm (65 routes)"]
   svc_governance["governance (35 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (174 routes)"]
+  svc_keycore["keycore (176 routes)"]
   svc_posture["posture (13 routes)"]
   svc_pqc["pqc (14 routes)"]
   svc_reporting["reporting (34 routes)"]

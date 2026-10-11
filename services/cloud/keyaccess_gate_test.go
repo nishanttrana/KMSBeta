@@ -38,9 +38,9 @@ func newCloudBindingForGate(t *testing.T) (*Service, *nopCloudPublisher, CloudAc
 	svc, _, keycore, pub := newCloudService(t)
 	ctx := context.Background()
 	keycore.Seed("tenant-ka", "key-ka", "AES-256")
-	account, err := svc.RegisterAccount(ctx, RegisterCloudAccountRequest{
+	account, err := svc.RegisterAccount(attachCtx("tenant-ka"), RegisterCloudAccountRequest{
 		TenantID: "tenant-ka", Provider: ProviderAWS, Name: "aws-ka", DefaultRegion: "us-east-1",
-		CredentialsJSON: `{"access_key":"abc","secret":"xyz"}`,
+		ConnectionID: "cred-aws",
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -140,7 +140,12 @@ type GovernanceSettings struct {
 	ApprovalExpiryMinutes      int    `json:"approval_expiry_minutes"`
 	ExpiryCheckIntervalSeconds int    `json:"expiry_check_interval_seconds"`
 	ApprovalDeliveryMode       string `json:"approval_delivery_mode"`
-	SMTPHost                   string `json:"smtp_host"`
+	// SMTPConnectionID names the "smtp" credential (Playbooks → Credentials)
+	// mail is sent through. The smtp_* fields below are a relay an earlier
+	// release stored here: shown until the migration has moved it into a
+	// credential, never accepted (mail_credentials.go).
+	SMTPConnectionID string `json:"smtp_connection_id"`
+	SMTPHost         string `json:"smtp_host"`
 	SMTPPort                   string `json:"smtp_port"`
 	SMTPUsername               string `json:"smtp_username"`
 	SMTPPassword               string `json:"smtp_password,omitempty"`

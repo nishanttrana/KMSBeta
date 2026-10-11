@@ -59,6 +59,8 @@ type Store interface {
 	// Azure EKM
 	CreateAzureEKMConfig(ctx context.Context, cfg AzureEKMConfig) error
 	GetAzureEKMConfig(ctx context.Context, tenantID, configID string) (AzureEKMConfig, error)
+	ListLegacyAzureSecrets(ctx context.Context) ([]AzureEKMConfig, error)
+	SetAzureConfigConnection(ctx context.Context, tenantID, configID, connectionID string) error
 	ListAzureEKMConfigs(ctx context.Context, tenantID string) ([]AzureEKMConfig, error)
 	UpdateAzureEKMConfig(ctx context.Context, cfg AzureEKMConfig) error
 	DeleteAzureEKMConfig(ctx context.Context, tenantID, configID string) error

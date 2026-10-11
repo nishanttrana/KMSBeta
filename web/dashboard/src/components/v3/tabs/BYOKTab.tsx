@@ -21,9 +21,10 @@ import {
   type CloudInventoryItem,
   type CloudRegionMapping
 } from "../../../lib/cloud";
+import { CredentialPicker } from "../CredentialPicker";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
-import { B, Btn, Card, FG, Inp, Modal, Row2, Section, Sel, Txt, usePromptDialog } from "../legacyPrimitives";
+import { B, Btn, Card, FG, Inp, Modal, Row2, Section, Sel, usePromptDialog } from "../legacyPrimitives";
 
 function normalizeKeyState(state: string): string {
   const raw = String(state || "").toLowerCase().trim();
@@ -79,15 +80,6 @@ function copyToClipboard(text: string) {
 const CLOUD_PROVIDER_LABELS: Record<string, string> = { aws: "AWS KMS", azure: "Azure Key Vault", gcp: "Google Cloud KMS", oci: "Oracle Cloud Vault", salesforce: "Salesforce BYOK", alibaba: "Alibaba Cloud KMS", servicenow: "ServiceNow" };
 const CLOUD_PROVIDER_ORDER = ["aws", "azure", "gcp", "oci", "salesforce", "alibaba", "servicenow"];
 
-const CREDENTIAL_TEMPLATES: Record<string, string> = {
-  aws: JSON.stringify({ access_key_id: "", secret_access_key: "", region: "us-east-1" }, null, 2),
-  azure: JSON.stringify({ tenant_id: "", client_id: "", client_secret: "", vault_url: "https://myvault.vault.azure.net" }, null, 2),
-  gcp: JSON.stringify({ type: "service_account", project_id: "", private_key_id: "", private_key: "", client_email: "", client_id: "" }, null, 2),
-  oci: JSON.stringify({ tenancy_ocid: "", user_ocid: "", fingerprint: "", private_key: "", region: "us-ashburn-1", compartment_id: "" }, null, 2),
-  salesforce: JSON.stringify({ org_id: "", instance_url: "https://login.salesforce.com", client_id: "", client_secret: "", username: "", password: "" }, null, 2),
-  alibaba: JSON.stringify({ access_key_id: "", access_key_secret: "" }, null, 2),
-  servicenow: JSON.stringify({ instance_url: "https://your-instance.service-now.com", username: "", password: "" }, null, 2),
-};
 
 const PROVIDER_REGIONS: Record<string, string[]> = {
   aws: ["us-east-1", "us-east-2", "us-west-1", "us-west-2", "eu-west-1", "eu-central-1", "ap-southeast-1", "ap-northeast-1"],
@@ -99,7 +91,7 @@ const PROVIDER_REGIONS: Record<string, string[]> = {
   servicenow: ["us"],
 };
 
-export const BYOKTab = ({ session, keyCatalog, onToast }) => {
+export const BYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
   const [modal, setModal] = useState<null | "add" | "import" | "region" | "inventory">(null);
   const [accounts, setAccounts] = useState<CloudAccount[]>([]);
   const [bindings, setBindings] = useState<CloudKeyBinding[]>([]);
@@ -129,7 +121,7 @@ export const BYOKTab = ({ session, keyCatalog, onToast }) => {
   const [addProvider, setAddProvider] = useState<CloudProvider>("aws");
   const [addName, setAddName] = useState("");
   const [addDefaultRegion, setAddDefaultRegion] = useState("");
-  const [addCredsJSON, setAddCredsJSON] = useState(CREDENTIAL_TEMPLATES.aws);
+  const [addCredential, setAddCredential] = useState("");
 
   const [importProvider, setImportProvider] = useState<CloudProvider>("aws");
   const [importAccountID, setImportAccountID] = useState("");
@@ -221,10 +213,8 @@ export const BYOKTab = ({ session, keyCatalog, onToast }) => {
     }
   }, [modal, accounts, keyChoices]);
 
-  // Update credential template when provider changes in add modal
-  useEffect(() => {
-    setAddCredsJSON(CREDENTIAL_TEMPLATES[addProvider] || "{}");
-  }, [addProvider]);
+  // A credential belongs to one provider.
+  useEffect(() => { setAddCredential(""); }, [addProvider]);
 
   const providerCards = useMemo(() => {
     const availableProviders = Array.from(new Set((Array.isArray(accounts) ? accounts : []).map((acct) => String(acct.provider || "").toLowerCase()).filter(Boolean)));
@@ -304,7 +294,7 @@ export const BYOKTab = ({ session, keyCatalog, onToast }) => {
     const accountName = String(account?.name || accountId);
     const ok = await promptDialog.confirm({
       title: "Delete Cloud Connector",
-      message: `Delete connector "${accountName}" for ${providerLabel}?\n\nThis permanently removes:\n• Connector credentials (encrypted)\n• All key bindings for this connector\n• All sync job history\n• Region mappings (if last connector for this provider)`,
+      message: `Delete connector "${accountName}" for ${providerLabel}?\n\nThis permanently removes:\n• All key bindings for this connector\n• All sync job history\n• Region mappings (if last connector for this provider)`,
       confirmLabel: "Delete Connector",
       cancelLabel: "Cancel",
       danger: true
@@ -329,15 +319,14 @@ export const BYOKTab = ({ session, keyCatalog, onToast }) => {
     if (!session?.token) return;
     const name = String(addName || "").trim();
     if (!name) { onToast?.("Connector name is required."); return; }
-    const rawCreds = String(addCredsJSON || "{}").trim() || "{}";
-    try { JSON.parse(rawCreds); } catch { onToast?.("Credentials JSON is invalid."); return; }
+    if (!addCredential) { onToast?.("Choose the provider's credential."); return; }
     setSubmittingAdd(true);
     try {
       const account = await registerCloudAccount(session, {
         provider: addProvider,
         name,
         defaultRegion: String(addDefaultRegion || "").trim(),
-        credentialsJson: rawCreds
+        connectionId: addCredential
       });
       addRecentOp(`${CLOUD_PROVIDER_LABELS[account.provider] || account.provider} connector`, "ok", `Connector ${account.name} added`);
       onToast?.(`Cloud connector added: ${account.name}`);
@@ -689,8 +678,8 @@ export const BYOKTab = ({ session, keyCatalog, onToast }) => {
           {(PROVIDER_REGIONS[addProvider] || []).map((r) => <option key={r} value={r}>{r}</option>)}
         </Sel>
       </FG>
-      <FG label="Credentials JSON" required hint={`Credentials are envelope-encrypted (AES-256-GCM + DEK) before storage. Use the ${CLOUD_PROVIDER_LABELS[addProvider] || addProvider} SDK credential schema.`}>
-        <Txt rows={10} value={addCredsJSON} onChange={(e) => setAddCredsJSON(e.target.value)} placeholder='{"access_key_id":"..."}' />
+      <FG label="Credential" required>
+        <CredentialPicker session={session} type={addProvider} value={addCredential} onChange={setAddCredential} onNavigate={onNavigate} />
       </FG>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
         <Btn onClick={() => setModal(null)} disabled={submittingAdd}>Cancel</Btn>

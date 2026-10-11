@@ -300,6 +300,9 @@ export type CreateCAInput = {
   key_ref?: string;
   subject: string;
   validity_days?: number;
+  // With key_backend "hsm": the HSM credential the CA key is generated on;
+  // empty is the tenant's HSM.
+  hsm_connection_id?: string;
 };
 
 export type IssueCertificateInput = {

@@ -6,20 +6,9 @@ import {
   ToggleLeft, ToggleRight, ListChecks, Link2, AlertTriangle, FlaskConical, Ban, RotateCcw, Radio
 } from "lucide-react";
 import { C } from "../../v3/theme";
+import { takePlaybooksView } from "../../../lib/credentials";
+import { Credentials } from "./playbooks/Credentials";
 import { EventStreams } from "./WebhooksTab";
-import { PrivateEndpoints } from "./PrivateEndpoints";
-
-// Connection field hints (placeholders only; nothing here is a default).
-const FIELD_HINTS: Record<string, string> = {
-  webhook_url: "https://hooks.slack.com/services/…", url: "https://…", base_url: "https://your-org.atlassian.net",
-  instance_url: "https://your-instance.service-now.com", headers: '{"Authorization":"Bearer …"}', signing_secret: "16+ characters; signs each body (X-KMS-Signature)", index: "optional", sourcetype: "vecta:audit",
-  dce_url: "https://<dce>.<region>.ingest.monitor.azure.com", dcr_immutable_id: "dcr-<32 hex>", stream_name: "Custom-VectaKMSAudit_CL",
-  azure_tenant_id: "Entra directory (tenant) ID", client_id: "app registration client ID", address: "siem.example.com:6514",
-  ca_pem: "-----BEGIN CERTIFICATE----- (the collector's CA, if not publicly trusted)", server_name: "name on the collector's certificate",
-  git_url: "https://github.com (the hosting site; the token is sent only there)", token: "access token with read access to the repositories",
-  username: "only for Basic authentication (a Bitbucket app password)", endpoint_url: "https://s3.eu-west-1.amazonaws.com (or a MinIO, Ceph, R2 or storage.googleapis.com address)", access_key_id: "access key ID (for Google Cloud Storage: an HMAC key)", secret_access_key: "signs requests to that endpoint only", account_url: "https://<account>.blob.core.windows.net", sas_token: "sv=…&sp=rl&sig=… (read and list); or use an Entra ID application or the account key instead", role_arn: "optional, Amazon only: arn:aws:iam::123456789012:role/name (the key assumes it for each scan)", external_id: "only if the role's trust policy asks for one", account_key: "grants the whole storage account; prefer a SAS token or Entra ID", account_name: "only with account_key, when the address does not start with the account", client_secret: "application (client) secret", gcs_url: "https://storage.googleapis.com", service_account_json: "the service account's JSON key file (used for a read-only token)",
-};
-const CATEGORY_LABELS: Record<string, string> = { notify: "Notifications", ticketing: "Ticketing", siem: "SIEM", source: "Scan sources" };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -204,10 +193,11 @@ function FiltersEditor({ filters, onChange, catalog, label }: any) {
 
 // ── main component ────────────────────────────────────────────────────────────
 
-export function PlaybooksTab({ session }: { session: any }) {
+export function PlaybooksTab({ session, onNavigate }: { session: any; onNavigate?: (tab: string) => void }) {
   const api = useCallback((service: string, method: string, path: string, body?: any) => call(session, service, method, path, body), [session]);
   const cp = useCallback((method: string, path: string, body?: any) => api("compliance", method, `/compliance${path}`, body), [api]);
-  const [view, setView] = useState("overview");
+  // Another tab's "add a credential" link opens this one on Credentials.
+  const [view, setView] = useState(() => takePlaybooksView() || "overview");
   const [catalog, setCatalog] = useState<any>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [playbooks, setPlaybooks] = useState<any[]>([]);
@@ -224,7 +214,6 @@ export function PlaybooksTab({ session }: { session: any }) {
   const [toast, setToast] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [dryRun, setDryRun] = useState<any>(null);
-  const [connForm, setConnForm] = useState<any>(null);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 5000); };
   const fail = (key: string, msg: string) => setErrors(p => ({ ...p, [key]: msg }));
@@ -368,24 +357,6 @@ export function PlaybooksTab({ session }: { session: any }) {
     } finally { setSaving(false); }
   };
 
-  // ── connections ──
-  const saveConnection = async () => {
-    const f = connForm;
-    const body = { name: f.name, type: f.type, fields: Object.fromEntries(Object.entries(f.fields).filter(([, v]) => v !== "")) };
-    const r = f.id ? await cp("PUT", `/playbooks/connections/${f.id}`, body) : await cp("POST", "/playbooks/connections", body);
-    if (r.ok) { showToast("Connection saved (credentials sealed)."); setConnForm(null); load(); } else showToast("Save refused: " + r.error);
-  };
-  const testConnection = async (c: any) => {
-    const r = await cp("POST", `/playbooks/connections/${c.id}/test`, {});
-    showToast(r.ok ? `Test reached ${c.endpoint}.` : "Test failed: " + r.error);
-  };
-  const deleteConnection = async (c: any) => {
-    if (!window.confirm(`Delete connection "${c.name}"?`)) return;
-    const r = await cp("DELETE", `/playbooks/connections/${c.id}`);
-    showToast(r.ok ? "Connection deleted." : "Delete refused: " + r.error);
-    load();
-  };
-
   const triggerGroups = groupBy(catalog?.triggers);
   const actionGroups = groupBy(catalog?.actions);
   const covered = new Set(playbooks.filter((p: any) => p.enabled && p.authorized_by).map((p: any) => p.trigger?.type));
@@ -445,7 +416,7 @@ export function PlaybooksTab({ session }: { session: any }) {
     );
   };
 
-  const views = [["overview", "Overview", Activity], ["playbooks", "Playbooks", ListChecks], ["runs", "Runs", Zap], ["incidents", "Incidents", AlertTriangle], ["connections", "Connections", Link2], ["streams", "Event streaming", Radio]];
+  const views = [["overview", "Overview", Activity], ["playbooks", "Playbooks", ListChecks], ["runs", "Runs", Zap], ["incidents", "Incidents", AlertTriangle], ["connections", "Credentials", Link2], ["streams", "Event streaming", Radio]];
 
   return (
     <div style={{ padding: "24px 28px", maxWidth: 1240, margin: "0 auto" }}>
@@ -463,8 +434,8 @@ export function PlaybooksTab({ session }: { session: any }) {
         </div>
       </div>
       <div style={{ fontSize: 11, color: C.dim, marginBottom: 16, lineHeight: 1.5 }}>
-        A playbook responds to an audited event (or runs by hand): it can notify or raise a SIEM alert through sealed connections, act on keys, certificates, users, alerts and incidents, and pause for a governance approval.
-        Event streaming sends every matching audit event to a SIEM or webhook through the same connections.
+        A playbook responds to an audited event (or runs by hand): it can notify or raise a SIEM alert through sealed credentials, act on keys, certificates, users, alerts and incidents, and pause for a governance approval.
+        Event streaming sends every matching audit event to a SIEM or webhook through the same credentials.
         Actions run as the compliance service on the authority of the person who last saved the playbook, re-checked with auth before every automatic run.
       </div>
       <Err>{errors.catalog && `Playbook catalogue unavailable: ${errors.catalog}`}</Err>
@@ -607,71 +578,9 @@ export function PlaybooksTab({ session }: { session: any }) {
       )}
 
       {view === "connections" && (
-        <Card title="Connections (credentials sealed under the compliance master key; never shown again)" icon={<Link2 size={14} color={C.accent} />}
-          right={<Btn small disabled={!catalog} onClick={() => setConnForm({ name: "", type: "slack", fields: {} })}><Plus size={11} /> New connection</Btn>}>
-          <Err>{errors.connections && <div style={{ padding: 12 }}>Connections unavailable: {errors.connections}</div>}</Err>
-          <Err>{errors.exposure && <div style={{ padding: 12 }}>Exposure register unavailable (which connections need rotating is not assessed): {errors.exposure}</div>}</Err>
-          {Object.keys(exposed).length > 0 && (
-            <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.border}`, background: C.redDim, color: C.red, fontSize: 11, lineHeight: 1.5 }}>
-              <b>{Object.keys(exposed).length} connection{Object.keys(exposed).length === 1 ? "" : "s"} to rotate.</b> Their credentials were stored in plaintext before 2.5.0-beta and are
-              still readable in database copies and backups made before then. Rotate each URL or token where it was issued, then edit the connection and
-              enter every new value; the warning clears when all its fields are replaced (or the connection is deleted).
-            </div>
-          )}
-          {connForm && (
-            <div style={{ padding: 16, borderBottom: `1px solid ${C.border}`, background: C.bg, maxWidth: 560 }}>
-              <Inp label="Name" value={connForm.name} onChange={(e: any) => setConnForm((p: any) => ({ ...p, name: e.target.value }))} />
-              <Sel label="Type" value={connForm.type} disabled={!!connForm.id} onChange={(e: any) => setConnForm((p: any) => ({ ...p, type: e.target.value, fields: {} }))}>
-                {Object.entries(CATEGORY_LABELS).map(([cat, label]) => (
-                  <optgroup key={cat} label={label}>
-                    {(catalog?.connection_types || []).filter((t: any) => t.category === cat).map((t: any) => <option key={t.type} value={t.type}>{t.label}</option>)}
-                  </optgroup>
-                ))}
-              </Sel>
-              {[...(connType(connForm.type)?.fields || []), ...(connType(connForm.type)?.optional || [])].map((f: string) => {
-                const required = (connType(connForm.type)?.fields || []).includes(f);
-                const secret = (connType(connForm.type)?.secrets || []).includes(f);
-                const props = {
-                  label: `${f}${required ? " *" : ""}${connForm.id ? " (leave ******** to keep)" : ""}`, placeholder: FIELD_HINTS[f] || "",
-                  value: connForm.fields[f] ?? "", onChange: (e: any) => setConnForm((p: any) => ({ ...p, fields: { ...p.fields, [f]: e.target.value } })),
-                };
-                return f === "ca_pem" || f === "headers" || f === "service_account_json"
-                  ? <Txt key={f} {...props} rows={f === "headers" ? 2 : 4} style={{ fontFamily: "'JetBrains Mono', monospace" }} />
-                  : <Inp key={f} {...props} type={secret ? "password" : "text"} />;
-              })}
-              <div style={{ fontSize: 10, color: C.muted, marginBottom: 10, lineHeight: 1.5 }}>
-                The endpoint must be a public address reached over TLS (https, or syslog over TLS 1.3); platform services and private addresses are refused.
-                {connType(connForm.type)?.category === "siem" && " Test sends one labelled event to the SIEM."}
-                {connForm.type === "sentinel" && " Sentinel uses the Logs Ingestion API: the DCR stream must declare TimeGenerated, EventId, Action, TenantId, Service, Actor, TargetType, TargetId, Result, Severity, SourceIp and Event (dynamic)."}
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <Btn onClick={saveConnection}>Save</Btn><Btn variant="ghost" onClick={() => setConnForm(null)}>Cancel</Btn>
-              </div>
-            </div>
-          )}
-          {connections.length === 0 ? <div style={{ padding: 28, textAlign: "center", color: C.muted, fontSize: 12 }}>No connections.</div> : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead><tr><TH>Name</TH><TH>Type</TH><TH>Used for</TH><TH>Endpoint</TH><TH>Fields set</TH><TH>Updated</TH><TH></TH></tr></thead>
-              <tbody>{connections.map((c: any) => (
-                <tr key={c.id}>
-                  <TD><span style={{ fontWeight: 600 }}>{c.name}</span>
-                    {exposed[c.id] && <span title={`Stored in plaintext before 2.5.0-beta; exposed since ${new Date(exposed[c.id].exposed_since).toLocaleString()}`} style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: C.red, border: `1px solid ${C.red}`, borderRadius: 4, padding: "0 4px" }}>ROTATE</span>}
-                    <div style={{ fontSize: 9, color: C.muted, fontFamily: "'JetBrains Mono', monospace" }}>{c.id}</div></TD>
-                  <TD>{connType(c.type)?.label || c.type}</TD>
-                  <TD>{c.type === "git" ? "repository scans (Crypto Discovery)" : ["s3", "azure_blob", "gcs"].includes(c.type) ? "bucket scans (Crypto Discovery)" : ["playbooks", connType(c.type)?.stream ? "event streams" : "", ["slack", "teams"].includes(c.type) ? "approval notices" : ""].filter(Boolean).join(", ")}</TD>
-                  <TD mono>{c.endpoint}</TD><TD>{(c.fields_set || []).join(", ")}</TD><TD>{fmtAgo(c.updated_at)}</TD>
-                  <TD><div style={{ display: "flex", gap: 6 }}>
-                    <Btn variant="ghost" small onClick={() => testConnection(c)}>Test</Btn>
-                    <Btn variant="ghost" small onClick={() => setConnForm({ id: c.id, name: c.name, type: c.type, fields: Object.fromEntries((c.fields_set || []).map((f: string) => [f, "********"])) })}><Edit2 size={11} /></Btn>
-                    <Btn variant="danger" small onClick={() => deleteConnection(c)}><Trash2 size={11} /></Btn>
-                  </div></TD>
-                </tr>
-              ))}</tbody>
-            </table>
-          )}
-        </Card>
+        <Credentials session={session} exposed={exposed} exposureError={errors.exposure} onToast={showToast} onNavigate={onNavigate} onChanged={load} />
       )}
-      {view === "connections" && <PrivateEndpoints session={session} />}
+
       {view === "streams" && (
         <EventStreams session={session} connections={connections} connectionTypes={catalog?.connection_types || []} />
       )}
@@ -725,7 +634,7 @@ export function PlaybooksTab({ session }: { session: any }) {
                   </Sel>
                   {spec?.connection && (
                     <Sel label={`${spec.connection === "siem" ? "SIEM" : connType(spec.connection)?.label || spec.connection} connection *`} value={a.connection_id} onChange={(e: any) => setAction(i, "connection_id", e.target.value)}>
-                      <option value="">{conns.length ? "choose…" : "no connection of this type: add one under Connections"}</option>
+                      <option value="">{conns.length ? "choose…" : "none of this type: add one under Credentials"}</option>
                       {conns.map((c: any) => <option key={c.id} value={c.id}>{c.name} ({c.endpoint})</option>)}
                     </Sel>
                   )}

@@ -60,7 +60,7 @@ func (s *Service) CheckKeyDestruction(ctx context.Context, tenantID, keyID strin
 	out.VersionRows = len(versions)
 	out.HSM = "not_configured"
 	if s.hsm != nil {
-		objs, _, err := s.hsm.Objects(ctx, tenantID)
+		objs, _, err := s.hsmOf(key).Objects(ctx, tenantID)
 		if err != nil {
 			out.HSM, out.HSMError = "unreachable", err.Error()
 		} else {

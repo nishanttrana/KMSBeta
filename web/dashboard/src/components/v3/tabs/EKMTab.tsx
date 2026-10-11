@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { LayoutGrid, List, MoreVertical, RefreshCcw } from "lucide-react";
 import { B, Btn, Card, Chk, FG, Inp, Modal, Row2, Sel, usePromptDialog } from "../legacyPrimitives";
 import { C } from "../theme";
+import { CredentialPicker } from "../CredentialPicker";
 import { errMsg } from "../runtimeUtils";
 import {
   deleteBitLockerClient,
@@ -100,7 +101,7 @@ const SETUP_GUIDES: Record<string, { title: string; steps: string[] }> = {
   }
 };
 
-export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
+export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>{
   const [loading,setLoading]=useState(false);
   const [agents,setAgents]=useState([]);
   const [statusByID,setStatusByID]=useState({});
@@ -182,7 +183,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
   const [azureLoading,setAzureLoading]=useState(false);
   const [azureConfigForm,setAzureConfigForm]=useState({
     azure_tenant_id:"", subscription_id:"", resource_group:"", vault_name:"", vault_url:"",
-    managed_hsm_name:"", managed_hsm_url:"", client_id:"", client_secret:"", auth_mode:"client_secret"
+    managed_hsm_name:"", managed_hsm_url:"", connection_id:"", auth_mode:"client_secret"
   });
   const [azureMappingForm,setAzureMappingForm]=useState({ config_id:"", vecta_key_id:"", azure_key_name:"", purpose:"tde" });
   const [azureTestResults,setAzureTestResults]=useState<Record<string,{connected:boolean;error?:string}>>({});
@@ -194,7 +195,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
   const [googleCSEKeys,setGoogleCSEKeys]=useState<any[]>([]);
   const [googleCSELoading,setGoogleCSELoading]=useState(false);
   const [googleCSEConfigForm,setGoogleCSEConfigForm]=useState({
-    google_workspace_customer_id:"", service_account_email:"", service_account_key_json:"",
+    google_workspace_customer_id:"", service_account_email:"",
     allowed_domains:"", authentication_client_ids:"", kacls_endpoint:""
   });
   const [googleCSEKeyForm,setGoogleCSEKeyForm]=useState({ config_id:"", key_name:"", vecta_key_id:"", purpose:"drive" });
@@ -1118,7 +1119,6 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
           <FG label="KACLS Endpoint URL"><Inp value={googleCSEConfigForm.kacls_endpoint} onChange={e=>setGoogleCSEConfigForm(p=>({...p,kacls_endpoint:e.target.value}))} placeholder="https://kacls.example.com/ekm/kacls"/></FG>
         </Row2>
         <FG label="Authentication Client IDs (comma-separated)" hint="OAuth client ID(s) of the identity provider in your Workspace CSE settings. The authentication token's audience must be one of them."><Inp value={googleCSEConfigForm.authentication_client_ids} onChange={e=>setGoogleCSEConfigForm(p=>({...p,authentication_client_ids:e.target.value}))} placeholder="123456789-abc.apps.googleusercontent.com"/></FG>
-        <FG label="Service Account Key JSON"><Inp value={googleCSEConfigForm.service_account_key_json} onChange={e=>setGoogleCSEConfigForm(p=>({...p,service_account_key_json:e.target.value}))} placeholder='{"type":"service_account",...}' style={{fontFamily:"monospace",fontSize:11}}/></FG>
         <Btn disabled={googleCSELoading||!googleCSEConfigForm.google_workspace_customer_id||!googleCSEConfigForm.authentication_client_ids.trim()} onClick={async()=>{
           setGoogleCSELoading(true);
           try{
@@ -1126,13 +1126,12 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
             await createGoogleCSEConfig(session,{
               google_workspace_customer_id:googleCSEConfigForm.google_workspace_customer_id,
               service_account_email:googleCSEConfigForm.service_account_email,
-              service_account_key_json:googleCSEConfigForm.service_account_key_json,
               allowed_domains:domains,
               authentication_client_ids:splitList(googleCSEConfigForm.authentication_client_ids),
               kacls_endpoint:googleCSEConfigForm.kacls_endpoint
             });
             onToast?.("Google CSE config created");
-            setGoogleCSEConfigForm({google_workspace_customer_id:"",service_account_email:"",service_account_key_json:"",allowed_domains:"",authentication_client_ids:"",kacls_endpoint:""});
+            setGoogleCSEConfigForm({google_workspace_customer_id:"",service_account_email:"",allowed_domains:"",authentication_client_ids:"",kacls_endpoint:""});
             await refresh(true);
           }catch(e){onToast?.(`Failed: ${errMsg(e)}`);}finally{setGoogleCSELoading(false);}
         }} style={{marginTop:8}}>{googleCSELoading?"Creating...":"Create Config"}</Btn>
@@ -1553,7 +1552,6 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
 
     {/* ── Azure Add Config Modal ── */}
     {modal==="azure-add-config"&&(<Modal open={true} title="Add Azure Key Vault Connection" onClose={()=>setModal(null)}>
-      <FG label="Azure AD Tenant ID"><Inp value={azureConfigForm.azure_tenant_id} onChange={(e)=>setAzureConfigForm({...azureConfigForm,azure_tenant_id:e.target.value})} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/></FG>
       <Row2>
         <FG label="Vault Name"><Inp value={azureConfigForm.vault_name} onChange={(e)=>setAzureConfigForm({...azureConfigForm,vault_name:e.target.value})} placeholder="my-keyvault"/></FG>
         <FG label="Vault URL (auto-generated if empty)"><Inp value={azureConfigForm.vault_url} onChange={(e)=>setAzureConfigForm({...azureConfigForm,vault_url:e.target.value})} placeholder="https://my-keyvault.vault.azure.net"/></FG>
@@ -1566,13 +1564,14 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
         <FG label="Managed HSM Name (optional)"><Inp value={azureConfigForm.managed_hsm_name} onChange={(e)=>setAzureConfigForm({...azureConfigForm,managed_hsm_name:e.target.value})}/></FG>
         <FG label="Managed HSM URL (optional)"><Inp value={azureConfigForm.managed_hsm_url} onChange={(e)=>setAzureConfigForm({...azureConfigForm,managed_hsm_url:e.target.value})}/></FG>
       </Row2>
-      <FG label="Auth Mode"><Sel value={azureConfigForm.auth_mode} onChange={(e)=>setAzureConfigForm({...azureConfigForm,auth_mode:e.target.value})}>
-        <option value="client_secret">Client Secret</option><option value="managed_identity">Managed Identity</option><option value="certificate">Certificate</option>
+      <FG label="Sign-in"><Sel value={azureConfigForm.auth_mode} onChange={(e)=>setAzureConfigForm({...azureConfigForm,auth_mode:e.target.value})}>
+        <option value="client_secret">App registration (credential)</option><option value="managed_identity">Managed identity</option>
       </Sel></FG>
-      <Row2>
-        <FG label="Client ID (App Registration)"><Inp value={azureConfigForm.client_id} onChange={(e)=>setAzureConfigForm({...azureConfigForm,client_id:e.target.value})}/></FG>
-        <FG label="Client Secret"><Inp type="password" value={azureConfigForm.client_secret} onChange={(e)=>setAzureConfigForm({...azureConfigForm,client_secret:e.target.value})}/></FG>
-      </Row2>
+      {azureConfigForm.auth_mode==="managed_identity"
+        ? <FG label="Entra tenant ID"><Inp value={azureConfigForm.azure_tenant_id} onChange={(e)=>setAzureConfigForm({...azureConfigForm,azure_tenant_id:e.target.value})} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/></FG>
+        : <FG label="App registration credential" required>
+            <CredentialPicker session={session} type="azure" value={azureConfigForm.connection_id} onChange={(id:string)=>setAzureConfigForm({...azureConfigForm,connection_id:id})} onNavigate={onNavigate}/>
+          </FG>}
       <div style={{fontSize:11,color:C.textDim,marginTop:4}}>Vecta KMS will authenticate to Azure AD and manage keys in the specified Key Vault as an external key provider.</div>
       <div style={{display:"flex",gap:8,marginTop:12}}>
         <Btn onClick={async()=>{
@@ -1581,10 +1580,10 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
             await createAzureEKMConfig(session,azureConfigForm);
             onToast?.("Azure vault config created");
             setModal(null);
-            setAzureConfigForm({azure_tenant_id:"",subscription_id:"",resource_group:"",vault_name:"",vault_url:"",managed_hsm_name:"",managed_hsm_url:"",client_id:"",client_secret:"",auth_mode:"client_secret"});
+            setAzureConfigForm({azure_tenant_id:"",subscription_id:"",resource_group:"",vault_name:"",vault_url:"",managed_hsm_name:"",managed_hsm_url:"",connection_id:"",auth_mode:"client_secret"});
             await refresh(true);
           }catch(e){onToast?.(`Failed: ${errMsg(e)}`);}finally{setAzureLoading(false);}
-        }} disabled={azureLoading||!azureConfigForm.azure_tenant_id||!azureConfigForm.vault_name}>{azureLoading?"Creating...":"Create Config"}</Btn>
+        }} disabled={azureLoading||!azureConfigForm.vault_name||(azureConfigForm.auth_mode==="managed_identity"?!azureConfigForm.azure_tenant_id:!azureConfigForm.connection_id)}>{azureLoading?"Creating...":"Create Config"}</Btn>
         <Btn onClick={()=>setModal(null)}>Cancel</Btn>
       </div>
     </Modal>)}

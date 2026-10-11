@@ -69,6 +69,9 @@ func (h *Handler) handleCreateGoogleCSEConfig(w http.ResponseWriter, r *http.Req
 	}
 	req.TenantID = tenantID
 
+	if !h.refuseUnusedCSEKey(w, r, tenantID, reqID, req.ServiceAccountKeyJSON) {
+		return
+	}
 	if strings.TrimSpace(req.GoogleWorkspaceCustomerID) == "" {
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "google_workspace_customer_id is required"), reqID, tenantID)
 		return
@@ -88,7 +91,6 @@ func (h *Handler) handleCreateGoogleCSEConfig(w http.ResponseWriter, r *http.Req
 		TenantID:                  tenantID,
 		GoogleWorkspaceCustomerID: strings.TrimSpace(req.GoogleWorkspaceCustomerID),
 		ServiceAccountEmail:       strings.TrimSpace(req.ServiceAccountEmail),
-		ServiceAccountKeyJSON:     strings.TrimSpace(req.ServiceAccountKeyJSON),
 		AllowedDomains:            req.AllowedDomains,
 		AuthenticationClientIDs:   req.AuthenticationClientIDs,
 		KACLSEndpoint:             strings.TrimSpace(req.KACLSEndpoint),
@@ -103,8 +105,6 @@ func (h *Handler) handleCreateGoogleCSEConfig(w http.ResponseWriter, r *http.Req
 
 	h.publishAuditEvent(r.Context(), tenantID, "google_cse.config.created", cfg.ID)
 
-	// Mask service account key in response
-	cfg.ServiceAccountKeyJSON = maskSecret(cfg.ServiceAccountKeyJSON)
 	writeJSON(w, http.StatusCreated, map[string]interface{}{"config": cfg, "request_id": reqID})
 }
 
@@ -121,7 +121,7 @@ func (h *Handler) handleListGoogleCSEConfigs(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	for i := range items {
-		items[i].ServiceAccountKeyJSON = maskSecret(items[i].ServiceAccountKeyJSON)
+		items[i].ServiceAccountKeyJSON = ""
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
 }
@@ -138,7 +138,7 @@ func (h *Handler) handleGetGoogleCSEConfig(w http.ResponseWriter, r *http.Reques
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
 	}
-	cfg.ServiceAccountKeyJSON = maskSecret(cfg.ServiceAccountKeyJSON)
+	cfg.ServiceAccountKeyJSON = ""
 	writeJSON(w, http.StatusOK, map[string]interface{}{"config": cfg, "request_id": reqID})
 }
 
@@ -162,10 +162,10 @@ func (h *Handler) handleUpdateGoogleCSEConfig(w http.ResponseWriter, r *http.Req
 	}
 
 	existing.GoogleWorkspaceCustomerID = coalesceStr(strings.TrimSpace(req.GoogleWorkspaceCustomerID), existing.GoogleWorkspaceCustomerID)
-	existing.ServiceAccountEmail = coalesceStr(strings.TrimSpace(req.ServiceAccountEmail), existing.ServiceAccountEmail)
-	if strings.TrimSpace(req.ServiceAccountKeyJSON) != "" {
-		existing.ServiceAccountKeyJSON = strings.TrimSpace(req.ServiceAccountKeyJSON)
+	if !h.refuseUnusedCSEKey(w, r, tenantID, reqID, req.ServiceAccountKeyJSON) {
+		return
 	}
+	existing.ServiceAccountEmail = coalesceStr(strings.TrimSpace(req.ServiceAccountEmail), existing.ServiceAccountEmail)
 	if len(req.AllowedDomains) > 0 {
 		existing.AllowedDomains = req.AllowedDomains
 	}
@@ -181,7 +181,6 @@ func (h *Handler) handleUpdateGoogleCSEConfig(w http.ResponseWriter, r *http.Req
 
 	h.publishAuditEvent(r.Context(), tenantID, "google_cse.config.updated", existing.ID)
 
-	existing.ServiceAccountKeyJSON = maskSecret(existing.ServiceAccountKeyJSON)
 	writeJSON(w, http.StatusOK, map[string]interface{}{"config": existing, "request_id": reqID})
 }
 
@@ -603,4 +602,20 @@ func writeKACLSError(w http.ResponseWriter, status int, code string, message str
 			"status":  code,
 		},
 	})
+}
+
+// refuseUnusedCSEKey refuses a request that carries a Google service account
+// key. The KACLS verifies tokens against published keys and has no use for
+// one, so none is taken or stored (before 8.0.0-beta it was kept in
+// plaintext and never read). The refusal is audited.
+func (h *Handler) refuseUnusedCSEKey(w http.ResponseWriter, r *http.Request, tenantID, reqID, key string) bool {
+	if strings.TrimSpace(key) == "" {
+		return true
+	}
+	const msg = "service_account_key_json is not accepted: Google CSE verifies tokens against published keys and uses no service account key"
+	_ = h.svc.publishAudit(r.Context(), "audit.ekm.google_cse_config_refused", tenantID, map[string]interface{}{
+		"result": "refused", "reason": "service_account_key_not_used", "severity": "warning", "description": msg,
+	})
+	h.writeServiceError(w, newServiceError(http.StatusBadRequest, "service_account_key_not_used", msg), reqID, tenantID)
+	return false
 }

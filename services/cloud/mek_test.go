@@ -14,13 +14,7 @@ func TestUpgradeMovesCloudCredentialsOffPublicKey(t *testing.T) {
 	ctx := context.Background()
 	_, store, keycore, pub := newCloudService(t)
 	old := NewService(store, keycore, newMockProviderRegistry(), pub, mektest.PublicDevKey("cloud"))
-	acc, err := old.RegisterAccount(ctx, RegisterCloudAccountRequest{
-		TenantID: "t1", Provider: ProviderAWS, Name: "aws", DefaultRegion: "us-east-1",
-		CredentialsJSON: `{"access_key":"AKIA","secret":"s3"}`,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	acc := legacyAccount(t, old, "t1", ProviderAWS, "aws", `{"access_key":"AKIA","secret":"s3"}`)
 	mektest.ApplySchema(t, store.db.SQL(), "cloud")
 	k := mektest.Open(t, store.db.SQL(), "cloud", mektest.NewKeycore(t))
 	svc := NewService(store, keycore, newMockProviderRegistry(), pub, k.Current())
