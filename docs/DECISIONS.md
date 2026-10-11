@@ -7,6 +7,50 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-12 — EKM database clients enrol with a one-time token and check in with their own key
+**Decision:** a database client is created pending by an administrator, who
+issues a one-time registration token (256 random bits, 24 hours, stored as
+its SHA-256). The agent presents it once and receives a client key, which it
+sends with every check-in in its own header. Health is the age of the last
+verified check-in, judged by the service with fixed thresholds (5 and 60
+minutes) that travel with every response. Every check-in is stored (the
+newest 120 per client). A pending or keyed client refuses the older calls
+that accept any token of the tenant (docs/SECURITY/EKM_CLIENTS.md).
+**Why:** the owner asked for the registration and health view of a
+prototype, as a real capability. The prototype's clock, check-ins and
+registration were simulated; here each has to be something the service
+verified. The existing "Deploy Agent" marked a client connected at form
+submit, so "registered" and "seen" needed a credential only the agent holds.
+**Rejected:**
+- *The prototype's demo clock, "Simulate check-in" and "Pause agent".*
+  Simulations (CLAUDE.md rule 8). Health changes only when a real agent
+  stops or resumes.
+- *"Key requests are being served" on a healthy client.* A check-in proves
+  the agent reaches the KMS, not that a database uses a Vecta-held key. The
+  panel shows the reported TDE state and the last key request on record.
+- *A JWT as the registration token, as in the prototype.* It would need a
+  signing key and a replay store to be single-use; a random token whose hash
+  is cleared in the statement that registers the client is single-use by
+  construction and has nothing to parse before it is verified.
+- *An auth-service API client per agent.* It works today for clients from
+  earlier releases, but the heartbeat route can't bind such a token to one
+  agent, and enrolment would need ekm to create auth clients.
+- *HMAC-signed check-ins.* The service would have to keep the key itself
+  (sealed), not a hash, and re-seal on master-key rotation; over TLS 1.3 a
+  bearer key stored as a hash is the smaller exposure.
+- *A count badge on the sidebar's Enterprise KM entry.* The shell would poll
+  ekm from every page. A client needing attention is the tile's hue on the
+  page and, for a response, a playbook trigger.
+- *Thresholds in the dashboard.* One copy, in the service
+  (`ekmClients.test.ts` "never judges health itself").
+- *Coloured tile numbers, as in the prototype.* Counts are neutral on the
+  shared `Stat`; hue marks only a state needing attention (decision below).
+**Enforced by:** `services/ekm/clients_test.go`,
+`TestAgentBinaryEnrolsAndChecksIn`, `TestClientEnrolmentPostgres`,
+`routetest.RefusalsAudited` on the four administrator routes, `ekmClients.test.ts`, `ekm-clients.spec.ts`.
+**Still open:** per-tenant thresholds; an event when a client turns degraded
+or offline; a client key for the packaged heartbeat scripts.
+
 ## 2026-10-12 — A page shows state and controls; meaning goes in the docs
 **Decision:** a dashboard page carries no paragraph that explains a feature.
 It shows state (badges, chips with counts, measured values) and controls.

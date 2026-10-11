@@ -5,6 +5,58 @@ Newest entries on top.
 
 ## 2026-10-12
 
+### EKM clients: three fakes on the page being replaced, and what the rebuild taught (11.7.0-beta)
+- **"Deploy Agent" recorded a connection that never happened.** The dialog
+  called `POST /ekm/agents/register`, which stamps `status: connected` and
+  `last_heartbeat_at: now` because it was written for an agent announcing
+  itself. From a browser it made a client "connected, 0s ago" before any
+  agent existed. How it slipped through: the route can't tell who is calling
+  (it takes any token of the tenant), and the test registered an agent and
+  checked it was listed, which a fake also satisfies. **Rule: a record of
+  contact is written only on a credential the contacting party holds.** A
+  client is now pending until its agent presents a one-time token, and a
+  pending client refuses the token-authenticated calls
+  (`TestClientIsPendingUntilItsAgentEnrols`).
+- **"Verify Connection" called `GET .../validate-deploy`; only `POST`
+  exists.** It always failed, so nobody saw that the POST it meant would
+  have marked the client connected on the dashboard's own word and answered
+  "deployment validated successfully". A broken control hid a fake one. The
+  wizard now waits for the service to report the enrolment.
+- **The packaged heartbeat scripts sent `"tde_state":"enabled"` as a
+  literal.** They can't read the database. They now send `unknown`
+  (`TestDeployScriptsDoNotClaimTDEIsEnabled`). The class: grep a generated
+  script for the states it reports and ask where each value is measured.
+- **A poll inside a component whose parent re-renders every second never
+  fired.** The wizard's `setInterval(…, 3000)` listed the parent's
+  `onChanged` in its effect dependencies; the parent keeps a one-second
+  clock for "18s ago", so the effect was torn down and rebuilt every second
+  and three seconds never elapsed. Type-check and unit tests passed; the
+  smoke test that waits for a real enrolment caught it. **Rule: a timer's
+  effect depends on values, not on a callback prop; read the callback
+  through a ref.** The drawer's own poll is now asserted too
+  (`expect.poll` on the request count).
+- **An agent's credential can't ride in `Authorization`.** On a cluster
+  member `pkg/config/clusterforward.go` verifies that header as an
+  auth-service token before forwarding a write, and answers 401 for
+  anything else. The client key has its own header, `X-EKM-Client-Key`.
+- **`X-Forwarded-For`'s first entry is the caller's claim.** Envoy
+  (`use_remote_address: true`) appends the address it saw, so the last entry
+  is the trustworthy one; a client can prepend anything. The client's
+  "Source IP" uses the last entry (`TestClientIPIsTheAddressTheEdgeSaw`).
+  **Not fixed here:** `pkg/route`, `pkg/auditmw` and `pkg/jwtauth` still take
+  the first entry for the audit event's `source_ip`, which a caller can
+  therefore forge. It needs its own change and test.
+- **`document.elementFromPoint` answers null below the fold.** The
+  covered-controls sweep reported every off-screen row as "covered by
+  undefined" on a thousand-row table. It now skips points outside the
+  window, and the crowded test scrolls to the last rows and sweeps again
+  (`tests/fixtures/layout.ts`).
+- **Two rule changes landed mid-task from another session in the same
+  tree** (neutral counts on the shared `Stat`, no explanatory text on a
+  page). The page had been built with coloured numbers and hint lines and
+  was rebuilt before it was committed. `git fetch` and re-read `CLAUDE.md`
+  before the final checks, not only before pushing.
+
 ### Controls that did nothing, and four reports that were each a class (11.6.0-beta)
 - **A selector's choice was read from a button.** The SCEP and CMPv2
   wizards read `document.getElementById("…").value` from the shared `Sel`,

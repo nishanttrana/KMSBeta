@@ -10,7 +10,7 @@
   "src/components/v3/tabs/CryptoAgilityTab.tsx": 518,
   "src/components/v3/tabs/CryptoTab.tsx": 909,
   "src/components/v3/tabs/DashboardTab.tsx": 505,
-  "src/components/v3/tabs/EKMTab.tsx": 1663,
+  "src/components/v3/tabs/EKMTab.tsx": 1140,
   "src/components/v3/tabs/GovernanceTab.tsx": 632,
   "src/components/v3/tabs/HSMTab.tsx": 562,
   "src/components/v3/tabs/HYOKTab.tsx": 680,

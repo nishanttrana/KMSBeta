@@ -449,8 +449,9 @@ changes code without touching CHANGELOG.md or learning.md.
     id. `tests/unit/controlsAreReal.test.ts` enforces this.
   - A layout is rendered and tested in every state it has: collapsed and
     open, empty and crowded (a count of 4,200, not 3). A badge sits beside
-    its icon, never over it. The smoke tests' `coveredControls` sweep fails
-    when one control is drawn over another.
+    its icon, never over it. The smoke tests' `coveredControls` sweep
+    (`web/dashboard/tests/fixtures/layout.ts`) fails when one control is
+    drawn over another.
 
 - `make conformance` passes. It enforces rules 1–3 and 5, that routes use
   the `pkg/route` kernel, that every shell script parses under macOS

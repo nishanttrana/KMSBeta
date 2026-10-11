@@ -36,11 +36,19 @@ func main() {
 		serviceCmd  string
 		runOnce     bool
 		showVersion bool
+		enroll      bool
+		server      string
+		tokenFile   string
+		caPath      string
 	)
 	flag.StringVar(&configPath, "config", "", "Path to agent config JSON")
 	flag.StringVar(&serviceCmd, "service", "", "Service command: install|uninstall|start|stop|restart")
 	flag.BoolVar(&runOnce, "once", false, "Run register+heartbeat once and exit")
 	flag.BoolVar(&showVersion, "version", false, "Print version and exit")
+	flag.BoolVar(&enroll, "enroll", false, "Register this host with the one-time token in -token-file, write the config and exit")
+	flag.StringVar(&server, "server", "", "With -enroll: the KMS EKM endpoint, e.g. https://kms.example.com/svc/ekm")
+	flag.StringVar(&tokenFile, "token-file", "", "With -enroll: file holding the registration token; removed once used")
+	flag.StringVar(&caPath, "ca", "", "With -enroll: PEM bundle to trust for the KMS endpoint")
 	flag.Parse()
 
 	if showVersion {
@@ -50,6 +58,17 @@ func main() {
 
 	if strings.TrimSpace(configPath) == "" {
 		configPath = defaultConfigPath()
+	}
+
+	if enroll {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		name, err := Enroll(ctx, server, tokenFile, caPath, configPath)
+		if err != nil {
+			log.Fatalf("enroll failed: %v", err)
+		}
+		fmt.Printf("registered as %s; config written to %s\n", name, configPath)
+		return
 	}
 
 	cfg, err := LoadAgentConfig(configPath)
@@ -210,7 +229,12 @@ func NewAgentRunner(cfg AgentConfig, logger *log.Logger) *AgentRunner {
 		if cfg.TLSSkipVerify {
 			logger.Printf("WARNING: tls_skip_verify is set but InsecureSkipVerify is disabled for FIPS 140-3 compliance")
 		}
-		transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS13}
+		tlsCfg, err := kmsTLSConfig(cfg.CAPath)
+		if err != nil {
+			logger.Printf("WARNING: ca_path not usable, trusting the system roots only: %v", err)
+			tlsCfg = &tls.Config{MinVersion: tls.VersionTLS13}
+		}
+		transport.TLSClientConfig = tlsCfg
 	}
 	client := &http.Client{
 		Timeout:   15 * time.Second,
@@ -218,7 +242,12 @@ func NewAgentRunner(cfg AgentConfig, logger *log.Logger) *AgentRunner {
 	}
 
 	var auditEmitter *pkgaudit.HTTPEmitter
-	if cfg.AuditBaseURL != "" {
+	if cfg.ClientKey != "" {
+		// The audit ingest takes an auth-service token, which an enrolled
+		// client does not hold. The KMS audits its enrolment and every
+		// check-in itself, with this client as the verified actor.
+		logger.Printf("enrolled client: enrolment and check-ins are audited by the KMS")
+	} else if cfg.AuditBaseURL != "" {
 		auditEmitter, err = pkgaudit.NewHTTPEmitter(cfg.AuditBaseURL, "ekm-agent", cfg.AgentID, client, auth)
 		if err != nil {
 			logger.Printf("WARNING: audit emitter init failed, agent events will not be audited: %v", err)
@@ -251,6 +280,10 @@ func (r *AgentRunner) emitAudit(ctx context.Context, action string, evt pkgaudit
 }
 
 func (r *AgentRunner) Register(ctx context.Context) error {
+	if r.cfg.ClientKey != "" {
+		// Registered once, by Enroll, with the one-time token.
+		return nil
+	}
 	body := map[string]interface{}{
 		"tenant_id":              r.cfg.TenantID,
 		"agent_id":               r.cfg.AgentID,
@@ -320,6 +353,9 @@ func (r *AgentRunner) SendHeartbeat(ctx context.Context) error {
 		"config_version_ack": r.cfg.ConfigVersionAck,
 		"metadata_json":      mustJSON(meta),
 	}
+	if r.cfg.ClientKey != "" {
+		body["version"] = agentVersion()
+	}
 	hbPath := replaceAgentIDPath(r.cfg.HeartbeatPath, r.cfg.AgentID)
 	url := joinURL(r.cfg.APIBaseURL, hbPath)
 	if err := r.postJSON(ctx, url, body, nil); err != nil {
@@ -338,6 +374,16 @@ func (r *AgentRunner) staticMetadata() map[string]interface{} {
 	}
 }
 
+// authorize puts this agent's credential on a request: the client key of an
+// enrolled client, otherwise the configured auth-service credential.
+func (r *AgentRunner) authorize(req *http.Request) error {
+	if r.cfg.ClientKey != "" {
+		req.Header.Set(clientKeyHeader, r.cfg.ClientKey)
+		return nil
+	}
+	return r.auth.ApplyAuth(req)
+}
+
 func (r *AgentRunner) postJSON(ctx context.Context, url string, payload interface{}, out interface{}) error {
 	raw, err := json.Marshal(payload)
 	if err != nil {
@@ -348,7 +394,7 @@ func (r *AgentRunner) postJSON(ctx context.Context, url string, payload interfac
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if err := r.auth.ApplyAuth(req); err != nil {
+	if err := r.authorize(req); err != nil {
 		return fmt.Errorf("apply auth: %w", err)
 	}
 	resp, err := r.httpClient.Do(req)
@@ -370,7 +416,7 @@ func (r *AgentRunner) getJSON(ctx context.Context, url string, out interface{}) 
 	if err != nil {
 		return err
 	}
-	if err := r.auth.ApplyAuth(req); err != nil {
+	if err := r.authorize(req); err != nil {
 		return fmt.Errorf("apply auth: %w", err)
 	}
 	resp, err := r.httpClient.Do(req)

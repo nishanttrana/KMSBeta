@@ -5881,6 +5881,96 @@
       "service": "ekm"
     },
     {
+      "action": "client_list",
+      "code_scope": "ekm",
+      "file": "services/ekm/clients.go",
+      "handler": "h.listClients",
+      "line": 272,
+      "match_key": "ekm|GET|/ekm/clients",
+      "method": "GET",
+      "normalized_path": "/ekm/clients",
+      "path": "/ekm/clients",
+      "permission": "ekm.read",
+      "registration": "kernel",
+      "resource": "ekm_client",
+      "service": "ekm"
+    },
+    {
+      "action": "client_created",
+      "code_scope": "ekm",
+      "file": "services/ekm/clients.go",
+      "handler": "h.createClient",
+      "line": 273,
+      "match_key": "ekm|POST|/ekm/clients",
+      "method": "POST",
+      "normalized_path": "/ekm/clients",
+      "path": "/ekm/clients",
+      "permission": "ekm.write",
+      "registration": "kernel",
+      "resource": "ekm_client",
+      "service": "ekm"
+    },
+    {
+      "action": "client_read",
+      "code_scope": "ekm",
+      "file": "services/ekm/clients.go",
+      "handler": "h.getClient",
+      "line": 274,
+      "match_key": "ekm|GET|/ekm/clients/{param}",
+      "method": "GET",
+      "normalized_path": "/ekm/clients/{param}",
+      "path": "/ekm/clients/{id}",
+      "permission": "ekm.read",
+      "registration": "kernel",
+      "resource": "ekm_client",
+      "service": "ekm"
+    },
+    {
+      "action": "client_token_issued",
+      "code_scope": "ekm",
+      "file": "services/ekm/clients.go",
+      "handler": "h.issueClientToken",
+      "line": 275,
+      "match_key": "ekm|POST|/ekm/clients/{param}/registration-token",
+      "method": "POST",
+      "normalized_path": "/ekm/clients/{param}/registration-token",
+      "path": "/ekm/clients/{id}/registration-token",
+      "permission": "ekm.write",
+      "registration": "kernel",
+      "resource": "ekm_client",
+      "service": "ekm"
+    },
+    {
+      "action": "client_enrolled",
+      "code_scope": "ekm",
+      "file": "services/ekm/clients.go",
+      "handler": "h.enrollClient",
+      "line": 277,
+      "match_key": "ekm|POST|/ekm/clients/enroll",
+      "method": "POST",
+      "normalized_path": "/ekm/clients/enroll",
+      "path": "/ekm/clients/enroll",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "ekm_client",
+      "service": "ekm"
+    },
+    {
+      "action": "client_check_in",
+      "code_scope": "ekm",
+      "file": "services/ekm/clients.go",
+      "handler": "h.clientCheckIn",
+      "line": 278,
+      "match_key": "ekm|POST|/ekm/clients/{param}/check-in",
+      "method": "POST",
+      "normalized_path": "/ekm/clients/{param}/check-in",
+      "path": "/ekm/clients/{id}/check-in",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "ekm_client",
+      "service": "ekm"
+    },
+    {
       "action": "",
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
@@ -15858,6 +15948,96 @@
       "service": "ekm"
     },
     {
+      "action": "client_enrolled",
+      "code_scope": "ekm",
+      "file": "services/ekm/clients.go",
+      "handler": "h.enrollClient",
+      "line": 277,
+      "match_key": "ekm|POST|/ekm/clients/enroll",
+      "method": "POST",
+      "normalized_path": "/ekm/clients/enroll",
+      "path": "/ekm/clients/enroll",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "ekm_client",
+      "service": "ekm"
+    },
+    {
+      "action": "client_check_in",
+      "code_scope": "ekm",
+      "file": "services/ekm/clients.go",
+      "handler": "h.clientCheckIn",
+      "line": 278,
+      "match_key": "ekm|POST|/ekm/clients/{param}/check-in",
+      "method": "POST",
+      "normalized_path": "/ekm/clients/{param}/check-in",
+      "path": "/ekm/clients/{id}/check-in",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "ekm_client",
+      "service": "ekm"
+    },
+    {
+      "action": "",
+      "code_scope": "ekm",
+      "file": "services/ekm/handler.go",
+      "handler": "h.handleRegisterAgent",
+      "line": 55,
+      "match_key": "ekm|POST|/ekm/agents/register",
+      "method": "POST",
+      "normalized_path": "/ekm/agents/register",
+      "path": "/ekm/agents/register",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "ekm"
+    },
+    {
+      "action": "",
+      "code_scope": "ekm",
+      "file": "services/ekm/handler.go",
+      "handler": "h.handleAgentStatus",
+      "line": 57,
+      "match_key": "ekm|GET|/ekm/agents/{param}/status",
+      "method": "GET",
+      "normalized_path": "/ekm/agents/{param}/status",
+      "path": "/ekm/agents/{id}/status",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "ekm"
+    },
+    {
+      "action": "",
+      "code_scope": "ekm",
+      "file": "services/ekm/handler.go",
+      "handler": "h.handleAgentHealth",
+      "line": 58,
+      "match_key": "ekm|GET|/ekm/agents/{param}/health",
+      "method": "GET",
+      "normalized_path": "/ekm/agents/{param}/health",
+      "path": "/ekm/agents/{id}/health",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "ekm"
+    },
+    {
+      "action": "",
+      "code_scope": "ekm",
+      "file": "services/ekm/handler.go",
+      "handler": "h.handleAgentDeployPackage",
+      "line": 60,
+      "match_key": "ekm|GET|/ekm/agents/{param}/deploy",
+      "method": "GET",
+      "normalized_path": "/ekm/agents/{param}/deploy",
+      "path": "/ekm/agents/{id}/deploy",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "ekm"
+    },
+    {
       "action": "",
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
@@ -21417,29 +21597,9 @@
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "setDbView(dbView===\"cards\"?\"list\":\"cards\")} style={ }>{dbView===\"cards\"? : }",
-      "line": 699,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "openDeploy",
-      "label": "Deploy Agent",
-      "line": 700,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "openDbRegister",
+      "handler": "openDbRegister} disabled={!agents.length",
       "label": "Register Database",
-      "line": 701,
+      "line": 475,
       "tabs": [
         "ekm"
       ],
@@ -21449,87 +21609,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(\"setup-guide\")}>Setup Guide",
-      "line": 702,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "refresh(false)} disabled= >",
-      "line": 703,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "runRotate(agent)} disabled= style={ }>",
-      "line": 764,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "openLogs(agent)} style={ }>Logs",
-      "line": 765,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "openHealthDetail(agent)} style={ }>Health",
-      "line": 766,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "} disabled= style={ }>Rotate",
-      "line": 793,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "} style={ }>Logs",
-      "line": 794,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "openHealthDetail(agent)} style={ }>Full Health",
-      "line": 832,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "runDelete(agent)} disabled= style={ }>",
-      "line": 833,
+      "line": 476,
       "tabs": [
         "ekm"
       ],
@@ -21539,7 +21619,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setExpandedTdeGuide(prev=>( ))} style={ }>Guide",
-      "line": 863,
+      "line": 496,
       "tabs": [
         "ekm"
       ],
@@ -21549,17 +21629,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "runRevokeTDE(db)} disabled= style={ }>",
-      "line": 864,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "loadAgentKeyAccessLogs(expandedAgent)} disabled= style={ }>",
-      "line": 883,
+      "line": 497,
       "tabs": [
         "ekm"
       ],
@@ -21569,7 +21639,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setBitLockerView(bitLockerView===\"cards\"?\"list\":\"cards\")} style={ }>{bitLocke...",
-      "line": 921,
+      "line": 530,
       "tabs": [
         "ekm"
       ],
@@ -21579,7 +21649,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "openBitLockerDeploy",
       "label": "Register Client",
-      "line": 922,
+      "line": 531,
       "tabs": [
         "ekm"
       ],
@@ -21589,7 +21659,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "openBitLockerScan",
       "label": "Network Scan",
-      "line": 923,
+      "line": 532,
       "tabs": [
         "ekm"
       ],
@@ -21599,7 +21669,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "refresh(false)} disabled= >",
-      "line": 924,
+      "line": 533,
       "tabs": [
         "ekm"
       ],
@@ -21609,7 +21679,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "runBitLockerOperation(client,op)} disabled={bitLockerOpClientID===`$ :$ `} st...",
-      "line": 948,
+      "line": 557,
       "tabs": [
         "ekm"
       ],
@@ -21619,7 +21689,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "openBitLockerActivity(client)} style={ }>Activity",
-      "line": 949,
+      "line": 558,
       "tabs": [
         "ekm"
       ],
@@ -21629,7 +21699,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "openBitLockerDelete(client)} style={ }>Delete",
-      "line": 950,
+      "line": 559,
       "tabs": [
         "ekm"
       ],
@@ -21639,7 +21709,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "openBitLockerActivity(client)} style={ }>Activity",
-      "line": 971,
+      "line": 580,
       "tabs": [
         "ekm"
       ],
@@ -21649,7 +21719,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "openBitLockerOptions(client)} style={ }>Ops",
-      "line": 972,
+      "line": 581,
       "tabs": [
         "ekm"
       ],
@@ -21659,7 +21729,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "openBitLockerDelete(client)} style={ }>Del",
-      "line": 973,
+      "line": 582,
       "tabs": [
         "ekm"
       ],
@@ -21669,7 +21739,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(\"azure-add-config\")}>+ Add Azure Vault",
-      "line": 1000,
+      "line": 609,
       "tabs": [
         "ekm"
       ],
@@ -21679,7 +21749,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(\"azure-add-mapping\")}>+ Add Key Mapping",
-      "line": 1001,
+      "line": 610,
       "tabs": [
         "ekm"
       ],
@@ -21689,7 +21759,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "refresh(true)} disabled= > Refresh",
-      "line": 1002,
+      "line": 611,
       "tabs": [
         "ekm"
       ],
@@ -21699,7 +21769,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setAzureTestResults(prev=>({...prev,[cfg.id]: })); try{ const res=await tes...",
-      "line": 1023,
+      "line": 632,
       "tabs": [
         "ekm"
       ],
@@ -21709,7 +21779,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setAzureSyncing(cfg.id); try{ const res=await syncAzureKeys(session,cfg.id)...",
-      "line": 1031,
+      "line": 640,
       "tabs": [
         "ekm"
       ],
@@ -21719,7 +21789,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ if(!confirm(\"Delete this Azure vault configuration?\")) return; try catch(e)...",
-      "line": 1039,
+      "line": 648,
       "tabs": [
         "ekm"
       ],
@@ -21729,7 +21799,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setAzureOpLoading(`import-$ `); try{const res=await importKeyToAzure(sessio...",
-      "line": 1074,
+      "line": 683,
       "tabs": [
         "ekm"
       ],
@@ -21739,7 +21809,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setAzureOpLoading(`rotate-$ `); try{const res=await rotateAzureKey(session,...",
-      "line": 1078,
+      "line": 687,
       "tabs": [
         "ekm"
       ],
@@ -21749,7 +21819,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{setModal(\"azure-wrap\");setAzureMappingForm(prev=>( ));}} style={ }>Wrap",
-      "line": 1082,
+      "line": 691,
       "tabs": [
         "ekm"
       ],
@@ -21759,7 +21829,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{setModal(\"azure-unwrap\");setAzureMappingForm(prev=>( ));}} style={ }>Unwrap",
-      "line": 1083,
+      "line": 692,
       "tabs": [
         "ekm"
       ],
@@ -21769,7 +21839,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ if(!confirm(\"Delete this key mapping?\")) return; try catch(e){onToast?.(`De...",
-      "line": 1084,
+      "line": 693,
       "tabs": [
         "ekm"
       ],
@@ -21779,7 +21849,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setGoogleCSELoading(true); try{ const domains=googleCSEConfigForm.allowed_d...",
-      "line": 1122,
+      "line": 731,
       "tabs": [
         "ekm"
       ],
@@ -21789,7 +21859,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ const v=await promptDialog.prompt( ); if(v===null) return; try{await update...",
-      "line": 1154,
+      "line": 763,
       "tabs": [
         "ekm"
       ],
@@ -21799,7 +21869,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ if(!confirm(\"Delete this Google CSE config?\")) return; try catch(e){onToast...",
-      "line": 1159,
+      "line": 768,
       "tabs": [
         "ekm"
       ],
@@ -21809,7 +21879,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setGoogleCSELoading(true); try{ await createGoogleCSEKey(session, ); onToas...",
-      "line": 1188,
+      "line": 797,
       "tabs": [
         "ekm"
       ],
@@ -21819,7 +21889,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ if(!confirm(\"Delete this CSE key?\")) return; try catch(e){onToast?.(`Delete...",
-      "line": 1216,
+      "line": 825,
       "tabs": [
         "ekm"
       ],
@@ -21829,7 +21899,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setGuideEngine(eng)} style={ }>",
-      "line": 1250,
+      "line": 859,
       "tabs": [
         "ekm"
       ],
@@ -21839,7 +21909,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "submitDbRegister} disabled={dbRegistering",
       "label": "(icon or dynamic label)",
-      "line": 1328,
+      "line": 902,
       "tabs": [
         "ekm"
       ],
@@ -21849,47 +21919,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 1329,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "submitDeploy} disabled={deploying",
-      "label": "(icon or dynamic label)",
-      "line": 1359,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "setModal(null)}>Cancel",
-      "line": 1360,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "downloadText(file.path,file.content)} style={ }>Download",
-      "line": 1375,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "{ const agentId=String(deployPackage?.agent_id||\"\").trim(); if(!agentId) setV...",
-      "line": 1390,
+      "line": 903,
       "tabs": [
         "ekm"
       ],
@@ -21899,7 +21929,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "submitBitLockerDeploy} disabled={bitLockerDeploying",
       "label": "(icon or dynamic label)",
-      "line": 1443,
+      "line": 920,
       "tabs": [
         "ekm"
       ],
@@ -21909,7 +21939,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 1444,
+      "line": 921,
       "tabs": [
         "ekm"
       ],
@@ -21919,7 +21949,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "downloadText(file.path,file.content)} style={ }>Download",
-      "line": 1451,
+      "line": 928,
       "tabs": [
         "ekm"
       ],
@@ -21929,7 +21959,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "submitBitLockerDelete} disabled={bitLockerDeleteSubmitting||!bitLockerDeleteConfirmBackup",
       "label": "(icon or dynamic label)",
-      "line": 1469,
+      "line": 946,
       "tabs": [
         "ekm"
       ],
@@ -21939,7 +21969,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 1470,
+      "line": 947,
       "tabs": [
         "ekm"
       ],
@@ -21949,7 +21979,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "runBitLockerScan} disabled={bitLockerScanRunning",
       "label": "(icon or dynamic label)",
-      "line": 1487,
+      "line": 964,
       "tabs": [
         "ekm"
       ],
@@ -21959,7 +21989,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "onboardScannedBitLocker} disabled={bitLockerOnboarding",
       "label": "(icon or dynamic label)",
-      "line": 1503,
+      "line": 980,
       "tabs": [
         "ekm"
       ],
@@ -21969,7 +21999,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{const all= ;bitLockerScanCandidates.forEach(r=> );setBitLockerScanSelected(a...",
-      "line": 1504,
+      "line": 981,
       "tabs": [
         "ekm"
       ],
@@ -21979,7 +22009,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "} disabled={bitLockerOpClientID===`$ :$ `} style={ }>",
-      "line": 1546,
+      "line": 1023,
       "tabs": [
         "ekm"
       ],
@@ -21989,7 +22019,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setAzureLoading(true); try{ await createAzureEKMConfig(session,azureConfigF...",
-      "line": 1577,
+      "line": 1054,
       "tabs": [
         "ekm"
       ],
@@ -21999,7 +22029,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 1587,
+      "line": 1064,
       "tabs": [
         "ekm"
       ],
@@ -22009,7 +22039,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setAzureLoading(true); try{ await createAzureKeyMapping(session,azureMappin...",
-      "line": 1606,
+      "line": 1083,
       "tabs": [
         "ekm"
       ],
@@ -22019,7 +22049,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 1616,
+      "line": 1093,
       "tabs": [
         "ekm"
       ],
@@ -22029,7 +22059,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setAzureLoading(true); try{ const res=await wrapAzureKey(session,azureMappi...",
-      "line": 1624,
+      "line": 1101,
       "tabs": [
         "ekm"
       ],
@@ -22039,7 +22069,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 1632,
+      "line": 1109,
       "tabs": [
         "ekm"
       ],
@@ -22049,7 +22079,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setAzureLoading(true); try{ const res=await unwrapAzureKey(session,azureMap...",
-      "line": 1644,
+      "line": 1121,
       "tabs": [
         "ekm"
       ],
@@ -22059,7 +22089,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 1652,
+      "line": 1129,
       "tabs": [
         "ekm"
       ],
@@ -24992,6 +25022,182 @@
       "line": 185,
       "tabs": [],
       "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/AddClientWizard.tsx",
+      "handler": "",
+      "label": "void copy()}>{done ? : }",
+      "line": 31,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/AddClientWizard.tsx",
+      "handler": "",
+      "label": "void issue(client)} disabled= >",
+      "line": 153,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/AddClientWizard.tsx",
+      "handler": "",
+      "label": "setOS(o)}>",
+      "line": 168,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/AddClientWizard.tsx",
+      "handler": "onClose",
+      "label": "Cancel",
+      "line": 188,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/AddClientWizard.tsx",
+      "handler": "",
+      "label": "void create()} disabled= >",
+      "line": 188,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/AddClientWizard.tsx",
+      "handler": "onClose",
+      "label": "Finish later",
+      "line": 189,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/AddClientWizard.tsx",
+      "handler": "",
+      "label": "setStep(3)} disabled= >I've copied it",
+      "line": 189,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/AddClientWizard.tsx",
+      "handler": "onClose",
+      "label": "Finish later",
+      "line": 190,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/AddClientWizard.tsx",
+      "handler": "again",
+      "label": "Add another",
+      "line": 191,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/AddClientWizard.tsx",
+      "handler": "onClose",
+      "label": "Done",
+      "line": 191,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/CheckInStrip.tsx",
+      "handler": "",
+      "label": "setPicked(picked === b.entry.at ? null : b.entry.at)} title={`$ \u00b7 $ after the...",
+      "line": 29,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/CheckInStrip.tsx",
+      "handler": "",
+      "label": "setList(!list)} style={ }>",
+      "line": 53,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/ClientDrawer.tsx",
+      "handler": "onClose} aria-label=\"Close\" style={{ background: \"transparent\", border: `1px solid ${C.border",
+      "label": "Close",
+      "line": 114,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/ClientDrawer.tsx",
+      "handler": "",
+      "label": "act(\"Key requests\", async () => setLogs(await listEKMAgentLogs(session, c.id,...",
+      "line": 183,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/ClientDrawer.tsx",
+      "handler": "rotate} disabled={!detail?.key || busy !== \"\"",
+      "label": "Rotate key",
+      "line": 199,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/ClientDrawer.tsx",
+      "handler": "",
+      "label": "onReenrol(c)} disabled= >New registration token",
+      "line": 200,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/ClientDrawer.tsx",
+      "handler": "remove} disabled={busy !== \"\"",
+      "label": "Remove",
+      "line": 201,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/Clients.tsx",
+      "handler": "",
+      "label": "void load(false)} disabled= aria-label=\"Refresh\">",
+      "line": 84,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/Clients.tsx",
+      "handler": "",
+      "label": "setWizard( )}> Add client",
+      "line": 85,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/Clients.tsx",
+      "handler": "",
+      "label": "setDrill(null)} data-testid=\"ekm-drill\" style={ }> \u00b7",
+      "line": 109,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/Clients.tsx",
+      "handler": "",
+      "label": "setWizard( )}> Add client",
+      "line": 117,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/Clients.tsx",
+      "handler": "",
+      "label": "}>{c.registration === \"registered\" ? <>Health : \"Continue setup\"}",
+      "line": 139,
+      "tabs": [],
+      "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/playbooks/CredentialDetail.tsx",
@@ -29438,7 +29644,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/agents?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 285,
+      "line": 241,
       "match_key": "ekm|GET|/ekm/agents",
       "method": "GET",
       "normalized_path": "/ekm/agents",
@@ -29449,35 +29655,9 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}/status?${tenantQuery(session)}`)",
-      "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 290,
-      "match_key": "ekm|GET|/ekm/agents/{param}/status",
-      "method": "GET",
-      "normalized_path": "/ekm/agents/{param}/status",
-      "path": "/ekm/agents/{param}/status?{param}",
-      "service": "ekm",
-      "service_key": "ekm",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}/health?${tenantQuery(session)}`)",
-      "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 299,
-      "match_key": "ekm|GET|/ekm/agents/{param}/health",
-      "method": "GET",
-      "normalized_path": "/ekm/agents/{param}/health",
-      "path": "/ekm/agents/{param}/health?{param}",
-      "service": "ekm",
-      "service_key": "ekm",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}/logs?${tenantQuery(session)}&limit=${Math.max(1, Math.min(200, Math.tru...",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 308,
+      "line": 246,
       "match_key": "ekm|GET|/ekm/agents/{param}/logs",
       "method": "GET",
       "normalized_path": "/ekm/agents/{param}/logs",
@@ -29487,23 +29667,10 @@
       "source": "serviceRequest"
     },
     {
-      "dynamic": false,
-      "expression": "serviceRequest(\"ekm\", \"/ekm/agents/register\")",
-      "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 317,
-      "match_key": "ekm|POST|/ekm/agents/register",
-      "method": "POST",
-      "normalized_path": "/ekm/agents/register",
-      "path": "/ekm/agents/register",
-      "service": "ekm",
-      "service_key": "ekm",
-      "source": "serviceRequest"
-    },
-    {
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}/rotate`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 336,
+      "line": 255,
       "match_key": "ekm|POST|/ekm/agents/{param}/rotate",
       "method": "POST",
       "normalized_path": "/ekm/agents/{param}/rotate",
@@ -29516,7 +29683,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 355,
+      "line": 274,
       "match_key": "ekm|DELETE|/ekm/agents/{param}",
       "method": "DELETE",
       "normalized_path": "/ekm/agents/{param}",
@@ -29527,22 +29694,9 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}/deploy?${tenantQuery(session)}&os=${encodeURIComponent(targetOS)}`)",
-      "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 375,
-      "match_key": "ekm|GET|/ekm/agents/{param}/deploy",
-      "method": "GET",
-      "normalized_path": "/ekm/agents/{param}/deploy",
-      "path": "/ekm/agents/{param}/deploy?{param}&os={param}",
-      "service": "ekm",
-      "service_key": "ekm",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients?${tenantQuery(session, tenantOverride)}&limit=${Math.max(1, Math.min(100000, Math.trunc(lim...",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 388,
+      "line": 294,
       "match_key": "ekm|GET|/ekm/bitlocker/clients",
       "method": "GET",
       "normalized_path": "/ekm/bitlocker/clients",
@@ -29555,7 +29709,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}?${tenantQuery(session, tenantOverride)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 401,
+      "line": 307,
       "match_key": "ekm|GET|/ekm/bitlocker/clients/{param}",
       "method": "GET",
       "normalized_path": "/ekm/bitlocker/clients/{param}",
@@ -29568,7 +29722,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}/delete-preview?${tenantQuery(session, tenantOverride)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 414,
+      "line": 320,
       "match_key": "ekm|GET|/ekm/bitlocker/clients/{param}/delete-preview",
       "method": "GET",
       "normalized_path": "/ekm/bitlocker/clients/{param}/delete-preview",
@@ -29581,7 +29735,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"ekm\", \"/ekm/bitlocker/clients/register\")",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 427,
+      "line": 333,
       "match_key": "ekm|POST|/ekm/bitlocker/clients/register",
       "method": "POST",
       "normalized_path": "/ekm/bitlocker/clients/register",
@@ -29594,7 +29748,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 454,
+      "line": 360,
       "match_key": "ekm|DELETE|/ekm/bitlocker/clients/{param}",
       "method": "DELETE",
       "normalized_path": "/ekm/bitlocker/clients/{param}",
@@ -29607,7 +29761,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"ekm\", \"/ekm/bitlocker/network/scan\")",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 475,
+      "line": 381,
       "match_key": "ekm|POST|/ekm/bitlocker/network/scan",
       "method": "POST",
       "normalized_path": "/ekm/bitlocker/network/scan",
@@ -29620,7 +29774,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}/operations`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 501,
+      "line": 407,
       "match_key": "ekm|POST|/ekm/bitlocker/clients/{param}/operations",
       "method": "POST",
       "normalized_path": "/ekm/bitlocker/clients/{param}/operations",
@@ -29633,7 +29787,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}/jobs?${tenantQuery(session, tenantOverride)}&limit=${Math.m...",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 525,
+      "line": 431,
       "match_key": "ekm|GET|/ekm/bitlocker/clients/{param}/jobs",
       "method": "GET",
       "normalized_path": "/ekm/bitlocker/clients/{param}/jobs",
@@ -29646,7 +29800,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/recovery?${tenantQuery(session, tenantOverride)}&client_id=${encodeURIComponent(clientID)}&limit=${...",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 539,
+      "line": 445,
       "match_key": "ekm|GET|/ekm/bitlocker/recovery",
       "method": "GET",
       "normalized_path": "/ekm/bitlocker/recovery",
@@ -29659,7 +29813,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}/deploy?${tenantQuery(session, tenantOverride)}&os=${encodeU...",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 553,
+      "line": 459,
       "match_key": "ekm|GET|/ekm/bitlocker/clients/{param}/deploy",
       "method": "GET",
       "normalized_path": "/ekm/bitlocker/clients/{param}/deploy",
@@ -29672,7 +29826,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"ekm\", \"/ekm/databases\")",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 606,
+      "line": 512,
       "match_key": "ekm|POST|/ekm/databases",
       "method": "POST",
       "normalized_path": "/ekm/databases",
@@ -29685,7 +29839,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/sdk/overview?${tenantQuery(session, tenantOverride)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 624,
+      "line": 530,
       "match_key": "ekm|GET|/ekm/sdk/overview",
       "method": "GET",
       "normalized_path": "/ekm/sdk/overview",
@@ -29698,7 +29852,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/sdk/download?${tenantQuery(session, tenantOverride)}&provider=${encodeURIComponent(provider)}&os=${encodeURIC...",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 638,
+      "line": 544,
       "match_key": "ekm|GET|/ekm/sdk/download",
       "method": "GET",
       "normalized_path": "/ekm/sdk/download",
@@ -29711,7 +29865,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 691,
+      "line": 597,
       "match_key": "ekm|GET|/ekm/azure/configs",
       "method": "GET",
       "normalized_path": "/ekm/azure/configs",
@@ -29724,7 +29878,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs/${encodeURIComponent(configID)}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 696,
+      "line": 602,
       "match_key": "ekm|GET|/ekm/azure/configs/{param}",
       "method": "GET",
       "normalized_path": "/ekm/azure/configs/{param}",
@@ -29737,7 +29891,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 713,
+      "line": 619,
       "match_key": "ekm|POST|/ekm/azure/configs",
       "method": "POST",
       "normalized_path": "/ekm/azure/configs",
@@ -29750,7 +29904,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs/${encodeURIComponent(configID)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 731,
+      "line": 637,
       "match_key": "ekm|PUT|/ekm/azure/configs/{param}",
       "method": "PUT",
       "normalized_path": "/ekm/azure/configs/{param}",
@@ -29763,7 +29917,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs/${encodeURIComponent(configID)}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 741,
+      "line": 647,
       "match_key": "ekm|DELETE|/ekm/azure/configs/{param}",
       "method": "DELETE",
       "normalized_path": "/ekm/azure/configs/{param}",
@@ -29776,7 +29930,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs/${encodeURIComponent(configID)}/test?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 747,
+      "line": 653,
       "match_key": "ekm|POST|/ekm/azure/configs/{param}/test",
       "method": "POST",
       "normalized_path": "/ekm/azure/configs/{param}/test",
@@ -29789,7 +29943,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs/${encodeURIComponent(configID)}/sync?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 754,
+      "line": 660,
       "match_key": "ekm|POST|/ekm/azure/configs/{param}/sync",
       "method": "POST",
       "normalized_path": "/ekm/azure/configs/{param}/sync",
@@ -29802,7 +29956,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings?${tenantQuery(session)}${q}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 762,
+      "line": 668,
       "match_key": "ekm|GET|/ekm/azure/mappings",
       "method": "GET",
       "normalized_path": "/ekm/azure/mappings",
@@ -29815,7 +29969,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 772,
+      "line": 678,
       "match_key": "ekm|POST|/ekm/azure/mappings",
       "method": "POST",
       "normalized_path": "/ekm/azure/mappings",
@@ -29828,7 +29982,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 780,
+      "line": 686,
       "match_key": "ekm|DELETE|/ekm/azure/mappings/{param}",
       "method": "DELETE",
       "normalized_path": "/ekm/azure/mappings/{param}",
@@ -29841,7 +29995,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}/import?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 786,
+      "line": 692,
       "match_key": "ekm|POST|/ekm/azure/mappings/{param}/import",
       "method": "POST",
       "normalized_path": "/ekm/azure/mappings/{param}/import",
@@ -29854,7 +30008,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}/rotate?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 793,
+      "line": 699,
       "match_key": "ekm|POST|/ekm/azure/mappings/{param}/rotate",
       "method": "POST",
       "normalized_path": "/ekm/azure/mappings/{param}/rotate",
@@ -29867,7 +30021,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}/wrap`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 800,
+      "line": 706,
       "match_key": "ekm|POST|/ekm/azure/mappings/{param}/wrap",
       "method": "POST",
       "normalized_path": "/ekm/azure/mappings/{param}/wrap",
@@ -29880,7 +30034,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}/unwrap`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 810,
+      "line": 716,
       "match_key": "ekm|POST|/ekm/azure/mappings/{param}/unwrap",
       "method": "POST",
       "normalized_path": "/ekm/azure/mappings/{param}/unwrap",
@@ -29893,7 +30047,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 851,
+      "line": 757,
       "match_key": "ekm|GET|/ekm/google-cse/configs",
       "method": "GET",
       "normalized_path": "/ekm/google-cse/configs",
@@ -29906,7 +30060,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"ekm\", \"/ekm/google-cse/configs\")",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 864,
+      "line": 770,
       "match_key": "ekm|POST|/ekm/google-cse/configs",
       "method": "POST",
       "normalized_path": "/ekm/google-cse/configs",
@@ -29919,7 +30073,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs/${encodeURIComponent(configID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 879,
+      "line": 785,
       "match_key": "ekm|PUT|/ekm/google-cse/configs/{param}",
       "method": "PUT",
       "normalized_path": "/ekm/google-cse/configs/{param}",
@@ -29932,7 +30086,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs/${encodeURIComponent(configID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 889,
+      "line": 795,
       "match_key": "ekm|DELETE|/ekm/google-cse/configs/{param}",
       "method": "DELETE",
       "normalized_path": "/ekm/google-cse/configs/{param}",
@@ -29945,7 +30099,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"ekm\", \"/ekm/google-cse/keys\")",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 909,
+      "line": 815,
       "match_key": "ekm|POST|/ekm/google-cse/keys",
       "method": "POST",
       "normalized_path": "/ekm/google-cse/keys",
@@ -29958,7 +30112,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/keys/${encodeURIComponent(keyID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 919,
+      "line": 825,
       "match_key": "ekm|DELETE|/ekm/google-cse/keys/{param}",
       "method": "DELETE",
       "normalized_path": "/ekm/google-cse/keys/{param}",
@@ -29971,7 +30125,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/tde/keys/${encodeURIComponent(keyId)}/revoke`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 928,
+      "line": 834,
       "match_key": "ekm|POST|/ekm/tde/keys/{param}/revoke",
       "method": "POST",
       "normalized_path": "/ekm/tde/keys/{param}/revoke",
@@ -29984,7 +30138,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/databases/${encodeURIComponent(dbId)}/revoke-tde`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 942,
+      "line": 848,
       "match_key": "ekm|POST|/ekm/databases/{param}/revoke-tde",
       "method": "POST",
       "normalized_path": "/ekm/databases/{param}/revoke-tde",
@@ -29995,28 +30149,67 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentId)}/validate-deploy?${tenantQuery(session)}`)",
-      "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 956,
-      "match_key": "ekm|GET|/ekm/agents/{param}/validate-deploy",
-      "method": "GET",
-      "normalized_path": "/ekm/agents/{param}/validate-deploy",
-      "path": "/ekm/agents/{param}/validate-deploy?{param}",
-      "service": "ekm",
-      "service_key": "ekm",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
       "expression": "serviceRequest(\"tfe\", `/tfe/file-encrypt/download?${qs.toString()}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 1003,
+      "line": 899,
       "match_key": "tfe|GET|/tfe/file-encrypt/download",
       "method": "GET",
       "normalized_path": "/tfe/file-encrypt/download",
       "path": "/tfe/file-encrypt/download?{param}",
       "service": "tfe",
       "service_key": "tfe",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"ekm\", `/ekm/clients?${tenant(session)}`)",
+      "file": "web/dashboard/src/lib/ekmClients.ts",
+      "line": 56,
+      "match_key": "ekm|GET|/ekm/clients",
+      "method": "GET",
+      "normalized_path": "/ekm/clients",
+      "path": "/ekm/clients?{param}",
+      "service": "ekm",
+      "service_key": "ekm",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"ekm\", `/ekm/clients/${encodeURIComponent(id)}?${tenant(session)}`)",
+      "file": "web/dashboard/src/lib/ekmClients.ts",
+      "line": 61,
+      "match_key": "ekm|GET|/ekm/clients/{param}",
+      "method": "GET",
+      "normalized_path": "/ekm/clients/{param}",
+      "path": "/ekm/clients/{param}?{param}",
+      "service": "ekm",
+      "service_key": "ekm",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": false,
+      "expression": "serviceRequest(\"ekm\", \"/ekm/clients\")",
+      "file": "web/dashboard/src/lib/ekmClients.ts",
+      "line": 66,
+      "match_key": "ekm|POST|/ekm/clients",
+      "method": "POST",
+      "normalized_path": "/ekm/clients",
+      "path": "/ekm/clients",
+      "service": "ekm",
+      "service_key": "ekm",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"ekm\", `/ekm/clients/${encodeURIComponent(id)}/registration-token?${tenant(session)}`)",
+      "file": "web/dashboard/src/lib/ekmClients.ts",
+      "line": 75,
+      "match_key": "ekm|POST|/ekm/clients/{param}/registration-token",
+      "method": "POST",
+      "normalized_path": "/ekm/clients/{param}/registration-token",
+      "path": "/ekm/clients/{param}/registration-token?{param}",
+      "service": "ekm",
+      "service_key": "ekm",
       "source": "serviceRequest"
     },
     {
@@ -33049,7 +33242,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-11T18:51:29Z",
+  "generated_at": "2026-10-11T23:26:42Z",
   "navigation": [
     {
       "group": "Overview",
@@ -57801,12 +57994,455 @@
     {
       "frontend_call_sites": [
         {
-          "expression": "serviceRequest(\"ekm\", \"/ekm/agents/register\")",
-          "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 317,
+          "expression": "serviceRequest(\"ekm\", `/ekm/clients?${tenant(session)}`)",
+          "file": "web/dashboard/src/lib/ekmClients.ts",
+          "line": 56,
           "source": "serviceRequest"
         }
       ],
+      "handler": "h.listClients",
+      "handler_external_package_calls": [
+        "time.Now"
+      ],
+      "handler_file": "services/ekm/clients.go",
+      "handler_helper_calls": [
+        "ListClients",
+        "clientError",
+        "clientView",
+        "clientThresholds"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 294,
+      "handler_name": "listClients",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "ListClients"
+      ],
+      "method": "GET",
+      "normalized_path": "/ekm/clients",
+      "path": "/ekm/clients",
+      "route_file": "services/ekm/clients.go",
+      "route_line": 272,
+      "service": "ekm",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"ekm\", \"/ekm/clients\")",
+          "file": "web/dashboard/src/lib/ekmClients.ts",
+          "line": 66,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.createClient",
+      "handler_external_package_calls": [
+        "strings.TrimSpace",
+        "strings.EqualFold",
+        "time.Now"
+      ],
+      "handler_file": "services/ekm/clients.go",
+      "handler_helper_calls": [
+        "normalizeDBEngine",
+        "Error",
+        "isSupportedTDEEngine",
+        "ListClients",
+        "clientError",
+        "newID",
+        "CreatePendingClient",
+        "shouldAuto",
+        "createTDEKey",
+        "PurgeAgent",
+        "GetClient",
+        "clientView"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 358,
+      "handler_name": "createClient",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "createTDEKey"
+      ],
+      "handler_store_calls": [
+        "ListClients",
+        "CreatePendingClient",
+        "PurgeAgent",
+        "GetClient"
+      ],
+      "method": "POST",
+      "normalized_path": "/ekm/clients",
+      "path": "/ekm/clients",
+      "route_file": "services/ekm/clients.go",
+      "route_line": 273,
+      "service": "ekm",
+      "service_external_package_calls": [
+        "errors.As",
+        "errors.Is",
+        "fmt.Sprintf",
+        "strings.TrimSpace",
+        "strings.EqualFold",
+        "strings.ToLower",
+        "strings.Contains",
+        "strings.ReplaceAll",
+        "time.Now",
+        "time.Since"
+      ],
+      "service_helper_calls": [
+        "newServiceError",
+        "validJSONOr",
+        "newID",
+        "CreateAsymmetricKey",
+        "Error",
+        "GetKey",
+        "extractInt",
+        "strconvItoa",
+        "PublicKey",
+        "defaultString",
+        "firstString",
+        "CreateTDEKey",
+        "GetTDEKey",
+        "publishAudit",
+        "BumpAgentConfigVersion",
+        "WrapDEK",
+        "firstNonEmpty",
+        "buildEKMKeyAccessMetadata",
+        "evaluateKeyAccess",
+        "RecordKeyAccess",
+        "auditKeyAccessRefused",
+        "Wrap",
+        "TouchTDEKeyAccess",
+        "UnwrapDEK",
+        "Unwrap",
+        "RotateTDEKey",
+        "RotateKey",
+        "parseVersionID",
+        "UpdateTDEKeyRotation",
+        "UpdateTDEKeyMetadata",
+        "ListDatabasesByKey",
+        "GetTDEPublicKey"
+      ],
+      "service_internal_package_calls": [
+        "pkg/crypto.Zeroize"
+      ],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "errors.As",
+            "errors.Is",
+            "fmt.Sprintf",
+            "strings.TrimSpace",
+            "strings.EqualFold",
+            "strings.ToLower",
+            "strings.Contains",
+            "strings.ReplaceAll",
+            "time.Now",
+            "time.Since"
+          ],
+          "file": "services/ekm/service.go",
+          "helper_calls": [
+            "newServiceError",
+            "validJSONOr",
+            "newID",
+            "CreateAsymmetricKey",
+            "Error",
+            "GetKey",
+            "extractInt",
+            "strconvItoa",
+            "PublicKey",
+            "defaultString",
+            "firstString",
+            "CreateTDEKey",
+            "GetTDEKey",
+            "publishAudit",
+            "BumpAgentConfigVersion",
+            "WrapDEK",
+            "firstNonEmpty",
+            "buildEKMKeyAccessMetadata",
+            "evaluateKeyAccess",
+            "RecordKeyAccess",
+            "auditKeyAccessRefused",
+            "Wrap",
+            "TouchTDEKeyAccess",
+            "UnwrapDEK",
+            "Unwrap",
+            "RotateTDEKey",
+            "RotateKey",
+            "parseVersionID",
+            "UpdateTDEKeyRotation",
+            "UpdateTDEKeyMetadata",
+            "ListDatabasesByKey",
+            "GetTDEPublicKey",
+            "refusePublicKey",
+            "GetAgentHealth",
+            "GetAgent",
+            "refreshAgentConnectivity",
+            "parseJSONMap",
+            "agentOSMetrics",
+            "reportedOSMetrics",
+            "normalizeAgentStatus",
+            "mapStringAny",
+            "mapFloatAny",
+            "mapInt64Any",
+            "ListAgentLogs",
+            "ListKeyAccessByAgent",
+            "RotateAgentAssignedKey",
+            "ListDatabases",
+            "DeleteAgent",
+            "DestroyKeyImmediately",
+            "PurgeAgent",
+            "BuildAgentDeployPackage",
+            "normalizeTargetOS",
+            "normalizeDBEngine",
+            "defaultInt",
+            "buildTDESetupGuide",
+            "recommendedProfilesForEngine"
+          ],
+          "internal_package_calls": [
+            "pkg/crypto.Zeroize"
+          ],
+          "line": 415,
+          "name": "createTDEKey",
+          "receiver_calls": [
+            "s.keycore.CreateAsymmetricKey",
+            "s.keycore.GetKey",
+            "s.keycore.PublicKey",
+            "s.keycore.Wrap",
+            "s.keycore.Unwrap",
+            "s.keycore.RotateKey",
+            "s.keycore.DestroyKeyImmediately"
+          ],
+          "store_calls": [
+            "CreateTDEKey",
+            "GetTDEKey",
+            "BumpAgentConfigVersion",
+            "RecordKeyAccess",
+            "TouchTDEKeyAccess",
+            "UpdateTDEKeyRotation",
+            "UpdateTDEKeyMetadata",
+            "ListDatabasesByKey",
+            "GetAgent",
+            "ListKeyAccessByAgent",
+            "ListDatabases",
+            "PurgeAgent"
+          ]
+        }
+      ],
+      "service_receiver_calls": [
+        "s.keycore.CreateAsymmetricKey",
+        "s.keycore.GetKey",
+        "s.keycore.PublicKey",
+        "s.keycore.Wrap",
+        "s.keycore.Unwrap",
+        "s.keycore.RotateKey",
+        "s.keycore.DestroyKeyImmediately"
+      ],
+      "service_store_calls": [
+        "CreateTDEKey",
+        "GetTDEKey",
+        "BumpAgentConfigVersion",
+        "RecordKeyAccess",
+        "TouchTDEKeyAccess",
+        "UpdateTDEKeyRotation",
+        "UpdateTDEKeyMetadata",
+        "ListDatabasesByKey",
+        "GetAgent",
+        "ListKeyAccessByAgent",
+        "ListDatabases",
+        "PurgeAgent"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"ekm\", `/ekm/clients/${encodeURIComponent(id)}?${tenant(session)}`)",
+          "file": "web/dashboard/src/lib/ekmClients.ts",
+          "line": 61,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.getClient",
+      "handler_external_package_calls": [
+        "time.Now"
+      ],
+      "handler_file": "services/ekm/clients.go",
+      "handler_helper_calls": [
+        "GetClient",
+        "clientError",
+        "ListClientCheckIns",
+        "clientView",
+        "clientThresholds",
+        "GetTDEKey",
+        "ListKeyAccessByAgent",
+        "parseJSONMap",
+        "reportedOSMetrics",
+        "agentOSMetrics",
+        "ListDatabases"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 309,
+      "handler_name": "getClient",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "GetClient",
+        "ListClientCheckIns",
+        "GetTDEKey",
+        "ListKeyAccessByAgent",
+        "ListDatabases"
+      ],
+      "method": "GET",
+      "normalized_path": "/ekm/clients/{param}",
+      "path": "/ekm/clients/{id}",
+      "route_file": "services/ekm/clients.go",
+      "route_line": 274,
+      "service": "ekm",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"ekm\", `/ekm/clients/${encodeURIComponent(id)}/registration-token?${tenant(session)}`)",
+          "file": "web/dashboard/src/lib/ekmClients.ts",
+          "line": 75,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.issueClientToken",
+      "handler_external_package_calls": [
+        "strings.Join",
+        "time.Now"
+      ],
+      "handler_file": "services/ekm/clients.go",
+      "handler_helper_calls": [
+        "GetClient",
+        "clientError",
+        "newClientSecret",
+        "SetClientToken",
+        "verifierHash"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 428,
+      "handler_name": "issueClientToken",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "GetClient",
+        "SetClientToken"
+      ],
+      "method": "POST",
+      "normalized_path": "/ekm/clients/{param}/registration-token",
+      "path": "/ekm/clients/{id}/registration-token",
+      "route_file": "services/ekm/clients.go",
+      "route_line": 275,
+      "service": "ekm",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.enrollClient",
+      "handler_external_package_calls": [
+        "strings.TrimSpace",
+        "time.Now"
+      ],
+      "handler_file": "services/ekm/clients.go",
+      "handler_helper_calls": [
+        "parseRegistrationToken",
+        "GetClient",
+        "sameVerifier",
+        "clientIP",
+        "Error",
+        "newClientSecret",
+        "clientError",
+        "ConsumeClientToken",
+        "verifierHash",
+        "RecordClientCheckIn",
+        "clientView"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 462,
+      "handler_name": "enrollClient",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "GetClient",
+        "ConsumeClientToken",
+        "RecordClientCheckIn"
+      ],
+      "method": "POST",
+      "normalized_path": "/ekm/clients/enroll",
+      "path": "/ekm/clients/enroll",
+      "route_file": "services/ekm/clients.go",
+      "route_line": 277,
+      "service": "ekm",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.clientCheckIn",
+      "handler_external_package_calls": [
+        "strings.TrimSpace",
+        "time.Now"
+      ],
+      "handler_file": "services/ekm/clients.go",
+      "handler_helper_calls": [
+        "GetClient",
+        "sameVerifier",
+        "normalizeAgentStatus",
+        "Error",
+        "clientIP",
+        "UpdateAgentHeartbeat",
+        "normalizeTDEState",
+        "validJSONOr",
+        "clientError",
+        "RecordClientCheckIn",
+        "clientView"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 533,
+      "handler_name": "clientCheckIn",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "GetClient",
+        "UpdateAgentHeartbeat",
+        "RecordClientCheckIn"
+      ],
+      "method": "POST",
+      "normalized_path": "/ekm/clients/{param}/check-in",
+      "path": "/ekm/clients/{id}/check-in",
+      "route_file": "services/ekm/clients.go",
+      "route_line": 278,
+      "service": "ekm",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
       "handler": "h.handleRegisterAgent",
       "handler_external_package_calls": [],
       "handler_file": "services/ekm/handler.go",
@@ -57818,6 +58454,7 @@
         "Error",
         "tenantFromRequest",
         "RegisterAgent",
+        "withSourceIP",
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
@@ -57845,6 +58482,7 @@
         "validJSONOr",
         "newServiceError",
         "newID",
+        "guardLegacyContact",
         "GetAgent",
         "defaultInt",
         "normalizeTDEState",
@@ -57852,6 +58490,7 @@
         "isSupportedTDEEngine",
         "createTDEKey",
         "UpsertAgent",
+        "noteCheckIn",
         "publishAudit"
       ],
       "service_internal_package_calls": [],
@@ -57869,6 +58508,7 @@
             "validJSONOr",
             "newServiceError",
             "newID",
+            "guardLegacyContact",
             "GetAgent",
             "defaultInt",
             "normalizeTDEState",
@@ -57876,6 +58516,7 @@
             "isSupportedTDEEngine",
             "createTDEKey",
             "UpsertAgent",
+            "noteCheckIn",
             "publishAudit"
           ],
           "internal_package_calls": [],
@@ -57899,7 +58540,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/agents?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 285,
+          "line": 241,
           "source": "serviceRequest"
         }
       ],
@@ -57946,7 +58587,7 @@
             "refreshAgentConnectivity"
           ],
           "internal_package_calls": [],
-          "line": 168,
+          "line": 172,
           "name": "ListAgents",
           "receiver_calls": [],
           "store_calls": [
@@ -57960,14 +58601,7 @@
       ]
     },
     {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}/status?${tenantQuery(session)}`)",
-          "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 290,
-          "source": "serviceRequest"
-        }
-      ],
+      "frontend_call_sites": [],
       "handler": "h.handleAgentStatus",
       "handler_external_package_calls": [],
       "handler_file": "services/ekm/handler.go",
@@ -58019,7 +58653,7 @@
             "GetTDEKey"
           ],
           "internal_package_calls": [],
-          "line": 188,
+          "line": 192,
           "name": "GetAgentStatus",
           "receiver_calls": [],
           "store_calls": [
@@ -58037,14 +58671,7 @@
       ]
     },
     {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}/health?${tenantQuery(session)}`)",
-          "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 299,
-          "source": "serviceRequest"
-        }
-      ],
+      "frontend_call_sites": [],
       "handler": "h.handleAgentHealth",
       "handler_external_package_calls": [],
       "handler_file": "services/ekm/handler.go",
@@ -58079,10 +58706,8 @@
         "GetAgent",
         "refreshAgentConnectivity",
         "parseJSONMap",
-        "defaultString",
-        "mapStringAny",
-        "mapFloatAny",
-        "mapInt64Any",
+        "agentOSMetrics",
+        "reportedOSMetrics",
         "normalizeAgentStatus"
       ],
       "service_internal_package_calls": [],
@@ -58099,14 +58724,12 @@
             "GetAgent",
             "refreshAgentConnectivity",
             "parseJSONMap",
-            "defaultString",
-            "mapStringAny",
-            "mapFloatAny",
-            "mapInt64Any",
+            "agentOSMetrics",
+            "reportedOSMetrics",
             "normalizeAgentStatus"
           ],
           "internal_package_calls": [],
-          "line": 902,
+          "line": 910,
           "name": "GetAgentHealth",
           "receiver_calls": [],
           "store_calls": [
@@ -58124,7 +58747,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}/logs?${tenantQuery(session)}&limit=${Math.max(1, Math.min(200, Math.tru...",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 308,
+          "line": 246,
           "source": "serviceRequest"
         }
       ],
@@ -58176,7 +58799,7 @@
             "ListKeyAccessByAgent"
           ],
           "internal_package_calls": [],
-          "line": 985,
+          "line": 1003,
           "name": "ListAgentLogs",
           "receiver_calls": [],
           "store_calls": [
@@ -58192,14 +58815,7 @@
       ]
     },
     {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}/deploy?${tenantQuery(session)}&os=${encodeURIComponent(targetOS)}`)",
-          "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 375,
-          "source": "serviceRequest"
-        }
-      ],
+      "frontend_call_sites": [],
       "handler": "h.handleAgentDeployPackage",
       "handler_external_package_calls": [
         "strings.TrimSpace"
@@ -58230,6 +58846,7 @@
         "fmt.Sprintf",
         "strings.TrimSpace",
         "strings.ReplaceAll",
+        "strings.ToLower",
         "time.Now"
       ],
       "service_helper_calls": [
@@ -58243,7 +58860,9 @@
         "defaultInt",
         "buildTDESetupGuide",
         "recommendedProfilesForEngine",
-        "publishAudit"
+        "publishAudit",
+        "BuildFileEncryptAgentPackage",
+        "buildFileEncryptReadme"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -58252,6 +58871,7 @@
             "fmt.Sprintf",
             "strings.TrimSpace",
             "strings.ReplaceAll",
+            "strings.ToLower",
             "time.Now"
           ],
           "file": "services/ekm/service.go",
@@ -58266,10 +58886,12 @@
             "defaultInt",
             "buildTDESetupGuide",
             "recommendedProfilesForEngine",
-            "publishAudit"
+            "publishAudit",
+            "BuildFileEncryptAgentPackage",
+            "buildFileEncryptReadme"
           ],
           "internal_package_calls": [],
-          "line": 1157,
+          "line": 1175,
           "name": "BuildAgentDeployPackage",
           "receiver_calls": [],
           "store_calls": [
@@ -58287,7 +58909,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}/rotate`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 336,
+          "line": 255,
           "source": "serviceRequest"
         }
       ],
@@ -58345,7 +58967,7 @@
             "BumpAgentConfigVersion"
           ],
           "internal_package_calls": [],
-          "line": 997,
+          "line": 1015,
           "name": "RotateAgentAssignedKey",
           "receiver_calls": [],
           "store_calls": [
@@ -58367,7 +58989,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 355,
+          "line": 274,
           "source": "serviceRequest"
         }
       ],
@@ -58435,7 +59057,7 @@
             "PurgeAgent"
           ],
           "internal_package_calls": [],
-          "line": 1034,
+          "line": 1052,
           "name": "DeleteAgent",
           "receiver_calls": [
             "s.keycore.DestroyKeyImmediately"
@@ -58471,6 +59093,7 @@
         "Error",
         "tenantFromRequest",
         "AgentHeartbeat",
+        "withSourceIP",
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
@@ -58493,12 +59116,14 @@
       ],
       "service_helper_calls": [
         "newServiceError",
+        "guardLegacyContact",
         "normalizeAgentStatus",
         "normalizeTDEState",
         "UpdateAgentHeartbeat",
         "validJSONOr",
         "GetAgent",
         "UpsertAgent",
+        "noteCheckIn",
         "publishAudit"
       ],
       "service_internal_package_calls": [],
@@ -58511,16 +59136,18 @@
           "file": "services/ekm/service.go",
           "helper_calls": [
             "newServiceError",
+            "guardLegacyContact",
             "normalizeAgentStatus",
             "normalizeTDEState",
             "UpdateAgentHeartbeat",
             "validJSONOr",
             "GetAgent",
             "UpsertAgent",
+            "noteCheckIn",
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 234,
+          "line": 238,
           "name": "AgentHeartbeat",
           "receiver_calls": [],
           "store_calls": [
@@ -58542,7 +59169,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/sdk/overview?${tenantQuery(session, tenantOverride)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 624,
+          "line": 530,
           "source": "serviceRequest"
         }
       ],
@@ -58609,7 +59236,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/sdk/download?${tenantQuery(session, tenantOverride)}&provider=${encodeURIComponent(provider)}&os=${encodeURIC...",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 638,
+          "line": 544,
           "source": "serviceRequest"
         }
       ],
@@ -58684,7 +59311,7 @@
         {
           "expression": "serviceRequest(\"ekm\", \"/ekm/bitlocker/clients/register\")",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 427,
+          "line": 333,
           "source": "serviceRequest"
         }
       ],
@@ -58774,7 +59401,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients?${tenantQuery(session, tenantOverride)}&limit=${Math.max(1, Math.min(100000, Math.trunc(lim...",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 388,
+          "line": 294,
           "source": "serviceRequest"
         }
       ],
@@ -58842,7 +59469,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}?${tenantQuery(session, tenantOverride)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 401,
+          "line": 307,
           "source": "serviceRequest"
         }
       ],
@@ -58907,7 +59534,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}/delete-preview?${tenantQuery(session, tenantOverride)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 414,
+          "line": 320,
           "source": "serviceRequest"
         }
       ],
@@ -58984,7 +59611,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 454,
+          "line": 360,
           "source": "serviceRequest"
         }
       ],
@@ -59151,7 +59778,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}/operations`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 501,
+          "line": 407,
           "source": "serviceRequest"
         }
       ],
@@ -59239,7 +59866,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}/jobs?${tenantQuery(session, tenantOverride)}&limit=${Math.m...",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 525,
+          "line": 431,
           "source": "serviceRequest"
         }
       ],
@@ -59480,7 +60107,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/recovery?${tenantQuery(session, tenantOverride)}&client_id=${encodeURIComponent(clientID)}&limit=${...",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 539,
+          "line": 445,
           "source": "serviceRequest"
         }
       ],
@@ -59546,7 +60173,7 @@
         {
           "expression": "serviceRequest(\"ekm\", \"/ekm/bitlocker/network/scan\")",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 475,
+          "line": 381,
           "source": "serviceRequest"
         }
       ],
@@ -59626,7 +60253,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}/deploy?${tenantQuery(session, tenantOverride)}&os=${encodeU...",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 553,
+          "line": 459,
           "source": "serviceRequest"
         }
       ],
@@ -59748,7 +60375,7 @@
             "createTDEKey"
           ],
           "internal_package_calls": [],
-          "line": 399,
+          "line": 407,
           "name": "CreateTDEKey",
           "receiver_calls": [],
           "store_calls": []
@@ -59839,7 +60466,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 494,
+          "line": 502,
           "name": "WrapDEK",
           "receiver_calls": [
             "s.keycore.Wrap"
@@ -59942,7 +60569,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 602,
+          "line": 610,
           "name": "UnwrapDEK",
           "receiver_calls": [
             "s.keycore.Unwrap"
@@ -60049,7 +60676,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 713,
+          "line": 721,
           "name": "RotateTDEKey",
           "receiver_calls": [
             "s.keycore.RotateKey",
@@ -60145,7 +60772,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 826,
+          "line": 834,
           "name": "GetTDEPublicKey",
           "receiver_calls": [
             "s.keycore.PublicKey"
@@ -60173,7 +60800,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/tde/keys/${encodeURIComponent(keyId)}/revoke`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 928,
+          "line": 834,
           "source": "serviceRequest"
         }
       ],
@@ -60245,7 +60872,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2030,
+          "line": 2051,
           "name": "RevokeTDEKey",
           "receiver_calls": [
             "s.keycore.DestroyKeyImmediately"
@@ -60275,7 +60902,7 @@
         {
           "expression": "serviceRequest(\"ekm\", \"/ekm/databases\")",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 606,
+          "line": 512,
           "source": "serviceRequest"
         }
       ],
@@ -60355,7 +60982,7 @@
             "GetDatabase"
           ],
           "internal_package_calls": [],
-          "line": 279,
+          "line": 287,
           "name": "RegisterDatabase",
           "receiver_calls": [],
           "store_calls": [
@@ -60421,7 +61048,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 382,
+          "line": 390,
           "name": "ListDatabases",
           "receiver_calls": [],
           "store_calls": [
@@ -60477,7 +61104,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 390,
+          "line": 398,
           "name": "GetDatabase",
           "receiver_calls": [],
           "store_calls": [
@@ -60495,7 +61122,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/databases/${encodeURIComponent(dbId)}/revoke-tde`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 942,
+          "line": 848,
           "source": "serviceRequest"
         }
       ],
@@ -60553,7 +61180,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2105,
+          "line": 2126,
           "name": "RevokeDatabaseTDE",
           "receiver_calls": [],
           "store_calls": [
@@ -60581,6 +61208,7 @@
         "Error",
         "tenantFromRequest",
         "ValidateDeployment",
+        "withSourceIP",
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
@@ -60605,6 +61233,7 @@
       ],
       "service_helper_calls": [
         "newServiceError",
+        "guardLegacyContact",
         "GetAgent",
         "RegisterAgent",
         "UpdateAgentHeartbeat",
@@ -60623,6 +61252,7 @@
           "file": "services/ekm/service.go",
           "helper_calls": [
             "newServiceError",
+            "guardLegacyContact",
             "GetAgent",
             "RegisterAgent",
             "UpdateAgentHeartbeat",
@@ -60630,7 +61260,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2142,
+          "line": 2163,
           "name": "ValidateDeployment",
           "receiver_calls": [],
           "store_calls": [
@@ -60650,7 +61280,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 713,
+          "line": 619,
           "source": "serviceRequest"
         }
       ],
@@ -60699,7 +61329,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 691,
+          "line": 597,
           "source": "serviceRequest"
         }
       ],
@@ -60739,7 +61369,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs/${encodeURIComponent(configID)}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 696,
+          "line": 602,
           "source": "serviceRequest"
         }
       ],
@@ -60779,7 +61409,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs/${encodeURIComponent(configID)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 731,
+          "line": 637,
           "source": "serviceRequest"
         }
       ],
@@ -60829,7 +61459,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs/${encodeURIComponent(configID)}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 741,
+          "line": 647,
           "source": "serviceRequest"
         }
       ],
@@ -60870,7 +61500,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs/${encodeURIComponent(configID)}/test?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 747,
+          "line": 653,
           "source": "serviceRequest"
         }
       ],
@@ -60913,7 +61543,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs/${encodeURIComponent(configID)}/sync?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 754,
+          "line": 660,
           "source": "serviceRequest"
         }
       ],
@@ -60966,7 +61596,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 772,
+          "line": 678,
           "source": "serviceRequest"
         }
       ],
@@ -61015,7 +61645,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings?${tenantQuery(session)}${q}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 762,
+          "line": 668,
           "source": "serviceRequest"
         }
       ],
@@ -61057,7 +61687,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 780,
+          "line": 686,
           "source": "serviceRequest"
         }
       ],
@@ -61098,7 +61728,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}/import?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 786,
+          "line": 692,
           "source": "serviceRequest"
         }
       ],
@@ -61149,7 +61779,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}/rotate?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 793,
+          "line": 699,
           "source": "serviceRequest"
         }
       ],
@@ -61196,7 +61826,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}/wrap`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 800,
+          "line": 706,
           "source": "serviceRequest"
         }
       ],
@@ -61240,7 +61870,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}/unwrap`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 810,
+          "line": 716,
           "source": "serviceRequest"
         }
       ],
@@ -61284,7 +61914,7 @@
         {
           "expression": "serviceRequest(\"ekm\", \"/ekm/google-cse/configs\")",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 864,
+          "line": 770,
           "source": "serviceRequest"
         }
       ],
@@ -61333,7 +61963,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 851,
+          "line": 757,
           "source": "serviceRequest"
         }
       ],
@@ -61406,7 +62036,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs/${encodeURIComponent(configID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 879,
+          "line": 785,
           "source": "serviceRequest"
         }
       ],
@@ -61457,7 +62087,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs/${encodeURIComponent(configID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 889,
+          "line": 795,
           "source": "serviceRequest"
         }
       ],
@@ -61498,7 +62128,7 @@
         {
           "expression": "serviceRequest(\"ekm\", \"/ekm/google-cse/keys\")",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 909,
+          "line": 815,
           "source": "serviceRequest"
         }
       ],
@@ -61616,7 +62246,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/keys/${encodeURIComponent(keyID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 919,
+          "line": 825,
           "source": "serviceRequest"
         }
       ],
@@ -89826,7 +90456,7 @@
       "confidential": 7,
       "dataprotect": 49,
       "discovery": 24,
-      "ekm": 65,
+      "ekm": 71,
       "governance": 35,
       "hsm-connector": 14,
       "hyok": 21,
@@ -89858,7 +90488,7 @@
       "confidential": 6,
       "dataprotect": 28,
       "discovery": 22,
-      "ekm": 44,
+      "ekm": 43,
       "governance": 23,
       "hyok": 7,
       "keyaccess": 6,
@@ -90079,20 +90709,20 @@
     ]
   },
   "summary": {
-    "backend_routes": 900,
+    "backend_routes": 906,
     "backend_services": 28,
-    "button_inventory": 762,
-    "frontend_call_sites": 537,
+    "button_inventory": 769,
+    "frontend_call_sites": 536,
     "matched_frontend_call_sites": 515,
     "nav_items": 26,
-    "request_flows": 900,
+    "request_flows": 906,
     "request_flows_with_frontend": 522,
-    "request_flows_with_internal_package_calls": 160,
-    "request_flows_with_service_calls": 532,
-    "request_flows_with_store_calls": 637,
+    "request_flows_with_internal_package_calls": 161,
+    "request_flows_with_service_calls": 533,
+    "request_flows_with_store_calls": 643,
     "subpane_groups": 9,
     "tab_components": 33,
-    "unmatched_frontend_call_sites": 22
+    "unmatched_frontend_call_sites": 21
   },
   "tabs": [
     {
@@ -90271,7 +90901,7 @@
       "support_files": []
     },
     {
-      "call_count": 45,
+      "call_count": 40,
       "component": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "group": "Data & integrations",
       "id": "ekm",
@@ -90526,7 +91156,7 @@
       ]
     },
     {
-      "call_count": 45,
+      "call_count": 40,
       "component": "web/dashboard/src/components/v3/tabs/ClientSDKTab.tsx",
       "group": "UNLISTED",
       "id": "pkcs11",
@@ -90755,22 +91385,9 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentId)}/validate-deploy?${tenantQuery(session)}`)",
-      "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 956,
-      "match_key": "ekm|GET|/ekm/agents/{param}/validate-deploy",
-      "method": "GET",
-      "normalized_path": "/ekm/agents/{param}/validate-deploy",
-      "path": "/ekm/agents/{param}/validate-deploy?{param}",
-      "service": "ekm",
-      "service_key": "ekm",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
       "expression": "serviceRequest(\"tfe\", `/tfe/file-encrypt/download?${qs.toString()}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 1003,
+      "line": 899,
       "match_key": "tfe|GET|/tfe/file-encrypt/download",
       "method": "GET",
       "normalized_path": "/tfe/file-encrypt/download",
@@ -104556,24 +105173,254 @@
         ]
       },
       {
+        "complexity": 1,
+        "externalPackages": [
+          "time.Now"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"ekm\", `/ekm/clients?${tenant(session)}`)",
+            "file": "web/dashboard/src/lib/ekmClients.ts",
+            "line": 56,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "listClients",
+        "handlerFile": "services/ekm/clients.go",
+        "handlerLine": 294,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/ekm/clients",
+        "path": "/ekm/clients",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "ekm|GET|/ekm/clients",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [],
+        "storeCalls": [
+          "ListClients"
+        ],
+        "uiLabels": [
+          "ekmClients"
+        ]
+      },
+      {
+        "complexity": 23,
+        "externalPackages": [
+          "strings.TrimSpace",
+          "strings.EqualFold",
+          "time.Now",
+          "errors.As",
+          "errors.Is",
+          "fmt.Sprintf",
+          "strings.ToLower",
+          "strings.Contains",
+          "strings.ReplaceAll",
+          "time.Since"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"ekm\", \"/ekm/clients\")",
+            "file": "web/dashboard/src/lib/ekmClients.ts",
+            "line": 66,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "createClient",
+        "handlerFile": "services/ekm/clients.go",
+        "handlerLine": 358,
+        "hasFrontend": true,
+        "internalPackages": [
+          "pkg/crypto.Zeroize"
+        ],
+        "method": "POST",
+        "normalizedPath": "/ekm/clients",
+        "path": "/ekm/clients",
+        "receiverCalls": [
+          "s.keycore.CreateAsymmetricKey",
+          "s.keycore.GetKey",
+          "s.keycore.PublicKey",
+          "s.keycore.Wrap",
+          "s.keycore.Unwrap",
+          "s.keycore.RotateKey",
+          "s.keycore.DestroyKeyImmediately"
+        ],
+        "risk": "medium",
+        "routeKey": "ekm|POST|/ekm/clients",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [
+          "createTDEKey"
+        ],
+        "storeCalls": [
+          "ListClients",
+          "CreatePendingClient",
+          "PurgeAgent",
+          "GetClient",
+          "CreateTDEKey",
+          "GetTDEKey",
+          "BumpAgentConfigVersion",
+          "RecordKeyAccess",
+          "TouchTDEKeyAccess",
+          "UpdateTDEKeyRotation",
+          "UpdateTDEKeyMetadata",
+          "ListDatabasesByKey",
+          "GetAgent",
+          "ListKeyAccessByAgent",
+          "ListDatabases"
+        ],
+        "uiLabels": [
+          "ekmClients"
+        ]
+      },
+      {
+        "complexity": 5,
+        "externalPackages": [
+          "time.Now"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"ekm\", `/ekm/clients/${encodeURIComponent(id)}?${tenant(session)}`)",
+            "file": "web/dashboard/src/lib/ekmClients.ts",
+            "line": 61,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "getClient",
+        "handlerFile": "services/ekm/clients.go",
+        "handlerLine": 309,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/ekm/clients/{param}",
+        "path": "/ekm/clients/{id}",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "ekm|GET|/ekm/clients/{param}",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [],
+        "storeCalls": [
+          "GetClient",
+          "ListClientCheckIns",
+          "GetTDEKey",
+          "ListKeyAccessByAgent",
+          "ListDatabases"
+        ],
+        "uiLabels": [
+          "ekmClients"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [
+          "strings.Join",
+          "time.Now"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"ekm\", `/ekm/clients/${encodeURIComponent(id)}/registration-token?${tenant(session)}`)",
+            "file": "web/dashboard/src/lib/ekmClients.ts",
+            "line": 75,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "issueClientToken",
+        "handlerFile": "services/ekm/clients.go",
+        "handlerLine": 428,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/ekm/clients/{param}/registration-token",
+        "path": "/ekm/clients/{id}/registration-token",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "ekm|POST|/ekm/clients/{param}/registration-token",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [],
+        "storeCalls": [
+          "GetClient",
+          "SetClientToken"
+        ],
+        "uiLabels": [
+          "ekmClients"
+        ]
+      },
+      {
+        "complexity": 3,
+        "externalPackages": [
+          "strings.TrimSpace",
+          "time.Now"
+        ],
+        "frontendSites": [],
+        "handler": "enrollClient",
+        "handlerFile": "services/ekm/clients.go",
+        "handlerLine": 462,
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/ekm/clients/enroll",
+        "path": "/ekm/clients/enroll",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "ekm|POST|/ekm/clients/enroll",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [],
+        "storeCalls": [
+          "GetClient",
+          "ConsumeClientToken",
+          "RecordClientCheckIn"
+        ],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 3,
+        "externalPackages": [
+          "strings.TrimSpace",
+          "time.Now"
+        ],
+        "frontendSites": [],
+        "handler": "clientCheckIn",
+        "handlerFile": "services/ekm/clients.go",
+        "handlerLine": 533,
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/ekm/clients/{param}/check-in",
+        "path": "/ekm/clients/{id}/check-in",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "ekm|POST|/ekm/clients/{param}/check-in",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [],
+        "storeCalls": [
+          "GetClient",
+          "UpdateAgentHeartbeat",
+          "RecordClientCheckIn"
+        ],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
         "complexity": 2,
         "externalPackages": [
           "errors.Is",
           "strings.TrimSpace",
           "time.Now"
         ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"ekm\", \"/ekm/agents/register\")",
-            "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 317,
-            "source": "serviceRequest"
-          }
-        ],
+        "frontendSites": [],
         "handler": "handleRegisterAgent",
         "handlerFile": "services/ekm/handler.go",
         "handlerLine": 157,
-        "hasFrontend": true,
+        "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
         "normalizedPath": "/ekm/agents/register",
@@ -104591,8 +105438,7 @@
           "UpsertAgent"
         ],
         "uiLabels": [
-          "Enterprise KM",
-          "pkcs11"
+          "API only"
         ]
       },
       {
@@ -104604,7 +105450,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/agents?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 285,
+            "line": 241,
             "source": "serviceRequest"
           }
         ],
@@ -104638,18 +105484,11 @@
           "strings.TrimSpace",
           "time.Since"
         ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}/status?${tenantQuery(session)}`)",
-            "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 290,
-            "source": "serviceRequest"
-          }
-        ],
+        "frontendSites": [],
         "handler": "handleAgentStatus",
         "handlerFile": "services/ekm/handler.go",
         "handlerLine": 197,
-        "hasFrontend": true,
+        "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
         "normalizedPath": "/ekm/agents/{param}/status",
@@ -104668,8 +105507,7 @@
           "GetTDEKey"
         ],
         "uiLabels": [
-          "Enterprise KM",
-          "pkcs11"
+          "API only"
         ]
       },
       {
@@ -104679,18 +105517,11 @@
           "strings.TrimSpace",
           "time.Since"
         ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}/health?${tenantQuery(session)}`)",
-            "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 299,
-            "source": "serviceRequest"
-          }
-        ],
+        "frontendSites": [],
         "handler": "handleAgentHealth",
         "handlerFile": "services/ekm/handler.go",
         "handlerLine": 212,
-        "hasFrontend": true,
+        "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
         "normalizedPath": "/ekm/agents/{param}/health",
@@ -104707,8 +105538,7 @@
           "GetAgent"
         ],
         "uiLabels": [
-          "Enterprise KM",
-          "pkcs11"
+          "API only"
         ]
       },
       {
@@ -104721,7 +105551,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}/logs?${tenantQuery(session)}&limit=${Math.max(1, Math.min(200, Math.tru...",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 308,
+            "line": 246,
             "source": "serviceRequest"
           }
         ],
@@ -104756,20 +105586,14 @@
           "strings.TrimSpace",
           "fmt.Sprintf",
           "strings.ReplaceAll",
+          "strings.ToLower",
           "time.Now"
         ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}/deploy?${tenantQuery(session)}&os=${encodeURIComponent(targetOS)}`)",
-            "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 375,
-            "source": "serviceRequest"
-          }
-        ],
+        "frontendSites": [],
         "handler": "handleAgentDeployPackage",
         "handlerFile": "services/ekm/handler.go",
         "handlerLine": 288,
-        "hasFrontend": true,
+        "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
         "normalizedPath": "/ekm/agents/{param}/deploy",
@@ -104786,8 +105610,7 @@
           "GetAgent"
         ],
         "uiLabels": [
-          "Enterprise KM",
-          "pkcs11"
+          "API only"
         ]
       },
       {
@@ -104799,7 +105622,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}/rotate`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 336,
+            "line": 255,
             "source": "serviceRequest"
           }
         ],
@@ -104841,7 +105664,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentID)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 355,
+            "line": 274,
             "source": "serviceRequest"
           }
         ],
@@ -104916,7 +105739,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/sdk/overview?${tenantQuery(session, tenantOverride)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 624,
+            "line": 530,
             "source": "serviceRequest"
           }
         ],
@@ -104953,7 +105776,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/sdk/download?${tenantQuery(session, tenantOverride)}&provider=${encodeURIComponent(provider)}&os=${encodeURIC...",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 638,
+            "line": 544,
             "source": "serviceRequest"
           }
         ],
@@ -104991,7 +105814,7 @@
           {
             "expression": "serviceRequest(\"ekm\", \"/ekm/bitlocker/clients/register\")",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 427,
+            "line": 333,
             "source": "serviceRequest"
           }
         ],
@@ -105031,7 +105854,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients?${tenantQuery(session, tenantOverride)}&limit=${Math.max(1, Math.min(100000, Math.trunc(lim...",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 388,
+            "line": 294,
             "source": "serviceRequest"
           }
         ],
@@ -105068,7 +105891,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}?${tenantQuery(session, tenantOverride)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 401,
+            "line": 307,
             "source": "serviceRequest"
           }
         ],
@@ -105106,7 +105929,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}/delete-preview?${tenantQuery(session, tenantOverride)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 414,
+            "line": 320,
             "source": "serviceRequest"
           }
         ],
@@ -105146,7 +105969,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 454,
+            "line": 360,
             "source": "serviceRequest"
           }
         ],
@@ -105221,7 +106044,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}/operations`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 501,
+            "line": 407,
             "source": "serviceRequest"
           }
         ],
@@ -105261,7 +106084,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}/jobs?${tenantQuery(session, tenantOverride)}&limit=${Math.m...",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 525,
+            "line": 431,
             "source": "serviceRequest"
           }
         ],
@@ -105368,7 +106191,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/recovery?${tenantQuery(session, tenantOverride)}&client_id=${encodeURIComponent(clientID)}&limit=${...",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 539,
+            "line": 445,
             "source": "serviceRequest"
           }
         ],
@@ -105409,7 +106232,7 @@
           {
             "expression": "serviceRequest(\"ekm\", \"/ekm/bitlocker/network/scan\")",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 475,
+            "line": 381,
             "source": "serviceRequest"
           }
         ],
@@ -105446,7 +106269,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}/deploy?${tenantQuery(session, tenantOverride)}&os=${encodeU...",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 553,
+            "line": 459,
             "source": "serviceRequest"
           }
         ],
@@ -105661,7 +106484,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/tde/keys/${encodeURIComponent(keyId)}/revoke`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 928,
+            "line": 834,
             "source": "serviceRequest"
           }
         ],
@@ -105706,7 +106529,7 @@
           {
             "expression": "serviceRequest(\"ekm\", \"/ekm/databases\")",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 606,
+            "line": 512,
             "source": "serviceRequest"
           }
         ],
@@ -105806,7 +106629,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/databases/${encodeURIComponent(dbId)}/revoke-tde`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 942,
+            "line": 848,
             "source": "serviceRequest"
           }
         ],
@@ -105878,7 +106701,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 713,
+            "line": 619,
             "source": "serviceRequest"
           }
         ],
@@ -105911,7 +106734,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 691,
+            "line": 597,
             "source": "serviceRequest"
           }
         ],
@@ -105944,7 +106767,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs/${encodeURIComponent(configID)}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 696,
+            "line": 602,
             "source": "serviceRequest"
           }
         ],
@@ -105979,7 +106802,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs/${encodeURIComponent(configID)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 731,
+            "line": 637,
             "source": "serviceRequest"
           }
         ],
@@ -106013,7 +106836,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs/${encodeURIComponent(configID)}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 741,
+            "line": 647,
             "source": "serviceRequest"
           }
         ],
@@ -106046,7 +106869,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs/${encodeURIComponent(configID)}/test?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 747,
+            "line": 653,
             "source": "serviceRequest"
           }
         ],
@@ -106080,7 +106903,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/azure/configs/${encodeURIComponent(configID)}/sync?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 754,
+            "line": 660,
             "source": "serviceRequest"
           }
         ],
@@ -106117,7 +106940,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 772,
+            "line": 678,
             "source": "serviceRequest"
           }
         ],
@@ -106153,7 +106976,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings?${tenantQuery(session)}${q}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 762,
+            "line": 668,
             "source": "serviceRequest"
           }
         ],
@@ -106186,7 +107009,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 780,
+            "line": 686,
             "source": "serviceRequest"
           }
         ],
@@ -106221,7 +107044,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}/import?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 786,
+            "line": 692,
             "source": "serviceRequest"
           }
         ],
@@ -106255,7 +107078,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}/rotate?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 793,
+            "line": 699,
             "source": "serviceRequest"
           }
         ],
@@ -106288,7 +107111,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}/wrap`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 800,
+            "line": 706,
             "source": "serviceRequest"
           }
         ],
@@ -106319,7 +107142,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}/unwrap`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 810,
+            "line": 716,
             "source": "serviceRequest"
           }
         ],
@@ -106352,7 +107175,7 @@
           {
             "expression": "serviceRequest(\"ekm\", \"/ekm/google-cse/configs\")",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 864,
+            "line": 770,
             "source": "serviceRequest"
           }
         ],
@@ -106385,7 +107208,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 851,
+            "line": 757,
             "source": "serviceRequest"
           }
         ],
@@ -106445,7 +107268,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs/${encodeURIComponent(configID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 879,
+            "line": 785,
             "source": "serviceRequest"
           }
         ],
@@ -106479,7 +107302,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs/${encodeURIComponent(configID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 889,
+            "line": 795,
             "source": "serviceRequest"
           }
         ],
@@ -106521,7 +107344,7 @@
           {
             "expression": "serviceRequest(\"ekm\", \"/ekm/google-cse/keys\")",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 909,
+            "line": 815,
             "source": "serviceRequest"
           }
         ],
@@ -106588,7 +107411,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/keys/${encodeURIComponent(keyID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 919,
+            "line": 825,
             "source": "serviceRequest"
           }
         ],
@@ -121853,7 +122676,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-11T18:51:29Z",
+    "generatedAt": "2026-10-11T23:26:42Z",
     "methods": [
       "DELETE",
       "GET",
@@ -121893,7 +122716,7 @@
       "workload"
     ],
     "summary": {
-      "flows": 900,
+      "flows": 906,
       "frontendBacked": 522,
       "highRisk": 345,
       "services": 28

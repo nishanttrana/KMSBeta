@@ -391,6 +391,12 @@ discovery,POST,/discovery/buckets/{id}/test,/discovery/buckets/{param}/test,h.te
 discovery,GET,/discovery/schedule,/discovery/schedule,h.getSchedule,kernel,discovery.read,schedule_read,discovery,services/discovery/handler.go,68,discovery|GET|/discovery/schedule
 discovery,PUT,/discovery/schedule,/discovery/schedule,h.putSchedule,kernel,discovery.write,schedule_update,discovery_schedule,services/discovery/handler.go,69,discovery|PUT|/discovery/schedule
 ekm,GET,/ekm/credential-usage,/ekm/credential-usage,h.azureCredentialUsage,kernel,authenticated,credential_usage_read,credential,services/ekm/azure_credentials.go,117,ekm|GET|/ekm/credential-usage
+ekm,GET,/ekm/clients,/ekm/clients,h.listClients,kernel,ekm.read,client_list,ekm_client,services/ekm/clients.go,272,ekm|GET|/ekm/clients
+ekm,POST,/ekm/clients,/ekm/clients,h.createClient,kernel,ekm.write,client_created,ekm_client,services/ekm/clients.go,273,ekm|POST|/ekm/clients
+ekm,GET,/ekm/clients/{id},/ekm/clients/{param},h.getClient,kernel,ekm.read,client_read,ekm_client,services/ekm/clients.go,274,ekm|GET|/ekm/clients/{param}
+ekm,POST,/ekm/clients/{id}/registration-token,/ekm/clients/{param}/registration-token,h.issueClientToken,kernel,ekm.write,client_token_issued,ekm_client,services/ekm/clients.go,275,ekm|POST|/ekm/clients/{param}/registration-token
+ekm,POST,/ekm/clients/enroll,/ekm/clients/enroll,h.enrollClient,kernel,public,client_enrolled,ekm_client,services/ekm/clients.go,277,ekm|POST|/ekm/clients/enroll
+ekm,POST,/ekm/clients/{id}/check-in,/ekm/clients/{param}/check-in,h.clientCheckIn,kernel,public,client_check_in,ekm_client,services/ekm/clients.go,278,ekm|POST|/ekm/clients/{param}/check-in
 ekm,POST,/ekm/agents/register,/ekm/agents/register,h.handleRegisterAgent,mux,,,,services/ekm/handler.go,55,ekm|POST|/ekm/agents/register
 ekm,GET,/ekm/agents,/ekm/agents,h.handleListAgents,mux,,,,services/ekm/handler.go,56,ekm|GET|/ekm/agents
 ekm,GET,/ekm/agents/{id}/status,/ekm/agents/{param}/status,h.handleAgentStatus,mux,,,,services/ekm/handler.go,57,ekm|GET|/ekm/agents/{param}/status

@@ -9190,6 +9190,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "ekm-get-ekm-clients",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "GET /ekm/clients",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/clients?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "GET /svc/ekm/ekm/clients?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-get-ekm-clients-id",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "GET /ekm/clients/{id}",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/clients/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "GET /svc/ekm/ekm/clients/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "ekm-get-ekm-credential-usage",
     "group": "Enterprise Key Management (ekm)",
     "title": "GET /ekm/credential-usage",
@@ -9955,6 +10011,118 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from EKM service.",
     "requestExample": "POST /svc/ekm/ekm/bitlocker/network/scan?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-clients",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/clients",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/clients?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/clients?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-clients-id-check-in",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/clients/{id}/check-in",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/clients/{id}/check-in?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/clients/{id}/check-in?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-clients-id-registration-token",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/clients/{id}/registration-token",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/clients/{id}/registration-token?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/clients/{id}/registration-token?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-clients-enroll",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/clients/enroll",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/clients/enroll?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/clients/enroll?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

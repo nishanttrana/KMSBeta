@@ -23,34 +23,6 @@ export type EKMAgent = {
   updated_at?: string;
 };
 
-export type EKMAgentStatus = {
-  agent: EKMAgent;
-  managed_databases: number;
-  tde_enabled_databases: number;
-  last_heartbeat_age_sec: number;
-  assigned_key_algorithm?: string;
-};
-
-export type EKMAgentHealth = {
-  agent: EKMAgent;
-  health: "healthy" | "degraded" | "down" | string;
-  last_heartbeat_age_sec: number;
-  metrics: {
-    hostname: string;
-    os_name: string;
-    os_version: string;
-    kernel: string;
-    arch: string;
-    cpu_usage_pct: number;
-    memory_usage_pct: number;
-    disk_usage_pct: number;
-    load_1: number;
-    uptime_sec: number;
-    agent_runtime_sec: number;
-  };
-  warnings: string[];
-};
-
 export type EKMAccessLog = {
   id: string;
   tenant_id: string;
@@ -244,26 +216,10 @@ export type EKMDeleteAgentResult = {
   deleted_key_ids: string[];
 };
 
-export type RegisterEKMAgentInput = {
-  agent_id?: string;
-  name: string;
-  role?: string;
-  db_engine: "mssql" | "oracle" | "postgresql" | "mysql" | "db2";
-  host: string;
-  version: string;
-  heartbeat_interval_sec?: number;
-  metadata_json?: string;
-  auto_provision_tde?: boolean;
-};
-
 type ListAgentsResponse = { items: EKMAgent[] };
-type AgentStatusResponse = { status: EKMAgentStatus };
-type AgentHealthResponse = { health: EKMAgentHealth };
 type AgentLogsResponse = { items: EKMAccessLog[] };
-type RegisterAgentResponse = { agent: EKMAgent };
 type RotateResponse = { rotation: { key_id: string; version_id: string; affected_agent_ids: string[] } };
 type DeleteAgentResponse = { deleted: EKMDeleteAgentResult };
-type DeployResponse = { package: EKMDeployPackage };
 type SDKOverviewResponse = { overview: EKMSDKOverview };
 type SDKDownloadResponse = { artifact: EKMSDKArtifact };
 type BitLockerClientsResponse = { items: EKMBitLockerClient[] };
@@ -286,24 +242,6 @@ export async function listEKMAgents(session: AuthSession): Promise<EKMAgent[]> {
   return Array.isArray(out?.items) ? out.items : [];
 }
 
-export async function getEKMAgentStatus(session: AuthSession, agentID: string): Promise<EKMAgentStatus> {
-  const out = await serviceRequest<AgentStatusResponse>(
-    session,
-    "ekm",
-    `/ekm/agents/${encodeURIComponent(agentID)}/status?${tenantQuery(session)}`
-  );
-  return out.status;
-}
-
-export async function getEKMAgentHealth(session: AuthSession, agentID: string): Promise<EKMAgentHealth> {
-  const out = await serviceRequest<AgentHealthResponse>(
-    session,
-    "ekm",
-    `/ekm/agents/${encodeURIComponent(agentID)}/health?${tenantQuery(session)}`
-  );
-  return out.health;
-}
-
 export async function listEKMAgentLogs(session: AuthSession, agentID: string, limit = 20): Promise<EKMAccessLog[]> {
   const out = await serviceRequest<AgentLogsResponse>(
     session,
@@ -311,25 +249,6 @@ export async function listEKMAgentLogs(session: AuthSession, agentID: string, li
     `/ekm/agents/${encodeURIComponent(agentID)}/logs?${tenantQuery(session)}&limit=${Math.max(1, Math.min(200, Math.trunc(limit)))}`
   );
   return Array.isArray(out?.items) ? out.items : [];
-}
-
-export async function registerEKMAgent(session: AuthSession, input: RegisterEKMAgentInput): Promise<EKMAgent> {
-  const out = await serviceRequest<RegisterAgentResponse>(session, "ekm", "/ekm/agents/register", {
-    method: "POST",
-    body: JSON.stringify({
-      tenant_id: session.tenantId,
-      agent_id: String(input.agent_id || "").trim(),
-      name: String(input.name || "").trim(),
-      role: String(input.role || "ekm-agent").trim(),
-      db_engine: String(input.db_engine || "mssql").trim(),
-      host: String(input.host || "").trim(),
-      version: String(input.version || "").trim(),
-      heartbeat_interval_sec: Math.max(5, Math.min(300, Math.trunc(Number(input.heartbeat_interval_sec || 30)))),
-      metadata_json: String(input.metadata_json || "{}"),
-      auto_provision_tde: input.auto_provision_tde !== false
-    })
-  });
-  return out.agent;
 }
 
 export async function rotateEKMAgentKey(session: AuthSession, agentID: string, reason = "manual"): Promise<void> {
@@ -365,19 +284,6 @@ export async function deleteEKMAgent(
     }
   );
   return out.deleted;
-}
-
-export async function getEKMDeployPackage(
-  session: AuthSession,
-  agentID: string,
-  targetOS: "linux" | "windows"
-): Promise<EKMDeployPackage> {
-  const out = await serviceRequest<DeployResponse>(
-    session,
-    "ekm",
-    `/ekm/agents/${encodeURIComponent(agentID)}/deploy?${tenantQuery(session)}&os=${encodeURIComponent(targetOS)}`
-  );
-  return out.package;
 }
 
 export async function listBitLockerClients(
@@ -947,16 +853,6 @@ export async function revokeDatabaseTDE(session: AuthSession, dbId: string): Pro
       method: "POST",
       body: JSON.stringify({ tenant_id: session.tenantId })
     }
-  );
-  return out;
-}
-
-// Validate agent deployment
-export async function validateAgentDeployment(session: AuthSession, agentId: string): Promise<any> {
-  const out = await serviceRequest<any>(
-    session,
-    "ekm",
-    `/ekm/agents/${encodeURIComponent(agentId)}/validate-deploy?${tenantQuery(session)}`
   );
   return out;
 }

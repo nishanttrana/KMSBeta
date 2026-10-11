@@ -21,6 +21,15 @@ type Store interface {
 	BumpAgentConfigVersion(ctx context.Context, tenantID string, agentID string, keyID string, keyVersion string) error
 	PurgeAgent(ctx context.Context, tenantID string, agentID string, keyIDs []string) (int, int, int, error)
 
+	// Database clients: registration and check-ins (store_clients.go)
+	ListClients(ctx context.Context, tenantID string) ([]clientRecord, error)
+	GetClient(ctx context.Context, tenantID, clientID string) (clientRecord, error)
+	CreatePendingClient(ctx context.Context, c clientRecord) error
+	SetClientToken(ctx context.Context, tenantID, clientID, tokenHash string, expires time.Time) error
+	ConsumeClientToken(ctx context.Context, tenantID, clientID, tokenHash, credentialHash, sourceIP, version, host string, at time.Time) (bool, error)
+	RecordClientCheckIn(ctx context.Context, in ClientCheckIn) error
+	ListClientCheckIns(ctx context.Context, tenantID, clientID string, limit int) ([]ClientCheckIn, error)
+
 	UpsertDatabase(ctx context.Context, db DatabaseInstance) error
 	GetDatabase(ctx context.Context, tenantID string, databaseID string) (DatabaseInstance, error)
 	ListDatabases(ctx context.Context, tenantID string, agentID string) ([]DatabaseInstance, error)
@@ -327,6 +336,13 @@ WHERE tenant_id = $1 AND id = $2
 			if n, nErr := res.RowsAffected(); nErr == nil {
 				counts.deletedKeys += int(n)
 			}
+		}
+
+		if _, err := tx.ExecContext(ctx, `
+DELETE FROM ekm_agent_checkins
+WHERE tenant_id = $1 AND agent_id = $2
+`, tenantID, agentID); err != nil {
+			return err
 		}
 
 		agentRes, err := tx.ExecContext(ctx, `

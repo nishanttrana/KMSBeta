@@ -116,6 +116,7 @@ var Replicated = map[string][]string{
 		"lineage_events", // dropped by discovery migration 003; 002 still creates it
 	},
 	"ekm": {
+		"ekm_agent_checkins",
 		"ekm_agents",
 		"ekm_azure_configs",
 		"ekm_azure_key_mappings",

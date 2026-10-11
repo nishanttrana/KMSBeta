@@ -17,6 +17,9 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
   internal one is mTLS, from the internal-services Sub CA. Covers the PKI
   layout, PQC key exchange, rotation, current (non-compliant) status and the
   delivery plan.
+- [EKM_CLIENTS.md](EKM_CLIENTS.md): how a database client is registered
+  (one-time token, then its own client key), what its health states mean,
+  and why a tenant token can no longer register a client or keep it alive.
 - [KEY_ACCESS_MODEL.md](KEY_ACCESS_MODEL.md): the binding design for key
   access and key management: one decision for every interface (usage mask,
   lifecycle phase, grants and label policies, conditions, explicit deny),

@@ -1033,6 +1033,8 @@ func TestTriggerSubjectsAreEmitted(t *testing.T) {
 		"audit.auth.account_locked":                 {"services/auth/handler.go", `"audit.auth.account_locked"`},
 		"audit.auth.dpop_replay_detected":           {"services/auth/handler.go", `"audit.auth.dpop_replay_detected"`},
 		"audit.workload.svid_issued":                {"services/workload/handler.go", `Action: "svid_issued"`},
+		"audit.ekm.client_enrolled":                 {"services/ekm/clients.go", `Action: "client_enrolled"`},
+		"audit.ekm.client_token_issued":             {"services/ekm/clients.go", `Action: "client_token_issued"`},
 		"audit.workload.settings_updated":           {"services/workload/handler.go", `Action: "settings_updated"`},
 		"audit.workload.federation_bundle_upserted": {"services/workload/handler.go", `Action: "federation_bundle_upserted"`},
 		"audit.workload.federation_bundle_deleted":  {"services/workload/handler.go", `Action: "federation_bundle_deleted"`},

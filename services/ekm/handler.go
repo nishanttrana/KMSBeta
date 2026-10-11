@@ -167,7 +167,7 @@ func (h *Handler) handleRegisterAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req.TenantID = tenantID
-	agent, key, err := h.svc.RegisterAgent(r.Context(), req, cn)
+	agent, key, err := h.svc.RegisterAgent(withSourceIP(r.Context(), r), req, cn)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, req.TenantID)
 		return
@@ -314,7 +314,7 @@ func (h *Handler) handleAgentHeartbeat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req.TenantID = tenantID
-	out, err := h.svc.AgentHeartbeat(r.Context(), r.PathValue("id"), req, cn)
+	out, err := h.svc.AgentHeartbeat(withSourceIP(r.Context(), r), r.PathValue("id"), req, cn)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
@@ -832,7 +832,7 @@ func (h *Handler) handleValidateDeployment(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	req.TenantID = tenantID
-	out, err := h.svc.ValidateDeployment(r.Context(), r.PathValue("id"), req)
+	out, err := h.svc.ValidateDeployment(withSourceIP(r.Context(), r), r.PathValue("id"), req)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return

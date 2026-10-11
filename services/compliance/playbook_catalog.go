@@ -74,6 +74,8 @@ var playbookTriggers = []TriggerSpec{
 	{Type: "account_locked", Label: "Account locked", Group: "Access", Subjects: []string{"audit.auth.account_locked"}},
 	{Type: "dpop_replay_detected", Label: "DPoP proof replay detected", Group: "Access", Subjects: []string{"audit.auth.dpop_replay_detected"}},
 	{Type: "workload_svid_issued", Label: "Workload SVID issued", Group: "Access", Subjects: []string{"audit.workload.svid_issued"}, SuccessOnly: true},
+	{Type: "ekm_client_enrolled", Label: "Database client registered, or a registration refused (EKM)", Group: "Access", Subjects: []string{"audit.ekm.client_enrolled"}},
+	{Type: "ekm_client_token_issued", Label: "Database client registration token issued (EKM)", Group: "Access", Subjects: []string{"audit.ekm.client_token_issued"}, SuccessOnly: true},
 	{Type: "workload_trust_changed", Label: "Workload identity trust changed (settings, federation)", Group: "Access", Subjects: []string{"audit.workload.settings_updated", "audit.workload.federation_bundle_upserted", "audit.workload.federation_bundle_deleted"}, SuccessOnly: true},
 	{Type: "posture_changed", Label: "Compliance posture score changed", Group: "Compliance", Subjects: []string{"audit.compliance.posture_changed"}},
 	{Type: "credential_expiring", Label: "Credential expiring or expired", Group: "Credentials", Subjects: []string{"audit.compliance.credential_expiring", "audit.compliance.credential_expired"}},

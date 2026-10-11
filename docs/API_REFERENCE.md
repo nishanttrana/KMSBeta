@@ -1758,6 +1758,10 @@ Audit:
 - `audit.signing.sign_refused` (identity, policy or token refusal, with `code`), `audit.signing.request_refused` (`reason: tenant_mismatch`)
 - `audit.confidential.key_released` (key sealed to the attested recipient key; `recipient_key_binding`, `key_version`, `seal_algorithm`), `audit.confidential.key_release_refused` (`reason`: no binding, verdict, keycore refusal), `audit.confidential.key_release` (kernel), `audit.key.attested_release` (keycore kernel, refusals included)
 - `audit.ekm.request_refused` (EKM `401`/`403`: no verified tenant token, cross-tenant, BitLocker agent token missing or wrong role)
+- `audit.ekm.client_list`, `audit.ekm.client_read`, `audit.ekm.client_created`, `audit.ekm.client_token_issued` (EKM database clients, 11.7.0-beta; kernel refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`)
+- `audit.ekm.client_enrolled`: `result: success` with the client as actor (`actor_type: ekm_client`, `client_source_ip`, `version`, `reenrolment`), or `result: refused` with `reason: invalid_registration_token` or `registration_token_expired`
+- `audit.ekm.client_check_in`: `result: success` with the client as actor, or `result: refused` with `reason: invalid_client_key`
+- `audit.ekm.request_refused` with `code: client_enrollment_required` or `client_key_required`: a tenant token was used to register, heartbeat or validate a client that is pending or holds a client key
 - `audit.ekm.tde_key_accessed` with `operation: public`: `result: success` with `key_version`, or `result: refused` with `reason: public_key_unavailable` (EKM `424`: keycore gave no public key; 6.12.0-beta) or keycore's own refusal reason (`not_found`, `delegation_refused`, ...; 6.18.0-beta)
 - `audit.ekm.key_access_denied` (TDE `wrap`, `unwrap`, `rotate` refused by key access: `reason` is the deny reason, or `key_access_unavailable` when the service is deployed but gives no decision; `result: refused`), `audit.cloud.key_access_denied` (BYOK `create`, `rotate`, `reimport`, `restore` and cloud `sync`, same reasons, `result: refused`)
 - then `audit.governance.fips_mode_applied` for each service start
@@ -2963,6 +2967,50 @@ Google CSE (KACLS), Azure EKM and the Java SDK.
   provider source from `services/jca-provider` (`Cipher.VectaKeyWrap` over
   `POST /svc/ekm/ekm/tde/keys/{id}/wrap` and `.../unwrap`).
 
+### Database clients (11.7.0-beta)
+
+A database client is the agent on one database host. It is added pending,
+registers itself with a one-time token, and then checks in with its own
+client key ([SECURITY/EKM_CLIENTS.md](SECURITY/EKM_CLIENTS.md)).
+
+| Route | Caller | Notes |
+|---|---|---|
+| `GET /svc/ekm/ekm/clients` | `ekm.read` | `items[]`, `thresholds`, `server_time` |
+| `POST /svc/ekm/ekm/clients` | `ekm.write` | Body `name`, `db_engine` (`mssql`, `oracle`, `postgresql`, `mysql`, `db2`, `mariadb`), optional `host`, `heartbeat_interval_sec` (5 to 3600), `auto_provision_tde` (default `true`). `201` `client`, pending. `409 client_name_taken` |
+| `GET /svc/ekm/ekm/clients/{id}` | `ekm.read` | `client`, `check_ins[]` (newest 60, oldest first), `thresholds`, and when known `key`, `last_key_request`, `metrics`, `databases`, `tde_enabled_databases` |
+| `POST /svc/ekm/ekm/clients/{id}/registration-token` | `ekm.write` | `201` `token` (returned once), `expires_at` (24 hours), `enroll_path`. Replaces an earlier unused token. For a registered client the token re-enrols it |
+| `POST /svc/ekm/ekm/clients/enroll` | the agent, with the token | Body `tenant_id`, `token`, optional `version`, `host`. `200` `client`, `client_key` (returned once), `client_key_header`, `check_in_path`. `401 invalid_registration_token` or `registration_token_expired` |
+| `POST /svc/ekm/ekm/clients/{id}/check-in` | the agent, with header `X-EKM-Client-Key` | Body `tenant_id`, optional `status` (`connected`, `degraded`), `tde_state`, `active_key_id`, `active_key_version`, `config_version_ack`, `metadata_json`, `version`. `401 invalid_client_key` |
+
+A client: `id`, `name`, `db_engine`, `host`, `registration` (`pending`,
+`registered`), `health` (`pending`, `healthy`, `degraded`, `offline`),
+`last_seen_at` and `last_seen_age_sec` (absent until a check-in),
+`registered_at`, `created_at`, `source_ip`, `version`, `tde_state`,
+`heartbeat_interval_sec`, `assigned_key_id`, `assigned_key_version`,
+`credential` (`client_key`, `service_token`, or empty while pending),
+`token_expires_at` (while an unused token is outstanding).
+
+`thresholds`: `healthy_within_sec` (300), `degraded_within_sec` (3600).
+
+The two agent routes take no `Authorization` header. A client is removed
+with `DELETE /svc/ekm/ekm/agents/{id}`, which also destroys its TDE keys.
+
+For a client that is pending or holds a client key,
+`POST /ekm/agents/register`, `POST /ekm/agents/{id}/heartbeat` and
+`POST /ekm/agents/{id}/validate-deploy` answer `403`
+`client_enrollment_required` or `client_key_required`.
+
+```bash
+# Add a client and issue its registration token. The token goes to a file.
+printf 'Authorization: Bearer %s\n' "$TOKEN" > "$HDR"
+CLIENT_ID=$(curl -sS --fail-with-body --cacert vecta-root-ca.pem -X POST https://localhost/svc/ekm/ekm/clients \
+  -H @"$HDR" -H "Content-Type: application/json" \
+  -d '{"tenant_id":"root","name":"ORCL-PROD-04","db_engine":"oracle","host":"orcl-prod-04.corp.local"}' | jq -r .client.id)
+( umask 077; curl -sS --fail-with-body --cacert vecta-root-ca.pem -X POST \
+  "https://localhost/svc/ekm/ekm/clients/$CLIENT_ID/registration-token?tenant_id=root" -H @"$HDR" | jq -r .token > registration-token )
+rm -f "$HDR"
+```
+
 ---
 
 ## Service 19: KMIP (`/svc/kmip/`)
@@ -3926,7 +3974,7 @@ Common prefixes:
 | audit.workload.* | Workload identity |
 | audit.confidential.* | Attestation verdicts and attested key release |
 | audit.keyaccess.* | Key access justification policy and decisions |
-| audit.ekm.* | EKM agents and TDE keys; `audit.ekm.key_access_denied` for a TDE operation refused by key access (deny, or `key_access_unavailable`) |
+| audit.ekm.* | EKM agents, database clients (`client_created`, `client_token_issued`, `client_enrolled`, `client_check_in`, `client_list`, `client_read`) and TDE keys; `audit.ekm.key_access_denied` for a TDE operation refused by key access (deny, or `key_access_unavailable`) |
 | audit.cloud.* | Cloud accounts, inventory and sync; BYOK `byok_created`, `byok_rotated`, `byok_reimported`, `byok_revoked`, `byok_restored`, `byok_verified`, `byok_synced`, `byok_keys_listed`, `byok_key_read`, `byok_runs_listed`, `byok_providers_read` (10.0.0-beta); `audit.cloud.key_access_denied` for a refusal by key access |
 | audit.hyok.* | HYOK proxy requests; `audit.hyok.request_denied` for policy and key access refusals |
 | audit.security.* | Audit-side detection signals (sustained risk) |
@@ -4533,6 +4581,12 @@ from the code; do not edit by hand.
 - `POST /svc/ekm/ekm/bitlocker/clients/{id}/operations`
 - `POST /svc/ekm/ekm/bitlocker/network/scan`
 - `GET /svc/ekm/ekm/bitlocker/recovery`
+- `GET /svc/ekm/ekm/clients`
+- `POST /svc/ekm/ekm/clients`
+- `POST /svc/ekm/ekm/clients/enroll`
+- `GET /svc/ekm/ekm/clients/{id}`
+- `POST /svc/ekm/ekm/clients/{id}/check-in`
+- `POST /svc/ekm/ekm/clients/{id}/registration-token`
 - `GET /svc/ekm/ekm/credential-usage`
 - `GET /svc/ekm/ekm/databases`
 - `POST /svc/ekm/ekm/databases`

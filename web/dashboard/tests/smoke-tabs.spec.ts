@@ -1,4 +1,5 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import { coveredControls } from "./fixtures/layout";
 
 const RENDER_ERROR_TEXT = "This tab failed to render.";
 
@@ -321,33 +322,6 @@ test("the top bar has no search box and no command palette", async ({ page }) =>
   await expect(page.getByPlaceholder(/search|jump/i)).toHaveCount(0);
   await expect(page.getByRole("textbox")).toHaveCount(1);
 });
-
-// Asks the browser what is drawn at the centre of every icon, button and input
-// under root. A fault is one that some other control covers, or that spills
-// out of root.
-function coveredControls(root: Locator): Promise<string[]> {
-  return root.evaluate((el) => {
-    const box = el.getBoundingClientRect();
-    const faults: string[] = [];
-    for (const node of Array.from(el.querySelectorAll("svg, button, input"))) {
-      const r = node.getBoundingClientRect();
-      const name = `${node.tagName} "${node.getAttribute("title") || node.getAttribute("aria-label") || node.getAttribute("class") || ""}"`;
-      if (!r.width || !r.height) { faults.push(`${name} has no size`); continue; }
-      if (r.left < box.left - 0.5 || r.right > box.right + 0.5) faults.push(`${name} spills out of its container`);
-      const x = r.left + r.width / 2, y = r.top + r.height / 2;
-      // Scrolled out of a list: not on screen, so nothing can cover it.
-      let clipped = false;
-      for (let a = node.parentElement; a && a !== el.parentElement; a = a.parentElement) {
-        const c = a.getBoundingClientRect();
-        if (getComputedStyle(a).overflowY !== "visible" && (y < c.top || y > c.bottom)) clipped = true;
-      }
-      if (clipped) continue;
-      const hit = document.elementFromPoint(x, y);
-      if (!hit || !(node.contains(hit) || hit.contains(node))) faults.push(`${name} is covered by ${hit?.tagName}`);
-    }
-    return faults;
-  });
-}
 
 type Box = { x: number; y: number; width: number; height: number } | null;
 function intersects(a: Box, b: Box): boolean {

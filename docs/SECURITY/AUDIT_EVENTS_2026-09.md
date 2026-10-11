@@ -479,6 +479,25 @@ are gone too.
 |---|---|---|
 | `audit.key.cryptoperiods_listed`, `audit.key.cryptoperiod_set`, `audit.key.cryptoperiod_reset` | Kernel events for the tenant's cryptoperiods (`days`, `default_days`); refusals `invalid_days`, `unknown_category`, `not_custom` with `result: refused` | `TestTenantCryptoperiodDrivesRotation`, `TestRotationRoutesRefusalsAudited` |
 
+## EKM database clients (11.7.0-beta, docs/SECURITY/EKM_CLIENTS.md)
+
+Kernel events (`pkg/route`): one per call, refusals included. None carries a
+registration token or a client key.
+
+| Event | When | Test |
+|---|---|---|
+| `audit.ekm.client_created` | An administrator added a pending client (`name`, `db_engine`, `host`, `assigned_key_id`) | `TestClientIsPendingUntilItsAgentEnrols` |
+| `audit.ekm.client_token_issued` (warning) | A one-time registration token was issued (`expires_at`, `reenrolment`) | `TestClientIsPendingUntilItsAgentEnrols` |
+| `audit.ekm.client_enrolled` (warning), `result: success` | An agent presented a valid token and was issued a client key; the client is the actor (`actor_type: ekm_client`, `client_source_ip`, `version`, `reenrolment`) | `TestClientIsPendingUntilItsAgentEnrols`, `TestAgentBinaryEnrolsAndChecksIn` |
+| `audit.ekm.client_enrolled`, `result: refused`, `reason: invalid_registration_token` | A malformed, unknown, replaced or already used token, one presented for another tenant, or the second of two agents presenting one token | `TestClientIsPendingUntilItsAgentEnrols`, `TestClientRegistrationTokenExpires`, `TestClientEnrolmentPostgres` |
+| `audit.ekm.client_enrolled`, `result: refused`, `reason: registration_token_expired` | The right token, after its 24 hours | `TestClientRegistrationTokenExpires` |
+| `audit.ekm.client_check_in`, `result: success` | A client checked in with its key (`status`, `client_source_ip`); the client is the actor | `TestClientChecksInWithItsOwnKey`, `TestAgentBinaryEnrolsAndChecksIn` |
+| `audit.ekm.client_check_in`, `result: refused`, `reason: invalid_client_key` | No key, a wrong key, another client's key, a key replaced by re-enrolment, an unknown client, or a key presented for another tenant | `TestClientChecksInWithItsOwnKey` |
+| `audit.ekm.client_list`, `audit.ekm.client_read` | The client list or one client was read | `TestClientRoutesRefuseAndAudit` |
+| (the four administrator routes, unauthenticated / missing `ekm.read` or `ekm.write` / wrong tenant) | Kernel refusals | `TestClientRoutesRefuseAndAudit` |
+| `audit.ekm.request_refused`, `code: client_enrollment_required` | A tenant token was used to register, heartbeat or validate a pending client | `TestClientIsPendingUntilItsAgentEnrols` |
+| `audit.ekm.request_refused`, `code: client_key_required` | A tenant token was used to heartbeat a client that holds a client key | `TestClientChecksInWithItsOwnKey` |
+
 ## REST client credentials (7.16.0-beta, docs/CI_CD_AUTOMATION.md)
 
 Rotation, revocation and API-key deletion moved onto the route kernel, so

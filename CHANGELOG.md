@@ -4,6 +4,78 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [11.7.0-beta] — 2026-10-12
+
+### Added
+- **Enterprise KM → EKM for DBs shows every database client, whether its
+  agent has registered, and how long ago it last checked in.** Tiles count
+  the clients that are registered, awaiting registration, healthy, degraded
+  and offline; clicking a tile lists exactly those clients.
+- **A client is registered by its own agent, with a one-time token.** "Add
+  client" names the client, then shows a registration token once (24 hours,
+  one use). The agent presents it from the database host
+  (`ekm-agent -enroll`) and receives its own client key. Until then the
+  client reads "Awaiting registration"; the wizard's last step ends only
+  when the agent has really enrolled, and says when and from which address.
+- **Each client has a health panel:** the verdict, the path to the KMS and
+  the client's TDE key, its last 30 check-ins as a strip (on time, late,
+  missed; each bar opens its check-in, and a list shows them all), the
+  agent version, source address, registration time, reported TDE state and
+  host metrics, the last key request, and the thresholds in force. From the
+  panel a key is rotated, a new registration token is issued (which
+  replaces the client key when used) and the client is removed.
+- **Health is the age of the last verified check-in:** healthy up to 5
+  minutes, degraded up to 60, offline beyond. The service judges it.
+- **Playbook triggers** "Database client registered, or a registration
+  refused (EKM)" and "Database client registration token issued (EKM)".
+- API: `GET`/`POST /ekm/clients`, `GET /ekm/clients/{id}`,
+  `POST /ekm/clients/{id}/registration-token`, `POST /ekm/clients/enroll`,
+  `POST /ekm/clients/{id}/check-in`. The first four need the new
+  permissions `ekm.read` / `ekm.write`; **a role without `*` must be
+  granted them to use the page.**
+
+### Changed
+- **A client that is pending, or that holds a client key, can no longer be
+  registered or kept alive with a tenant token.** The older register,
+  heartbeat and validate calls accept any token of the tenant; for such a
+  client they now answer `403`. Clients registered before this release are
+  unaffected and are shown with credential "Service token".
+- The agent now runs for PostgreSQL, MySQL, Db2 and MariaDB clients as well
+  (it reports their TDE state as unknown; it inspects SQL Server and Oracle).
+  Its installer already offered these engines and the agent then refused to
+  start.
+
+### Removed
+- **"Deploy Agent" and its "Verify Connection" tab**, replaced by "Add
+  client". The per-agent Logs and Health dialogs and the card view are
+  replaced by the health panel.
+
+### Fixed
+- **A client was shown as connected, with a heartbeat "0s ago", the moment
+  "Deploy Agent" was submitted**, before any agent existed. A new client now
+  has no check-in until its agent makes one.
+- **"Verify Connection" never verified anything.** It called a route that
+  does not exist for that method, and the route it meant marks the client
+  connected on the caller's word. The dashboard no longer calls it.
+- **The packaged heartbeat scripts reported the database's TDE as enabled
+  without reading it.** They report it as unknown; only the agent inspects
+  the database.
+
+Schema: `services/ekm/migrations/010_client_enrollment.sql` (new columns on
+`ekm_agents`, new replicated table `ekm_agent_checkins`). What each state
+and control means: `docs/SECURITY/EKM_CLIENTS.md`.
+
+### Security
+- Dashboard build dependency `source-map-js` 1.2.1 → 1.2.2 (lockfile only),
+  which clears the advisory the CI `npm audit` step had started to fail on.
+
+Enforced by `services/ekm/clients_test.go`,
+`TestAgentBinaryEnrolsAndChecksIn` (the real agent binary against the real
+service over TLS 1.3), `TestClientEnrolmentPostgres` (real Postgres: two
+agents presenting one token, one registered), `services/ekm-agent/enroll_test.go`,
+`web/dashboard/tests/unit/ekmClients.test.ts` and
+`web/dashboard/tests/ekm-clients.spec.ts`.
+
 ## [11.6.0-beta] — 2026-10-12
 
 ### Fixed

@@ -8,9 +8,37 @@ This agent registers to `services/ekm`, sends heartbeat + OS health metrics, and
 
 It is packaged as a single Windows binary with PowerShell install script.
 
+## Registering a host (enrolment)
+
+Add the client in the console (Enterprise KM → EKM for DBs → Add client) and
+copy its one-time registration token. On the database host, in the folder
+holding the agent:
+
+```bash
+# Paste the token, press Enter, then Ctrl-D. It is never typed on a command line.
+sudo sh -c 'umask 077; mkdir -p /etc/vecta-ekm; cat > /etc/vecta-ekm/registration-token'
+sudo ./ekm-agent -enroll -server https://kms.example.com/svc/ekm -token-file /etc/vecta-ekm/registration-token
+sudo ./ekm-agent -service install && sudo ./ekm-agent -service start
+```
+
+On Windows (PowerShell as Administrator) the token file is
+`$env:ProgramData\Vecta\EKMAgent\registration-token` and the binary is
+`ekm-agent.exe`.
+
+`-enroll` exchanges the token for a client key, writes the config (mode
+`0600`; database settings already in it are kept) and removes the token
+file. Add `-ca <bundle.pem>` when the KMS certificate comes from its
+internal CA. `-server` must be `https://`. An enrolled agent checks in at
+`/ekm/clients/{id}/check-in` with its client key and needs none of the
+methods below ([docs/SECURITY/EKM_CLIENTS.md](../../docs/SECURITY/EKM_CLIENTS.md)).
+
+The agent runs for `mssql`, `oracle`, `postgresql`, `mysql`, `db2` and
+`mariadb` clients. It inspects TDE state on SQL Server and Oracle and reports
+`unknown` for the others.
+
 ## Authentication
 
-The agent supports four authentication methods (in priority order):
+An agent that was not enrolled supports four authentication methods (in priority order):
 
 | Method | Config Fields | Description |
 |--------|--------------|-------------|

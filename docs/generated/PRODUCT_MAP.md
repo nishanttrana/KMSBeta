@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-11T18:51:29Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-11T23:26:42Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `26`
 - Tab/component mappings: `33`
 - Sub-pane groups: `9`
-- Backend HTTP routes discovered: `900` across `28` services
-- Backend routes on the `pkg/route` kernel: `475` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `537`
+- Backend HTTP routes discovered: `906` across `28` services
+- Backend routes on the `pkg/route` kernel: `481` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `536`
 - Frontend call sites with exact backend route match: `515`
-- Frontend call sites needing review or dynamic/runtime confirmation: `22`
-- Clickable controls with static `onClick` handlers: `762`
-- Backend request flows with handler/service/package summaries: `900`
+- Frontend call sites needing review or dynamic/runtime confirmation: `21`
+- Clickable controls with static `onClick` handlers: `769`
+- Backend request flows with handler/service/package summaries: `906`
 
 ## How To Use This For Launch
 
@@ -148,7 +148,7 @@ flowchart LR
   svc_compliance["compliance (61 routes)"]
   svc_confidential["confidential (7 routes)"]
   svc_discovery["discovery (24 routes)"]
-  svc_ekm["ekm (65 routes)"]
+  svc_ekm["ekm (71 routes)"]
   svc_governance["governance (35 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
@@ -181,7 +181,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, keycore, secrets | 74 |
 | Data & integrations | Data Protection | dataprotection | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | Data & integrations | Cloud Key Control | cloudctl | web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | - | 0 |
-| Data & integrations | Enterprise KM | ekm | web/dashboard/src/components/v3/tabs/EKMTab.tsx | ekm, tfe | 45 |
+| Data & integrations | Enterprise KM | ekm | web/dashboard/src/components/v3/tabs/EKMTab.tsx | ekm, tfe | 40 |
 | Data & integrations | HSM | hsm | web/dashboard/src/components/v3/tabs/HSMTab.tsx | auth | 46 |
 | Data & integrations | Workload Identity | workload | web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | workload | 13 |
 | Data & integrations | Confidential Compute | confidential | web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | confidential | 6 |
@@ -199,7 +199,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | UNLISTED | crypto | crypto | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | keycore | 49 |
 | UNLISTED | dataenc | dataenc | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | UNLISTED | hyok | hyok | web/dashboard/src/components/v3/tabs/HYOKTab.tsx | hyok | 7 |
-| UNLISTED | pkcs11 | pkcs11 | web/dashboard/src/components/v3/tabs/ClientSDKTab.tsx | ekm, tfe | 45 |
+| UNLISTED | pkcs11 | pkcs11 | web/dashboard/src/components/v3/tabs/ClientSDKTab.tsx | ekm, tfe | 40 |
 | UNLISTED | restapi | restapi | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | auth, auth-edge, certs, secrets | 123 |
 | UNLISTED | tokenize | tokenize | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 
@@ -218,7 +218,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | confidential | 7 | 6 |
 | dataprotect | 49 | 28 |
 | discovery | 24 | 22 |
-| ekm | 65 | 44 |
+| ekm | 71 | 43 |
 | governance | 35 | 23 |
 | hsm-connector | 14 | 0 |
 | hyok | 21 | 7 |
@@ -256,8 +256,7 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | cloud | GET | /cloud/bindings{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 224 |
 | compliance | GET | /compliance/playbooks/connections/{param}/test | serviceRequest | web/dashboard/src/lib/credentials.ts | 72 |
 | compliance | GET | /compliance/playbooks/connections/{param} | serviceRequest | web/dashboard/src/lib/credentials.ts | 76 |
-| ekm | GET | /ekm/agents/{param}/validate-deploy | serviceRequest | web/dashboard/src/lib/ekm.ts | 956 |
-| tfe | GET | /tfe/file-encrypt/download | serviceRequest | web/dashboard/src/lib/ekm.ts | 1003 |
+| tfe | GET | /tfe/file-encrypt/download | serviceRequest | web/dashboard/src/lib/ekm.ts | 899 |
 | hyok | POST | /hyok/{param}/v1/keys/{param}/{param} | serviceRequest | web/dashboard/src/lib/hyok.ts | 180 |
 | reporting | PUT | /alerts/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/reporting.ts | 311 |
 | reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 350 |
@@ -265,7 +264,7 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | secrets | GET | /{param}&format={param}{param}` : ""} | serviceRequest | web/dashboard/src/lib/secrets.ts | 170 |
 | secrets | DELETE | /secretURL(session, secretId, `/versions/{param}`) | serviceRequest | web/dashboard/src/lib/secrets.ts | 199 |
 
-Showing `22` of `22`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
+Showing `21` of `21`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
 
 ## Backend Routes Not Directly Called From Dashboard
 
@@ -394,7 +393,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/playbooks/{id} | h.getPlaybook | compliance.playbook.read | services/compliance/handler_playbooks.go | 139 |
 | compliance | PUT | /compliance/playbooks/{id} | h.updatePlaybook | compliance.playbook.write | services/compliance/handler_playbooks.go | 140 |
 
-Showing `120` of `378`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `384`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

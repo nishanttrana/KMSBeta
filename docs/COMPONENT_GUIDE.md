@@ -323,10 +323,15 @@ Use cases:
 
 Common APIs:
 
-- `POST /svc/ekm/ekm/agents/register`
+- `POST /svc/ekm/ekm/clients`
+- `POST /svc/ekm/ekm/clients/{id}/registration-token`
 - `POST /svc/ekm/ekm/tde/keys`
 - `POST /svc/ekm/ekm/tde/keys/{id}/wrap`
 - `GET /svc/ekm/ekm/bitlocker/clients`
+
+References:
+
+- [EKM database clients](SECURITY/EKM_CLIENTS.md)
 
 ### KMIP
 

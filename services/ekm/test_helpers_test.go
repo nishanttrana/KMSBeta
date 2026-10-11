@@ -249,6 +249,22 @@ func createEKMSchemaForTest(conn *pkgdb.DB) error {
 			tls_client_cn TEXT NOT NULL DEFAULT '',
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			registration TEXT NOT NULL DEFAULT 'registered',
+			registered_at TIMESTAMP,
+			source_ip TEXT NOT NULL DEFAULT '',
+			enroll_token_hash TEXT NOT NULL DEFAULT '',
+			enroll_token_expires_at TIMESTAMP,
+			credential_hash TEXT NOT NULL DEFAULT '',
+			PRIMARY KEY (tenant_id, id)
+		);`,
+		`CREATE TABLE ekm_agent_checkins (
+			tenant_id TEXT NOT NULL,
+			id TEXT NOT NULL,
+			agent_id TEXT NOT NULL,
+			at TIMESTAMP NOT NULL,
+			source_ip TEXT NOT NULL DEFAULT '',
+			version TEXT NOT NULL DEFAULT '',
+			status TEXT NOT NULL DEFAULT '',
 			PRIMARY KEY (tenant_id, id)
 		);`,
 		`CREATE TABLE ekm_tde_keys (

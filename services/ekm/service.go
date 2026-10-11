@@ -82,6 +82,9 @@ func (s *Service) RegisterAgent(ctx context.Context, req RegisterAgentRequest, t
 		req.DBEngine = DefaultDBEngine
 	}
 
+	if err := s.guardLegacyContact(ctx, req.TenantID, req.AgentID); err != nil {
+		return Agent{}, nil, err
+	}
 	existing, err := s.store.GetAgent(ctx, req.TenantID, req.AgentID)
 	isNewAgent := false
 	switch {
@@ -153,6 +156,7 @@ func (s *Service) RegisterAgent(ctx context.Context, req RegisterAgentRequest, t
 	if err != nil {
 		return Agent{}, nil, err
 	}
+	s.noteCheckIn(ctx, out, now)
 
 	_ = s.publishAudit(ctx, "audit.ekm.agent_registered", req.TenantID, map[string]interface{}{
 		"agent_id":        out.ID,
@@ -237,6 +241,9 @@ func (s *Service) AgentHeartbeat(ctx context.Context, agentID string, req AgentH
 	if req.TenantID == "" || agentID == "" {
 		return Agent{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and agent id are required")
 	}
+	if err := s.guardLegacyContact(ctx, req.TenantID, agentID); err != nil {
+		return Agent{}, err
+	}
 	status := normalizeAgentStatus(req.Status)
 	if status == "" {
 		status = AgentStatusConnected
@@ -265,6 +272,7 @@ func (s *Service) AgentHeartbeat(ctx context.Context, agentID string, req AgentH
 		agent.TLSClientCN = strings.TrimSpace(tlsClientCN)
 		_ = s.store.UpsertAgent(ctx, agent)
 	}
+	s.noteCheckIn(ctx, agent, now)
 	_ = s.publishAudit(ctx, "audit.ekm.agent_heartbeat", req.TenantID, map[string]interface{}{
 		"agent_id":           agentID,
 		"status":             status,
@@ -921,29 +929,12 @@ func (s *Service) GetAgentHealth(ctx context.Context, tenantID string, agentID s
 		}
 	}
 	meta := parseJSONMap(agent.MetadataJSON)
-	metrics := AgentOSMetrics{
-		Hostname:        defaultString(mapStringAny(meta, "hostname", "host_name", "os_hostname"), agent.Host),
-		OSName:          mapStringAny(meta, "os_name", "os", "platform"),
-		OSVersion:       mapStringAny(meta, "os_version", "platform_version", "version"),
-		Kernel:          mapStringAny(meta, "kernel", "kernel_version"),
-		Arch:            mapStringAny(meta, "arch", "architecture"),
-		CPUUsagePct:     mapFloatAny(meta, "cpu_usage_pct", "cpu_pct", "cpu_percent"),
-		MemoryUsagePct:  mapFloatAny(meta, "memory_usage_pct", "memory_pct", "mem_pct"),
-		DiskUsagePct:    mapFloatAny(meta, "disk_usage_pct", "disk_pct"),
-		Load1:           mapFloatAny(meta, "load_1", "load1"),
-		UptimeSec:       mapInt64Any(meta, "uptime_sec", "uptime_seconds"),
-		AgentRuntimeSec: mapInt64Any(meta, "agent_runtime_sec"),
-	}
+	metrics := agentOSMetrics(meta, agent.Host)
 	warnings := make([]string, 0)
 	health := "healthy"
 	// Thresholds are judged only on metrics the agent actually reported; an
 	// agent that sent none is not "within threshold".
-	metricsReported := false
-	for _, k := range []string{"cpu_usage_pct", "cpu_pct", "cpu_percent", "memory_usage_pct", "memory_pct", "mem_pct", "disk_usage_pct", "disk_pct"} {
-		if _, ok := meta[k]; ok {
-			metricsReported = true
-		}
-	}
+	metricsReported := reportedOSMetrics(meta)
 	if !metricsReported {
 		health = "unknown"
 		warnings = append(warnings, "agent has not reported OS metrics")
@@ -980,6 +971,33 @@ func (s *Service) GetAgentHealth(ctx context.Context, tenantID string, agentID s
 		Metrics:             metrics,
 		Warnings:            warnings,
 	}, nil
+}
+
+// agentOSMetrics reads the OS metrics an agent put in its check-in metadata.
+func agentOSMetrics(meta map[string]interface{}, host string) AgentOSMetrics {
+	return AgentOSMetrics{
+		Hostname:        defaultString(mapStringAny(meta, "hostname", "host_name", "os_hostname"), host),
+		OSName:          mapStringAny(meta, "os_name", "os", "platform"),
+		OSVersion:       mapStringAny(meta, "os_version", "platform_version", "version"),
+		Kernel:          mapStringAny(meta, "kernel", "kernel_version"),
+		Arch:            mapStringAny(meta, "arch", "architecture"),
+		CPUUsagePct:     mapFloatAny(meta, "cpu_usage_pct", "cpu_pct", "cpu_percent"),
+		MemoryUsagePct:  mapFloatAny(meta, "memory_usage_pct", "memory_pct", "mem_pct"),
+		DiskUsagePct:    mapFloatAny(meta, "disk_usage_pct", "disk_pct"),
+		Load1:           mapFloatAny(meta, "load_1", "load1"),
+		UptimeSec:       mapInt64Any(meta, "uptime_sec", "uptime_seconds"),
+		AgentRuntimeSec: mapInt64Any(meta, "agent_runtime_sec"),
+	}
+}
+
+// reportedOSMetrics says whether the agent reported any usage metric at all.
+func reportedOSMetrics(meta map[string]interface{}) bool {
+	for _, k := range []string{"cpu_usage_pct", "cpu_pct", "cpu_percent", "memory_usage_pct", "memory_pct", "mem_pct", "disk_usage_pct", "disk_pct"} {
+		if _, ok := meta[k]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Service) ListAgentLogs(ctx context.Context, tenantID string, agentID string, limit int) ([]KeyAccessLog, error) {
@@ -1188,6 +1206,9 @@ EKM_ROTATE_PATH=/ekm/agents/%s/rotate
 EKM_VALIDATE_PATH=/ekm/agents/%s/validate-deploy
 `, tenantID, agent.ID, agent.Name, engine, defaultString(agent.Host, "127.0.0.1"), defaultInt(agent.HeartbeatIntervalSec, DefaultHeartbeatSec), rotation, agent.ID, agent.ID, agent.ID))
 
+	// These scripts report reachability and OS metrics only. They can't read
+	// the database, so they report its TDE state as unknown; the agent binary
+	// is what inspects it.
 	linuxHeartbeat := `#!/usr/bin/env bash
 set -euo pipefail
 source /etc/vecta-ekm/agent.env
@@ -1198,7 +1219,7 @@ UP=$(cut -d. -f1 /proc/uptime || echo "0")
 HOST=$(hostname | tr -dc 'a-zA-Z0-9._-')
 OS=$(uname -s | tr -dc 'a-zA-Z0-9._-')
 META=$(printf '{"hostname":"%s","os_name":"%s","cpu_usage_pct":%s,"memory_usage_pct":%s,"disk_usage_pct":%s,"uptime_sec":%s}' "$HOST" "$OS" "$CPU" "$MEM" "$DISK" "$UP")
-BODY=$(printf '{"tenant_id":"%s","status":"connected","tde_state":"enabled","active_key_id":"%s","active_key_version":"%s","metadata_json":"%s"}' "$TENANT_ID" "${ACTIVE_KEY_ID:-}" "${ACTIVE_KEY_VERSION:-}" "$(printf '%s' "$META" | sed 's/"/\\"/g')")
+BODY=$(printf '{"tenant_id":"%s","status":"connected","tde_state":"unknown","active_key_id":"%s","active_key_version":"%s","metadata_json":"%s"}' "$TENANT_ID" "${ACTIVE_KEY_ID:-}" "${ACTIVE_KEY_VERSION:-}" "$(printf '%s' "$META" | sed 's/"/\\"/g')")
 curl -fsS -X POST "$EKM_API_BASE_URL$EKM_HEARTBEAT_PATH" -H "Content-Type: application/json" -H "Authorization: Bearer ${EKM_TOKEN:?set EKM_TOKEN in the environment}" -d "$BODY" >/dev/null
 `
 	windowsHeartbeat := `$ErrorActionPreference = "Stop"
@@ -1229,7 +1250,7 @@ $meta = @{
 $body = @{
   tenant_id = $cfg["TENANT_ID"]
   status = "connected"
-  tde_state = "enabled"
+  tde_state = "unknown"
   active_key_id = $cfg["ACTIVE_KEY_ID"]
   active_key_version = $cfg["ACTIVE_KEY_VERSION"]
   metadata_json = $meta
@@ -2146,6 +2167,9 @@ func (s *Service) ValidateDeployment(ctx context.Context, agentID string, req Va
 		return ValidateDeploymentResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and agent id are required")
 	}
 
+	if err := s.guardLegacyContact(ctx, req.TenantID, agentID); err != nil {
+		return ValidateDeploymentResponse{}, err
+	}
 	messages := make([]string, 0)
 	status := "valid"
 

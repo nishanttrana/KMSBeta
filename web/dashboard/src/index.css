@@ -55,6 +55,8 @@
   /* Crypto-asset class fills, checked with the dataviz palette validator
      against this surface (CVD and normal-vision separation). */
   --cls-exposed: #9370e3; --cls-weak: #c93b40; --cls-qv: #b08a12; --cls-strong: #2b9e8e; --cls-unknown: #5d6370;
+  /* Check-in strip fills (EKM clients), validated the same way on this surface. */
+  --cls-ontime: #2b9e8e; --cls-late: #b08a12; --cls-missed: #c93b40;
 
   /* Cards are flat with a hairline; only overlays cast a shadow. */
   --shadow-sm:  none;
@@ -110,6 +112,7 @@
   --s-yellow: #8a6d00;  --s-yellow-dim: rgba(138,109,0,.09);
 
   --cls-exposed: #7a4fd0; --cls-weak: #e5484d; --cls-qv: #e8a317; --cls-strong: #2f9e8f; --cls-unknown: #c3c7cf;
+  --cls-ontime: #2f9e8f; --cls-late: #e8a317; --cls-missed: #e5484d;
 
   --shadow-sm:  none;
   --shadow-md:  0 2px 8px rgba(28, 27, 24, 0.07), 0 1px 2px rgba(28, 27, 24, 0.05);

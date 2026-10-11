@@ -47,6 +47,14 @@ type AgentConfig struct {
 	ActiveKeyID      string `json:"active_key_id"`
 	ActiveKeyVersion string `json:"active_key_version"`
 	ConfigVersionAck int    `json:"config_version_ack"`
+
+	// ClientKey is the credential the KMS issued when this host enrolled
+	// with a one-time registration token (enroll.go). When set, the agent
+	// checks in with it and needs no auth-service token.
+	ClientKey string `json:"client_key,omitempty"`
+	// CAPath is a PEM bundle to trust for the KMS endpoint, for a KMS whose
+	// certificate comes from its internal CA.
+	CAPath string `json:"ca_path,omitempty"`
 }
 
 func LoadAgentConfig(path string) (AgentConfig, error) {
@@ -98,6 +106,8 @@ func applyEnvOverrides(cfg *AgentConfig) {
 	cfg.JWTEndpoint = envOr("JWT_ENDPOINT", cfg.JWTEndpoint)
 	cfg.ActiveKeyID = envOr("ACTIVE_KEY_ID", cfg.ActiveKeyID)
 	cfg.ActiveKeyVersion = envOr("ACTIVE_KEY_VERSION", cfg.ActiveKeyVersion)
+	cfg.ClientKey = envOr("EKM_CLIENT_KEY", cfg.ClientKey)
+	cfg.CAPath = envOr("EKM_CA_PATH", cfg.CAPath)
 
 	cfg.DBPort = envIntOr("DB_PORT", cfg.DBPort)
 	cfg.HeartbeatIntervalSec = envIntOr("HEARTBEAT_INTERVAL_SEC", cfg.HeartbeatIntervalSec)
@@ -141,6 +151,8 @@ func applyDefaults(cfg *AgentConfig) {
 	if strings.TrimSpace(cfg.HeartbeatPath) == "" {
 		if cfg.AgentMode == "bitlocker" {
 			cfg.HeartbeatPath = "/ekm/bitlocker/clients/{agent_id}/heartbeat"
+		} else if cfg.ClientKey != "" {
+			cfg.HeartbeatPath = "/ekm/clients/{agent_id}/check-in"
 		} else {
 			cfg.HeartbeatPath = "/ekm/agents/{agent_id}/heartbeat"
 		}
@@ -197,8 +209,12 @@ func validateConfig(cfg AgentConfig) error {
 		}
 		return nil
 	}
-	if cfg.DBEngine != "mssql" && cfg.DBEngine != "oracle" {
-		return fmt.Errorf("db_engine must be mssql or oracle")
+	// The engines the KMS registers a client for. The agent inspects TDE
+	// state on SQL Server and Oracle and reports "unknown" for the others.
+	switch cfg.DBEngine {
+	case "mssql", "oracle", "postgresql", "mysql", "db2", "mariadb":
+	default:
+		return fmt.Errorf("db_engine must be mssql, oracle, postgresql, mysql, db2 or mariadb")
 	}
 	return nil
 }

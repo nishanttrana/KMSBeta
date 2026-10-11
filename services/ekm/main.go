@@ -126,6 +126,7 @@ func main() {
 	kernel := route.New("ekm", audit, logger)
 	keyring.Routes(kernel, "ekm")
 	handler.azureCredentialRoutes(kernel)
+	handler.clientRoutes(kernel)
 	kernel.MountOn(handler.mux)
 
 	httpPort := envOr("HTTP_PORT", "8130")
