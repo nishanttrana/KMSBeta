@@ -18936,7 +18936,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setCollapsed((v) => !v)} title= className=\"vk-icon-btn\" style={{ width: 22, h...",
-      "line": 698,
+      "line": 636,
       "tabs": [],
       "tag": "button"
     },
@@ -18944,7 +18944,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "onLogout",
       "label": "Sign out",
-      "line": 858,
+      "line": 820,
       "tabs": [],
       "tag": "button"
     },
@@ -18952,7 +18952,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "togglePin(tab)} title= style={{ display: \"inline-flex\", alignItems: \"center\",...",
-      "line": 909,
+      "line": 873,
       "tabs": [],
       "tag": "button"
     },
@@ -18960,7 +18960,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setPaletteOpen(true)} title=\"Command palette (\u2318K)\" className=\"vk-search-btn\"...",
-      "line": 932,
+      "line": 896,
       "tabs": [],
       "tag": "button"
     },
@@ -18968,7 +18968,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "selectTab(\"admin\")} style={cliEnabled ? : }>",
-      "line": 982,
+      "line": 946,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18976,7 +18976,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" aria-label=\"About this KMS build\" aria-expanded= ti...",
-      "line": 1019,
+      "line": 983,
       "tabs": [],
       "tag": "button"
     },
@@ -18984,7 +18984,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" style={{ display: \"inline-flex\", alignItems: \"cente...",
-      "line": 1054,
+      "line": 1018,
       "tabs": [],
       "tag": "button"
     },
@@ -18993,6 +18993,14 @@
       "handler": "onClick",
       "label": "(icon or dynamic label)",
       "line": 23,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/SidebarSubNav.tsx",
+      "handler": "",
+      "label": "onSelect(item.id)} style={ } >",
+      "line": 95,
       "tabs": [],
       "tag": "button"
     },
@@ -33079,7 +33087,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-11T09:36:38Z",
+  "generated_at": "2026-10-11T15:47:12Z",
   "navigation": [
     {
       "group": "Overview",
@@ -89765,7 +89773,7 @@
   "summary": {
     "backend_routes": 890,
     "backend_services": 28,
-    "button_inventory": 763,
+    "button_inventory": 764,
     "frontend_call_sites": 563,
     "matched_frontend_call_sites": 517,
     "nav_items": 26,
@@ -121619,7 +121627,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-11T09:36:38Z",
+    "generatedAt": "2026-10-11T15:47:12Z",
     "methods": [
       "DELETE",
       "GET",

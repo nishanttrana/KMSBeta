@@ -5,6 +5,40 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### "I said last time to not have sub tab" (9.6.0-beta)
+- **An instruction that was acted on but never written down came back.**
+  The owner had already asked for a module's views to be sub-options in the
+  sidebar instead of a separate sub-tab column. Nothing in CLAUDE.md,
+  DECISIONS.md or here recorded it, so the column of cards stayed and the
+  owner had to repeat it. A UI instruction is a standing rule like any
+  other: it goes into CLAUDE.md in the same change, with a test.
+- **The rule needs a test, or the next module brings the column back.**
+  `SUB_PANES` and the sidebar list now live in one file
+  (`components/v3/SidebarSubNav.tsx`), and the smoke test "a module's
+  sub-options expand under its name in the sidebar" asserts the list, the
+  fold, the selected view and that no `.vk-subcard` column exists.
+- **A longer breadcrumb pushed the header buttons off screen.** Forcing
+  "group / module / view" onto one line at 1280px hid the info, alerts and
+  theme buttons. With a view open the breadcrumb is "module / view". Look
+  at the whole header, not only the part that changed.
+- **Moving a list broke a generator that passed anyway.**
+  `generate_product_map.py` found the nav by searching the shell for
+  `const NAV` up to `const SUB_PANES`. With the list moved it wrote a map
+  with 0 navigation items and 0 view groups, and `make conformance`
+  (`product-map`) passed, because it only compares the output with what
+  the generator writes. The staged diff stat (thousands of lines for a UI
+  change) was the signal. It had also been matching `NAV_GROUPS_KEY`, not
+  `NAV`, and worked by luck. The generator now anchors on `const NAV = [`,
+  reads the views from `SidebarSubNav.tsx`, and exits with an error when
+  either is empty. A generated file is checked for content, not only for
+  freshness; read the diff of generated files before committing.
+- **`open(f, "w").write(open(f).read()...)` empties the file.** The write
+  handle truncates before the read runs; `VERSION` was committed-ready as
+  zero bytes. Read first, then write.
+- **The size burn-down made the right design the easy one.** The shell was
+  one line under its ceiling, so the list had to go in its own file; the
+  shell dropped from 1224 to about 1130 lines and its ceiling with it.
+
 ### "It doesn't accept the default password" (9.5.0-beta)
 - **A documented default that three things could silently replace.** The
   rule said the admin is seeded as `changeit`; the code read

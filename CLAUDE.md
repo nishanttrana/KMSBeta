@@ -332,6 +332,17 @@ an approach, record it here or in the matching doc below.
   `chartDrill.tsx`), and the server counts the whole window, never a sample.
   Its buckets come from `pkg/timebucket`.
 
+- **Sub-options live in the sidebar** (owner directive, 2026-10-11: "not
+  have sub tab", "the options should be as a sub option on the left when I
+  expand", "for every sub tab", "click on the name to expand"). A module
+  with several views lists them in `SUB_PANES`
+  (`components/v3/SidebarSubNav.tsx`). Clicking the module's name in the
+  sidebar unfolds them under it, and the module receives the choice as
+  `subView`. The shell has no second column, card list or tab strip for a
+  module's views, and a new module with views is added to `SUB_PANES`, not
+  given its own switcher. The smoke test "a module's sub-options expand
+  under its name in the sidebar" enforces this.
+
 - **Dashboard pages are visual first, with little text** (owner directive,
   2026-10-01, on Crypto Discovery: "immature buggy and not esthetic", "bar
   charts missing", "good UI, less text", "how to add other sources is

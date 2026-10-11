@@ -2,9 +2,9 @@ import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useSt
 import {
   BarChart3,
   Bell,
-  Building2,
   CalendarClock,
   CheckCircle2,
+  ChevronRight,
   ChevronsLeft,
   ChevronsRight,
   ClipboardCheck,
@@ -20,24 +20,14 @@ import {
   Lightbulb,
   Search,
   KeyRound,
-  Layers,
   LayoutGrid,
-  Link,
-  List,
   Lock,
   Pin,
   PinOff,
   Play,
-  Plug,
   ScrollText,
   Settings,
-  Shield,
   ShieldCheck,
-  VenetianMask,
-  Zap,
-  Users,
-  Server,
-  RefreshCw,
   Radar,
   Archive,
   Info,
@@ -59,6 +49,7 @@ import { listKeysPaginated, listTags } from "../lib/keycore";
 import { getUnreadAlertCounts } from "../lib/reporting";
 import { B, Btn, Sel } from "./v3/legacyPrimitives";
 import { isFipsModeEnabled, normalizeFipsModeValue, TabErrorBoundary } from "./v3/runtimeUtils";
+import { SidebarSubNav, SUB_PANES, type SubPane } from "./v3/SidebarSubNav";
 import { C } from "./v3/theme";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -273,58 +264,6 @@ const NAV = [
   ]},
 ];
 
-const SUB_PANES: Record<string, any[]> = {
-  workbench: [
-    { id: "crypto", label: "Crypto Console", hint: "Interactive cryptographic operations and algorithm console", icon: Zap },
-    { id: "restapi", label: "REST API", hint: "Authenticated API explorer and endpoint documentation", icon: FileText },
-    { id: "tokenize", label: "Tokenize / Mask / Redact", hint: "Vault and vaultless tokenization with masking/redaction", icon: VenetianMask, feature: "data_protection" },
-    { id: "dataenc", label: "Data Encryption", hint: "Field-level, envelope, searchable and FPE crypto", icon: Database, feature: "data_protection" },
-    { id: "hyok-test", label: "HYOK Live Test", hint: "Interactive HYOK crypto test console for all protocols", icon: Zap }
-  ],
-  dataprotection: [
-    { id: "fieldenc", label: "Field Encryption", hint: "Wrapper registration, challenge-response and local crypto lease control", icon: KeyRound, feature: "data_protection" },
-    { id: "dataenc-policy", label: "Data Encryption Policy", hint: "Policy controls only for data encryption interfaces", icon: List, feature: "data_protection" },
-    { id: "token-policy", label: "Token / Mask / Redact Policy", hint: "Policy controls only for tokenization, masking and redaction", icon: VenetianMask, feature: "data_protection" },
-    { id: "pkcs11", label: "Java SDK", hint: "Java JCA provider download", icon: Plug }
-  ],
-  cloudctl: [
-    { id: "byok", label: "BYOK", hint: "Cloud provider key import and sync", icon: Cloud, feature: "cloud_byok" },
-    { id: "hyok", label: "HYOK", hint: "Hold-your-own-key policy and cryptographic controls", icon: ShieldCheck, feature: "hyok_proxy" },
-    { id: "google-cse", label: "Google CSE", hint: "Workspace Client-Side Encryption", icon: Shield, feature: "ekm_database" },
-    { id: "azure", label: "Azure EKM", hint: "Key Vault & Managed HSM integration", icon: Cloud, feature: "ekm_database" }
-  ],
-  ekm: [
-    { id: "db", label: "EKM for DBs", hint: "MSSQL / Oracle TDE agents", icon: Database, feature: "ekm_database" },
-    { id: "bitlocker", label: "BitLocker", hint: "Windows endpoint key lifecycle", icon: Lock, feature: "ekm_database" },
-    { id: "kmip", label: "KMIP", hint: "Profiles, clients, mTLS onboarding", icon: Link, feature: "kmip_server" }
-  ],
-  certs: [
-    { id: "cert-overview", label: "Certificate Operations", hint: "CA hierarchy, issuance, signing and certificate lifecycle", icon: FileText, feature: "certs" },
-    { id: "cert-enrollment", label: "Enrollment Protocols", hint: "ACME, EST, SCEP, CMPv2 and runtime mTLS enrollment settings", icon: Link, feature: "certs" },
-    { id: "cert-service-mtls", label: "Service mTLS", hint: "Internal certificates: key, PQC key exchange, rotation and restarts", icon: Shield, feature: "certs" }
-  ],
-  hsm: [
-    { id: "hsm-aws", label: "AWS CloudHSM", hint: "Cluster endpoint, slot mapping and crypto user binding", icon: Cloud, feature: "hsm_hardware_or_software" },
-    { id: "hsm-azure", label: "Azure Managed HSM", hint: "Managed HSM endpoint mapping and PKCS#11 bridge profile", icon: Cloud, feature: "hsm_hardware_or_software" },
-    { id: "hsm-thales", label: "Thales Luna HSM", hint: "NTLS endpoint, Luna slot and partition settings", icon: Cpu, feature: "hsm_hardware_or_software" },
-    { id: "hsm-utimaco", label: "Utimaco HSM", hint: "CryptoServer slot/partition profile and provider settings", icon: Cpu, feature: "hsm_hardware_or_software" },
-    { id: "hsm-entrust", label: "Entrust nShield HSM", hint: "Security World connector, slot profile and token mapping", icon: ShieldCheck, feature: "hsm_hardware_or_software" },
-    { id: "hsm-securosys", label: "Securosys Primus HSM", hint: "Primus PKCS#11 library, partition user and token label", icon: ShieldCheck, feature: "hsm_hardware_or_software" },
-    { id: "hsm-generic", label: "Generic PKCS#11 HSM", hint: "Vendor-neutral PKCS#11 library onboarding profile", icon: Plug, feature: "hsm_hardware_or_software" }
-  ],
-  cluster: [
-    { id: "topology", label: "Topology", hint: "Visual cluster map with node connections and health", icon: GitBranch, feature: "clustering" },
-    { id: "nodes", label: "Node Management", hint: "Detailed node metrics, role changes, and components", icon: Server, feature: "clustering" },
-    { id: "profiles", label: "Deploy Profiles", hint: "Replication profiles with deployment tier presets", icon: Layers, feature: "clustering" },
-    { id: "sync", label: "Sync Monitor", hint: "Real-time sync events, checkpoints, and replication lag", icon: RefreshCw, feature: "clustering" }
-  ],
-  admin: [
-    { id: "system", label: "System Administration", hint: "Platform health, runtime hardening, FIPS and governance settings", icon: Settings },
-    { id: "tenant", label: "Tenant Administration", hint: "Tenant lifecycle disable/delete workflow", icon: Building2 },
-    { id: "users", label: "User Management", hint: "User and group administration with role assignments", icon: Users }
-  ]
-};
-
 // Tabs merged into another; a saved or linked id opens the new home.
 // Platform > Health went to Administration > Health (1.38.0-beta),
 // Operations Metrics and Analytics to Overview > Operations (7.24.0-beta).
@@ -390,6 +329,8 @@ export default function VectaDashboardV3Shell(props: Props) {
     cluster: "topology",
     admin: "system"
   }));
+  // The one module whose sub-options are listed in the sidebar.
+  const [expandedTab, setExpandedTab] = useState(tab);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   const session = useMemo(
@@ -554,7 +495,7 @@ export default function VectaDashboardV3Shell(props: Props) {
     const q = navFilter.trim().toLowerCase();
     if (!q) return navGroups;
     return navGroups
-      .map((g: any) => ({ ...g, items: g.items.filter((it: any) => `${it.label} ${TITLES[it.id] || ""} ${g.g}`.toLowerCase().includes(q)) }))
+      .map((g: any) => ({ ...g, items: g.items.filter((it: any) => `${it.label} ${TITLES[it.id] || ""} ${g.g} ${(SUB_PANES[it.id] || []).map((sub) => sub.label).join(" ")}`.toLowerCase().includes(q)) }))
       .filter((g: any) => g.items.length > 0);
   }, [navGroups, navFilter]);
   const activeGroupLabel = useMemo(() => navGroups.find((g: any) => g.items.some((it: any) => it.id === tab))?.g || "", [navGroups, tab]);
@@ -573,13 +514,14 @@ export default function VectaDashboardV3Shell(props: Props) {
     }
   }, [tab, visibleTabIDs]);
 
-  const activePaneItems = (Array.isArray(SUB_PANES[tab]) ? SUB_PANES[tab] : []).filter((item) =>
-    canSeeFeature(item?.feature, enabledFeatures || new Set<FeatureKey>(), session)
-  );
+  const subPanesFor = (id: string): SubPane[] =>
+    (SUB_PANES[id] || []).filter((item) => canSeeFeature(item.feature, enabledFeatures || new Set<FeatureKey>(), session));
+  const activePaneItems = subPanesFor(tab);
   const selectedSubRaw = String((subPaneSelection as any)[tab] || "");
   const activeSubPaneSelection = String(
     activePaneItems.some((item) => String(item.id) === selectedSubRaw) ? selectedSubRaw : (activePaneItems[0]?.id || "")
   );
+  const activeSubPane = activePaneItems.find((item) => item.id === activeSubPaneSelection);
   const globalFipsEnabled = isFipsModeEnabled(fipsMode);
 
   // Flatten visible nav into command-palette items.
@@ -599,15 +541,15 @@ export default function VectaDashboardV3Shell(props: Props) {
   const selectTab = (nextTab: string) => {
     try { localStorage.setItem(TAB_STORAGE_KEY, nextTab); } catch { /* ignored */ }
     try { window.history.replaceState(null, "", `#${nextTab}`); } catch { /* ignored */ }
-    const paneItems = (Array.isArray(SUB_PANES[nextTab]) ? SUB_PANES[nextTab] : []).filter((item) =>
-      canSeeFeature(item?.feature, enabledFeatures || new Set<FeatureKey>(), session)
-    );
+    const paneItems = subPanesFor(nextTab);
+    setExpandedTab(nextTab);
     // Use startTransition so React keeps the current tab visible until the new
     // lazy module finishes loading — no Suspense fallback flicker on tab switch.
     startTransition(() => {
       setTab(nextTab);
-      if (paneItems.length) {
-        setSubPaneSelection((prev: any) => ({ ...prev, [nextTab]: String(prev?.[nextTab] || paneItems[0].id) }));
+      const firstPane = paneItems[0];
+      if (firstPane) {
+        setSubPaneSelection((prev: any) => ({ ...prev, [nextTab]: String(prev?.[nextTab] || firstPane.id) }));
       }
     });
   };
@@ -642,9 +584,6 @@ export default function VectaDashboardV3Shell(props: Props) {
         .vk-nav-group:hover{color:${C.text}!important}
         .vk-nav-item:hover .vk-nav-icon{color:${C.accent}!important}
         .vk-nav-item:hover .vk-nav-label{color:${C.text}!important}
-        .vk-subcard{transition:border-color .12s,background .12s,box-shadow .12s}
-        .vk-subcard:hover{border-color:${C.borderHi}!important;background:rgba(255,255,255,.02)!important}
-        .vk-subcard-active{border-color:${C.accent}!important;background:${C.accentDim}!important}
         .vk-icon-btn{transition:border-color .12s,color .12s,background .12s}
         .vk-icon-btn:hover{border-color:${C.borderHi}!important;color:${C.text}!important}
         .vk-topbar-cluster{transition:border-color .12s}
@@ -652,7 +591,6 @@ export default function VectaDashboardV3Shell(props: Props) {
         .vk-search-btn{transition:border-color .12s,color .12s}
         .vk-search-btn:hover{border-color:${C.borderHi}!important;color:${C.text}!important}
       `}</style>
-
 
       {/* ══════════════════════════════════════════════
           SIDEBAR
@@ -763,11 +701,20 @@ export default function VectaDashboardV3Shell(props: Props) {
               )}
               {groupOpen && g.items.map((it: any) => {
                 const isActive = tab === it.id;
+                const subItems = collapsed ? [] : subPanesFor(it.id);
+                const q = navFilter.trim().toLowerCase();
+                const subOpen = expandedTab === it.id ? subItems.length > 0 : Boolean(q) && subItems.some((sub) => sub.label.toLowerCase().includes(q));
                 return (
+                  <div key={it.id}>
                   <div
-                    key={it.id}
                     className="vk-nav-item"
-                    onClick={() => selectTab(it.id)}
+                    aria-expanded={subItems.length > 0 ? subOpen : undefined}
+                    onClick={() => {
+                      // The name opens the module and lists its sub-options; a second click folds them.
+                      if (isActive && subOpen) setExpandedTab("");
+                      else selectTab(it.id);
+                      if (collapsed && SUB_PANES[it.id]) setCollapsed(false);
+                    }}
                     title={collapsed ? it.label : undefined}
                     style={{
                       display: "flex",
@@ -816,6 +763,21 @@ export default function VectaDashboardV3Shell(props: Props) {
                         background: C.accentFg, flexShrink: 0,
                       }} />
                     )}
+                    {subItems.length > 0 && (
+                      <ChevronRight size={12} strokeWidth={2} style={{ color: C.muted, flexShrink: 0, transform: subOpen ? "rotate(90deg)" : "none", transition: "transform .15s" }} />
+                    )}
+                  </div>
+                  {subOpen && (
+                    <SidebarSubNav
+                      tabId={it.id}
+                      items={subItems}
+                      activeId={isActive ? activeSubPaneSelection : ""}
+                      onSelect={(subId) => {
+                        setSubPaneSelection((prev: any) => ({ ...prev, [it.id]: subId }));
+                        if (!isActive) selectTab(it.id);
+                      }}
+                    />
+                  )}
                   </div>
                 );
               })}
@@ -901,9 +863,11 @@ export default function VectaDashboardV3Shell(props: Props) {
           {/* Left: page title + pin */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <nav aria-label="Breadcrumb" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-              {activeGroupLabel && <span style={{ color: C.muted }}>{activeGroupLabel}</span>}
-              {activeGroupLabel && <span style={{ color: C.borderHi }}>/</span>}
-              <span style={{ fontWeight: 600, color: C.text, letterSpacing: -0.1 }}>{TITLES[tab]}</span>
+              {activeGroupLabel && !activeSubPane && <span style={{ color: C.muted }}>{activeGroupLabel}</span>}
+              {activeGroupLabel && !activeSubPane && <span style={{ color: C.borderHi }}>/</span>}
+              <span style={{ fontWeight: 600, color: activeSubPane ? C.muted : C.text, letterSpacing: -0.1 }}>{TITLES[tab]}</span>
+              {activeSubPane && <span style={{ color: C.borderHi }}>/</span>}
+              {activeSubPane && <span style={{ fontWeight: 600, color: C.text, letterSpacing: -0.1 }}>{activeSubPane.label}</span>}
             </nav>
             {tab !== "home" && (
               <button
@@ -1087,78 +1051,6 @@ export default function VectaDashboardV3Shell(props: Props) {
 
         {/* ── Content row ── */}
         <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-
-          {/* Sub-pane module panel */}
-          {activePaneItems.length > 0 && (
-            <div style={{
-              width: 232, flexShrink: 0,
-              background: C.surface,
-              borderRight: `1px solid ${C.border}`,
-              padding: "14px 10px",
-              overflowY: "auto",
-            }}>
-              <div style={{
-                fontSize: 9, color: C.muted,
-                textTransform: "uppercase", letterSpacing: 1.6,
-                marginBottom: 10, padding: "0 2px",
-                fontWeight: 700,
-              }}>
-                {TITLES[tab]}
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                {activePaneItems.map((item: any) => {
-                  const isActive = String(activeSubPaneSelection) === String(item.id);
-                  const ItemIcon = item.icon || null;
-                  return (
-                    <div
-                      key={String(item.id)}
-                      className={`vk-subcard${isActive ? " vk-subcard-active" : ""}`}
-                      onClick={() => setSubPaneSelection((prev: any) => ({ ...prev, [tab]: String(item.id) }))}
-                      style={{
-                        border: `1px solid ${isActive ? C.accent : C.border}`,
-                        background: isActive ? C.accentDim : "transparent",
-                        borderRadius: 8,
-                        padding: "9px 10px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                        {ItemIcon && (
-                          <span style={{
-                            width: 24, height: 24, borderRadius: 6,
-                            border: `1px solid ${isActive ? C.accent : C.border}`,
-                            background: isActive ? C.accentDim : C.card,
-                            display: "inline-flex", alignItems: "center", justifyContent: "center",
-                            color: isActive ? C.accent : C.dim,
-                            flexShrink: 0,
-                          }}>
-                            <ItemIcon size={12} strokeWidth={2} />
-                          </span>
-                        )}
-                        <div style={{
-                          fontSize: 11,
-                          color: isActive ? C.text : C.dim,
-                          fontWeight: isActive ? 600 : 500,
-                          lineHeight: 1.25,
-                        }}>
-                          {String(item.label || item.id)}
-                        </div>
-                      </div>
-                      {item.hint && (
-                        <div style={{
-                          fontSize: 9, color: C.muted,
-                          marginTop: 5, lineHeight: 1.45,
-                          paddingLeft: ItemIcon ? 33 : 0,
-                        }}>
-                          {String(item.hint)}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           {/* Tab content */}
           <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>

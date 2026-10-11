@@ -7,6 +7,32 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-11 — A module's views are sub-options in the sidebar, not a second column (9.6.0-beta)
+
+**Decision.** A module with several views (Cloud Key Control: BYOK, HYOK,
+Google CSE, Azure EKM, and seven other modules) lists them under its own
+name in the sidebar. Clicking the name opens the module and unfolds the
+list; clicking it again folds it. The column of cards the shell drew
+between the sidebar and the page is removed.
+
+**Why.** Owner directive: no sub-tab; the options are sub-options on the
+left, for every module. The column cost 232px of every page and put a
+second navigation beside the first.
+
+**Choices made.**
+- One module unfolded at a time, so the sidebar stays short. A module's
+  last view is remembered when it is opened again.
+- Clicking the name navigates as well as unfolds. A separate arrow that
+  unfolds without navigating was rejected: two targets on one row for no
+  gain.
+- The card descriptions became tooltips (pages are visual first).
+- With a view open the breadcrumb is "module / view"; adding the group in
+  front pushed the header buttons off a 1280px screen.
+
+**Not changed.** Tabs inside a page that sit beside their data (Audit Log's
+Events / Activity, Alert Center's Alerts / Analytics, Overview →
+Operations) are the "one home per view" rule, not module views, and stay.
+
 ## 2026-10-11 — Discovery: constants across the files of a scan; large objects read through; a first-kilobyte check without an ETag (9.2.0-beta)
 
 Owner asked for the limits 8.1.0-beta left to be fixed. One of them

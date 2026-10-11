@@ -273,3 +273,30 @@ test("operations status shows unavailable, not zero, when a source fails", async
   }
   await assertNoRenderBoundary(page);
 });
+
+// A module's views are sub-options under its name in the sidebar, never a
+// second column (9.6.0-beta). Clicking the name lists them and a second click
+// folds them; choosing one opens that view and names it in the breadcrumb.
+test("a module's sub-options expand under its name in the sidebar", async ({ page }) => {
+  const module = (label: string) => page.getByText(label, { exact: true }).first();
+  const crumb = page.getByRole("navigation", { name: "Breadcrumb" });
+  for (const [label, id, options] of [
+    ["Cloud Key Control", "cloudctl", ["BYOK", "HYOK", "Google CSE", "Azure EKM"]],
+    ["Certificates / PKI", "certs", ["Certificate Operations", "Enrollment Protocols", "Service mTLS"]],
+    ["Administration", "admin", ["System Administration", "Tenant Administration", "User Management"]],
+  ] as const) {
+    await module(label).click();
+    const sub = page.getByTestId(`subnav-${id}`);
+    await expect(sub.getByRole("button")).toHaveText([...options]);
+    await expect(page.locator("[data-testid^='subnav-']")).toHaveCount(1);
+    await sub.getByRole("button", { name: options[1], exact: true }).click();
+    await expect(sub.getByRole("button", { name: options[1], exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(crumb).toContainText(options[1]);
+    await assertNoRenderBoundary(page);
+  }
+  await module("Administration").click();
+  await expect(page.getByTestId("subnav-admin")).toHaveCount(0);
+  await module("Administration").click();
+  await expect(page.getByTestId("subnav-admin").getByRole("button", { name: "Tenant Administration", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(page.locator(".vk-subcard")).toHaveCount(0);
+});

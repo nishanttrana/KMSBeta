@@ -4,6 +4,23 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [9.6.0-beta] — 2026-10-11
+
+### Dashboard: a module's views open under its name in the sidebar
+- **Changed: the second column of view cards is gone.** Workbench, Data
+  Protection, Cloud Key Control, Enterprise KM, Certificates / PKI, HSM,
+  Cluster and Administration listed their views (for example BYOK, HYOK,
+  Google CSE and Azure EKM) in a column between the sidebar and the page.
+  Clicking the module's name in the sidebar now lists them indented under
+  it; clicking the name again folds them. One module is unfolded at a time.
+  The page gets the width the column used.
+- **Changed: the breadcrumb names the open view** ("Cloud Key Control /
+  HYOK").
+- **Changed: "Filter modules" also matches a view's name** and unfolds the
+  module that has it. In the icon-only sidebar, clicking a module with
+  views widens the sidebar to show them.
+- Each view's description is now its tooltip.
+
 ## [9.5.0-beta] — 2026-10-11
 
 ### Sign-in: the first admin password is always `changeit`

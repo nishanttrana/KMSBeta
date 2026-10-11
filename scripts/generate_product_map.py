@@ -31,6 +31,7 @@ SRC_ROOT = REPO_ROOT / "web" / "dashboard" / "src"
 SERVICES_ROOT = REPO_ROOT / "services"
 OUT_DIR = REPO_ROOT / "docs" / "generated"
 SHELL_PATH = SRC_ROOT / "components" / "VectaDashboardV3Shell.tsx"
+SUB_PANES_PATH = SRC_ROOT / "components" / "v3" / "SidebarSubNav.tsx"
 
 SERVICE_ALIASES = {
     "cluster": "cluster-manager",
@@ -994,11 +995,11 @@ def extract_shell_maps() -> Tuple[List[Dict[str, str]], Dict[str, str], Dict[str
             titles[match.group(1)] = match.group(2)
 
     nav: List[Dict[str, str]] = []
-    nav_start = text.find("const NAV")
-    sub_start = text.find("const SUB_PANES")
-    if nav_start >= 0 and sub_start > nav_start:
+    nav_start = text.find("const NAV = [")
+    nav_end = text.find("\n];", nav_start)
+    if nav_start >= 0 and nav_end > nav_start:
         current_group = ""
-        for line in text[nav_start:sub_start].splitlines():
+        for line in text[nav_start:nav_end].splitlines():
             group_match = re.search(r"\{\s*g:\s*\"([^\"]+)\"", line)
             if group_match:
                 current_group = group_match.group(1)
@@ -1007,10 +1008,13 @@ def extract_shell_maps() -> Tuple[List[Dict[str, str]], Dict[str, str], Dict[str
                 nav.append({"group": current_group, "id": item_match.group(1), "label": item_match.group(2)})
 
     subpanes: Dict[str, List[Dict[str, str]]] = defaultdict(list)
-    export_start = text.find("export default", sub_start)
-    if sub_start >= 0 and export_start > sub_start:
+    # A module's views are listed beside the sidebar component that shows them.
+    sub_text = SUB_PANES_PATH.read_text(encoding="utf-8")
+    sub_start = sub_text.find("const SUB_PANES")
+    sub_end = sub_text.find("\n};", sub_start)
+    if sub_start >= 0 and sub_end > sub_start:
         current_parent = ""
-        for line in text[sub_start:export_start].splitlines():
+        for line in sub_text[sub_start:sub_end].splitlines():
             parent_match = re.search(r"^\s*([A-Za-z0-9_]+):\s*\[", line)
             if parent_match:
                 current_parent = parent_match.group(1)
@@ -1018,6 +1022,10 @@ def extract_shell_maps() -> Tuple[List[Dict[str, str]], Dict[str, str], Dict[str
             if item_match and current_parent:
                 subpanes[current_parent].append({"id": item_match.group(1), "label": item_match.group(2)})
 
+    # An empty list here means the shell was restructured, not that the
+    # dashboard has no navigation: fail instead of writing an empty map.
+    if not nav or not subpanes:
+        raise SystemExit("generate_product_map: could not read NAV or SUB_PANES from the dashboard shell")
     return nav, tab_to_component, titles, dict(subpanes)
 
 
