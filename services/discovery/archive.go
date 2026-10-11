@@ -348,16 +348,46 @@ func (x *expansion) tar(prefix string, r io.Reader, depth int) {
 // archive, each member the parser reads. file names it in asset locations.
 // An archive over its caps yields what was read and the error.
 func (s *Service) fileAssets(tenantID, scanID, source, file, name string, raw []byte) ([]CryptoAsset, error) {
+	out, _, err := s.fileAssetsIn(fileRef{}, tenantID, scanID, source, file, name, raw)
+	return out, err
+}
+
+// fileAssetsIn is fileAssets for a file of a scan unit (usage_unit.go). On
+// its own (no unit) an archive is its own unit: its members can read each
+// other's constants.
+func (s *Service) fileAssetsIn(ref fileRef, tenantID, scanID, source, file, name string, raw []byte) ([]CryptoAsset, fileUsage, error) {
 	if archiveKind(raw) == "" || keystoreFormat(raw) != "" {
-		return s.materialAssets(tenantID, scanID, source, file, findMaterial(name, raw)), nil
+		found, usage := findMaterialIn(ref, file, name, raw)
+		return s.materialAssets(tenantID, scanID, source, file, found), usage, nil
+	}
+	own := ref.unit == nil
+	if own {
+		ref.unit = newUsageUnit()
 	}
 	members, err := expandArchive(name, raw)
-	var out []CryptoAsset
+	var (
+		out   []CryptoAsset
+		usage fileUsage
+	)
+	outer := ref.tag
 	for _, m := range members {
-		for _, a := range s.materialAssets(tenantID, scanID, source, file+"!/"+m.name, findMaterial(m.name, m.raw)) {
+		member := ref
+		member.tag = func(a CryptoAsset) {
+			if outer != nil {
+				outer(a)
+			}
+			a.Metadata["archive"], a.Metadata["member"] = file, m.name
+		}
+		found, u := findMaterialIn(member, file+"!/"+m.name, m.name, m.raw)
+		usage.merge(u)
+		for _, a := range s.materialAssets(tenantID, scanID, source, file+"!/"+m.name, found) {
 			a.Metadata["archive"], a.Metadata["member"] = file, m.name
 			out = append(out, a)
 		}
 	}
-	return out, err
+	if own {
+		late, _ := s.unitAssets(ref.unit, tenantID, scanID, source)
+		out = append(out, late...)
+	}
+	return out, usage, err
 }

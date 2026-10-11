@@ -4,6 +4,47 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [9.2.0-beta] — 2026-10-11
+
+### Crypto Discovery: the four limits left open in 8.1.0-beta
+- **Changed: more ways of naming an algorithm are resolved.**
+  - A constant another file defines (`Constants.CIPHER`, a Python module's
+    `DIGEST`, an exported Go constant), across the files of one scan: an
+    archive, a repository, the workspace or a bucket. Only names written as
+    constants cross files. The asset's detail shows where it is defined.
+  - A function with no arguments that only returns a literal
+    (`String algorithm() { return "DES"; }`).
+  - A format call or interpolated string whose parts are all known
+    (`String.format("%s/CBC/PKCS5Padding", ALG)`, `f"{PREFIX}1"`,
+    `` `${name}5` ``, `"$family/CBC"`).
+  - In a bucket, the object that reads a constant is read again on the
+    scan after the constant's value changes, though its own content has
+    not.
+- **Fixed: a name with an unfilled placeholder was reported as an
+  algorithm** (`Cipher.getInstance("$family/CBC")` became an asset named
+  `$FAMILY`).
+- **Changed: a PEM block is found wherever it starts**, also after other
+  text on its line or inside a binary with no line break before it.
+- **Changed: a deep scan reads large objects through.** An object of 2 MiB
+  to 256 MiB whose name says nothing is read once, start to end, for keys
+  and certificates anywhere in it, and opened if it is an archive of up to
+  32 MiB. Before, it was judged by its first kilobyte. **This transfers the
+  whole object**, once per version, within each run's byte budget.
+- **Changed: without an ETag, a replaced object is seen on the next scan.**
+  Each scan reads the first kilobyte of an object whose listing matches
+  and compares it with what was read. A write that kept the time and the
+  size is now missed only if it kept the first kilobyte too, and then for
+  at most seven days.
+
+**Upgrade.** Every bucket object is read once more on the next scans (the
+parser changed), then skipped again while unchanged.
+
+Still limits: a value computed at run time (arguments, arithmetic, a
+configuration lookup), a camel-case constant outside Go, objects over
+256 MiB, archives over 32 MiB, and a key in the middle of a media or
+compressed file are not found. Not verified against a real storage service
+that returns no ETag.
+
 ## [9.1.0-beta] — 2026-10-11
 
 ### Crypto Discovery: storage credentials checked against a real server; a one-command check for your own accounts

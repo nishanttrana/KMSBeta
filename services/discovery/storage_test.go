@@ -1086,17 +1086,40 @@ func TestStorageWithoutETags(t *testing.T) {
 	}
 	run(2, 1, "after the rewrite was read")
 
-	// The worst case: new content under the old time and size. It is not
-	// seen at once, and is seen once the stand-in is older than its trust.
+	// New content under the old time and size: its first bytes differ, so
+	// it is seen on the next scan, not days later.
 	kept := objects["keys/settled.pem"]
 	set("keys/settled.pem", object{sameLength(len(kept.body)), kept.modified})
-	run(2, 1, "content replaced under the same time and size")
+	if res := run(3, 0, "content replaced under the same time and size"); len(res.assets) != 3 {
+		t.Fatalf("assets after the replacement: %d", len(res.assets))
+	}
+	run(2, 1, "after the replacement was read")
+
+	// What is left: the same time, size and first kilobyte. That is not
+	// seen until the stand-in is older than its trust.
+	pad := strings.Repeat("#", sniffBytes+200) + "\n"
+	first := sameLength(0)
+	set("keys/padded.pem", object{pad + first, stamp(time.Hour)})
+	run(3, 1, "a new object")
+	run(2, 2, "the new object read")
+	set("keys/padded.pem", object{pad + sameLength(len(first)), objects["keys/padded.pem"].modified})
+	run(2, 2, "replaced under the same time, size and first kilobyte")
 	clock = clock.Add(modifiedTrust)
-	run(3, 0, "once the stand-in is too old to trust")
+	run(4, 0, "once the stand-ins are too old to trust")
+	// The check is one small ranged read per object, never the object.
+	ranged := 0
+	for _, r := range srv.ranged {
+		if strings.HasSuffix(r, "bytes=0-1023") {
+			ranged++
+		}
+	}
+	if ranged == 0 {
+		t.Fatal("no first-bytes check was made")
+	}
 
 	// An ETag, where there is one, is still what decides.
 	o := bucketObject{key: "k", size: 10, etag: "abc", modified: stamp(time.Hour), listed: time.Now()}
-	if !o.unchangedSince("abc", clock) || o.unchangedSince("abd", clock) || o.recorded(clock) != "abc" {
+	if _, standIn := o.standIn("abc", clock); !o.unchangedSince("abc") || o.unchangedSince("abd") || o.recorded(clock, nil) != "abc" || standIn {
 		t.Fatal("an ETag was not used as it is")
 	}
 	// No Date on the listing: no stand-in, the object is read.
@@ -1104,4 +1127,61 @@ func TestStorageWithoutETags(t *testing.T) {
 	if o.token() != "" {
 		t.Fatalf("a time was trusted without the service's clock: %q", o.token())
 	}
+}
+
+// A bucket's objects share constants too, across scans (9.2.0-beta): a call
+// in one object that names a constant another defines is found, the object
+// is not read again while nothing changes, and it is read again once the
+// constant's value has, although its own ETag has not.
+func TestStorageResolvesConstantsAcrossObjects(t *testing.T) {
+	svc, store, _ := newDiscoveryService(t)
+	ctx := context.Background()
+	objects := map[string]string{
+		"app/hasher.py":     "from settings import DIGEST\nh = hashlib.new(DIGEST)\n",
+		"conf/settings.py":  "DIGEST = 'sha1'\n",
+		"conf/unrelated.py": "x = 1\n",
+	}
+	srv := newS3Server(t, objects, false)
+	trust(t, svc, srv)
+	clock := time.Now().UTC()
+	svc.now = func() time.Time { clock = clock.Add(time.Second); return clock }
+	_ = store.CreateBucket(ctx, Bucket{ID: "b1", TenantID: "t1", Provider: "s3", Endpoint: srv.URL, Name: "acme-artifacts", Region: "eu-west-1"})
+	run := func(wantRead int, want ...string) {
+		t.Helper()
+		b, err := svc.bucket(ctx, "t1", "b1")
+		if err != nil {
+			t.Fatal(err)
+		}
+		res, err := svc.scanBucket(ctx, nil, b, "s", false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		svc.storeAssets(ctx, "t1", res.assets, map[string]bool{})
+		if got := assetLines(res.assets, b.label()); res.files != wantRead || !reflect.DeepEqual(got, want) && !(len(got) == 0 && len(want) == 0) {
+			t.Fatalf("read %d (want %d), found %q, want %q", res.files, wantRead, got, want)
+		}
+	}
+	run(3, "crypto_usage|SHA-1|weak|app/hasher.py:2")
+	rows, _ := store.BucketObjects(ctx, "t1", "b1")
+	if h := rows["app/hasher.py"]; len(h.AssetIDs) != 1 || !reflect.DeepEqual(h.Needs, []string{"DIGEST"}) || h.NeedsHash == "" {
+		t.Fatalf("the reading object's record: %+v", h)
+	}
+	if c := rows["conf/settings.py"]; !reflect.DeepEqual(c.Consts, map[string][]string{"DIGEST": {`"sha1"`}}) {
+		t.Fatalf("the defining object's record: %+v", c)
+	}
+	raw, _ := json.Marshal(rows)
+	if strings.Contains(string(raw), "hashlib") {
+		t.Fatal("a source line is in the scan state")
+	}
+	// Nothing changed: nothing is read, and the finding is still seen.
+	run(0)
+	if _, n, _ := svc.FindAssets(ctx, "t1", 100, 0, AssetFilter{Source: "storage"}); n != 1 {
+		t.Fatalf("%d assets after an unchanged scan", n)
+	}
+	// The constant changes. Its object is read at once; the object that
+	// reads it has the same ETag and is read again on the scan after.
+	objects["conf/settings.py"] = "DIGEST = 'md5'\n"
+	run(1)
+	run(1, "crypto_usage|MD5|weak|app/hasher.py:2")
+	run(0)
 }

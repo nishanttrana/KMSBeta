@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-11T09:21:14Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-11T09:36:38Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -605,9 +605,9 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 169 | - | button | { if (!window.confirm(`Roll back "$ "? The successor keys it created are deac... |  |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 72 | - | button | Cancel | onClose} style={{ background: "transparent", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 73 | - | button | (icon or dynamic label) | onSave |
-| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 161 | - | button | setStatus(s)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 169 | - | Btn | void save()} disabled= >Save |  |
-| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 176 | - | Btn | (confirmRemove ? void remove() : setConfirmRemove(true))} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 162 | - | button | setStatus(s)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 170 | - | Btn | void save()} disabled= >Save |  |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 177 | - | Btn | (confirmRemove ? void remove() : setConfirmRemove(true))} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 125 | - | button | setDeep((d) => !d)} title="Also read objects whose names say nothing: up to 2... |  |
 | web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 130 | - | Btn | void add()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 134 | - | button | onNavigate?.("playbooks")} style={ }>New storage connection |  |

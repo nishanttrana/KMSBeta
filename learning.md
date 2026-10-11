@@ -5,6 +5,34 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### Discovery: names across files, large objects, no-ETag checks (9.2.0-beta)
+- **"Resolving across files breaks skipping unchanged objects" had an
+  answer.** The objection was real: object B's findings would depend on
+  object A. Record, per object, the constants it defines, the names it
+  could not resolve, and a hash of what those names stood for; read B
+  again when the hash differs. No source line is stored. The cost is one
+  scan of delay: A is read first, B on the scan after.
+- **Report what a statement adds, not what it gives.** Statements kept for
+  a second look with the whole table must not repeat what the first look
+  found. The second look replays the first into the same `seen` set and
+  keeps only new findings; resolving twice returns nothing.
+- **An unfilled placeholder is not an unknown algorithm.** "Unknown names
+  are recorded and not assessed" turned `"$family/CBC"` into an asset
+  called `$FAMILY`. It only showed once interpolation was resolved and the
+  same line produced both the real name and the junk one.
+- **`encoding/pem` only sees a block at the start of a line**, and so did
+  every "contains a key marker" pre-check that then handed the bytes to
+  it. Search for the marker, cut to the END line, decode from there.
+- **Two failing tests were the feature working.** `TestDeepScanReadsByContent`
+  and `TestStorageWithoutETags` asserted the old limits (a key deep in a
+  large object not found; a same-time, same-size replacement unseen). A
+  test that pins a limitation should say so in its name or comment, or the
+  next change reads its failure as a regression.
+- **Without an ETag there is no free answer.** Trusting the listing misses
+  a replaced key; reading everything costs the bucket every scan. One
+  kilobyte per object per scan is the middle: it turns "same time and
+  size" into "same time, size and first kilobyte", which a replaced key
+  does not survive, for a ranged request each.
 ### Verifying storage credentials for real (9.1.0-beta)
 - **"Not proven" is fixed by a run, not by more tests of the same kind.**
   The stand-ins for STS checked the signature with the AWS SDK's signer and

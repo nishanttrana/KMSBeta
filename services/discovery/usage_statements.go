@@ -1,11 +1,7 @@
 package main
 
 import (
-	"regexp"
-	"strconv"
 	"strings"
-
-	"vecta-kms/pkg/cryptocatalog"
 )
 
 // Usage rules read statements, not lines (8.1.0-beta). Until now each rule
@@ -25,10 +21,11 @@ import (
 // file assigns a string or a key size is replaced by that value where it is
 // read, and the finding says which name and where it was assigned.
 //
-// It stays deterministic and local: strings and comments are told apart by
-// a tokeniser, not by evaluating code. Not resolved: a value from another
-// file, a function's result, a format string, or a name assigned more than
-// maxConstValues different values (that is a variable, not a constant).
+// It stays deterministic: strings and comments are told apart by a
+// tokeniser, not by evaluating code. What a name can stand for, in this
+// file and across the files of a scan, is in usage_resolve.go and
+// usage_unit.go. A name assigned more than maxConstValues different values
+// is a variable, not a constant, and is not resolved.
 
 const (
 	maxStatementLines = 12
@@ -275,203 +272,4 @@ func startsWithPlus(toks []token) bool {
 		return false
 	}
 	return !(i+1 < len(toks) && isPunct(toks[i+1], '+'))
-}
-
-// constValue is a literal a file assigns to a name.
-type constValue struct {
-	lit  string // as it is written where the name is read: "DES" or 1024
-	line int
-}
-
-const (
-	constMods = `(?:(?:export|public|private|protected|internal|static|final|const|let|var|val|mut|readonly|pub|my|our|local)\s+)*`
-	constLit  = `(?:"([^"\\\n]{1,64})"|'([^'\\\n]{1,64})'|(\d{3,5}))`
-	constTail = `\s*;?\s*$`
-)
-
-var (
-	// type name = value (Java, C#, C), name = value, name: type = value.
-	reConst = regexp.MustCompile(`^\s*` + constMods + `(?:[A-Za-z_][\w.<>\[\]]*\s+)?([$@]?[A-Za-z_][\w.$]*)\s*(?::\s*[\w.<>\[\]&' ]+?\s*)?=\s*` + constLit + constTail)
-	// Go: name := value, const name = value, var name type = value.
-	reConstGo = regexp.MustCompile(`^\s*(?:const\s+|var\s+)?([A-Za-z_]\w*)(?:\s+[\w.\[\]*]+)?\s*:?=\s*` + constLit + constTail)
-	// C: #define NAME value.
-	reDefine     = regexp.MustCompile(`^\s*#\s*define\s+([A-Za-z_]\w*)\s+` + constLit + `\s*$`)
-	reUpperConst = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
-)
-
-// constName is the key a name is kept and looked up by: its last segment,
-// without a sigil.
-func constName(ident string) string {
-	if i := strings.LastIndexByte(ident, '.'); i >= 0 {
-		ident = ident[i+1:]
-	}
-	return strings.TrimLeft(ident, "$@")
-}
-
-// constants collects the names a file assigns a string or a key size to. A
-// name with more than maxConstValues different values is dropped.
-func constants(ext string, sts []statement, raw []byte) map[string][]constValue {
-	out := map[string][]constValue{}
-	add := func(m []string, line int) {
-		if m == nil {
-			return
-		}
-		lit := m[4]
-		if lit == "" {
-			lit = `"` + m[2] + m[3] + `"`
-		}
-		name := constName(m[1])
-		for _, v := range out[name] {
-			if v.lit == lit {
-				return
-			}
-		}
-		out[name] = append(out[name], constValue{lit, line})
-	}
-	re := reConst
-	if goExt[ext] {
-		re = reConstGo
-	}
-	for _, st := range sts {
-		if st.toks == nil {
-			continue
-		}
-		add(re.FindStringSubmatch(strings.Join(strings.Fields(st.text), " ")), st.line)
-	}
-	if cExt[ext] {
-		// "#" is no comment in C, but a #define is read from the raw line:
-		// its value is not an expression.
-		for i, line := range strings.Split(string(raw), "\n") {
-			if len(line) <= maxUsageLine && strings.Contains(line, "define") {
-				add(reDefine.FindStringSubmatch(strings.TrimRight(line, "\r")), i+1)
-			}
-		}
-	}
-	for name, vals := range out {
-		if len(vals) > maxConstValues {
-			delete(out, name)
-		}
-	}
-	return out
-}
-
-// readsConstant reports whether the name at toks[i] is read there as a
-// value: not called, not assigned to, and written as the file would write
-// its own name (bare, this.name, self.name, or an upper-case constant
-// behind any qualifier).
-func readsConstant(toks []token, i int) bool {
-	id := toks[i].text
-	name := constName(id)
-	if dot := strings.LastIndexByte(id, '.'); dot >= 0 {
-		if q := id[:dot]; q != "this" && q != "self" && q != "$this" && !reUpperConst.MatchString(name) {
-			return false
-		}
-	}
-	next, j := neighbour(toks, i, 1)
-	if j >= 0 && isPunct(next, '(') {
-		return false
-	}
-	if j >= 0 && isPunct(next, '=') && !(j+1 < len(toks) && isPunct(toks[j+1], '=')) {
-		return false // an assignment or a named argument: key_size=...
-	}
-	if j >= 0 && isPunct(next, ':') && j+1 < len(toks) && isPunct(toks[j+1], '=') {
-		return false
-	}
-	// A member of something else (obj->name, Type::name) is the file's own
-	// only when it is spelled as a constant.
-	if prev, k := neighbour(toks, i, -1); k > 0 && ((isPunct(prev, '>') && isPunct(toks[k-1], '-')) || (isPunct(prev, ':') && isPunct(toks[k-1], ':'))) {
-		owner, _ := neighbour(toks, k-1, -1)
-		if !reUpperConst.MatchString(name) && owner.text != "$this" && owner.text != "self" {
-			return false
-		}
-	}
-	return true
-}
-
-// usageScan applies the usage rules to a whole file.
-func usageScan(ext string, raw []byte) []finding {
-	sts := statements(ext, raw)
-	consts := constants(ext, sts, raw)
-	var out []finding
-	for _, st := range sts {
-		seen := map[string]bool{}
-		lineAt := func(off int) int { return st.line + strings.Count(st.text[:off], "\n") }
-		out = append(out, matchUsage(ext, st.text, lineAt, seen, nil)...)
-		if len(consts) == 0 {
-			continue
-		}
-		tried := map[string]bool{}
-		for i, t := range st.toks {
-			name := constName(t.text)
-			if t.kind != tokIdent || tried[name] || len(consts[name]) == 0 || !readsConstant(st.toks, i) {
-				continue
-			}
-			tried[name] = true
-			for _, v := range consts[name] {
-				if v.line == st.line {
-					continue // the assignment itself
-				}
-				var sb strings.Builder
-				for k, u := range st.toks {
-					if u.kind == tokIdent && constName(u.text) == name && readsConstant(st.toks, k) {
-						sb.WriteString(v.lit)
-					} else {
-						sb.WriteString(u.text)
-					}
-				}
-				variant := sb.String()
-				at := func(off int) int { return st.line + strings.Count(variant[:off], "\n") }
-				out = append(out, matchUsage(ext, variant, at, seen, map[string]interface{}{"via": name, "assigned_line": v.line})...)
-			}
-		}
-	}
-	return out
-}
-
-// matchUsage applies the rules to text. lineAt gives the line of an offset
-// in it; seen keeps one finding per line and algorithm; extra is recorded
-// with each finding.
-func matchUsage(ext, text string, lineAt func(int) int, seen map[string]bool, extra map[string]interface{}) []finding {
-	var out []finding
-	for _, r := range usageRules {
-		if r.exts != nil && !r.exts[ext] {
-			continue
-		}
-		if r.exts == nil && !configExt[ext] && ext != "" && !scriptExt[ext] {
-			// Directive rules read configuration and scripts, not code.
-			continue
-		}
-		for _, loc := range r.re.FindAllStringSubmatchIndex(text, -1) {
-			m := make([]string, len(loc)/2)
-			for g := range m {
-				if loc[2*g] >= 0 {
-					m[g] = text[loc[2*g]:loc[2*g+1]]
-				}
-			}
-			// The line the match starts on (a rule may match the line break
-			// before it).
-			off := loc[0]
-			for off < loc[1] && (text[off] == '\n' || text[off] == ' ' || text[off] == '\t') {
-				off++
-			}
-			n := lineAt(off)
-			for _, alg := range r.algs(m) {
-				// The catalogue's own spelling (TLSv1 -> TLS-1.0, 3DES -> 3TDEA).
-				if e, ok := cryptocatalog.Lookup(alg); ok {
-					alg = e.Algorithm
-				}
-				key := alg + "|" + strconv.Itoa(n)
-				if alg == "" || seen[key] {
-					continue
-				}
-				seen[key] = true
-				meta := map[string]interface{}{"api": r.api}
-				for k, v := range extra {
-					meta[k] = v
-				}
-				out = append(out, finding{kind: "crypto_usage", algorithm: alg, name: alg + " · " + r.api, line: n, meta: meta})
-			}
-		}
-	}
-	return out
 }

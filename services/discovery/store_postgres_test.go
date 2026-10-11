@@ -167,6 +167,16 @@ func TestTargetsAndAssetRemovalPostgres(t *testing.T) {
 	if a, _ := store.GetAsset(ctx, tenant, "a2"); a.ScanID != "scan_touch" || !a.LastSeen.Equal(t0.Add(2*time.Hour)) || a.Algorithm != "RSA-2048" {
 		t.Fatalf("touched asset %+v", a)
 	}
+	// Migration 010: an object's constants, the names it reads and their hash.
+	withConsts := BucketObject{TenantID: tenant, BucketID: added.ID, Key: "releases/c.py", ETag: "e9", Rules: scanRules,
+		Consts: map[string][]string{"DIGEST": {`"sha1"`, `"md5"`}}, Needs: []string{"ALG", "KEY_BITS"}, NeedsHash: "0123456789abcdef"}
+	if err := store.PutBucketObjects(ctx, []BucketObject{withConsts}, t0.Add(-time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := store.BucketObjects(ctx, tenant, added.ID); err != nil || len(got["releases/c.py"].Consts["DIGEST"]) != 2 ||
+		strings.Join(got["releases/c.py"].Needs, ",") != "ALG,KEY_BITS" || got["releases/c.py"].NeedsHash != "0123456789abcdef" || got["releases/b.bin"].Consts != nil {
+		t.Fatalf("constants round trip: %+v %v", got["releases/c.py"], err)
+	}
 	if err := store.PruneBucketObjects(ctx, tenant, added.ID, t0); err != nil {
 		t.Fatal(err)
 	}

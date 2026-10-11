@@ -51,11 +51,19 @@ func sshFingerprint(blob []byte) string {
 // findMaterial parses one file. A keystore is recognised by its first bytes
 // or its extension; name also picks the usage rules for its language.
 func findMaterial(name string, raw []byte) []finding {
+	out, _ := findMaterialIn(fileRef{}, name, name, raw)
+	return out
+}
+
+// findMaterialIn is findMaterial for a file of a scan unit: file is its
+// name in asset locations, and what it shares with the unit is returned.
+func findMaterialIn(ref fileRef, file, name string, raw []byte) ([]finding, fileUsage) {
+	var shared fileUsage
 	if format := keystoreFormat(raw); format != "" {
-		return []finding{{kind: "keystore", fingerprint: secretFingerprint(raw), meta: map[string]interface{}{"format": format}}}
+		return []finding{{kind: "keystore", fingerprint: secretFingerprint(raw), meta: map[string]interface{}{"format": format}}}, shared
 	}
 	if keystoreExt[strings.ToLower(filepath.Ext(name))] {
-		return []finding{{kind: "keystore", fingerprint: secretFingerprint(raw), meta: map[string]interface{}{"format": strings.TrimPrefix(strings.ToLower(filepath.Ext(name)), ".")}}}
+		return []finding{{kind: "keystore", fingerprint: secretFingerprint(raw), meta: map[string]interface{}{"format": strings.TrimPrefix(strings.ToLower(filepath.Ext(name)), ".")}}}, shared
 	}
 	var out []finding
 	ext, usage := usageFile(name)
@@ -82,30 +90,82 @@ func findMaterial(name string, raw []byte) []finding {
 		out = append(out, secrets...)
 	}
 	if usage {
-		out = append(out, usageScan(ext, raw)...)
+		var found []finding
+		found, shared = usageScan(ext, raw, ref, file)
+		out = append(out, found...)
 	}
-	rest, sawPEM := raw, false
-	for {
-		before := rest
-		var block *pem.Block
-		block, rest = pem.Decode(rest)
-		if block == nil {
-			break
-		}
-		sawPEM = true
-		at := len(raw) - len(before) + bytes.Index(before, []byte("-----BEGIN "+block.Type))
-		ln := bytes.Count(raw[:max(at, 0)], []byte("\n")) + 1
-		if f, ok := pemFinding(block, ln); ok {
-			out = append(out, f)
-		}
-	}
+	pems, sawPEM := pemFindings(raw)
+	out = append(out, pems...)
 	// A DER certificate (.cer, .der) has no PEM armour.
 	if !sawPEM && len(out) == 0 {
 		if c, err := x509.ParseCertificate(raw); err == nil {
 			out = append(out, certFinding(c, 0))
 		}
 	}
-	return out
+	return out, shared
+}
+
+var (
+	pemBegin = []byte("-----BEGIN ")
+	pemEnd   = []byte("-----END ")
+)
+
+// maxPEMBlock bounds one armoured block looked for in the middle of a line.
+const maxPEMBlock = 64 << 10
+
+// pemFindings reads every PEM block in raw. encoding/pem finds a block
+// only where "-----BEGIN" starts a line, so a key embedded in a binary, or
+// following other text on its line, was never decoded (until 9.2.0-beta).
+// Those are found by their marker and decoded from there.
+func pemFindings(raw []byte) ([]finding, bool) {
+	var (
+		out []finding
+		saw bool
+	)
+	add := func(block *pem.Block, at int) {
+		saw = true
+		if f, ok := pemFinding(block, bytes.Count(raw[:max(at, 0)], []byte("\n"))+1); ok {
+			out = append(out, f)
+		}
+	}
+	for rest := raw; ; {
+		before := rest
+		var block *pem.Block
+		if block, rest = pem.Decode(rest); block == nil {
+			break
+		}
+		add(block, len(raw)-len(before)+bytes.Index(before, []byte("-----BEGIN "+block.Type)))
+	}
+	for from := 0; ; {
+		i := bytes.Index(raw[from:], pemBegin)
+		if i < 0 {
+			break
+		}
+		at := from + i
+		from = at + len(pemBegin)
+		if at == 0 || raw[at-1] == '\n' {
+			continue // read above
+		}
+		if block := firstPEM(raw[at:min(len(raw), at+maxPEMBlock)]); block != nil {
+			add(block, at)
+		}
+	}
+	return out, saw
+}
+
+// firstPEM decodes the block that starts window, which begins at a
+// "-----BEGIN" marker: to the end of its END line, and no further.
+func firstPEM(window []byte) *pem.Block {
+	end := bytes.Index(window, pemEnd)
+	if end < 0 {
+		return nil
+	}
+	tail := bytes.Index(window[end+len(pemEnd):], []byte("-----"))
+	if tail < 0 {
+		return nil
+	}
+	block, _ := pem.Decode(window[:end+len(pemEnd)+tail+5])
+	return block
 }
 
 // secretFindings: service tokens, cloud secret keys and PEM private keys

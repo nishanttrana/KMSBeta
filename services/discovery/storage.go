@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/tls"
@@ -304,9 +305,12 @@ type bucketObject struct {
 //     the scan read the object then carries a later time. A younger object
 //     gets no token and is read again next scan.
 //   - A token is trusted for modifiedTrust from when the object was read.
-//     After that it is read again whatever the listing says, which bounds
-//     how long a write that kept the old time and length (a copy that
-//     preserves times, on a gateway over a file system) can go unseen.
+//     After that it is read again whatever the listing says.
+//   - It is never trusted alone: each scan reads the object's first
+//     kilobyte and compares its print with the one recorded (9.2.0-beta).
+//     A write that kept the old time and length (a copy that preserves
+//     times, on a gateway over a file system) is seen at once unless it
+//     kept the first kilobyte too, and then within modifiedTrust.
 //
 // A listing with neither an ETag nor a time and a Date is read in full, as
 // before.
@@ -330,31 +334,47 @@ func (o bucketObject) token() string {
 }
 
 // recorded is the token as stored when the object is read at now: a
-// stand-in also carries when it was read.
-func (o bucketObject) recorded(now time.Time) string {
+// stand-in also carries when it was read and the print of its first bytes.
+func (o bucketObject) recorded(now time.Time, head []byte) string {
 	t := o.token()
 	if strings.HasPrefix(t, modifiedMark) {
-		t += fmt.Sprintf("~%d", now.Unix())
+		t += fmt.Sprintf("~%d~%s", now.Unix(), headPrint(head))
 	}
 	return t
 }
 
-// unchangedSince reports whether stored (the token recorded at the last
-// read) says the object listed now is the one that was read.
-func (o bucketObject) unchangedSince(stored string, now time.Time) bool {
+// headPrint identifies the first sniffBytes of an object's content.
+func headPrint(head []byte) string {
+	return hex.EncodeToString(pkgcrypto.SHA256(head[:min(len(head), sniffBytes)])[:8])
+}
+
+// standIn reports whether stored is a last-modified stand-in that still
+// says the object listed now is the one read, and the print its first
+// bytes must then have. The caller reads those bytes before believing it
+// (9.2.0-beta): a write that kept the time and the length is seen at once
+// unless it also kept the first kilobyte.
+func (o bucketObject) standIn(stored string, now time.Time) (string, bool) {
 	t := o.token()
-	if t == "" || stored == "" {
-		return false
+	if o.etag != "" || t == "" {
+		return "", false
 	}
-	if !strings.HasPrefix(t, modifiedMark) {
-		return stored == t
+	rest, ok := strings.CutPrefix(stored, t+"~")
+	if !ok {
+		return "", false
 	}
-	read, ok := strings.CutPrefix(stored, t+"~")
-	if !ok || atoi(read) <= 0 {
-		return false
+	read, print, ok := strings.Cut(rest, "~")
+	if !ok || atoi(read) <= 0 || print == "" {
+		return "", false
 	}
 	at := time.Unix(int64(atoi(read)), 0)
-	return !now.Before(at) && now.Sub(at) < modifiedTrust
+	return print, !now.Before(at) && now.Sub(at) < modifiedTrust
+}
+
+// unchangedSince reports whether stored (the ETag recorded at the last
+// read) says the object listed now is the one that was read. Without an
+// ETag it is never enough on its own (standIn).
+func (o bucketObject) unchangedSince(stored string) bool {
+	return o.etag != "" && stored == o.etag
 }
 
 // parseListingTime reads a listing's time: RFC 3339 (S3, Google) or the
@@ -532,7 +552,55 @@ func scannable(o bucketObject) bool {
 // nothing: any other object small enough to hold, outside dependency and
 // build folders.
 func sniffable(o bucketObject) bool {
-	return o.size > 0 && o.size <= maxArchiveBytes && !strings.HasSuffix(o.key, "/") && !skippedPath(o.key)
+	return o.size > 0 && o.size <= maxStreamBytes && !strings.HasSuffix(o.key, "/") && !skippedPath(o.key)
+}
+
+// maxStreamBytes is the largest object a deep scan reads through (a
+// variable so a test can lower it). Larger ones are not looked into.
+var maxStreamBytes int64 = 256 << 20
+
+// streamed: an object too large to hold that a deep scan reads through
+// once, looking for armoured keys and certificates (9.2.0-beta). Until now
+// such an object was judged by its first kilobyte.
+func streamed(o bucketObject) bool {
+	return o.size > maxUploadBytes && !headOnlyExt[strings.ToLower(path.Ext(o.key))]
+}
+
+// streamPEM reads r to its end and returns the PEM blocks in it, wherever
+// they start. It holds a window, never the object.
+func streamPEM(r io.Reader) ([]finding, error) {
+	const window = 4 * maxPEMBlock
+	br := bufio.NewReaderSize(r, window)
+	var out []finding
+	line := 1
+	for {
+		buf, err := br.Peek(window)
+		if len(buf) == 0 {
+			if err == io.EOF {
+				return out, nil
+			}
+			return out, errors.New("the download ended early")
+		}
+		i := bytes.Index(buf, pemBegin)
+		if i < 0 {
+			n := len(buf)
+			if err == nil {
+				n -= len(pemBegin) - 1 // a marker may straddle the window's end
+			}
+			line += bytes.Count(buf[:n], []byte("\n"))
+			_, _ = br.Discard(n)
+			continue
+		}
+		line += bytes.Count(buf[:i], []byte("\n"))
+		_, _ = br.Discard(i)
+		block, _ := br.Peek(maxPEMBlock)
+		if b := firstPEM(block); b != nil {
+			if f, ok := pemFinding(b, line); ok {
+				out = append(out, f)
+			}
+		}
+		_, _ = br.Discard(len(pemBegin))
+	}
 }
 
 // headOnlyExt: formats that are compressed or encoded throughout, so key
@@ -554,7 +622,7 @@ func readWhole(o bucketObject) bool {
 
 // sniffCost is what a deep scan reads of an object to decide.
 func sniffCost(o bucketObject) int64 {
-	if readWhole(o) {
+	if readWhole(o) || streamed(o) {
 		return o.size
 	}
 	return sniffBytes
@@ -580,41 +648,98 @@ func worthParsing(raw []byte) bool {
 type bucketJob struct {
 	bucketObject
 	sniff bool
+	// verify: the object has no ETag and its listing matches what was
+	// read; it is unchanged if its first bytes still have this print.
+	verify string
+	old    BucketObject
 }
 
-// fetchObject reads the object a job names. A sniffed object that holds
-// nothing of interest returns nil. A deep scan reads a small object whole
-// and a larger one only if its first kilobyte is a keystore, an archive or
-// a key.
-func (s *Service) fetchObject(ctx context.Context, client *http.Client, b Bucket, cred bucketCredential, j bucketJob) ([]byte, error) {
+// objectRead is what reading one object gave.
+type objectRead struct {
+	assets []CryptoAsset
+	usage  fileUsage
+	parsed bool   // its content reached the parser
+	head   []byte // its first bytes, for the stand-in's print
+}
+
+// readJob reads the object a job names and inventories it. A deep scan
+// reads a small object whole, reads through a large one for armoured keys,
+// and looks only at the first kilobyte of formats that can't hold key text.
+func (s *Service) readJob(ctx context.Context, client *http.Client, b Bucket, cred bucketCredential, j bucketJob, ref fileRef, scanID, file string) (objectRead, error) {
+	var out objectRead
+	parse := func(raw []byte) error {
+		var err error
+		out.parsed = true
+		out.assets, out.usage, err = s.fileAssetsIn(ref, b.TenantID, scanID, "storage", file, j.key, raw)
+		return err
+	}
 	limit := int64(maxUploadBytes)
-	if !j.sniff {
+	switch {
+	case !j.sniff:
 		if archiveName(j.key) {
 			limit = maxArchiveBytes
 		}
-		return s.readObject(ctx, client, b, cred, j.key, limit, 0)
-	}
-	if readWhole(j.bucketObject) {
 		raw, err := s.readObject(ctx, client, b, cred, j.key, limit, 0)
-		if err != nil || !worthParsing(raw) {
-			return nil, err
+		if err != nil {
+			return out, err
 		}
-		return raw, nil
+		out.head = raw
+		return out, parse(raw)
+	case readWhole(j.bucketObject):
+		raw, err := s.readObject(ctx, client, b, cred, j.key, limit, 0)
+		if err != nil {
+			return out, err
+		}
+		if out.head = raw; worthParsing(raw) {
+			return out, parse(raw)
+		}
+		return out, nil
+	case streamed(j.bucketObject):
+		resp, err := s.bucketGet(ctx, client, b, cred, j.key, nil, 0)
+		if err != nil {
+			return out, err
+		}
+		defer resp.Body.Close() //nolint:errcheck
+		br := bufio.NewReaderSize(io.LimitReader(resp.Body, maxStreamBytes+1), 4*maxPEMBlock)
+		head, _ := br.Peek(sniffBytes)
+		out.head = append([]byte(nil), head...)
+		if archiveKind(head) != "" || keystoreFormat(head) != "" {
+			// An archive is opened if it can be held; a keystore this
+			// large is not fingerprinted.
+			if archiveKind(head) == "" || keystoreFormat(head) != "" || j.size > maxArchiveBytes {
+				return out, nil
+			}
+			raw, err := io.ReadAll(io.LimitReader(br, maxArchiveBytes+1))
+			if err != nil || len(raw) > maxArchiveBytes {
+				return out, errors.New("the download ended early or the object is larger than its listing said")
+			}
+			return out, parse(raw)
+		}
+		found, err := streamPEM(br)
+		if len(found) > 0 {
+			out.parsed = true
+			out.assets = s.materialAssets(b.TenantID, scanID, "storage", file, found)
+		}
+		return out, err
 	}
 	head, err := s.readObject(ctx, client, b, cred, j.key, 0, sniffBytes)
-	if err != nil || !looksLikeKeyMaterial(head) {
-		return nil, err
+	if out.head = head; err != nil || !looksLikeKeyMaterial(head) {
+		return out, err
 	}
 	if j.size <= int64(len(head)) {
-		return head, nil
+		return out, parse(head)
 	}
 	if archiveKind(head) != "" {
 		limit = maxArchiveBytes
 	}
 	if j.size > limit {
-		return nil, nil // key material by its first bytes, but too large to hold
+		return out, nil // key material by its first bytes, but too large to hold
 	}
-	return s.readObject(ctx, client, b, cred, j.key, limit, 0)
+	raw, err := s.readObject(ctx, client, b, cred, j.key, limit, 0)
+	if err != nil {
+		return out, err
+	}
+	return out, parse(raw)
 }
 
 // One run's budget for one bucket (variables so a test can lower them). A
@@ -625,7 +750,7 @@ var bucketRunBudget = 6 * time.Minute
 
 // scanRules is recorded with each object read. Raise it when the parser
 // learns something new, so unchanged objects are read again.
-const scanRules = 3
+const scanRules = 4
 
 // scanBucket reads the bucket from where its last run stopped, through
 // guard (and, with a connection, only to addresses its credential may go): it lists the
@@ -670,9 +795,51 @@ func (s *Service) scanBucket(ctx context.Context, guard dialControl, b Bucket, s
 		label = b.label()
 		wall  = time.Now()
 	)
+	// unit: the constants this bucket's objects define, from every object
+	// read so far (this run or an earlier one), for calls in other objects
+	// that name them. waiting: objects read in this run that read such a
+	// constant; they are settled when the run ends.
+	unit := newUsageUnit()
+	waiting := map[string]BucketObject{}
+	for key, old := range known {
+		unit.seed(label+"/"+key, old.Consts)
+	}
+	var rows []BucketObject
+	// keep marks an unchanged object's assets seen and carries its record
+	// over. It is kept only if every asset found in it is still in the
+	// inventory; one that is not (removed, or never stored because the scan
+	// stopped first) is found by reading again.
+	keep := func(old BucketObject, o bucketObject) (bool, error) {
+		n, err := s.store.TouchAssets(ctx, b.TenantID, old.AssetIDs, scanID, s.now())
+		if err != nil {
+			return false, fmt.Errorf("mark unchanged assets seen: %w", err)
+		}
+		if n != len(old.AssetIDs) {
+			return false, nil
+		}
+		out.unchanged++
+		out.kept += n
+		old.Size = o.size
+		rows = append(rows, old)
+		return true, nil
+	}
 	finish := func(complete bool) error {
 		if probe {
 			return nil
+		}
+		// Calls that name a constant another object defines, now that this
+		// run's objects are all read; and what each waiting object's names
+		// stand for, so a later change reads it again.
+		late, byOwner := s.unitAssets(unit, b.TenantID, scanID, "storage")
+		out.assets = append(out.assets, late...)
+		settled := make([]BucketObject, 0, len(waiting))
+		for key, row := range waiting {
+			row.AssetIDs = append(row.AssetIDs, byOwner[key]...)
+			row.NeedsHash = unit.needsHash(label+"/"+key, row.Needs)
+			settled = append(settled, row)
+		}
+		if err := s.store.PutBucketObjects(ctx, settled, s.now()); err != nil {
+			return err
 		}
 		b.ScannedAt = s.now()
 		if complete {
@@ -698,9 +865,9 @@ func (s *Service) scanBucket(ctx context.Context, guard dialControl, b Bucket, s
 		}
 		var (
 			todo []bucketJob
-			rows []BucketObject
 			cut  bool // the byte budget ended inside this page
 		)
+		rows = rows[:0]
 		for _, o := range page {
 			j := bucketJob{bucketObject: o, sniff: !scannable(o)}
 			cost := o.size
@@ -710,19 +877,19 @@ func (s *Service) scanBucket(ctx context.Context, guard dialControl, b Bucket, s
 				}
 				cost = sniffCost(o)
 			}
-			if old, ok := known[o.key]; ok && !probe && old.Rules == scanRules && o.unchangedSince(old.ETag, s.now()) {
-				n, err := s.store.TouchAssets(ctx, b.TenantID, old.AssetIDs, scanID, s.now())
-				if err != nil {
-					return out, fmt.Errorf("mark unchanged assets seen: %w", err)
-				}
-				// Skipped only if every asset found in it is still in the
-				// inventory; one that is not (removed, or never stored
-				// because the scan stopped first) is found by reading again.
-				if n == len(old.AssetIDs) {
-					out.unchanged++
-					out.kept += n
-					rows = append(rows, BucketObject{TenantID: b.TenantID, BucketID: b.ID, Key: o.key, ETag: old.ETag, Size: o.size, AssetIDs: old.AssetIDs, Rules: scanRules})
-					continue
+			// What the constants it reads from other objects stand for
+			// must be what it was when the object was read.
+			if old, ok := known[o.key]; ok && !probe && old.Rules == scanRules && old.NeedsHash == unit.needsHash(label+"/"+o.key, old.Needs) {
+				if o.unchangedSince(old.ETag) {
+					kept, err := keep(old, o)
+					if err != nil {
+						return out, err
+					}
+					if kept {
+						continue
+					}
+				} else if print, ok := o.standIn(old.ETag, s.now()); ok {
+					j.verify, j.old, cost = print, old, min(cost, sniffBytes)
 				}
 			}
 			if bytes+cost > maxBucketBytes && bytes > 0 {
@@ -741,30 +908,49 @@ func (s *Service) scanBucket(ctx context.Context, guard dialControl, b Bucket, s
 			go func() {
 				defer wg.Done()
 				for o := range jobs {
-					raw, err := s.fetchObject(ctx, client, b, cred, o)
-					var found []CryptoAsset
-					if err == nil && raw != nil {
-						found, err = s.fileAssets(b.TenantID, scanID, "storage", label+"/"+o.key, o.key, raw)
-						for _, a := range found {
-							a.Metadata["endpoint"], a.Metadata["bucket"], a.Metadata["key"], a.Metadata["provider"] = b.Endpoint, b.Name, o.key, b.Provider
+					file := label + "/" + o.key
+					if o.verify != "" {
+						// No ETag: the listing matches, so read the first
+						// bytes and compare them with what was read then.
+						head, err := s.readObject(ctx, client, b, cred, o.key, 0, sniffBytes)
+						if err == nil && headPrint(head) == o.verify {
+							mu.Lock()
+							kept, kerr := keep(o.old, o.bucketObject)
+							mu.Unlock()
+							if kerr == nil && kept {
+								continue
+							}
 						}
+					}
+					tag := func(a CryptoAsset) {
+						a.Metadata["endpoint"], a.Metadata["bucket"], a.Metadata["key"], a.Metadata["provider"] = b.Endpoint, b.Name, o.key, b.Provider
+					}
+					read, err := s.readJob(ctx, client, b, cred, o, fileRef{unit: unit, owner: o.key, tag: tag}, scanID, file)
+					for _, a := range read.assets {
+						tag(a)
 					}
 					mu.Lock()
 					if o.sniff {
 						out.sniffed++
 					}
-					if raw != nil {
+					if read.parsed {
 						out.files++
-						out.assets = append(out.assets, found...)
+						out.assets = append(out.assets, read.assets...)
 					}
+					// What failed is not recorded, so it is tried again.
 					if err != nil {
 						out.unreadable = append(out.unreadable, o.key+": "+err.Error())
 					} else {
-						ids := make([]string, 0, len(found))
-						for _, a := range found {
+						ids := make([]string, 0, len(read.assets))
+						for _, a := range read.assets {
 							ids = append(ids, a.ID)
 						}
-						rows = append(rows, BucketObject{TenantID: b.TenantID, BucketID: b.ID, Key: o.key, ETag: o.recorded(s.now()), Size: o.size, AssetIDs: ids, Rules: scanRules})
+						row := BucketObject{TenantID: b.TenantID, BucketID: b.ID, Key: o.key, ETag: o.recorded(s.now(), read.head), Size: o.size, AssetIDs: ids, Rules: scanRules,
+							Consts: read.usage.exports, Needs: read.usage.needs}
+						rows = append(rows, row)
+						if len(row.Needs) > 0 {
+							waiting[o.key] = row
+						}
 					}
 					mu.Unlock()
 				}

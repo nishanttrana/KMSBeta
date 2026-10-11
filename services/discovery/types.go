@@ -140,6 +140,12 @@ type BucketObject struct {
 	Size     int64
 	AssetIDs []string
 	Rules    int // the parser's rule set when read (scanRules)
+	// Consts are the constants the object defines for other objects to
+	// read; Needs the constant names it reads and does not define; and
+	// NeedsHash what those stood for when it was read (usage_unit.go).
+	Consts    map[string][]string
+	Needs     []string
+	NeedsHash string
 }
 
 // Schedule runs a tenant's scan every IntervalHours on the authority of the

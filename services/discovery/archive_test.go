@@ -290,7 +290,7 @@ func TestDeepScanReadsByContent(t *testing.T) {
 		"backups/late.bak":     strings.Repeat("x", sniffBytes+10) + "\n" + priv,    // nothing in its first kilobyte
 		"backups/firmware.img": strings.Repeat("\x00", 9000) + "\n" + priv,          // binary, a key further in
 		"backups/blob.img":     strings.Repeat("\x00\x01", 6000),                    // binary, nothing in it
-		"media/huge.dat":       strings.Repeat("x", maxUploadBytes+1) + "\n" + priv, // too large to read whole
+		"media/huge.dat":       strings.Repeat("x", maxUploadBytes+1) + "\n" + priv, // too large to hold: read through
 		"media/logo.png":       string(pngBytes) + strings.Repeat("\x00", 4096),
 		"media/renamed.dat":    string(zipOf(t, map[string]string{"id_rsa": priv})),
 		"node_modules/a/k.bak": priv,
@@ -315,6 +315,7 @@ func TestDeepScanReadsByContent(t *testing.T) {
 				"private_key_material|RSA-2048|exposed|backups/key.bak:11",
 				"private_key_material|RSA-2048|exposed|backups/late.bak:2",
 				"private_key_material|RSA-2048|exposed|conf/id_rsa:1",
+				"private_key_material|RSA-2048|exposed|media/huge.dat:2",
 				"private_key_material|RSA-2048|exposed|media/renamed.dat!/id_rsa:1",
 			}
 		}
@@ -329,18 +330,19 @@ func TestDeepScanReadsByContent(t *testing.T) {
 		wantSniffed, wantFiles := 0, 1
 		if deep {
 			// The dependency folder is not looked into. Everything else
-			// without a telling name is read whole when it is small (so a
+			// without a telling name is read: whole when it is small,
+			// through from start to end when it is too large to hold (so a
 			// key anywhere in it is found), and by its first kilobyte only
-			// when it is an image or too large to hold.
-			wantRanged = []string{"/acme-artifacts/media/huge.dat bytes=0-1023", "/acme-artifacts/media/logo.png bytes=0-1023"}
-			// Parsed: all but the image, the large file and the empty binary.
-			wantSniffed, wantFiles = 8, 6
+			// when it is an image.
+			wantRanged = []string{"/acme-artifacts/media/logo.png bytes=0-1023"}
+			// Parsed: all but the image and the empty binary.
+			wantSniffed, wantFiles = 8, 7
 		}
 		if !reflect.DeepEqual(ranged, wantRanged) || res.sniffed != wantSniffed || res.files != wantFiles {
 			t.Fatalf("deep %v: ranged %q, sniffed %d, files %d", deep, ranged, res.sniffed, res.files)
 		}
-		// Each object was asked for once: the image and the large file by
-		// their first kilobyte, never downloaded; the dependency never.
+		// Each object was asked for once: the image by its first kilobyte,
+		// never downloaded; the dependency never.
 		count := map[string]int{}
 		for _, r := range srv.requests() {
 			uri, _, _ := strings.Cut(r, " | ")

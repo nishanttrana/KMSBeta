@@ -343,6 +343,7 @@ func (s *Service) scanArchive(r Repository, scanID string, body io.Reader, limit
 	counted := &io.LimitedReader{R: gz, N: maxRepoBytes + 1}
 	tr := tar.NewReader(counted)
 	label := r.label()
+	unit := newUsageUnit()
 	for entries := 0; ; entries++ {
 		h, err := tr.Next()
 		if err == io.EOF {
@@ -371,21 +372,28 @@ func (s *Service) scanArchive(r Repository, scanID string, body io.Reader, limit
 			return out, errors.New("the archive ended early or is damaged")
 		}
 		out.files++
-		found, _ := s.fileAssets(r.TenantID, scanID, "git", label+"/"+rel, rel, raw) // an archive over its caps: what was read
-		for _, a := range found {
+		commit := out.commit
+		tag := func(a CryptoAsset) {
 			a.Metadata["repository"], a.Metadata["path"] = r.URL, rel
 			if r.Ref != "" {
 				a.Metadata["ref"] = r.Ref
 			}
-			if out.commit != "" {
-				a.Metadata["commit"] = out.commit
+			if commit != "" {
+				a.Metadata["commit"] = commit
 			}
+		}
+		found, _, _ := s.fileAssetsIn(fileRef{unit: unit, tag: tag}, r.TenantID, scanID, "git", label+"/"+rel, rel, raw) // an archive over its caps: what was read
+		for _, a := range found {
+			tag(a)
 			out.assets = append(out.assets, a)
 		}
 		if limit > 0 && out.files >= limit {
 			break
 		}
 	}
+	// Calls that name a constant another file of the repository defines.
+	late, _ := s.unitAssets(unit, r.TenantID, scanID, "git")
+	out.assets = append(out.assets, late...)
 	return out, nil
 }
 

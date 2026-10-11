@@ -171,6 +171,9 @@ func createDiscoverySchemaForTest(conn *pkgdb.DB) error {
 			size_bytes BIGINT NOT NULL DEFAULT 0,
 			asset_ids TEXT NOT NULL DEFAULT '',
 			rules INTEGER NOT NULL DEFAULT 0,
+			consts_json TEXT NOT NULL DEFAULT '{}',
+			needs TEXT NOT NULL DEFAULT '',
+			needs_hash TEXT NOT NULL DEFAULT '',
 			seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, bucket_id, object_key)
 		);`,

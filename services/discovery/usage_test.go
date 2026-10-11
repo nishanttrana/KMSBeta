@@ -340,3 +340,189 @@ note = "x"
 		t.Errorf("unclosed statement: %v", got)
 	}
 }
+
+// A function with no arguments that only returns a literal, a format call
+// and an interpolated string are read as the literal they produce
+// (9.2.0-beta).
+func TestCryptoUsageThroughFunctionsAndFormats(t *testing.T) {
+	cases := []struct {
+		name, body string
+		want       []string
+	}{
+		{"Fn.java", `class A {
+  private String algorithm() {
+    return "DES";
+  }
+  static int bits() { return 1024; }
+  String mode() { return pick(); }
+  void f() throws Exception {
+    Cipher a = Cipher.getInstance(algorithm());
+    Cipher b = Cipher.getInstance(this.algorithm());
+    Cipher c = Cipher.getInstance(String.format("%s/%s/PKCS5Padding", "RC4", "ECB"));
+    Cipher d = Cipher.getInstance(String.format("%s/CBC/PKCS5Padding", ALG));
+    Cipher e = Cipher.getInstance(mode());
+    Cipher g = Cipher.getInstance(other.algorithm());
+  }
+  static final String ALG = "DESede";
+}`, []string{"3TDEA@11", "DES@8", "DES@9", "RC4@10"}},
+		{"fn.py", `PREFIX = "sha"
+def digest():
+    return "md5"
+def other(x):
+    return "md4"
+class K:
+    def name(self):
+        return 'sha1'
+    def run(self):
+        a = hashlib.new(digest())
+        b = hashlib.new(self.name())
+        c = hashlib.new(f"{PREFIX}1")
+        d = hashlib.new("{}{}".format("md", 4))
+        e = hashlib.new("%s5" % "md")
+        f = hashlib.new(other(1))
+        g = hashlib.new("%s-%s" % ("x",))
+`, []string{"MD4@13", "MD5@10", "MD5@14", "SHA-1@11", "SHA-1@12"}},
+		{"fn.go", `package x
+const family = "RSA"
+func keyBits() int {
+	return 1024
+}
+func curve() string { return "P256" }
+func f() {
+	k, _ := rsa.GenerateKey(rand.Reader, keyBits())
+	_ = k
+}`, []string{"RSA-1024@8"}},
+		{"fn.js", `const algo = () => 'des-ede3-cbc'
+const name = "md"
+function digest() {
+  return "sha1"
+}
+const c = crypto.createCipheriv(algo(), key, iv)
+const h = crypto.createHash(digest())
+const g = crypto.createHash(` + "`${name}5`" + `)
+const i = crypto.createHash(` + "`${unknown}5`" + `)
+`, []string{"3TDEA@6", "MD5@8", "SHA-1@7"}},
+		{"fn.kt", `val family = "DES"
+fun algorithm() = "RC4"
+val a = Cipher.getInstance("$family/CBC/PKCS5Padding")
+val b = Cipher.getInstance("${family}ede/CBC/PKCS5Padding")
+val c = Cipher.getInstance(algorithm())
+`, []string{"3TDEA@4", "DES@3", "RC4@5"}},
+		{"fn.rb", `def digest
+  'md5'
+end
+NAME = "des"
+c = OpenSSL::Cipher.new("#{NAME}-cbc")
+`, []string{"DES@5"}},
+		{"fn.php", `<?php
+$alg = 'des';
+$x = openssl_encrypt($data, "{$alg}-cbc", $key);
+$y = openssl_encrypt($data, sprintf("%s-ede3-cbc", "des"), $key);
+`, []string{"3TDEA@4", "DES@3"}},
+	}
+	for _, c := range cases {
+		if got := usageOf(c.name, c.body); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("%s:\n got  %v\n want %v", c.name, got, c.want)
+		}
+	}
+}
+
+// A constant one file defines names the algorithm in a call in another
+// file of the same scan (9.2.0-beta): the files of an archive, of a
+// repository, of the workspace. Only names written as constants cross
+// files, the finding says where the constant is defined, and nothing is
+// reported twice.
+func TestCryptoUsageAcrossFiles(t *testing.T) {
+	svc, _, _ := newDiscoveryService(t)
+	files := map[string]string{
+		"src/Constants.java": "public final class Constants {\n  public static final String CIPHER = \"DES/CBC/PKCS5Padding\";\n  public static final int KEY_BITS = 1024;\n  static String local = \"RC4\";\n}\n",
+		"src/Use.java":       "class Use {\n  void f() throws Exception {\n    Cipher a = Cipher.getInstance(Constants.CIPHER);\n    Cipher b = Cipher.getInstance(CIPHER);\n    Cipher c = Cipher.getInstance(local);\n    MessageDigest m = MessageDigest.getInstance(\"MD5\");\n  }\n}\n",
+		"lib/settings.py":    "DIGEST = 'sha1'\n",
+		"lib/hasher.py":      "from settings import DIGEST\nh = hashlib.new(DIGEST)\nk = rsa.generate_private_key(public_exponent=65537, key_size=settings.KEY_BITS)\n",
+		"pkg/consts.go":      "package pkg\n\nconst DefaultBits = 1024\nvar minBits = 2048\n",
+		"pkg/keys.go":        "package pkg\n\nfunc f() {\n\tk, _ := rsa.GenerateKey(rand.Reader, DefaultBits)\n\tj, _ := rsa.GenerateKey(rand.Reader, minBits)\n}\n",
+	}
+	assets, err := svc.fileAssets("t1", "s", "upload", "app.zip", "app.zip", zipOf(t, files))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"crypto_usage|DES|weak|src/Use.java:3", "crypto_usage|DES|weak|src/Use.java:4", "crypto_usage|MD5|weak|src/Use.java:6",
+		"crypto_usage|RSA-1024|weak|lib/hasher.py:3", "crypto_usage|RSA-1024|weak|pkg/keys.go:4", "crypto_usage|SHA-1|weak|lib/hasher.py:2",
+	}
+	sort.Strings(want)
+	if got := assetLines(assets, "app.zip!"); !reflect.DeepEqual(got, want) {
+		t.Fatalf("across files\n got %q\nwant %q", got, want)
+	}
+	for _, a := range assets {
+		if a.Location == "app.zip!/src/Use.java:3" && (a.Metadata["via"] != "CIPHER" || a.Metadata["defined_in"] != "app.zip!/src/Constants.java" || a.Metadata["archive"] != "app.zip" || a.Metadata["member"] != "src/Use.java") {
+			t.Fatalf("resolved asset: %+v", a.Metadata)
+		}
+	}
+
+	// The same over a repository's files, read one after another in any order.
+	unit := newUsageUnit()
+	var found []CryptoAsset
+	for _, name := range []string{"src/Use.java", "src/Constants.java"} { // the reader before the definition
+		a, _, _ := svc.fileAssetsIn(fileRef{unit: unit}, "t1", "s", "git", "repo/"+name, name, []byte(files[name]))
+		found = append(found, a...)
+	}
+	late, _ := svc.unitAssets(unit, "t1", "s", "git")
+	if got := assetLines(append(found, late...), "repo"); !reflect.DeepEqual(got, []string{"crypto_usage|DES|weak|src/Use.java:3", "crypto_usage|DES|weak|src/Use.java:4", "crypto_usage|MD5|weak|src/Use.java:6"}) {
+		t.Fatalf("across a repository's files: %q", got)
+	}
+	if again, _ := svc.unitAssets(unit, "t1", "s", "git"); len(again) != 0 {
+		t.Fatalf("a second resolve reported %d assets again", len(again))
+	}
+
+	// A file on its own resolves nothing from elsewhere, and a constant
+	// with too many values across files is not one.
+	if got := usageOf("Use.java", files["src/Use.java"]); !reflect.DeepEqual(got, []string{"MD5@6"}) {
+		t.Fatalf("a file alone: %v", got)
+	}
+	many := map[string]string{"use.py": "h = hashlib.new(DIGEST)\n"}
+	for i, v := range []string{"md5", "sha1", "md4", "sha256", "sha512"} {
+		many["c"+itoa(i)+".py"] = "DIGEST = '" + v + "'\n"
+	}
+	if assets, _ := svc.fileAssets("t1", "s", "upload", "many.zip", "many.zip", zipOf(t, many)); len(assets) != 0 {
+		t.Fatalf("a name with five values across files was resolved: %q", assetLines(assets, "many.zip!"))
+	}
+}
+
+// A PEM block is found wherever it starts: after other bytes on its line,
+// or inside a binary with no line break before it (9.2.0-beta).
+func TestPEMIsFoundInTheMiddleOfALine(t *testing.T) {
+	priv := testPrivatePEM(t)
+	for name, raw := range map[string]string{
+		"after text on the line": "key=" + priv,
+		"in a binary":            strings.Repeat("\x00\x7f", 700) + priv + strings.Repeat("\x00", 64),
+		"twice on one line":      "a " + priv[:len(priv)-1] + " b " + priv,
+	} {
+		got := findMaterial("blob.bin", []byte(raw))
+		n := 0
+		for _, f := range got {
+			if f.kind == "private_key_material" && f.algorithm == "RSA-2048" {
+				n++
+			}
+		}
+		if want := map[bool]int{true: 2, false: 1}[name == "twice on one line"]; n != want {
+			t.Fatalf("%s: %d keys, want %d (%+v)", name, n, want, got)
+		}
+	}
+	// At the start of a line it is found once, as before.
+	if got := findMaterial("k.pem", []byte(priv)); len(got) != 1 {
+		t.Fatalf("a plain PEM file: %d findings", len(got))
+	}
+	// A marker with no block after it is nothing.
+	if got := findMaterial("notes.bin", []byte("see -----BEGIN and -----END nothing")); len(got) != 0 {
+		t.Fatalf("a bare marker: %+v", got)
+	}
+
+	// The same reading a large object through, with the block across the
+	// window's edge and no line start before it.
+	big := strings.Repeat("x", 4*maxPEMBlock-20) + priv + strings.Repeat("y\n", 100000) + "z" + priv
+	found, err := streamPEM(strings.NewReader(big))
+	if err != nil || len(found) != 2 || found[0].line != 1 || found[1].line != 100000+strings.Count(priv, "\n")+1 {
+		t.Fatalf("read through: %v, %d found %+v", err, len(found), found)
+	}
+}

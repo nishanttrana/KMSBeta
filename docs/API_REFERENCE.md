@@ -3373,7 +3373,13 @@ records only what it observed:
   a call continued on the next lines, string literals joined by the
   language's operator, and a name the same file assigns a string or key
   size are resolved; such a finding carries `metadata.via` (the name) and
-  `metadata.assigned_line`. Values from other files are not resolved.
+  `metadata.assigned_line`. From 9.2.0-beta so are a function with no
+  arguments that only returns a literal, a format call or interpolated
+  string whose parts are all known, and a constant another file of the same
+  scan defines (an archive, a repository, the workspace, a bucket), for
+  names written as constants (`UPPER_CASE`, or an exported Go name); that
+  finding also carries `metadata.defined_in`. In a bucket the object that
+  reads the constant is read again on the scan after the constant changes.
 - `asset_type: "api_token"` (`metadata.provider`: `github`, `gitlab`,
   `slack`, `stripe`, `google`, `jwt`) and `"cloud_secret_key"` (`aws`,
   `azure`), and a PEM private key inside a JSON string
@@ -3390,14 +3396,19 @@ a deeper archive is reported in the scan's error, not opened. A member's
 asset has `location` `archive!/member:line` (`outer!/inner!/member:line`
 when nested) and `metadata.archive` and `metadata.member`. A bucket added
 with `"deep": true` also has every object without a telling name looked
-into (8.1.0-beta): one of up to 2 MiB is downloaded and parsed whole; a
-larger one, or an image, audio, video, font, columnar or compressed file,
-has its first 1024 bytes read (`Range: bytes=0-1023`) and is downloaded
-only if those are a keystore, an archive or a key.
-`stats.storage_sniffed` counts the objects looked into. An object is
-skipped while its ETag is unchanged; where a service returns no ETag, its
-last-modified time and size are used instead, once the time is two
-minutes old and for at most seven days (8.1.0-beta).
+into (8.1.0-beta): one of up to 2 MiB is downloaded and parsed whole. A
+larger one, up to 256 MiB, is read through once for armoured keys and
+certificates wherever they start, and opened if it is an archive of at
+most 32 MiB (9.2.0-beta). An image, audio, video, font, columnar or
+compressed file has its first 1024 bytes read (`Range: bytes=0-1023`) and
+is downloaded only if those are a keystore, an archive or a key.
+`stats.storage_sniffed` counts the objects looked into. A PEM block is
+found wherever it starts, also inside a binary with no line break before it
+(9.2.0-beta). An object is skipped while its ETag is unchanged; where a
+service returns no ETag, its last-modified time and size are used instead,
+once the time is two minutes old and for at most seven days (8.1.0-beta),
+and from 9.2.0-beta only after its first kilobyte is read and found to be
+what it was.
 
 **Uploads (7.18.0-beta).** `POST /discovery/upload` with body
 `{"name": "bundle.pem", "content": "<base64>"}` inventories one file of at

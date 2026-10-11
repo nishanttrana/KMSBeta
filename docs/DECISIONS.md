@@ -7,6 +7,43 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-11 — Discovery: constants across the files of a scan; large objects read through; a first-kilobyte check without an ETag (9.2.0-beta)
+
+Owner asked for the limits 8.1.0-beta left to be fixed. One of them
+reverses a rejection made in that entry.
+
+- **Constants are resolved across the files of one scan.** Supersedes
+  "Rejected: resolving across files" (8.1.0-beta), whose objection was that
+  one object's findings would depend on another's and so break skipping
+  unchanged objects. Each bucket object now records the constants it
+  defines, the names it could not resolve and a hash of what those stood
+  for, and is read again when the hash differs. A repository, the
+  workspace and an archive are read in one go: statements that read an
+  unknown constant are held in memory (8 MiB at most) and read again once
+  every file has been seen. Only names written as constants cross files.
+  *Rejected:* storing the statements for buckets (source text in the
+  database), and resolving any name across files (a common word such as
+  `name` would bind to an unrelated file). *Cost:* in a bucket the reader
+  is corrected one scan after the constant changes. *Enforced by:*
+  `TestCryptoUsageAcrossFiles`, `TestStorageResolvesConstantsAcrossObjects`.
+- **Zero-argument functions that return a literal, format calls and
+  interpolated strings are folded to the literal.** Text rewriting, not
+  evaluation: no arguments, no arithmetic, no control flow. *Enforced by:*
+  `TestCryptoUsageThroughFunctionsAndFormats`.
+- **A deep scan reads objects of up to 256 MiB through**, in a window, for
+  armoured keys and certificates. Only PEM is looked for: tokens and
+  usage rules need the parser, which holds a file. *Cost:* the whole
+  object is transferred, within the run's byte budget. *Enforced by:*
+  `TestDeepScanReadsByContent`, `TestPEMIsFoundInTheMiddleOfALine`.
+- **Without an ETag, the first kilobyte is read every scan before the
+  listing is believed.** Narrows the cost accepted in 8.1.0-beta (a write
+  that keeps time and size unseen for seven days) to one that also keeps
+  the first kilobyte. *Rejected:* reading such objects in full every scan
+  (what 7.38.0 did; the cost that entry set out to remove) and hashing the
+  whole object (the same read). *Enforced by:* `TestStorageWithoutETags`.
+
+---
+
 ## 2026-10-11 — Identity provider secrets are sealed in auth; the external token vault is removed, not built; HSM import widened (9.0.0-beta)
 
 Owner asked for what 8.0.0-beta left undone or undecided to be fixed. Two

@@ -52,6 +52,7 @@ const FACTS: [string, string, ((v: unknown) => ReactNode)?][] = [
   ["api", "Named by"],
   ["via", "Through the name"],
   ["assigned_line", "Assigned on line"],
+  ["defined_in", "Defined in"],
   ["format", "Format"],
 ];
 

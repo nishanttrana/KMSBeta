@@ -24449,7 +24449,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
       "handler": "",
       "label": "setStatus(s)} style={ }>",
-      "line": 161,
+      "line": 162,
       "tabs": [],
       "tag": "button"
     },
@@ -24457,7 +24457,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
       "handler": "",
       "label": "void save()} disabled= >Save",
-      "line": 169,
+      "line": 170,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24465,7 +24465,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
       "handler": "",
       "label": "(confirmRemove ? void remove() : setConfirmRemove(true))} disabled= >",
-      "line": 176,
+      "line": 177,
       "tabs": [],
       "tag": "Btn"
     },
@@ -33079,7 +33079,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-11T09:21:14Z",
+  "generated_at": "2026-10-11T09:36:38Z",
   "navigation": [
     {
       "group": "Overview",
@@ -56804,7 +56804,7 @@
           "file": "services/discovery/repo.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 502,
+          "line": 510,
           "name": "ListRepositories",
           "receiver_calls": [],
           "store_calls": [
@@ -56904,7 +56904,7 @@
             "CreateRepository"
           ],
           "internal_package_calls": [],
-          "line": 472,
+          "line": 480,
           "name": "AddRepository",
           "receiver_calls": [],
           "store_calls": [
@@ -56920,7 +56920,7 @@
             "DeleteRepository"
           ],
           "internal_package_calls": [],
-          "line": 519,
+          "line": 527,
           "name": "RemoveRepository",
           "receiver_calls": [],
           "store_calls": [
@@ -56935,7 +56935,7 @@
             "scanRepository"
           ],
           "internal_package_calls": [],
-          "line": 530,
+          "line": 538,
           "name": "TestRepository",
           "receiver_calls": [],
           "store_calls": []
@@ -56945,7 +56945,7 @@
           "file": "services/discovery/storage.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 895,
+          "line": 1081,
           "name": "ListBuckets",
           "receiver_calls": [],
           "store_calls": [
@@ -56972,7 +56972,7 @@
             "scanBucket"
           ],
           "internal_package_calls": [],
-          "line": 865,
+          "line": 1051,
           "name": "AddBucket",
           "receiver_calls": [],
           "store_calls": [
@@ -57039,7 +57039,7 @@
             "DeleteRepository"
           ],
           "internal_package_calls": [],
-          "line": 519,
+          "line": 527,
           "name": "RemoveRepository",
           "receiver_calls": [],
           "store_calls": [
@@ -57100,7 +57100,7 @@
             "scanRepository"
           ],
           "internal_package_calls": [],
-          "line": 530,
+          "line": 538,
           "name": "TestRepository",
           "receiver_calls": [],
           "store_calls": []
@@ -57148,7 +57148,7 @@
           "file": "services/discovery/storage.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 895,
+          "line": 1081,
           "name": "ListBuckets",
           "receiver_calls": [],
           "store_calls": [
@@ -57259,7 +57259,7 @@
             "scanBucket"
           ],
           "internal_package_calls": [],
-          "line": 865,
+          "line": 1051,
           "name": "AddBucket",
           "receiver_calls": [],
           "store_calls": [
@@ -57278,7 +57278,7 @@
             "PruneBucketObjects"
           ],
           "internal_package_calls": [],
-          "line": 912,
+          "line": 1098,
           "name": "RemoveBucket",
           "receiver_calls": [],
           "store_calls": [
@@ -57294,7 +57294,7 @@
             "scanBucket"
           ],
           "internal_package_calls": [],
-          "line": 946,
+          "line": 1132,
           "name": "TestBucket",
           "receiver_calls": [],
           "store_calls": []
@@ -57393,7 +57393,7 @@
             "PruneBucketObjects"
           ],
           "internal_package_calls": [],
-          "line": 912,
+          "line": 1098,
           "name": "RemoveBucket",
           "receiver_calls": [],
           "store_calls": [
@@ -57456,7 +57456,7 @@
             "scanBucket"
           ],
           "internal_package_calls": [],
-          "line": 946,
+          "line": 1132,
           "name": "TestBucket",
           "receiver_calls": [],
           "store_calls": []
@@ -121619,7 +121619,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-11T09:21:14Z",
+    "generatedAt": "2026-10-11T09:36:38Z",
     "methods": [
       "DELETE",
       "GET",

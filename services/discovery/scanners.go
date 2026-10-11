@@ -380,6 +380,7 @@ func (s *Service) scanCode(_ context.Context, tenantID string, scanID string) ([
 	}
 	out := make([]CryptoAsset, 0)
 	count := 0
+	unit := newUsageUnit()
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -406,11 +407,13 @@ func (s *Service) scanCode(_ context.Context, tenantID string, scanID string) ([
 			return nil
 		}
 		rel, _ := filepath.Rel(root, path)
-		found, _ := s.fileAssets(tenantID, scanID, "code", rel, rel, raw) // an archive over its caps: what was read
+		found, _, _ := s.fileAssetsIn(fileRef{unit: unit}, tenantID, scanID, "code", rel, rel, raw) // an archive over its caps: what was read
 		out = append(out, found...)
 		return nil
 	})
-	return out, err
+	// Calls that name a constant another file of the workspace defines.
+	late, _ := s.unitAssets(unit, tenantID, scanID, "code")
+	return append(out, late...), err
 }
 
 // codeScanFile: source, configuration and key or certificate files. Lock

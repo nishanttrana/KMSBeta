@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -363,7 +364,7 @@ WHERE tenant_id = $1 AND id = $2
 // BucketObjects returns what the scan recorded of a bucket's objects, by key.
 func (s *SQLStore) BucketObjects(ctx context.Context, tenantID string, bucketID string) (map[string]BucketObject, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT object_key, etag, size_bytes, asset_ids, rules
+SELECT object_key, etag, size_bytes, asset_ids, rules, consts_json, needs, needs_hash
 FROM discovery_bucket_objects
 WHERE tenant_id = $1 AND bucket_id = $2
 `, tenantID, bucketID)
@@ -374,12 +375,18 @@ WHERE tenant_id = $1 AND bucket_id = $2
 	out := map[string]BucketObject{}
 	for rows.Next() {
 		o := BucketObject{TenantID: tenantID, BucketID: bucketID}
-		var ids string
-		if err := rows.Scan(&o.Key, &o.ETag, &o.Size, &ids, &o.Rules); err != nil {
+		var ids, consts, needs string
+		if err := rows.Scan(&o.Key, &o.ETag, &o.Size, &ids, &o.Rules, &consts, &needs, &o.NeedsHash); err != nil {
 			return nil, err
 		}
 		if ids != "" {
 			o.AssetIDs = strings.Split(ids, ",")
+		}
+		if needs != "" {
+			o.Needs = strings.Split(needs, ",")
+		}
+		if consts != "" && consts != "{}" {
+			_ = json.Unmarshal([]byte(consts), &o.Consts)
 		}
 		out[o.Key] = o
 	}
@@ -389,16 +396,27 @@ WHERE tenant_id = $1 AND bucket_id = $2
 // PutBucketObjects records objects as read or seen unchanged at at.
 func (s *SQLStore) PutBucketObjects(ctx context.Context, objects []BucketObject, at time.Time) error {
 	for _, o := range objects {
+		consts := "{}"
+		if len(o.Consts) > 0 {
+			raw, err := json.Marshal(o.Consts)
+			if err != nil {
+				return err
+			}
+			consts = string(raw)
+		}
 		if _, err := s.db.SQL().ExecContext(ctx, `
-INSERT INTO discovery_bucket_objects (tenant_id, bucket_id, object_key, etag, size_bytes, asset_ids, rules, seen_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+INSERT INTO discovery_bucket_objects (tenant_id, bucket_id, object_key, etag, size_bytes, asset_ids, rules, consts_json, needs, needs_hash, seen_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 ON CONFLICT (tenant_id, bucket_id, object_key) DO UPDATE SET
 	etag = excluded.etag,
 	size_bytes = excluded.size_bytes,
 	asset_ids = excluded.asset_ids,
 	rules = excluded.rules,
+	consts_json = excluded.consts_json,
+	needs = excluded.needs,
+	needs_hash = excluded.needs_hash,
 	seen_at = excluded.seen_at
-`, o.TenantID, o.BucketID, o.Key, o.ETag, o.Size, strings.Join(o.AssetIDs, ","), o.Rules, at.UTC()); err != nil {
+`, o.TenantID, o.BucketID, o.Key, o.ETag, o.Size, strings.Join(o.AssetIDs, ","), o.Rules, consts, strings.Join(o.Needs, ","), o.NeedsHash, at.UTC()); err != nil {
 			return err
 		}
 	}
