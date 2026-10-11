@@ -1,0 +1,83 @@
+name: Storage scan — live verification
+
+# Runs Crypto Discovery's object storage scan against real Amazon, Azure and
+# Google accounts (docs/SECURITY/STORAGE_LIVE_VERIFICATION.md). It never
+# runs by itself on a push: start it from the Actions tab once the
+# repository secrets below exist. Each service whose secrets are set is
+# scanned, scanned again (nothing may be downloaded the second time) and
+# tried with a wrong credential, which the service must refuse. Nothing is
+# written to any bucket, and no secret is printed.
+#
+# Give every credential list and read on one test bucket, nothing more.
+
+on:
+  workflow_dispatch:
+    inputs:
+      deep:
+        description: "Deep scan (also read objects whose names say nothing)"
+        type: boolean
+        default: false
+      min_assets:
+        description: "Least number of assets each scan must find (0: any)"
+        default: "0"
+
+permissions:
+  contents: read
+
+jobs:
+  storage-live:
+    name: Scan real buckets with real credentials
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GOFIPS140: v1.0.0
+      # Amazon S3 (and role assumption when the role is set)
+      VECTA_TEST_S3_ENDPOINT: ${{ secrets.STORAGE_LIVE_S3_ENDPOINT }}
+      VECTA_TEST_S3_REGION: ${{ secrets.STORAGE_LIVE_S3_REGION }}
+      VECTA_TEST_S3_BUCKET: ${{ secrets.STORAGE_LIVE_S3_BUCKET }}
+      VECTA_TEST_S3_PREFIX: ${{ secrets.STORAGE_LIVE_S3_PREFIX }}
+      VECTA_TEST_S3_ACCESS_KEY: ${{ secrets.STORAGE_LIVE_S3_ACCESS_KEY }}
+      VECTA_TEST_S3_SECRET_KEY: ${{ secrets.STORAGE_LIVE_S3_SECRET_KEY }}
+      VECTA_TEST_S3_ROLE_ARN: ${{ secrets.STORAGE_LIVE_S3_ROLE_ARN }}
+      VECTA_TEST_S3_EXTERNAL_ID: ${{ secrets.STORAGE_LIVE_S3_EXTERNAL_ID }}
+      # Azure Blob Storage: any of SAS, Entra ID application, account key
+      VECTA_TEST_AZURE_ENDPOINT: ${{ secrets.STORAGE_LIVE_AZURE_ENDPOINT }}
+      VECTA_TEST_AZURE_CONTAINER: ${{ secrets.STORAGE_LIVE_AZURE_CONTAINER }}
+      VECTA_TEST_AZURE_SAS: ${{ secrets.STORAGE_LIVE_AZURE_SAS }}
+      VECTA_TEST_AZURE_TENANT_ID: ${{ secrets.STORAGE_LIVE_AZURE_TENANT_ID }}
+      VECTA_TEST_AZURE_CLIENT_ID: ${{ secrets.STORAGE_LIVE_AZURE_CLIENT_ID }}
+      VECTA_TEST_AZURE_CLIENT_SECRET: ${{ secrets.STORAGE_LIVE_AZURE_CLIENT_SECRET }}
+      VECTA_TEST_AZURE_ACCOUNT_NAME: ${{ secrets.STORAGE_LIVE_AZURE_ACCOUNT_NAME }}
+      VECTA_TEST_AZURE_ACCOUNT_KEY: ${{ secrets.STORAGE_LIVE_AZURE_ACCOUNT_KEY }}
+      # Google Cloud Storage
+      VECTA_TEST_GCS_BUCKET: ${{ secrets.STORAGE_LIVE_GCS_BUCKET }}
+      VECTA_TEST_GCS_PREFIX: ${{ secrets.STORAGE_LIVE_GCS_PREFIX }}
+      STORAGE_LIVE_GCS_SERVICE_ACCOUNT_JSON: ${{ secrets.STORAGE_LIVE_GCS_SERVICE_ACCOUNT_JSON }}
+      VECTA_TEST_STORAGE_MIN_ASSETS: ${{ inputs.min_assets }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Write the Google key file (only if its secret is set)
+        run: |
+          if [ -n "$STORAGE_LIVE_GCS_SERVICE_ACCOUNT_JSON" ]; then
+            umask 077
+            printf '%s' "$STORAGE_LIVE_GCS_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/gcs-sa.json"
+            echo "VECTA_TEST_GCS_SERVICE_ACCOUNT_FILE=$RUNNER_TEMP/gcs-sa.json" >> "$GITHUB_ENV"
+          fi
+
+      - name: Deep scan option
+        if: ${{ inputs.deep }}
+        run: echo "VECTA_TEST_STORAGE_DEEP=1" >> "$GITHUB_ENV"
+
+      - name: Verify
+        run: scripts/verify-storage-live.sh --from-env
+
+      - name: Remove the Google key file
+        if: always()
+        run: rm -f "$RUNNER_TEMP/gcs-sa.json"

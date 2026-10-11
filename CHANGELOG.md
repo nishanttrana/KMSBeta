@@ -4,6 +4,30 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [9.3.0-beta] — 2026-10-11
+
+### Storage credentials: checking against your cloud accounts is one click in CI
+- **Added: a manual workflow, "Storage scan — live verification".** Put the
+  test credentials in repository secrets (`STORAGE_LIVE_*`), open Actions,
+  press Run. Each service whose secrets are set is scanned, scanned again
+  (nothing may be downloaded the second time) and tried with a wrong
+  credential that must be refused. The run's summary page lists what
+  passed, with the commit and time, and is the record to cite. It never
+  starts by itself, prints no secret and writes to no bucket.
+  `scripts/verify-storage-live.sh --from-env` is what it runs.
+- **Verified: Bearer-token access to Azure Blob on an independent server.**
+  The Azurite emulator with its OAuth checking on accepted the scan's
+  token on every list, read and ranged read, and refused a missing token, a
+  malformed one and one for another audience. This covers the storage half
+  of Entra ID sign-in. The token itself came from a stand-in issuer, since
+  nothing emulates Entra ID, so Entra ID is still not verified.
+- **Still not run, and why:** a private Amazon S3 bucket and Amazon STS,
+  Azure itself with an Entra ID application, and a Google service account.
+  No cloud account, CLI or credential exists on the build machine, so these
+  can only be run by someone who has the accounts. The status table in
+  [STORAGE_LIVE_VERIFICATION.md](docs/SECURITY/STORAGE_LIVE_VERIFICATION.md)
+  says "not yet run" until one is.
+
 ## [9.2.0-beta] — 2026-10-11
 
 ### Crypto Discovery: the four limits left open in 8.1.0-beta

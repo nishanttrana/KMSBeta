@@ -5,6 +5,35 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### "Fix what needs the owner's accounts" (9.3.0-beta)
+- **Asked to fix the unproven, with nothing to prove it against.** No
+  settings file, no cloud CLI, no credential on the machine. The choices
+  were to say "verified" on the strength of more stand-ins (fabricated
+  evidence), to go looking for credentials nobody offered, or to say plainly
+  what can't be done here and remove every other obstacle. The third: the
+  table still says "not yet run".
+- **Make the owner's step as small as the secret itself.** A script that
+  needs a checkout, Go and a correctly permissioned file is three chances
+  to give up. A manual workflow needs only the secrets, runs the same
+  script, and leaves a dated summary that can be cited as the evidence.
+- **Half a flow can be proven where the whole can't.** Entra ID has no
+  emulator, but Azure Blob's acceptance of a Bearer token does (Azurite,
+  `--oauth basic`). The label says exactly that: "Bearer token from a
+  stand-in issuer", not "Entra ID". I first printed it as "Entra ID" and
+  changed it before committing: an output line is a claim too.
+- **Check that the checker checks.** Before counting the Azurite pass, the
+  same server was shown to refuse no token, a malformed token and a token
+  for another audience. A server that accepts anything proves nothing.
+- **Two sessions took the same version number.** The other session pushed
+  its 9.2.0-beta minutes before mine; the push was refused, and I had
+  already removed the worktree the commit was made in. The commit was still
+  in the object store by its hash and was cherry-picked onto the new main
+  as 9.3.0-beta. Fetch immediately before pushing, and keep the worktree
+  until the push has succeeded.
+- **A test added after the "nothing configured" skip never runs.** The new
+  case was appended below the skip check and the first run "passed" by
+  skipping. Read the verbose output, not the exit code.
+
 ### Discovery: names across files, large objects, no-ETag checks (9.2.0-beta)
 - **"Resolving across files breaks skipping unchanged objects" had an
   answer.** The objection was real: object B's findings would depend on

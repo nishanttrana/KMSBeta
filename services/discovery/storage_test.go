@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -874,6 +875,12 @@ func TestBucketLimit(t *testing.T) {
 //   - a Google service account: VECTA_TEST_GCS_SERVICE_ACCOUNT_FILE (the
 //     path of its JSON key file) with VECTA_TEST_GCS_BUCKET.
 //
+// VECTA_TEST_AZURE_OAUTH_EMULATOR=1 (9.3.0-beta) checks the storage half of
+// Entra ID against the Azurite emulator started with --oauth basic: the
+// token comes from a stand-in issuer inside this test (no emulator of Entra
+// exists), and Azurite must accept it as a Bearer token on every list, read
+// and ranged read. It says nothing about Entra ID itself.
+//
 // scripts/verify-storage-live.sh runs it from a file of these settings.
 func TestLiveObjectStorage(t *testing.T) {
 	type live struct {
@@ -924,7 +931,7 @@ func TestLiveObjectStorage(t *testing.T) {
 		}
 		cases = append(cases, live{b, conn})
 	}
-	if len(cases) == 0 {
+	if len(cases) == 0 && os.Getenv("VECTA_TEST_AZURE_OAUTH_EMULATOR") == "" {
 		t.Skip("set VECTA_TEST_S3_ENDPOINT, VECTA_TEST_AZURE_ENDPOINT or VECTA_TEST_GCS_BUCKET to scan a real storage service")
 	}
 	svc, _, _ := newDiscoveryService(t)
@@ -945,6 +952,8 @@ func TestLiveObjectStorage(t *testing.T) {
 		switch f := c.conn.Fields; {
 		case f["role_arn"] != "":
 			return "assumed role"
+		case f["client_secret"] == "emulator-client-secret":
+			return "Bearer token from a stand-in issuer"
 		case f["client_secret"] != "":
 			return "Entra ID"
 		case f["service_account_json"] != "":
@@ -957,6 +966,16 @@ func TestLiveObjectStorage(t *testing.T) {
 			return "access key"
 		}
 		return "no credential"
+	}
+	if ep := os.Getenv("VECTA_TEST_AZURE_ENDPOINT"); ep != "" && os.Getenv("VECTA_TEST_AZURE_OAUTH_EMULATOR") != "" {
+		issuer := entraStandIn(t, "emulator-client-secret")
+		if svc.repoRoots == nil {
+			svc.repoRoots = x509.NewCertPool()
+		}
+		svc.repoRoots.AddCert(issuer.Certificate())
+		svc.entraURL = issuer.URL
+		conn := ResolvedConnection{Type: "azure_blob", Endpoint: host(ep), Fields: map[string]string{"azure_tenant_id": "11111111-2222-3333-4444-555555555555", "client_id": "emulator-app", "client_secret": "emulator-client-secret"}}
+		cases = append(cases, live{Bucket{Provider: "azure", Endpoint: ep, Name: os.Getenv("VECTA_TEST_AZURE_CONTAINER"), ConnectionID: "live"}, conn})
 	}
 	least, _ := strconv.Atoi(os.Getenv("VECTA_TEST_STORAGE_MIN_ASSETS"))
 	for i, c := range cases {
@@ -998,6 +1017,45 @@ func TestLiveObjectStorage(t *testing.T) {
 			t.Errorf("%s with a wrong credential: %v", c.b.label(), err)
 		}
 	}
+}
+
+// entraStandIn issues tokens shaped like Entra ID's for Azure Storage, for
+// the one client secret given: the client-credentials grant at
+// /{tenant}/oauth2/v2.0/token, answering a signed JWT with the storage
+// audience and an sts.windows.net issuer. It stands in for Entra ID only so
+// that the Azurite emulator has a token to judge.
+func entraStandIn(t *testing.T, secret string) *httptest.Server {
+	t.Helper()
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b64 := func(v interface{}) string {
+		raw, _ := json.Marshal(v)
+		return base64.RawURLEncoding.EncodeToString(raw)
+	}
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		tenant, rest, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, "/"), "/")
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method != http.MethodPost || rest != "oauth2/v2.0/token" || r.PostForm.Get("grant_type") != "client_credentials" ||
+			r.PostForm.Get("scope") != "https://storage.azure.com/.default" || r.PostForm.Get("client_secret") != secret {
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"error":"invalid_client"}`))
+			return
+		}
+		now := time.Now()
+		input := b64(map[string]string{"alg": "RS256", "typ": "JWT"}) + "." + b64(map[string]interface{}{
+			"aud": "https://storage.azure.com", "iss": "https://sts.windows.net/" + tenant + "/", "tid": tenant,
+			"appid": r.PostForm.Get("client_id"), "sub": r.PostForm.Get("client_id"), "oid": "22222222-3333-4444-5555-666666666666",
+			"iat": now.Unix(), "nbf": now.Add(-time.Minute).Unix(), "exp": now.Add(time.Hour).Unix(), "ver": "1.0",
+		})
+		digest := sha256.Sum256([]byte(input))
+		sig, _ := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, digest[:])
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"token_type": "Bearer", "expires_in": 3599, "access_token": input + "." + base64.RawURLEncoding.EncodeToString(sig)})
+	}))
+	t.Cleanup(srv.Close)
+	return srv
 }
 
 // A storage service that names no ETag (8.1.0-beta). Its objects were read
