@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-11T17:47:01Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-11T18:01:52Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -8,13 +8,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 
 - Dashboard navigation items: `26`
 - Tab/component mappings: `33`
-- Sub-pane groups: `8`
+- Sub-pane groups: `9`
 - Backend HTTP routes discovered: `900` across `28` services
 - Backend routes on the `pkg/route` kernel: `475` (permission and audit action in `backend-routes.csv`)
 - Frontend API call sites discovered: `537`
 - Frontend call sites with exact backend route match: `515`
 - Frontend call sites needing review or dynamic/runtime confirmation: `22`
-- Clickable controls with static `onClick` handlers: `763`
+- Clickable controls with static `onClick` handlers: `762`
 - Backend request flows with handler/service/package summaries: `900`
 
 ## How To Use This For Launch

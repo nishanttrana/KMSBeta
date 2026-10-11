@@ -62,12 +62,12 @@ export function HSMPartitionTable({ session, kind, onToast }: { session: AuthSes
           <tbody>
             {objects.map((o, i) => (
               <tr key={`${o.label}-${o.class}-${i}`}>
-                <td style={{ ...td, fontFamily: "'JetBrains Mono',monospace", maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={o.label}>{o.label || "(no label)"}</td>
+                <td style={{ ...td, fontFamily: "var(--font-mono)", maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={o.label}>{o.label || "(no label)"}</td>
                 {kind === "certificates" ? (
                   <>
                     <td style={td}>{o.certificate?.subject || "-"}</td>
                     <td style={td}>{o.certificate?.issuer || "-"}</td>
-                    <td style={{ ...td, fontFamily: "'JetBrains Mono',monospace" }}>{o.certificate?.serial || "-"}</td>
+                    <td style={{ ...td, fontFamily: "var(--font-mono)" }}>{o.certificate?.serial || "-"}</td>
                     <td style={td}>{o.certificate?.not_after ? new Date(o.certificate.not_after).toLocaleDateString() : "-"}</td>
                   </>
                 ) : (

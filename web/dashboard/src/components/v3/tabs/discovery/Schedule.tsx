@@ -55,13 +55,13 @@ export function ScheduleModal({ open, onClose, session, schedule, sources, onSav
   };
   const pill = (on: boolean) => ({
     border: `1px solid ${on ? C.accentFg : C.border}`, background: on ? C.accentDim : "transparent", color: on ? C.accentFg : C.muted,
-    borderRadius: 7, padding: "6px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer",
+    borderRadius: 3, padding: "6px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer",
   });
 
   return (
     <Modal open={open} onClose={onClose} title="Scan schedule">
       {schedule?.paused_reason && (
-        <div style={{ fontSize: 11.5, color: C.amberFg, border: `1px solid ${C.amberFg}`, borderRadius: 8, padding: "8px 10px", marginBottom: 12 }}>
+        <div style={{ fontSize: 11.5, color: C.amberFg, border: `1px solid ${C.amberFg}`, borderRadius: 4, padding: "8px 10px", marginBottom: 12 }}>
           Paused: {schedule.paused_reason}
         </div>
       )}

@@ -1,6 +1,6 @@
 import type { BYOKKey } from "../../../../lib/byok";
 
-export const MONO = "'JetBrains Mono',ui-monospace,monospace";
+export const MONO = "var(--font-mono)";
 
 export const CLOUD_LABELS: Record<string, string> = {
   aws: "AWS KMS", azure: "Azure Key Vault", gcp: "Google Cloud KMS", oci: "OCI Vault", alibaba: "Alibaba Cloud KMS", salesforce: "Salesforce Shield",

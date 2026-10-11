@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-11T17:47:01Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-11T18:01:52Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -17,15 +17,15 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/ThemeToggle.tsx | 17 | - | button | {isDark ? : } | toggle |
 | web/dashboard/src/components/ThemeToggle.tsx | 31 | - | button | } onMouseLeave={(e) => } > {isDark ? : } | toggle |
 | web/dashboard/src/components/ToastStack.tsx | 84 | - | button | dismiss(toast.id)} aria-label="Dismiss notification" style={ } > × |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 626 | - | button | setCollapsed((v) => !v)} title= className="vk-icon-btn" style={{ width: 22, h... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 812 | - | button | Sign out | onLogout |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 864 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 887 | - | button | setPaletteOpen(true)} title="Command palette (⌘K)" className="vk-search-btn"... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 936 | - | Btn | selectTab("admin")} style={cliEnabled ? : }> |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 973 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1008 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 627 | - | button | setCollapsed((v) => !v)} title= className="vk-icon-btn" style={{ width: 22, h... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 813 | - | button | Sign out | onLogout |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 865 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 888 | - | button | setPaletteOpen(true)} title="Command palette (⌘K)" className="vk-search-btn"... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 937 | - | Btn | selectTab("admin")} style={cliEnabled ? : }> |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 974 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1009 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
 | web/dashboard/src/components/primitives.tsx | 23 | - | button | (icon or dynamic label) | onClick |
-| web/dashboard/src/components/v3/SidebarSubNav.tsx | 95 | - | button | onSelect(item.id)} style={ } > |  |
+| web/dashboard/src/components/v3/SidebarSubNav.tsx | 107 | - | button | onSelect(item.id)} style={ } > |  |
 | web/dashboard/src/components/v3/chartDrill.tsx | 133 | - | Btn | Clear | onClear |
 | web/dashboard/src/components/v3/chartDrill.tsx | 141 | - | Btn | (icon or dynamic label) | onMore} disabled={loading |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 56 | - | button | Close | onClose} aria-label="Close" style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", pa... |
@@ -34,7 +34,7 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 537 | - | button | { if (!disabled) }} onFocus= onBlur= onMouseDown= onKeyDown= style={{ backgro... |  |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 650 | - | button | (icon or dynamic label) | onClick} disabled={disabled |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 677 | - | button | onChange(t)} style={{ background: "transparent", color: active === t ? C.text... |  |
-| web/dashboard/src/components/v3/runtimeUtils.tsx | 66 | - | button | Retry | reset} style={{ border: "1px solid #243656", borderRadius: 6, padding: "4px 10px", background: "transparent", color:... |
+| web/dashboard/src/components/v3/runtimeUtils.tsx | 66 | - | button | Retry | reset} style={{ border: "1px solid #243656", borderRadius: 3, padding: "4px 10px", background: "transparent", color:... |
 | web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 99 | - | Btn | void load()}>Retry |  |
 | web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 107 | - | Btn | void load()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 272 | alerts | Btn | void ackAlert(item)} disabled= style={ }> |  |
@@ -97,7 +97,7 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/BackupTab.tsx | 197 | backup | button | handleTrigger(p.id)} disabled title= style={{ padding: "4px 8px", borderRadiu... |  |
 | web/dashboard/src/components/v3/tabs/BackupTab.tsx | 200 | backup | button | deletePolicy(session, p.id).then(load)} style={{ padding: "4px 6px", borderRa... |  |
 | web/dashboard/src/components/v3/tabs/BackupTab.tsx | 279 | backup | button | handleRestore(p.id)} disabled title= style={{ padding: "4px 10px", borderRadi... |  |
-| web/dashboard/src/components/v3/tabs/BackupTab.tsx | 337 | backup | button | setShowCreate(false)} style={{ padding: "7px 16px", borderRadius: 6, border:... |  |
+| web/dashboard/src/components/v3/tabs/BackupTab.tsx | 337 | backup | button | setShowCreate(false)} style={{ padding: "7px 16px", borderRadius: 3, border:... |  |
 | web/dashboard/src/components/v3/tabs/BackupTab.tsx | 338 | backup | button | (icon or dynamic label) | handleCreate} disabled={creating \|\| !form.name |
 | web/dashboard/src/components/v3/tabs/CanaryKeysPanel.tsx | 85 | - | Btn | Create canary | create} disabled={busy \|\| !name.trim() |
 | web/dashboard/src/components/v3/tabs/CanaryKeysPanel.tsx | 105 | - | Btn | showTrips(k)}>Trips |  |
@@ -192,13 +192,13 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 180 | home, recommendations | button | onNavigate(r.action.tab)} style={ } > |  |
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 187 | home, recommendations | button | setOpen((v) => !v)} aria-label="Details" style={ }> |  |
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 202 | home, recommendations | button | onSnooze(r.id)} style={{ marginTop: 10, fontSize: 12, color: C.muted, backgro... |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 308 | home, recommendations | button | void refresh()} disabled= style={{ display: "inline-flex", alignItems: "cente... |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 347 | home, recommendations | button | onNavigate("recommendations")} style={ }>View all → |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 362 | home, recommendations | button | onNavigate("ops")} style={ }> Operations dashboard |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 393 | home, recommendations | button | void refresh()} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 398 | home, recommendations | button | setSev("all")}>All ( ) |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 400 | home, recommendations | button | setSev(s)}> ( ) |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 407 | home, recommendations | button | Show snoozed | unsnoozeAll |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 301 | home, recommendations | button | void refresh()} disabled= style={{ display: "inline-flex", alignItems: "cente... |  |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 340 | home, recommendations | button | onNavigate("recommendations")} style={ }>View all → |  |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 355 | home, recommendations | button | onNavigate("ops")} style={ }> Operations dashboard |  |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 386 | home, recommendations | button | void refresh()} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 391 | home, recommendations | button | setSev("all")}>All ( ) |  |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 393 | home, recommendations | button | setSev(s)}> ( ) |  |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 400 | home, recommendations | button | Show snoozed | unsnoozeAll |
 | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 520 | compliance | Btn | setView("assessment")} style={ }>Assessment |  |
 | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 521 | compliance | Btn | setView("reporting")} style={ }>Reports |  |
 | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 524 | compliance | Btn | void loadReporting()} disabled= > |  |
@@ -385,12 +385,12 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 111 | - | Btn | setShowForm(false)} variant="ghost">Cancel |  |
 | web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 130 | - | Btn | handleToggle(j)}>{j.enabled ? : } |  |
 | web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 133 | - | Btn | handleDelete(j.id)}> |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1808 | keys | Btn | void refreshKeyInventory()} style={{height:40,padding:"0 16px",borderRadius:1... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1808 | keys | Btn | void refreshKeyInventory()} style={{height:40,padding:"0 16px",borderRadius:4... |  |
 | web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1811 | keys | Btn | } primary style={ } > Create Key |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1818 | keys | Btn | setModal("form-key")} style={{height:40,padding:"0 20px",borderRadius:10,font... |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1821 | keys | Btn | } style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:7... |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1824 | keys | Btn | setModal("generate-pqc")} style={{height:40,padding:"0 20px",borderRadius:10,... |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1827 | keys | Btn | setModal("canary")} style={{height:40,padding:"0 20px",borderRadius:10,fontSi... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1818 | keys | Btn | setModal("form-key")} style={{height:40,padding:"0 20px",borderRadius:4,fontS... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1821 | keys | Btn | } style={{height:40,padding:"0 20px",borderRadius:4,fontSize:12,fontWeight:70... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1824 | keys | Btn | setModal("generate-pqc")} style={{height:40,padding:"0 20px",borderRadius:4,f... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1827 | keys | Btn | setModal("canary")} style={{height:40,padding:"0 20px",borderRadius:4,fontSiz... |  |
 | web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1837 | keys | button | { e.stopPropagation(); const next=!showColumnMenu; if(next) setShowColumnMenu... |  |
 | web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1965 | keys | button | { e.stopPropagation(); const isOpen=openActionMenuId===k.id; if(isOpen) const... |  |
 | web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2007 | keys | button | } style={ } > Edit Key Policy |  |
@@ -444,23 +444,22 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 74 | playbooks | button | (icon or dynamic label) | disabled ? undefined : onClick} style={{ ...base, ...styles[variant] |
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 185 | playbooks | button | onChange(filters.filter((_: any, idx: number) => idx !== i))} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 189 | playbooks | Btn | onChange([...filters, ])}> Add filter |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 378 | playbooks | button | setOpenRun(open ? "" : r.id)} style={ }>{open ? : } |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 388 | playbooks | Btn | handleCancel(r)}> Cancel |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 389 | playbooks | Btn | handleRetry(r)}> Retry |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 431 | playbooks | Btn | setView(v)}> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 432 | playbooks | Btn | openEditor()}> New |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 433 | playbooks | Btn | }> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 486 | playbooks | button | setDryRun(null)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 517 | playbooks | button | handleToggle(pb)} style={ }>{pb.enabled ? : } |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 523 | playbooks | Btn | openEditor(pb)}> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 524 | playbooks | Btn | handleDryRun(pb)}> Dry run |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 525 | playbooks | Btn | handleRun(pb)}> Run |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 526 | playbooks | Btn | handleDelete(pb)}> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 568 | playbooks | button | { setRunFilter( ); setView("runs"); }} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 629 | playbooks | button | setForm((p: any) => ( ))} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 661 | playbooks | Btn | setForm((p: any) => ({ ...p, actions: [...p.actions, ] }))}> Add action |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 663 | playbooks | Btn | (icon or dynamic label) | handleSave} disabled={saving \|\| !form.name |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 664 | playbooks | Btn | }>Cancel |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 382 | playbooks | button | setOpenRun(open ? "" : r.id)} style={ }>{open ? : } |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 392 | playbooks | Btn | handleCancel(r)}> Cancel |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 393 | playbooks | Btn | handleRetry(r)}> Retry |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 430 | playbooks | Btn | openEditor()}> New |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 431 | playbooks | Btn | }> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 484 | playbooks | button | setDryRun(null)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 515 | playbooks | button | handleToggle(pb)} style={ }>{pb.enabled ? : } |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 521 | playbooks | Btn | openEditor(pb)}> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 522 | playbooks | Btn | handleDryRun(pb)}> Dry run |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 523 | playbooks | Btn | handleRun(pb)}> Run |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 524 | playbooks | Btn | handleDelete(pb)}> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 566 | playbooks | button | { setRunFilter( ); setView("runs"); }} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 627 | playbooks | button | setForm((p: any) => ( ))} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 659 | playbooks | Btn | setForm((p: any) => ({ ...p, actions: [...p.actions, ] }))}> Add action |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 661 | playbooks | Btn | (icon or dynamic label) | handleSave} disabled={saving \|\| !form.name |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 662 | playbooks | Btn | }>Cancel |  |
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 548 | posture | Btn | load(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 549 | posture | Btn | (icon or dynamic label) | runScan} disabled={running |
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 972 | posture | Btn | setFindingEngine("")} style={ }>Clear engine filter |  |
@@ -668,9 +667,9 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/modules/admin/ExposurePanel.tsx | 112 | - | Btn | void acknowledge()}> |  |
 | web/dashboard/src/modules/admin/FipsModePanel.tsx | 103 | - | Btn | void review(m)}> |  |
 | web/dashboard/src/modules/admin/FipsModePanel.tsx | 122 | - | Btn | void apply()}> {busy ? "Applying..." : `Switch to $ and restart services`} |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 242 | - | Btn | inputRef.current?.click()} style={{ padding: "8px 14px", borderRadius: 10, bo... |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 242 | - | Btn | inputRef.current?.click()} style={{ padding: "8px 14px", borderRadius: 4, box... |  |
 | web/dashboard/src/modules/admin/SystemAdminTab.tsx | 256 | - | Btn | { onFileChange(null); if (inputRef.current) }} style={ } > Clear |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 510 | - | button | toggleScope(section)} style={{fontSize:11,padding:"4px 10px",borderRadius:6,b... |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 510 | - | button | toggleScope(section)} style={{fontSize:11,padding:"4px 10px",borderRadius:3,b... |  |
 | web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1253 | - | Btn | void loadHealth()}> |  |
 | web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1336 | - | Btn | void loadSystemState()} disabled= > |  |
 | web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1337 | - | Btn | setFipsConfigModalOpen(true)}>Configure FIPS |  |

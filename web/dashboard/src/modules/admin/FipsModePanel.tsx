@@ -106,7 +106,7 @@ export const FipsModePanel = ({ session, onToast }: Props) => {
         ))}
       </div>
       {impact && (
-        <div style={{ border: `1px solid ${impact.downgrade ? C.red : C.amber}`, borderRadius: 8, padding: 8 }}>
+        <div style={{ border: `1px solid ${impact.downgrade ? C.red : C.amber}`, borderRadius: 4, padding: 8 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: impact.downgrade ? C.redFg : C.amberFg }}>
             {impact.downgrade ? "Security downgrade: " : ""}{impact.from} to {impact.to}
           </div>

@@ -330,6 +330,7 @@ export default function VectaDashboardV3Shell(props: Props) {
     certs: "cert-overview",
     hsm: "hsm-generic",
     cluster: "topology",
+    playbooks: "overview",
     admin: "system"
   }));
   // The one module whose sub-options are listed in the sidebar.
@@ -597,7 +598,7 @@ export default function VectaDashboardV3Shell(props: Props) {
       {/* ══════════════════════════════════════════════
           SIDEBAR
       ══════════════════════════════════════════════ */}
-      <div data-theme="dark" style={{
+      <div style={{
         width: collapsed ? 60 : 248,
         background: C.sidebar,
         borderRight: `1px solid ${C.border}`,
@@ -628,7 +629,7 @@ export default function VectaDashboardV3Shell(props: Props) {
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             className="vk-icon-btn"
             style={{
-              width: 22, height: 22, borderRadius: 6,
+              width: 22, height: 22, borderRadius: 3,
               border: `1px solid ${C.border}`, background: "transparent",
               color: C.muted, display: "inline-flex", alignItems: "center", justifyContent: "center",
               cursor: "pointer", flexShrink: 0,
@@ -641,7 +642,7 @@ export default function VectaDashboardV3Shell(props: Props) {
         {/* Nav filter */}
         {!collapsed && (
           <div style={{ padding: "10px 12px 2px" }}>
-            <label className="vk-field-wrap" style={{ display: "flex", alignItems: "center", gap: 7, height: 32, padding: "0 9px", borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.muted }}>
+            <label className="vk-field-wrap" style={{ display: "flex", alignItems: "center", gap: 7, height: 32, padding: "0 9px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.surface, color: C.muted }}>
               <Search size={13} strokeWidth={2} />
               <input
                 value={navFilter}
@@ -669,9 +670,9 @@ export default function VectaDashboardV3Shell(props: Props) {
                   onClick={() => toggleGroup(g.g)}
                   style={{
                     padding: "12px 16px 4px",
-                    fontSize: 11.5, fontWeight: 600,
+                    fontSize: 10.5, fontWeight: 500, fontFamily: "var(--font-mono)", textTransform: "uppercase",
                     color: groupHasActive ? C.text : C.muted,
-                    letterSpacing: 0,
+                    letterSpacing: "0.07em",
                     cursor: "pointer",
                     display: "flex", alignItems: "center", justifyContent: "space-between",
                     userSelect: "none",
@@ -717,7 +718,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                       background: isActive ? C.accentDim : "transparent",
                       boxShadow: isActive ? `inset 2px 0 0 ${C.accentFg}` : "none",
                       margin: "1px 8px",
-                      borderRadius: 7,
+                      borderRadius: 3,
                     }}
                   >
                     <span
@@ -790,7 +791,7 @@ export default function VectaDashboardV3Shell(props: Props) {
         }}>
           <div style={{
             width: 30, height: 30,
-            borderRadius: 8,
+            borderRadius: 4,
             background: C.accentDim,
             border: `1px solid ${C.border}`,
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -815,7 +816,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                 className="vk-icon-btn"
                 style={{
                   width: 26, height: 26,
-                  borderRadius: 6,
+                  borderRadius: 3,
                   border: `1px solid ${C.border}`,
                   background: "transparent",
                   color: C.muted,
@@ -868,7 +869,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                   display: "inline-flex", alignItems: "center", gap: 4,
                   background: pinnedTabs.includes(tab) ? C.accentDim : "transparent",
                   border: `1px solid ${pinnedTabs.includes(tab) ? C.accentFg : C.border}`,
-                  borderRadius: 6, padding: "3px 8px", cursor: "pointer",
+                  borderRadius: 3, padding: "3px 8px", cursor: "pointer",
                   color: pinnedTabs.includes(tab) ? C.accentFg : C.muted,
                   fontSize: 10, fontWeight: 600, letterSpacing: 0.4,
                   transition: "all .15s",
@@ -891,7 +892,7 @@ export default function VectaDashboardV3Shell(props: Props) {
               style={{
                 display: "inline-flex", alignItems: "center", gap: 7,
                 height: 30, padding: "0 10px",
-                borderRadius: 8,
+                borderRadius: 4,
                 border: `1px solid ${C.border}`,
                 background: "transparent",
                 color: C.muted,
@@ -908,7 +909,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                 fontSize: 10, background: C.card,
                 border: `1px solid ${C.border}`,
                 borderRadius: 4, padding: "1px 5px",
-                fontFamily: "'JetBrains Mono',ui-monospace,monospace",
+                fontFamily: "var(--font-mono)",
                 color: C.muted,
               }}>⌘K</span>
             </button>
@@ -920,7 +921,7 @@ export default function VectaDashboardV3Shell(props: Props) {
 
             {/* Tenant selector */}
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <Sel w={160} aria-label="Tenant" title="Tenant" value={String(session?.tenantId || "")} onChange={(e) => setTenantScope(String(e.target.value || ""))} style={{ height: 28, borderRadius: 8, padding: "4px 24px 4px 8px", fontSize: 11.5 }}>
+              <Sel w={160} aria-label="Tenant" title="Tenant" value={String(session?.tenantId || "")} onChange={(e) => setTenantScope(String(e.target.value || ""))} style={{ height: 28, borderRadius: 4, padding: "4px 24px 4px 8px", fontSize: 11.5 }}>
                 {(Array.isArray(tenantOptions) && tenantOptions.length ? tenantOptions : [{ id: String(session?.tenantId || ""), name: String(session?.tenantId || ""), status: "active" }])
                   .filter((item: any) => Boolean(String(item?.id || "").trim()))
                   .map((item: any) => (
@@ -942,25 +943,25 @@ export default function VectaDashboardV3Shell(props: Props) {
             <div style={{ position: "relative" }}>
               <div
                 onClick={() => setTzOpen((v) => !v)}
-                style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", padding: "3px 8px", borderRadius: 6, border: `1px solid transparent`, transition: "border-color .12s" }}
+                style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", padding: "3px 8px", borderRadius: 3, border: `1px solid transparent`, transition: "border-color .12s" }}
               >
-                <span style={{ fontSize: 11.5, color: C.dim, whiteSpace: "nowrap", fontFamily: "'JetBrains Mono',ui-monospace,monospace" }} title={`Timezone: ${tz === "local" ? "Local" : tz}`}>
+                <span style={{ fontSize: 11.5, color: C.dim, whiteSpace: "nowrap", fontFamily: "var(--font-mono)" }} title={`Timezone: ${tz === "local" ? "Local" : tz}`}>
                   {formattedTime}
                 </span>
                 {tz !== "local" && (
-                  <span style={{ fontSize: 10, color: C.muted, fontFamily: "'JetBrains Mono',ui-monospace,monospace" }}>{tz.split("/").pop()}</span>
+                  <span style={{ fontSize: 10, color: C.muted, fontFamily: "var(--font-mono)" }}>{tz.split("/").pop()}</span>
                 )}
               </div>
               {tzOpen && (
                 <div style={{
                   position: "absolute", top: 32, right: 0, zIndex: 1000,
                   background: C.card, border: `1px solid ${C.border}`,
-                  borderRadius: 10, padding: 6, minWidth: 170,
+                  borderRadius: 4, padding: 6, minWidth: 170,
                   boxShadow: "0 12px 36px rgba(0,0,0,.5)",
                   animation: "fadeDown .15s ease-out",
                 }}>
                   {COMMON_TIMEZONES.map((item) => (
-                    <div key={item.value} onClick={() => changeTz(item.value)} style={{ padding: "6px 10px", fontSize: 11, color: tz === item.value ? C.accentFg : C.text, cursor: "pointer", borderRadius: 6, background: tz === item.value ? C.accentDim : "transparent", fontWeight: tz === item.value ? 700 : 400 }}>
+                    <div key={item.value} onClick={() => changeTz(item.value)} style={{ padding: "6px 10px", fontSize: 11, color: tz === item.value ? C.accentFg : C.text, cursor: "pointer", borderRadius: 3, background: tz === item.value ? C.accentDim : "transparent", fontWeight: tz === item.value ? 700 : 400 }}>
                       {item.label}
                     </div>
                   ))}
@@ -979,7 +980,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                 style={{
                   display: "inline-flex", alignItems: "center", justifyContent: "center",
                   cursor: "pointer", color: C.dim,
-                  width: 32, height: 32, borderRadius: 8,
+                  width: 32, height: 32, borderRadius: 4,
                   border: `1px solid ${C.border}`, background: "transparent",
                 }}
               >
@@ -989,7 +990,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                 <div role="dialog" aria-label="Build information" style={{
                   position: "absolute", top: 38, right: 0, zIndex: 1000,
                   background: C.card, border: `1px solid ${C.border}`,
-                  borderRadius: 10, padding: "10px 12px", minWidth: 240,
+                  borderRadius: 4, padding: "10px 12px", minWidth: 240,
                   boxShadow: "0 12px 36px rgba(0,0,0,.5)",
                   animation: "fadeDown .15s ease-out",
                 }}>
@@ -997,7 +998,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                   {BUILD_INFO.map(([label, value]) => (
                     <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 11, padding: "3px 0" }}>
                       <span style={{ color: C.muted }}>{label}</span>
-                      <span style={{ color: label === "Version" ? C.accentFg : C.text, fontFamily: "'JetBrains Mono',ui-monospace,monospace" }}>{value}</span>
+                      <span style={{ color: label === "Version" ? C.accentFg : C.text, fontFamily: "var(--font-mono)" }}>{value}</span>
                     </div>
                   ))}
                 </div>
@@ -1011,7 +1012,7 @@ export default function VectaDashboardV3Shell(props: Props) {
               style={{
                 display: "inline-flex", alignItems: "center", justifyContent: "center",
                 cursor: "pointer", position: "relative", color: C.dim,
-                width: 32, height: 32, borderRadius: 8,
+                width: 32, height: 32, borderRadius: 4,
                 border: `1px solid ${C.border}`,
                 background: "transparent",
               }}
@@ -1022,7 +1023,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                 <span style={{
                   position: "absolute", top: 4, right: 4,
                   background: C.red, color: C.white,
-                  fontSize: 10, borderRadius: 999,
+                  fontSize: 10, borderRadius: 4,
                   padding: "1px 3px", fontWeight: 700,
                   minWidth: 12, textAlign: "center",
                   border: `1.5px solid ${C.surface}`,
@@ -1084,7 +1085,7 @@ export default function VectaDashboardV3Shell(props: Props) {
           position: "fixed", right: 16, bottom: 72,
           background: C.surface,
           border: `1px solid ${C.borderHi}`,
-          borderRadius: 10,
+          borderRadius: 4,
           padding: "10px 14px",
           fontSize: 12, color: C.text,
           zIndex: 1200, maxWidth: 380,

@@ -78,7 +78,7 @@ export function SourceCards({ sources, assetCounts, running, uploading, onScan, 
             onDrop={isUpload ? (e) => { e.preventDefault(); setDragging(false); onUpload(Array.from(e.dataTransfer.files)); } : undefined}
             style={{ background: C.card, border: `1px ${dragging && isUpload ? "dashed" : "solid"} ${dragging && isUpload ? C.accentFg : C.border}`, borderRadius: "var(--radius-md)", padding: 12, display: "flex", flexDirection: "column", gap: 8, boxShadow: "var(--shadow-sm)", minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ width: 30, height: 30, borderRadius: 8, background: C.accentDim, color: C.accentFg, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon size={15} /></span>
+              <span style={{ width: 30, height: 30, borderRadius: 4, background: C.accentDim, color: C.accentFg, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon size={15} /></span>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: 12.5, fontWeight: 600, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{M.label}</div>
                 <div style={{ fontSize: 10.5, color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={s.error || sourceLine(s)}>{sourceLine(s)}</div>
@@ -158,7 +158,7 @@ export function TargetsModal({ open, onClose, session, targets, error, operatorE
     }
   };
   const seg = (p: "tls" | "ssh") => (
-    <button type="button" onClick={() => pick(p)} style={{ border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", background: proto === p ? C.accentDim : "transparent", color: proto === p ? C.accentFg : C.muted }}>{p.toUpperCase()}</button>
+    <button type="button" onClick={() => pick(p)} style={{ border: "none", borderRadius: 3, padding: "6px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", background: proto === p ? C.accentDim : "transparent", color: proto === p ? C.accentFg : C.muted }}>{p.toUpperCase()}</button>
   );
   return (
     <Modal open={open} onClose={onClose} title="Network targets" wide>
@@ -174,7 +174,7 @@ export function TargetsModal({ open, onClose, session, targets, error, operatorE
       {error ? (
         <div style={{ fontSize: 11, color: C.redFg }}>Targets unavailable: {error}</div>
       ) : targets.length ? (
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 4, overflow: "hidden" }}>
           {targets.map((t, i) => {
             const n = rangeSize(t.host);
             return (
@@ -207,7 +207,7 @@ export function CodeSetupModal({ open, onClose, configured }: { open: boolean; o
       {step(1, "Mount the repository read-only into the discovery service")}
       {step(2, "Set WORKSPACE_ROOT to the mount path")}
       {step(3, "Restart discovery, then scan")}
-      <pre style={{ fontFamily: MONO, fontSize: 11, color: C.text, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, margin: "8px 0 12px", overflowX: "auto" }}>{`discovery:
+      <pre style={{ fontFamily: MONO, fontSize: 11, color: C.text, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4, padding: 12, margin: "8px 0 12px", overflowX: "auto" }}>{`discovery:
   volumes:
     - /srv/repos:/workspace:ro
   environment:

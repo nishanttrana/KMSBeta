@@ -117,7 +117,7 @@ const card: React.CSSProperties = {
 function SevPill({ s }: { s: Severity }) {
   const c = SEV_COLOR[s];
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600, color: c.fg, background: c.bg, borderRadius: 999, padding: "2px 9px", whiteSpace: "nowrap" }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600, color: c.fg, background: c.bg, borderRadius: 4, padding: "2px 9px", whiteSpace: "nowrap" }}>
       <span style={{ width: 6, height: 6, borderRadius: 3, background: c.fg }} />
       {c.label}
     </span>
@@ -136,8 +136,8 @@ function ScoreRing({ score, grade, assessed }: { score: number; grade: string; a
         strokeDasharray={`${(assessed ? score / 100 : 0) * circ} ${circ}`}
         transform="rotate(-90 66 66)" style={{ transition: "stroke-dasharray .6s ease" }}
       />
-      <text x="66" y="64" textAnchor="middle" fontSize="30" fontWeight="650" fill={C.text} fontFamily="Inter, system-ui, -apple-system, sans-serif">{assessed ? score : "–"}</text>
-      <text x="66" y="86" textAnchor="middle" fontSize="12" fill={C.muted} fontFamily="Inter, system-ui, -apple-system, sans-serif">Grade {grade}</text>
+      <text x="66" y="64" textAnchor="middle" fontSize="30" fontWeight="650" fill={C.text} fontFamily="inherit">{assessed ? score : "–"}</text>
+      <text x="66" y="86" textAnchor="middle" fontSize="12" fill={C.muted} fontFamily="inherit">Grade {grade}</text>
     </svg>
   );
 }
@@ -179,7 +179,7 @@ export function RecommendationRow({ r, onNavigate, onSnooze, defaultOpen = false
           {onNavigate && (
             <button
               onClick={() => onNavigate(r.action.tab)}
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: C.accentFg, background: C.accentDim, border: 0, borderRadius: 7, padding: "6px 10px", cursor: "pointer", whiteSpace: "nowrap" }}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: C.accentFg, background: C.accentDim, border: 0, borderRadius: 3, padding: "6px 10px", cursor: "pointer", whiteSpace: "nowrap" }}
             >
               {r.action.label} <ArrowRight size={13} />
             </button>
@@ -190,16 +190,16 @@ export function RecommendationRow({ r, onNavigate, onSnooze, defaultOpen = false
         </div>
       </div>
       {open && (
-        <div style={{ margin: "10px 0 0 90px", padding: 12, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12.5, color: C.dim, lineHeight: 1.55 }}>
+        <div style={{ margin: "10px 0 0 90px", padding: 12, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 4, fontSize: 12.5, color: C.dim, lineHeight: 1.55 }}>
           <div><span style={{ color: C.text, fontWeight: 600 }}>How to fix: </span>{r.fix}</div>
           {r.evidence.length > 0 && (
             <div style={{ marginTop: 8 }}>
               <span style={{ color: C.text, fontWeight: 600 }}>Affected{r.affected ? ` (${r.affected})` : ""}: </span>
-              <span style={{ fontFamily: "'JetBrains Mono',ui-monospace,monospace", fontSize: 11.5 }}>{r.evidence.join(" · ")}</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11.5 }}>{r.evidence.join(" · ")}</span>
             </div>
           )}
           {onSnooze && (
-            <button onClick={() => onSnooze(r.id)} style={{ marginTop: 10, fontSize: 12, color: C.muted, background: "none", border: `1px solid ${C.border}`, borderRadius: 6, padding: "4px 9px", cursor: "pointer" }}>
+            <button onClick={() => onSnooze(r.id)} style={{ marginTop: 10, fontSize: 12, color: C.muted, background: "none", border: `1px solid ${C.border}`, borderRadius: 3, padding: "4px 9px", cursor: "pointer" }}>
               Snooze {SNOOZE_DAYS} days (this browser)
             </button>
           )}
@@ -272,11 +272,6 @@ function InventoryMix({ snapshot }: { snapshot: PlatformSnapshot | null }) {
   );
 }
 
-function greeting(): string {
-  const h = new Date().getHours();
-  return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
-}
-
 // ── Command Center (home) ────────────────────────────────────────────────
 export const CommandCenterTab = ({ session, fipsMode, onNavigate }: Props) => {
   const { snapshot, loading, error, refresh, visible, checks, score, snooze } = useRecommendations(session, fipsMode);
@@ -298,9 +293,7 @@ export const CommandCenterTab = ({ session, fipsMode, onNavigate }: Props) => {
     <div style={{ maxWidth: 1360, margin: "0 auto", display: "grid", gap: 16 }}>
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontSize: 13, color: C.muted }}>{greeting()}, {session?.username || "operator"}</div>
-          <h1 style={{ margin: "2px 0 0", fontSize: 24, fontWeight: 650, letterSpacing: -0.6 }}>Security command center</h1>
-          <div style={{ fontSize: 13, color: C.dim, marginTop: 4 }}>
+          <div style={{ fontSize: 13, color: C.dim }}>
             Tenant <b style={{ fontWeight: 600 }}>{session?.tenantId || "—"}</b>
             {snapshot && <> · evaluated {snapshot.now.toLocaleTimeString()}</>}
           </div>
@@ -308,7 +301,7 @@ export const CommandCenterTab = ({ session, fipsMode, onNavigate }: Props) => {
         <button
           onClick={() => void refresh()}
           disabled={loading}
-          style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12.5, fontWeight: 600, color: C.text, background: C.card, border: `1px solid ${C.borderHi}`, borderRadius: 8, padding: "7px 12px", cursor: loading ? "wait" : "pointer" }}
+          style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12.5, fontWeight: 600, color: C.text, background: C.card, border: `1px solid ${C.borderHi}`, borderRadius: 4, padding: "7px 12px", cursor: loading ? "wait" : "pointer" }}
         >
           <RefreshCw size={14} style={{ animation: loading ? "spinArc 1s linear infinite" : "none" }} /> {loading ? "Evaluating…" : "Re-evaluate"}
         </button>
@@ -327,7 +320,7 @@ export const CommandCenterTab = ({ session, fipsMode, onNavigate }: Props) => {
                 : loading ? "Collecting live state…" : "No data sources reachable yet."}
             </div>
             <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-              {SEVERITY_ORDER.map((s, i) => bySev[i] ? <span key={s} style={{ fontSize: 11, color: SEV_COLOR[s].fg, background: SEV_COLOR[s].bg, borderRadius: 999, padding: "1px 8px" }}>{bySev[i]} {SEV_COLOR[s].label.toLowerCase()}</span> : null)}
+              {SEVERITY_ORDER.map((s, i) => bySev[i] ? <span key={s} style={{ fontSize: 11, color: SEV_COLOR[s].fg, background: SEV_COLOR[s].bg, borderRadius: 4, padding: "1px 8px" }}>{bySev[i]} {SEV_COLOR[s].label.toLowerCase()}</span> : null)}
             </div>
           </div>
         </div>
@@ -382,7 +375,7 @@ export const RecommendationsTab = ({ session, fipsMode, onNavigate }: Props) => 
     (!q || `${r.title} ${r.why} ${r.frameworks.join(" ")}`.toLowerCase().includes(q.toLowerCase()))
   );
   const snoozedCount = all.filter((r) => snoozed[r.id]).length;
-  const chip = (active: boolean): React.CSSProperties => ({ fontSize: 12, fontWeight: 500, borderRadius: 999, padding: "4px 11px", cursor: "pointer", border: `1px solid ${active ? C.accentFg : C.border}`, background: active ? C.accentDim : "transparent", color: active ? C.accentFg : C.dim });
+  const chip = (active: boolean): React.CSSProperties => ({ fontSize: 12, fontWeight: 500, borderRadius: 4, padding: "4px 11px", cursor: "pointer", border: `1px solid ${active ? C.accentFg : C.border}`, background: active ? C.accentDim : "transparent", color: active ? C.accentFg : C.dim });
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gap: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 12, flexWrap: "wrap" }}>
@@ -403,7 +396,7 @@ export const RecommendationsTab = ({ session, fipsMode, onNavigate }: Props) => 
           <option value="all">All categories</option>
           {CATEGORY_ORDER.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search title or framework (e.g. PCI, DORA)…" style={{ flex: 1, minWidth: 220, fontSize: 12.5, padding: "6px 10px", borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.text }} />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search title or framework (e.g. PCI, DORA)…" style={{ flex: 1, minWidth: 220, fontSize: 12.5, padding: "6px 10px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.surface, color: C.text }} />
         {snoozedCount > 0 && <button style={chip(false)} onClick={unsnoozeAll}>Show {snoozedCount} snoozed</button>}
       </div>
       <div style={{ ...card, overflow: "hidden" }}>

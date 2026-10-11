@@ -24,7 +24,7 @@ export function RotationSchedulingTab({ session }: any) {
             onClick={() => setView(id)}
             style={{
               display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 14px",
-              borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer",
+              borderRadius: 3, fontSize: 12, fontWeight: 600, cursor: "pointer",
               border: `1px solid ${C.border}`,
               background: view === id ? C.accent : "transparent",
               color: view === id ? C.bg : C.dim,

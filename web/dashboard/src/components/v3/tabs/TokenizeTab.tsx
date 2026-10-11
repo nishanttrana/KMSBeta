@@ -449,7 +449,7 @@ export const TokenizeTab=({session,keyCatalog,onToast})=>{
               background:op===name?C.accent:"transparent",
               color:op===name?C.bg:C.text,
               border:`1px solid ${op===name?C.accent:C.border}`,
-              borderRadius:8,
+              borderRadius:4,
               padding:"8px 14px",
               fontSize:12,
               fontWeight:600,
@@ -564,17 +564,17 @@ export const TokenizeTab=({session,keyCatalog,onToast})=>{
       <Card style={{padding:16}}>
         <div style={{fontSize:22,fontWeight:700,color:C.text,marginBottom:6,fontFamily:"inherit"}}>Data Masking</div>
         <div style={{fontSize:11,color:C.dim,marginBottom:8}}>Pattern: <span style={{color:C.accentFg}}>{maskPattern}</span> - Role: <span style={{color:C.accentFg}}>{maskRole}</span></div>
-        <div style={{fontSize:12,color:C.text,background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,padding:10,marginBottom:10}}>
+        <div style={{fontSize:12,color:C.text,background:C.surface,border:`1px solid ${C.border}`,borderRadius:4,padding:10,marginBottom:10}}>
           <div style={{color:C.dim,marginBottom:4}}>Input:</div>
-          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,wordBreak:"break-word"}}>{maskInput||"-"}</div>
+          <div style={{fontFamily:"var(--font-mono)",fontSize:11,wordBreak:"break-word"}}>{maskInput||"-"}</div>
         </div>
         <Btn small onClick={()=>setOp("Mask")}>Open Mask Operation</Btn>
       </Card>
       <Card style={{padding:16}}>
         <div style={{fontSize:22,fontWeight:700,color:C.text,marginBottom:6,fontFamily:"inherit"}}>PII Redaction</div>
         <div style={{fontSize:11,color:C.dim,marginBottom:8}}>Action: <span style={{color:C.accentFg}}>{redactAction}</span> {redactDetectOnly?"(detect-only)":"(apply)"}</div>
-        <div style={{fontSize:12,color:C.text,background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,padding:10,marginBottom:10,maxHeight:90,overflow:"hidden"}}>
-          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,wordBreak:"break-word"}}>{redactInput||"-"}</div>
+        <div style={{fontSize:12,color:C.text,background:C.surface,border:`1px solid ${C.border}`,borderRadius:4,padding:10,marginBottom:10,maxHeight:90,overflow:"hidden"}}>
+          <div style={{fontFamily:"var(--font-mono)",fontSize:11,wordBreak:"break-word"}}>{redactInput||"-"}</div>
         </div>
         <Btn small onClick={()=>setOp("Redact")}>Open Redact Operation</Btn>
       </Card>
@@ -762,7 +762,7 @@ export const DataEncryptionTab=({session,keyCatalog,onToast})=>{
               background:mode===name?C.accentDim:"transparent",
               color:mode===name?C.accentFg:C.text,
               border:`1px solid ${mode===name?C.accent:C.border}`,
-              borderRadius:8,
+              borderRadius:4,
               padding:"8px 12px",
               fontSize:12,
               fontWeight:600,
@@ -1179,7 +1179,7 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
     </>}>
       <Card>
         <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Execution Model</div>
-        <div style={{fontSize:10,color:C.dim,lineHeight:1.5}}>
+        <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim,lineHeight:1.5}}>
           Wrapper registration is mandatory when <code style={{color:C.accentFg}}>require_registered_wrapper</code> is enabled. Lease issuance enforces nonce/timestamp/signature checks and policy gates (cache/local crypto).
         </div>
       </Card>
@@ -1624,7 +1624,7 @@ const DataEncryptionPolicy=({session,onToast})=>{
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
           {useCaseProfiles.map((profile)=>(
-            <div key={`alg-profile-${profile.id}`} style={{border:`1px solid ${C.border}`,borderRadius:10,padding:"8px 10px"}}>
+            <div key={`alg-profile-${profile.id}`} style={{border:`1px solid ${C.border}`,borderRadius:4,padding:"8px 10px"}}>
               <div style={{fontSize:12,color:C.text,fontWeight:700,marginBottom:6}}>{profile.label}</div>
               <div style={{display:"grid",gap:6}}>
                 {dataAlgoOptions.map((algo)=>{
@@ -2179,7 +2179,7 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
           <div style={{fontSize:11,color:C.text,fontWeight:700}}>Tokenization Mode Policy (by data type)</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
             {tokenTypes.map((tokenType)=>(
-              <div key={`mode-policy-${tokenType}`} style={{display:"grid",gridTemplateColumns:"1fr auto auto",alignItems:"center",gap:8,border:`1px solid ${C.border}`,borderRadius:10,padding:"8px 10px"}}>
+              <div key={`mode-policy-${tokenType}`} style={{display:"grid",gridTemplateColumns:"1fr auto auto",alignItems:"center",gap:8,border:`1px solid ${C.border}`,borderRadius:4,padding:"8px 10px"}}>
                 <div style={{fontSize:12,color:C.text}}>{tokenType}</div>
                 <Chk
                   label="Vault"
@@ -2208,7 +2208,7 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
           <div style={{fontSize:11,color:C.text,fontWeight:700}}>Token Format Policy (by data type)</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
             {tokenTypes.map((tokenType)=>(
-              <div key={`fmt-policy-${tokenType}`} style={{border:`1px solid ${C.border}`,borderRadius:10,padding:"8px 10px"}}>
+              <div key={`fmt-policy-${tokenType}`} style={{border:`1px solid ${C.border}`,borderRadius:4,padding:"8px 10px"}}>
                 <div style={{fontSize:12,color:C.text,marginBottom:6}}>{tokenType}</div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:6}}>
                   {tokenFormats.map((format)=>(
@@ -2288,7 +2288,7 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
           </div>
         </div>
 
-        <div style={{display:"grid",gap:8,border:`1px solid ${C.border}`,borderRadius:10,padding:10}}>
+        <div style={{display:"grid",gap:8,border:`1px solid ${C.border}`,borderRadius:4,padding:10}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap"}}>
             <div style={{fontSize:11,color:C.text,fontWeight:700}}>Create Token Vault (from Policy)</div>
             <div style={{display:"flex",gap:8}}>
@@ -2314,10 +2314,10 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
           </div>
           <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim}}>Vault tokens store token, token hash, ciphertext, original hash, metadata and lifecycle counters for deterministic lookup and detokenize controls.</div>
           <div style={{fontSize:10,color:C.text,fontWeight:700}}>Existing token vaults: {Array.isArray(vaultRows)?vaultRows.length:0}</div>
-          <div style={{maxHeight:180,overflowY:"auto",border:`1px solid ${C.border}`,borderRadius:8,padding:8,display:"grid",gap:6}}>
+          <div style={{maxHeight:180,overflowY:"auto",border:`1px solid ${C.border}`,borderRadius:4,padding:8,display:"grid",gap:6}}>
             {(Array.isArray(vaultRows)?vaultRows:[]).map((row:any)=>{
               const id=String(row?.id||"");
-              return <div key={`policy-vault-row-${id}`} style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 8px"}}>
+              return <div key={`policy-vault-row-${id}`} style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",border:`1px solid ${C.border}`,borderRadius:4,padding:"6px 8px"}}>
                 <div style={{fontSize:10,color:C.text}}>
                   {`${String(row?.name||"")} (${id}) - ${String(row?.token_type||"")}/${String(row?.format||"")}`}
                 </div>
@@ -2375,7 +2375,7 @@ const AuditLogViewer=({session,onToast})=>{
         {entries.map((e,i)=>{
           const catColor=catColors[e?.category]||C.muted;
           const ts=e?.created_at?new Date(e.created_at).toLocaleString():"";
-          return <div key={e?.id||i} style={{display:"grid",gridTemplateColumns:"3px 1fr",gap:0,borderRadius:6,overflow:"hidden",border:`1px solid ${C.border}`}}>
+          return <div key={e?.id||i} style={{display:"grid",gridTemplateColumns:"3px 1fr",gap:0,borderRadius:3,overflow:"hidden",border:`1px solid ${C.border}`}}>
             <div style={{background:catColor}}/>
             <div style={{padding:"6px 10px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
               <div>

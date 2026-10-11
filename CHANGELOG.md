@@ -4,6 +4,36 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [11.3.0-beta] — 2026-10-11
+
+### A look of its own: one plane per theme, IBM Plex, petrol and brass
+- **Sidebar, top bar and page now match in both themes.** The sidebar was
+  dark beside a light page. The themes are Basalt (dark) and Limestone
+  (light): warm stone surfaces with one petrol accent, colour kept for status.
+- **IBM Plex Sans and IBM Plex Mono**, bundled with the console and served
+  from its own origin (the Content-Security-Policy is unchanged; nothing is
+  fetched from a font host). Section and tile labels are set in mono
+  capitals. The fonts' licence ships at `/licenses/IBM-Plex-OFL-1.1.txt`.
+- **Crisp geometry.** One corner scale (3, 4, 6, 8px) replaces the mixed
+  radii in about 390 places; cards are flat with a hairline border.
+- **The mark's core is brass**, in the sidebar, sign-in, loader and tab icon.
+- **Playbooks' views are in the sidebar** (Overview, Playbooks, Runs,
+  Incidents, Credentials, Event streaming), under its name like every other
+  module. Its own tab strip and page title are removed.
+- The Command Center's greeting and heading are removed.
+
+### Fixed
+- **"No open critical/high posture findings" passed before posture had ever
+  run.** It reads "not assessed" until a posture scan is on record.
+- **Paragraphs that mix text with inline code or links fold too.** 58
+  paragraphs now fold; 8 warnings and confirmations stay open.
+
+Enforced by `web/dashboard/tests/unit/brandAndLegibility.test.ts`,
+`recommendations.test.ts` and the smoke test "Playbooks views are sidebar
+sub-options, not a tab strip". Decision in
+[docs/DECISIONS.md](docs/DECISIONS.md). Open: the tab rows inside
+Administration and Secret Vault are unchanged.
+
 ## [11.2.0-beta] — 2026-10-11
 
 ### Less text, honest posture, readable colours

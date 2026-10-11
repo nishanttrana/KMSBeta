@@ -129,7 +129,7 @@ export function BYOKConsole({ session, accounts, keyCatalog, onAddConnector, onT
           {runs.slice(0, 25).map((r) => {
             const k = keys.find((x) => x.id === r.byok_id);
             return (
-              <div key={r.id} style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 10px", background: C.card }}>
+              <div key={r.id} style={{ border: `1px solid ${C.border}`, borderRadius: 4, padding: "6px 10px", background: C.card }}>
                 <button type="button" onClick={() => setOpenRun(openRun === r.id ? "" : r.id)} style={{ all: "unset", cursor: "pointer", display: "flex", justifyContent: "space-between", width: "100%", fontSize: 11, gap: 8 }}>
                   <span style={{ color: C.text }}>{OPERATION_LABEL[r.operation] ?? r.operation} · {k ? `${cloudLabel(k.provider)} ${k.alias || k.cloud_key_id}` : r.byok_id}</span>
                   <span style={{ display: "flex", gap: 8, color: C.muted, flexShrink: 0 }}>{r.actor} · {fmtAgo(r.started_at)} <B c={r.status === "succeeded" ? "green" : "red"}>{r.status}</B></span>

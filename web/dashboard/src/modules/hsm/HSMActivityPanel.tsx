@@ -59,9 +59,9 @@ export function HSMActivityPanel({ session, onToast }: { session: AuthSession | 
               return (
                 <tr key={e.id} style={{ borderTop: `1px solid ${C.border}`, color: C.text }}>
                   <td style={{ padding: "4px 6px", whiteSpace: "nowrap" }}>{new Date(e.timestamp).toLocaleString()}</td>
-                  <td style={{ padding: "4px 6px", fontFamily: "'JetBrains Mono',monospace" }}>{e.action.replace(/^audit\./, "")}</td>
+                  <td style={{ padding: "4px 6px", fontFamily: "var(--font-mono)" }}>{e.action.replace(/^audit\./, "")}</td>
                   <td style={{ padding: "4px 6px" }}>{e.actor_id || "-"}</td>
-                  <td style={{ padding: "4px 6px", fontFamily: "'JetBrains Mono',monospace", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={e.target_id}>{e.target_id || "-"}</td>
+                  <td style={{ padding: "4px 6px", fontFamily: "var(--font-mono)", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={e.target_id}>{e.target_id || "-"}</td>
                   <td style={{ padding: "4px 6px", color: tone(e.result) }}>{e.result}{reason ? `: ${reason}` : ""}</td>
                 </tr>
               );

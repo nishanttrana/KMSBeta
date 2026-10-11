@@ -239,11 +239,11 @@ export function ScimProvisioningSection({ session, onToast, tenantID }: Props) {
           </div>
           <div
             style={{
-              fontFamily: "monospace",
+              fontFamily: "var(--font-mono)",
               fontSize: 11,
               color: C.text,
               padding: 10,
-              borderRadius: 12,
+              borderRadius: 6,
               border: `1px solid ${C.border}`,
               background: "rgba(4,10,20,0.7)",
               wordBreak: "break-all"
@@ -298,7 +298,7 @@ export function ScimProvisioningSection({ session, onToast, tenantID }: Props) {
 
 function MetricCard({ label, value, tone }: { label: string; value: string; tone: "green" | "amber" | "blue" }) {
   return (
-    <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 12, background: "rgba(15, 24, 40, 0.75)" }}>
+    <div style={{ border: `1px solid ${C.border}`, borderRadius: 6, padding: 12, background: "rgba(15, 24, 40, 0.75)" }}>
       <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>{label}</div>
       <B c={tone}>{value}</B>
     </div>

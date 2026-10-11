@@ -82,7 +82,7 @@ export function HSMIntegrationCard({ session, onToast }: { session: AuthSession 
         onChange={() => setTenantKey(!tenantKey)}
       />
       {settings?.tenant_key_label && (
-        <div style={{ fontSize: 10, color: C.muted, margin: "2px 0 6px 22px", fontFamily: "'JetBrains Mono',monospace" }}>
+        <div style={{ fontSize: 10, color: C.muted, margin: "2px 0 6px 22px", fontFamily: "var(--font-mono)" }}>
           {settings.tenant_key_label}{hsm?.tenant_key_ready ? " (present in HSM)" : ""}
         </div>
       )}

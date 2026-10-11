@@ -97,7 +97,7 @@ export function RepositoriesModal({ open, onClose, session, repositories, error,
       {error ? (
         <div style={{ fontSize: 11, color: C.redFg }}>Repositories unavailable: {error}</div>
       ) : repositories.length ? (
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 4, overflow: "hidden" }}>
           {repositories.map((r, i) => {
             const t = tests[r.id] || {};
             return (

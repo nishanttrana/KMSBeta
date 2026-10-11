@@ -86,7 +86,7 @@ export function Inventory({ session, sources, filters, setFilters, onOpen, reloa
           </Sel>
         </div>
         <button type="button" onClick={() => set({ stale: !filters.stale })} title="Assets the last scan of their source didn't observe"
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, borderRadius: 7, padding: "7px 10px", cursor: "pointer", border: `1px solid ${filters.stale ? C.accentFg : C.border}`, background: filters.stale ? C.accentDim : "transparent", color: filters.stale ? C.accentFg : C.muted }}>
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, borderRadius: 3, padding: "7px 10px", cursor: "pointer", border: `1px solid ${filters.stale ? C.accentFg : C.border}`, background: filters.stale ? C.accentDim : "transparent", color: filters.stale ? C.accentFg : C.muted }}>
           <Clock3 size={12} />Not seen
         </button>
       </div>
@@ -152,5 +152,5 @@ export function Inventory({ session, sources, filters, setFilters, onOpen, reloa
 
 const PageBtn = ({ label, disabled, onClick, children }: { label: string; disabled: boolean; onClick: () => void; children: ReactNode }) => (
   <button type="button" aria-label={label} disabled={disabled} onClick={onClick}
-    style={{ display: "inline-flex", border: `1px solid ${C.border}`, borderRadius: 6, background: "transparent", color: disabled ? C.border : C.text, cursor: disabled ? "default" : "pointer", padding: 3 }}>{children}</button>
+    style={{ display: "inline-flex", border: `1px solid ${C.border}`, borderRadius: 3, background: "transparent", color: disabled ? C.border : C.text, cursor: disabled ? "default" : "pointer", padding: 3 }}>{children}</button>
 );

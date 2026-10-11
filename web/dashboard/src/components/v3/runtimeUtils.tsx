@@ -60,10 +60,10 @@ export class TabErrorBoundary extends Component<TabErrorBoundaryProps, TabErrorB
         return this.props.renderFallback(this.state.errorMessage || "Unexpected runtime error.", reset);
       }
       return (
-        <div style={{ border: "1px solid #ef4444", borderRadius: 10, padding: 12 }}>
+        <div style={{ border: "1px solid #ef4444", borderRadius: 4, padding: 12 }}>
           <div style={{ fontSize: 12, color: "#ef4444", fontWeight: 700, marginBottom: 6 }}>This tab failed to render.</div>
           <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 8 }}>{this.state.errorMessage || "Unexpected runtime error."}</div>
-          <button onClick={reset} style={{ border: "1px solid #243656", borderRadius: 6, padding: "4px 10px", background: "transparent", color: "#06d6e0", cursor: "pointer", fontSize: 10 }}>
+          <button onClick={reset} style={{ border: "1px solid #243656", borderRadius: 3, padding: "4px 10px", background: "transparent", color: "#06d6e0", cursor: "pointer", fontSize: 10 }}>
             Retry
           </button>
         </div>

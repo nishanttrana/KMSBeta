@@ -7,6 +7,26 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-11 — Console look: one plane per theme, IBM Plex, petrol and brass
+**Decision:** each theme is one plane (Basalt dark, Limestone light): the
+sidebar, top bar and page share it. The typeface is IBM Plex Sans with IBM
+Plex Mono, bundled from `@fontsource` and served from the console's origin.
+The accent is petrol; brass appears only in the mark. Corners follow one
+scale (3/4/6/8px) and cards are flat (11.3.0-beta). This replaces the
+fonts, sidebar and accent of the entry below.
+**Why:** owner direction, 2026-10-11: the dark sidebar beside a light page
+did not match, the console needed an enterprise typeface, and it must not
+look like a generated template. Warm stone with petrol is not the blue-on-navy
+or indigo-on-graphite that such templates default to, and petrol sits clear
+of every status hue. Plex gives identifiers and hashes a designed mono.
+**Rejected:** a green or lime accent (collides with "healthy"); amber, brass
+or red as a UI accent (warning and failure); violet (the template look);
+loading the font from a host (third-party call, refused by the CSP).
+**Cost:** two font packages (OFL-1.1) and about 510 KB of font files in the
+image, of which a Latin user downloads about 90 KB.
+**Enforced by:** `brandAndLegibility.test.ts` (fonts only through tokens, no
+remote stylesheet, hue contrast on both cards).
+
 ## 2026-10-11 — Explanations fold; warnings stay open
 **Decision:** a text-only element holding a paragraph (120 characters or
 more) shows one line and opens on click or focus (`.vk-fold`). A warning or
@@ -20,7 +40,9 @@ files are at their size ceiling).
 **Enforced by:** `brandAndLegibility.test.ts` ("folds paragraphs of
 explanation").
 
-## 2026-10-11 — Console look: system fonts, an ink sidebar, one accent
+## 2026-10-11 — Console look: system fonts, an ink sidebar, one accent (superseded)
+**Superseded** the same day by "one plane per theme, IBM Plex, petrol and
+brass" above; kept for the reasoning that was rejected.
 **Decision:** the console uses the operating system's fonts, an azure accent,
 and a sidebar that stays dark in both themes (11.1.0-beta). The brand
 gradient (azure to mint) is used only for the mark and progress bars.

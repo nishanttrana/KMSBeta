@@ -34,7 +34,7 @@ export function OfflineBanner() {
         color: "#fff",
         fontSize: "0.875rem",
         fontWeight: 600,
-        fontFamily: "system-ui, sans-serif",
+        fontFamily: "inherit",
       }}
     >
       <svg

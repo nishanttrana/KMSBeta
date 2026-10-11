@@ -39,7 +39,7 @@ function ToastItem({ toast }: { toast: Toast }) {
         alignItems: "flex-start",
         gap: "10px",
         padding: "10px 14px",
-        borderRadius: 8,
+        borderRadius: 4,
         background: v.bg,
         border: `1px solid ${v.border}`,
         boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
@@ -75,7 +75,7 @@ function ToastItem({ toast }: { toast: Toast }) {
           fontSize: 12,
           lineHeight: 1.5,
           color: "#e2e8f0",
-          fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
+          fontFamily: "inherit",
           wordBreak: "break-word",
         }}
       >

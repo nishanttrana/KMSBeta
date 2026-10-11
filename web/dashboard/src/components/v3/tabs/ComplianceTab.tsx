@@ -66,7 +66,7 @@ import { getPQCInventory } from "../../../lib/pqc";
 
 /* ── Shared chart tooltip ── */
 const ChartTip = ({ children, style }: any) => (
-  <div style={{ background: C.surface, border: `1px solid ${C.borderHi}`, borderRadius: 8, padding: "8px 12px", fontSize: 10, color: C.text, boxShadow: "0 4px 20px rgba(0,0,0,.5)", ...style }}>
+  <div style={{ background: C.surface, border: `1px solid ${C.borderHi}`, borderRadius: 4, padding: "8px 12px", fontSize: 10, color: C.text, boxShadow: "0 4px 20px rgba(0,0,0,.5)", ...style }}>
     {children}
   </div>
 );

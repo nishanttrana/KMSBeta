@@ -1423,17 +1423,17 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
     const statusRaw=String(crt.status||"unknown");
     const status=statusRaw.toLowerCase();
     const statusIcon=status==="active"?<CheckCircle2 size={10} color={C.green}/>:status==="revoked"?<XCircle size={10} color={C.red}/>:status==="deleted"?<Trash2 size={10} color={C.blue}/>:<ShieldAlert size={10} color={C.amber}/>;
-    return <div key={certID} style={{padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:8,background:C.bg}}>
+    return <div key={certID} style={{padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:4,background:C.bg}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
         <div style={{minWidth:0,flex:1}}>
           <div style={{fontSize:11,color:C.text,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(crt.subject_cn||crt.id||"certificate")}</div>
           <div style={{display:"flex",gap:8,marginTop:3,alignItems:"center",flexWrap:"wrap"}}>
             <div style={{display:"inline-flex",alignItems:"center",gap:3}}>{statusIcon}<B c={status==="active"?"green":status==="revoked"||status==="deleted"?"red":"amber"}>{statusRaw||"unknown"}</B></div>
-            <span style={{fontSize: 10,color:C.accentFg,fontFamily:"'JetBrains Mono',monospace",background:C.accentDim,padding:"1px 5px",borderRadius:3}}>{String(crt.algorithm||"-")}</span>
+            <span style={{fontSize: 10,color:C.accentFg,fontFamily:"var(--font-mono)",background:C.accentDim,padding:"1px 5px",borderRadius:3}}>{String(crt.algorithm||"-")}</span>
             <span style={{fontSize: 10,color:C.dim}}>{formatDestroyAt(String(crt.not_after||"-"))}</span>
           </div>
         </div>
-        <div style={{fontSize: 10,color:C.muted,fontFamily:"'JetBrains Mono',monospace",maxWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{certID.slice(0,12)}...</div>
+        <div style={{fontSize: 10,color:C.muted,fontFamily:"var(--font-mono)",maxWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{certID.slice(0,12)}...</div>
       </div>
     </div>;
   };
@@ -1467,7 +1467,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
             <span>{depth===0?"Root CA":"Intermediate CA"}: {String(ca.name||caID)}</span>
           </button>
           <div style={{display:"flex",gap:10,marginTop:5,marginLeft:34,flexWrap:"wrap",alignItems:"center"}}>
-            <span style={{fontSize: 10,color:C.accentFg,fontFamily:"'JetBrains Mono',monospace",background:C.accentDim,padding:"2px 6px",borderRadius:4}}>{String(ca.algorithm||"-")}</span>
+            <span style={{fontSize: 10,color:C.accentFg,fontFamily:"var(--font-mono)",background:C.accentDim,padding:"2px 6px",borderRadius:4}}>{String(ca.algorithm||"-")}</span>
             <span style={{fontSize: 10,color:String(ca.key_backend)==="hsm"?C.accentFg:C.dim}}>{String(ca.key_backend)==="hsm"?"Key in HSM":String(ca.key_backend)==="keycore"?"Software key, keycore co-signed":"Software vault"}</span>
             <span style={{fontSize: 10,color:C.muted}}>Created: {formatDestroyAt(String(ca.created_at||""))}</span>
           </div>
@@ -1678,10 +1678,10 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
           return <Card key={meta.name} style={{padding:14,background:`linear-gradient(135deg,${C.card} 0%,${enabled?C.greenTint3:C.redTint3} 100%)`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <div style={{width:36,height:36,borderRadius:8,background:enabled?C.greenDim:C.redDim,display:"flex",alignItems:"center",justifyContent:"center"}}>{protocolIcon}</div>
+                <div style={{width:36,height:36,borderRadius:4,background:enabled?C.greenDim:C.redDim,display:"flex",alignItems:"center",justifyContent:"center"}}>{protocolIcon}</div>
                 <div>
                   <div style={{fontSize:15,fontWeight:700,color:C.text}}>{meta.title}</div>
-                  <div style={{fontSize: 10,color:C.accentFg,fontFamily:"'JetBrains Mono',monospace"}}>{meta.rfc}</div>
+                  <div style={{fontSize: 10,color:C.accentFg,fontFamily:"var(--font-mono)"}}>{meta.rfc}</div>
                 </div>
               </div>
               <B c={enabled?"green":"red"}>{enabled?"Active":"Disabled"}</B>
@@ -1699,7 +1699,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
               <div style={{display:"grid",gap:2}}>
                 {endpoints.map((ep,i)=><div key={i} style={{display:"flex",gap:6,fontSize: 10,alignItems:"center"}}>
                   <span style={{color:C.greenFg,fontWeight:600,minWidth:90}}>{ep.label}</span>
-                  <code style={{color:C.accentFg,fontFamily:"'JetBrains Mono',monospace",fontSize: 10}}>{ep.path}</code>
+                  <code style={{color:C.accentFg,fontFamily:"var(--font-mono)",fontSize: 10}}>{ep.path}</code>
                 </div>)}
               </div>
             </div>:null}
@@ -1930,7 +1930,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
             w={320}
             value={certSearch}
             onChange={(e)=>setCertSearch(e.target.value)}
-            style={{height:34,borderRadius:9,fontSize:11}}
+            style={{height:34,borderRadius:4,fontSize:11}}
           />
         <Btn small onClick={()=>setCertStatusView("all")} style={{background:certStatusView==="all"?C.accentDim:"transparent",color:certStatusView==="all"?C.accentFg:C.text,borderColor:certStatusView==="all"?C.accent:"transparent"}}>
           <span style={{display:"inline-flex",alignItems:"center",gap:4}}><FileText size={10}/>{`All (${certStatusCounts.all})`}</span>
@@ -1953,7 +1953,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
             <div key={c.id} style={{display:"grid",gridTemplateColumns:"1.3fr 1fr .8fr .8fr .9fr .55fr",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:11,alignItems:"center"}}>
               <div>
                 <div style={{color:C.text,fontWeight:600}}>{c.subject_cn||c.id}</div>
-                <div style={{fontSize: 10,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{c.id}</div>
+                <div style={{fontSize: 10,color:C.muted,fontFamily:"var(--font-mono)"}}>{c.id}</div>
               </div>
               <div style={{color:C.accentFg}}>{c.algorithm}</div>
               <div style={{color:C.dim,textTransform:"uppercase"}}>{c.cert_class}</div>
@@ -1979,7 +1979,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
                   style={{
                     background:"transparent",
                     border:`1px solid ${C.border}`,
-                    borderRadius:7,
+                    borderRadius:3,
                     color:C.accentFg,
                     width:28,
                     height:24,
@@ -1999,7 +1999,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
                   minWidth:190,
                   background:C.surface,
                   border:`1px solid ${C.borderHi}`,
-                  borderRadius:8,
+                  borderRadius:4,
                   boxShadow:"0 12px 24px rgba(0,0,0,.35)",
                   padding:4,
                   display:"grid",
@@ -2013,7 +2013,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
                     }}
                     onMouseEnter={(e)=>{(e.currentTarget as any).style.background=C.accentDim;}}
                     onMouseLeave={(e)=>{(e.currentTarget as any).style.background="transparent";}}
-                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6,display:"flex",alignItems:"center",gap:6}}
+                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:3,display:"flex",alignItems:"center",gap:6}}
                   >
                     <Download size={12} color={C.accent}/> Download
                   </button>:<div style={{padding:"6px 8px",fontSize:10,color:C.muted,display:"flex",alignItems:"center",gap:6}}>
@@ -2028,7 +2028,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
                     disabled={busy===`renew-${certID}`}
                     onMouseEnter={(e)=>{(e.currentTarget as any).style.background=C.greenDim;}}
                     onMouseLeave={(e)=>{(e.currentTarget as any).style.background="transparent";}}
-                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`renew-${certID}`?"not-allowed":"pointer",borderRadius:6,display:"flex",alignItems:"center",gap:6}}
+                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`renew-${certID}`?"not-allowed":"pointer",borderRadius:3,display:"flex",alignItems:"center",gap:6}}
                   >
                     <RotateCcw size={12} color={C.green}/> {busy===`renew-${certID}`?"Renewing...":"Renew"}
                   </button>:null}
@@ -2041,7 +2041,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
                     disabled={busy===`revoke-${certID}`}
                     onMouseEnter={(e)=>{(e.currentTarget as any).style.background=C.amberDim;}}
                     onMouseLeave={(e)=>{(e.currentTarget as any).style.background="transparent";}}
-                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`revoke-${certID}`?"not-allowed":"pointer",borderRadius:6,display:"flex",alignItems:"center",gap:6}}
+                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`revoke-${certID}`?"not-allowed":"pointer",borderRadius:3,display:"flex",alignItems:"center",gap:6}}
                   >
                     <ShieldX size={12} color={C.amber}/> {busy===`revoke-${certID}`?"Revoking...":"Revoke"}
                   </button>:null}
@@ -2054,7 +2054,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
                     disabled={busy===`ocsp-${certID}`}
                     onMouseEnter={(e)=>{(e.currentTarget as any).style.background=C.blueDim;}}
                     onMouseLeave={(e)=>{(e.currentTarget as any).style.background="transparent";}}
-                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`ocsp-${certID}`?"not-allowed":"pointer",borderRadius:6,display:"flex",alignItems:"center",gap:6}}
+                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`ocsp-${certID}`?"not-allowed":"pointer",borderRadius:3,display:"flex",alignItems:"center",gap:6}}
                   >
                     <Eye size={12} color={C.blue}/> {busy===`ocsp-${certID}`?"Checking...":"OCSP Status"}
                   </button>
@@ -2069,7 +2069,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
                     disabled={busy===`delete-${certID}`}
                     onMouseEnter={(e)=>{(e.currentTarget as any).style.background=C.redDim;}}
                     onMouseLeave={(e)=>{(e.currentTarget as any).style.background="transparent";}}
-                    style={{background:"transparent",border:"none",color:C.redFg,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`delete-${certID}`?"not-allowed":"pointer",borderRadius:6,display:"flex",alignItems:"center",gap:6}}
+                    style={{background:"transparent",border:"none",color:C.redFg,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`delete-${certID}`?"not-allowed":"pointer",borderRadius:3,display:"flex",alignItems:"center",gap:6}}
                   >
                     <Trash2 size={12} color={C.red}/> {busy===`delete-${certID}`?"Deleting...":"Delete Permanently"}
                   </button>
@@ -2316,7 +2316,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
     </Modal>
 
     <Modal open={modal==="upload-3p"} onClose={()=>setModal(null)} title="Upload 3rd-Party Web Certificate" wide>
-      <div style={{background:C.blueDim,border:`1px solid ${C.blue}`,borderRadius:8,padding:10,marginBottom:12,fontSize:10,color:C.blueFg}}>
+      <div style={{background:C.blueDim,border:`1px solid ${C.blue}`,borderRadius:4,padding:10,marginBottom:12,fontSize:10,color:C.blueFg}}>
         Upload certificates from external CAs (DigiCert, Let's Encrypt, etc.) for KMS interface or service endpoints.
       </div>
       <FG label="Purpose" required>
@@ -2370,7 +2370,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
       {clmStatus&&Array.isArray(clmStatus.milestones)?<FG label="CA/B Forum SC-081 Schedule" hint="Maximum public TLS certificate lifetime steps down to 47 days by March 2029.">
         <div style={{display:"grid",gap:4}}>
           {clmStatus.milestones.map((m,idx)=>(
-            <div key={`clm-ms-${idx}`} style={{fontSize:10,fontFamily:"'JetBrains Mono',monospace",color:m.active?C.text:C.dim}}>
+            <div key={`clm-ms-${idx}`} style={{fontSize:10,fontFamily:"var(--font-mono)",color:m.active?C.text:C.dim}}>
               {m.active?"> ":"  "}{m.effective_from==="baseline"?"baseline":`from ${m.effective_from}`}: max {m.max_validity_days} days{m.active?"  (in force)":""}
             </div>
           ))}
@@ -2406,14 +2406,14 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
       </FG>
       <FG label="Supported Options" hint="Use these keys in configuration JSON.">
         <div style={{display:"grid",gap:4}}>
-          {activeProtocolDocs.map((line,idx)=><div key={`${String(protocolName||"cfg")}-${idx}`} style={{fontSize:10,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>- {sanitizeDisplayText(line)}</div>)}
+          {activeProtocolDocs.map((line,idx)=><div key={`${String(protocolName||"cfg")}-${idx}`} style={{fontSize:10,color:C.dim,fontFamily:"var(--font-mono)"}}>- {sanitizeDisplayText(line)}</div>)}
         </div>
       </FG>
       {activeProtocolImplementation?<FG label="Implementation" hint="Open-source runtime details for this protocol engine.">
         <div style={{display:"grid",gap:4}}>
-          <div style={{fontSize:10,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>engine={sanitizeDisplayText(activeProtocolImplementation.engine||"native-go")} language={sanitizeDisplayText(activeProtocolImplementation.language||"go")} oss_only={String(Boolean(activeProtocolImplementation.oss_only))}</div>
-          {Array.isArray(activeProtocolImplementation.sdks)&&activeProtocolImplementation.sdks.length?<div style={{fontSize:10,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>sdk: {sanitizeDisplayText(activeProtocolImplementation.sdks.join(" | "))}</div>:null}
-          {Array.isArray(activeProtocolImplementation.hardening)&&activeProtocolImplementation.hardening.length?<div style={{fontSize:10,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>hardening: {sanitizeDisplayText(activeProtocolImplementation.hardening.join(" | "))}</div>:null}
+          <div style={{fontSize:10,color:C.dim,fontFamily:"var(--font-mono)"}}>engine={sanitizeDisplayText(activeProtocolImplementation.engine||"native-go")} language={sanitizeDisplayText(activeProtocolImplementation.language||"go")} oss_only={String(Boolean(activeProtocolImplementation.oss_only))}</div>
+          {Array.isArray(activeProtocolImplementation.sdks)&&activeProtocolImplementation.sdks.length?<div style={{fontSize:10,color:C.dim,fontFamily:"var(--font-mono)"}}>sdk: {sanitizeDisplayText(activeProtocolImplementation.sdks.join(" | "))}</div>:null}
+          {Array.isArray(activeProtocolImplementation.hardening)&&activeProtocolImplementation.hardening.length?<div style={{fontSize:10,color:C.dim,fontFamily:"var(--font-mono)"}}>hardening: {sanitizeDisplayText(activeProtocolImplementation.hardening.join(" | "))}</div>:null}
           {String(activeProtocolImplementation.notes||"").trim()?<div style={{fontSize:10,color:C.dim}}>{sanitizeDisplayText(activeProtocolImplementation.notes||"")}</div>:null}
         </div>
       </FG>:null}
@@ -2488,8 +2488,8 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
         <FG label="Metadata (JSON)">
           <Txt rows={6} value={starMetadataText} onChange={(e)=>setStarMetadataText(e.target.value)} />
         </FG>
-        <div style={{fontSize:10,color:C.muted}}>
-          REST: <span style={{fontFamily:"'JetBrains Mono', monospace"}}>/certs/star/summary</span>, <span style={{fontFamily:"'JetBrains Mono', monospace"}}>/certs/star/subscriptions</span>. ACME directory metadata also advertises STAR capability and default short-lived validity.
+        <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.muted}}>
+          REST: <span style={{fontFamily:"var(--font-mono)"}}>/certs/star/summary</span>, <span style={{fontFamily:"var(--font-mono)"}}>/certs/star/subscriptions</span>. ACME directory metadata also advertises STAR capability and default short-lived validity.
         </div>
         <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"flex-start"}}>
           <div style={{fontSize:10,color:C.dim,maxWidth:520}}>
@@ -2518,7 +2518,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
           <div style={{display:"grid",gap:8,marginBottom:12}}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
               {["1. Account","2. Order","3. Challenge","4. Finalize"].map((step,i)=>
-                <div key={i} style={{textAlign:"center",padding:"8px 4px",borderRadius:8,background:C.accentDim,border:`1px solid ${C.border}`}}>
+                <div key={i} style={{textAlign:"center",padding:"8px 4px",borderRadius:4,background:C.accentDim,border:`1px solid ${C.border}`}}>
                   <div style={{fontSize:10,fontWeight:700,color:C.accentFg}}>{step}</div>
                 </div>
               )}

@@ -75,7 +75,7 @@ function roleBadge(role: string, status: string, statusMeta: (s: string) => any)
   const h = statusMeta(status);
   return <span style={{
     display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px",
-    borderRadius: 999, background: h.bg, color: h.color,
+    borderRadius: 4, background: h.bg, color: h.color,
     border: leader ? `1px solid ${C.accent}` : `1px solid transparent`,
     fontSize: 10, fontWeight: 700
   }}>
@@ -87,7 +87,7 @@ function roleBadge(role: string, status: string, statusMeta: (s: string) => any)
 function componentPill(component: string, label: string, color: string) {
   const dimColor = color + "18";
   return <span key={component} style={{
-    padding: "3px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700,
+    padding: "3px 8px", borderRadius: 4, fontSize: 10, fontWeight: 700,
     color, background: dimColor, border: `1px solid ${color}22`
   }}>{label}</span>;
 }
@@ -141,13 +141,13 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
           <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Leader Node</div>
           <div style={{
             background: `linear-gradient(135deg, ${C.card} 0%, ${C.accentTint} 100%)`,
-            border: `1px solid ${C.accent}`, borderRadius: 14, padding: 18,
+            border: `1px solid ${C.accent}`, borderRadius: 6, padding: 18,
             boxShadow: `0 0 24px ${C.glow}`
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
                 <div style={{ fontSize: 18, color: C.white, fontWeight: 700 }}>{String(leaderNode.name || leaderNode.id)}</div>
-                <div style={{ fontSize: 10, color: C.muted, fontFamily: "'JetBrains Mono',monospace", marginTop: 2 }}>{String(leaderNode.endpoint || "unknown")}</div>
+                <div style={{ fontSize: 10, color: C.muted, fontFamily: "var(--font-mono)", marginTop: 2 }}>{String(leaderNode.endpoint || "unknown")}</div>
               </div>
               {roleBadge("leader", String(leaderNode.status || "unknown"), statusMeta)}
             </div>
@@ -196,13 +196,13 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
               const h = statusMeta(status);
               const components = (Array.isArray(node?.enabled_components) ? node.enabled_components : []).map((c: any) => String(c || "")).filter(Boolean);
               return <div key={String(node?.id || Math.random())} style={{
-                background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14,
+                background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, padding: 14,
                 borderLeft: `3px solid ${h.color}`
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                   <div>
                     <div style={{ fontSize: 14, color: C.white, fontWeight: 700 }}>{String(node?.name || node?.id || "-")}</div>
-                    <div style={{ fontSize: 10, color: C.muted, fontFamily: "'JetBrains Mono',monospace", marginTop: 2 }}>{String(node?.endpoint || "unknown")}</div>
+                    <div style={{ fontSize: 10, color: C.muted, fontFamily: "var(--font-mono)", marginTop: 2 }}>{String(node?.endpoint || "unknown")}</div>
                   </div>
                   {roleBadge("follower", status, statusMeta)}
                 </div>
@@ -239,14 +239,14 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
 
         {/* Sync info banner */}
         <div style={{
-          marginTop: 14, border: `1px solid ${C.borderHi}`, borderRadius: 10,
+          marginTop: 14, border: `1px solid ${C.borderHi}`, borderRadius: 4,
           background: C.card, padding: "12px 16px", display: "flex", alignItems: "center", gap: 8
         }}>
           <span style={{ fontSize: 11, color: C.accentFg, fontWeight: 700 }}>Replication</span>
           <span style={{ fontSize: 11, color: C.dim }}>{selectiveNote}</span>
         </div>
         {replication?.forwards_to && (
-          <div style={{ marginTop: 8, fontSize: 11, color: C.amberFg }}>
+          <div data-keep="" style={{ marginTop: 8, fontSize: 11, color: C.amberFg }}>
             Member node: key, policy and configuration changes are forwarded to primary {replication.forwards_to}. Crypto operations, logins and audit run on this node.
           </div>
         )}
@@ -295,7 +295,7 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
                 <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{String(node?.name || nodeID)}</div>
                 {roleBadge(String(node?.role || "follower"), status, statusMeta)}
               </div>
-              <div style={{ fontSize: 10, color: C.dim, fontFamily: "'JetBrains Mono',monospace", marginBottom: 8 }}>{String(node?.endpoint || "unknown")}</div>
+              <div style={{ fontSize: 10, color: C.dim, fontFamily: "var(--font-mono)", marginBottom: 8 }}>{String(node?.endpoint || "unknown")}</div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
                 <div>
@@ -377,13 +377,13 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
             return <div key={tier.id} onClick={() => applyTier(tier.id)} style={{
               background: isActive ? dimColor : C.card,
               border: `1px solid ${isActive ? tier.color : C.border}`,
-              borderRadius: 12, padding: 14, cursor: "pointer",
+              borderRadius: 6, padding: 14, cursor: "pointer",
               transition: "all .2s", boxShadow: isActive ? `0 0 16px ${tier.color}22` : "none"
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: isActive ? tier.color : C.text }}>{tier.label}</div>
                 <span style={{
-                  fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999,
+                  fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
                   background: dimColor, color: tier.color
                 }}>{tier.components.length} services</span>
               </div>
@@ -436,7 +436,7 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                     <div>
                       <div style={{ fontSize: 12, color: C.text, fontWeight: 700 }}>{String(profile?.name || profile?.id || "-")}</div>
-                      <div style={{ fontSize: 10, color: C.dim, fontFamily: "'JetBrains Mono',monospace" }}>{String(profile?.id || "-")}</div>
+                      <div style={{ fontSize: 10, color: C.dim, fontFamily: "var(--font-mono)" }}>{String(profile?.id || "-")}</div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       {profile?.is_default ? <B c="green">Default</B> : null}
@@ -517,7 +517,7 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
 
         {/* Sync event log */}
         <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Recent Sync Events</div>
-        <div style={{ maxHeight: 400, overflow: "auto", borderRadius: 10, border: `1px solid ${C.border}` }}>
+        <div style={{ maxHeight: 400, overflow: "auto", borderRadius: 4, border: `1px solid ${C.border}` }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
             <thead>
               <tr style={{ background: C.surface, position: "sticky", top: 0 }}>
@@ -528,7 +528,7 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
             </thead>
             <tbody>
               {syncEvents.map((evt) => <tr key={evt.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                <td style={{ padding: "6px 10px", color: C.dim, fontFamily: "'JetBrains Mono',monospace" }}>{evt.id}</td>
+                <td style={{ padding: "6px 10px", color: C.dim, fontFamily: "var(--font-mono)" }}>{evt.id}</td>
                 <td style={{ padding: "6px 10px" }}><B c="blue">{clusterComponentLabel(evt.component)}</B></td>
                 <td style={{ padding: "6px 10px", color: C.text }}>{evt.entity_type}/{evt.entity_id}</td>
                 <td style={{ padding: "6px 10px" }}><B c={evt.operation === "delete" ? "red" : evt.operation === "create" ? "green" : "amber"}>{evt.operation}</B></td>
@@ -578,13 +578,13 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
         </div>
 
         {/* Log entries */}
-        <div style={{ maxHeight: 500, overflow: "auto", borderRadius: 10, border: `1px solid ${C.border}` }}>
+        <div style={{ maxHeight: 500, overflow: "auto", borderRadius: 4, border: `1px solid ${C.border}` }}>
           {clusterLogs.map((log) => <div key={log.id} style={{
             padding: "10px 14px", borderBottom: `1px solid ${C.border}`,
             display: "flex", gap: 10, alignItems: "flex-start"
           }}>
             <span style={{
-              padding: "2px 8px", borderRadius: 5, fontSize: 10, fontWeight: 700,
+              padding: "2px 8px", borderRadius: 3, fontSize: 10, fontWeight: 700,
               color: levelColor(log.level), background: levelBg(log.level),
               flexShrink: 0, minWidth: 44, textAlign: "center", textTransform: "uppercase"
             }}>{String(log.level || "info").toUpperCase()}</span>

@@ -76,7 +76,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
   const na = loading || loadErr;
 
   const statCard = (icon: React.ReactNode, label: string, value: string, sub?: string, color?: string) => (
-    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px", flex: 1, display: "flex", gap: 10, alignItems: "flex-start" }}>
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: "14px 16px", flex: 1, display: "flex", gap: 10, alignItems: "flex-start" }}>
       <div style={{ color: color || C.accentFg, marginTop: 2 }}>{icon}</div>
       <div>
         <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
@@ -87,12 +87,12 @@ export function OpsMetricsPanel({ session }: { session: any }) {
   );
 
   return (
-    <div style={{ fontFamily: '"IBM Plex Sans", sans-serif', color: C.text }}>
+    <div style={{ color: C.text }}>
       {/* Controls */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div className="vk-fold" tabIndex={0} style={{ fontSize: 12, color: C.muted }}>Cryptographic operation throughput, latency and errors, from the audit event of every operation that ran, was refused or failed</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ display: "flex", gap: 2, background: C.surface, borderRadius: 6, padding: 2, border: `1px solid ${C.border}` }}>
+          <div style={{ display: "flex", gap: 2, background: C.surface, borderRadius: 3, padding: 2, border: `1px solid ${C.border}` }}>
             {(["1h", "24h", "7d", "30d"] as const).map(w => (
               <button key={w} onClick={() => setTimeWindow(w)} style={{
                 padding: "4px 10px", borderRadius: 4, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600,
@@ -101,13 +101,13 @@ export function OpsMetricsPanel({ session }: { session: any }) {
               }}>{w}</button>
             ))}
           </div>
-          <button onClick={load} style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, padding: "5px 10px", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 11 }}>
+          <button onClick={load} style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 3, padding: "5px 10px", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 11 }}>
             <RefreshCw size={12} /> Refresh
           </button>
         </div>
       </div>
 
-      {loadErr && <div style={{ padding: 12, borderRadius: 6, background: C.redDim, color: C.redFg, fontSize: 12, marginBottom: 16 }}>Operations metrics unavailable: {loadErr}</div>}
+      {loadErr && <div style={{ padding: 12, borderRadius: 3, background: C.redDim, color: C.redFg, fontSize: 12, marginBottom: 16 }}>Operations metrics unavailable: {loadErr}</div>}
 
       {!loadErr && !loading && overview && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", fontSize: 11, color: C.muted, marginBottom: 12 }}>
@@ -115,7 +115,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
             {ov.scope === "cluster" ? "Cluster-wide: every node's operations" : ov.scope === "node" ? "This node only" : "Single node"}
           </span>
           {(ov.by_node ?? []).length > 1 && (ov.by_node ?? []).map((n: any) => (
-            <span key={n.node || "local"} style={{ fontFamily: "monospace" }}>{n.node || "(unclustered)"}: {fmt(n.total_ops)}</span>
+            <span key={n.node || "local"} style={{ fontFamily: "var(--font-mono)" }}>{n.node || "(unclustered)"}: {fmt(n.total_ops)}</span>
           ))}
           <span>
             {ov.recorded_since
@@ -153,7 +153,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
 
       {/* Operations Breakdown */}
       {!loadErr && section === "ops" && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 20 }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: 20 }}>
           <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 16 }}>Operations by Type — {timeWindow}</div>
           {loading ? <div style={{ color: C.muted, padding: 20, textAlign: "center" }}>Loading...</div> : latency.length === 0 ? (
             <div style={{ textAlign: "center", padding: 40, color: C.muted }}>
@@ -169,7 +169,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
                 return (
                   <div key={row.op_type + row.service} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ width: 36, height: 22, borderRadius: 4, background: color + "22", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <span style={{ fontSize: 10, fontWeight: 800, color, fontFamily: "monospace" }}>{OP_ICONS[row.op_type] ?? row.op_type?.toUpperCase().slice(0, 3)}</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, color, fontFamily: "var(--font-mono)" }}>{OP_ICONS[row.op_type] ?? row.op_type?.toUpperCase().slice(0, 3)}</span>
                     </div>
                     <div style={{ width: 90, fontSize: 12, fontWeight: 600, color: C.text, textTransform: "capitalize" }}>{row.service ? `${row.service}/${row.op_type}` : row.op_type}</div>
                     <div style={{ flex: 1, background: C.border, borderRadius: 3, height: 6, overflow: "hidden" }}>
@@ -191,7 +191,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
 
       {/* Latency Percentiles */}
       {!loadErr && section === "latency" && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, overflow: "hidden" }}>
           <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, fontSize: 13, fontWeight: 700 }}>Latency by Operation Type <span style={{ fontSize: 11, fontWeight: 400, color: C.muted, marginLeft: 8 }}>average is exact; percentiles are the histogram bucket each falls in</span></div>
           {loading ? <div style={{ padding: 24, textAlign: "center", color: C.muted }}>Loading...</div> : latency.length === 0 ? (
             <div style={{ padding: 40, textAlign: "center", color: C.muted }}>No operations in this window.</div>
@@ -218,7 +218,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
                       <td style={{ ...CELL, color: C.greenFg }}>{le(row.p50_ms)}</td>
                       <td style={{ ...CELL, color: row.p90_ms == null || row.p90_ms > 25 ? C.amberFg : C.dim }}>{le(row.p90_ms)}</td>
                       <td style={{ ...CELL, color: row.p99_ms == null || row.p99_ms > 50 ? C.orangeFg : C.dim }}>{le(row.p99_ms)}</td>
-                      <td style={{ ...CELL, fontFamily: "monospace" }}>{fmt(row.sample_ops ?? 0)}</td>
+                      <td style={{ ...CELL, fontFamily: "var(--font-mono)" }}>{fmt(row.sample_ops ?? 0)}</td>
                     </tr>
                   );
                 })}
@@ -230,7 +230,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
 
       {/* By Service */}
       {!loadErr && section === "services" && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, overflow: "hidden" }}>
           <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, fontSize: 13, fontWeight: 700 }}>Operations by Service</div>
           {loading ? <div style={{ padding: 24, textAlign: "center", color: C.muted }}>Loading...</div> : services.length === 0 ? (
             <div style={{ padding: 40, textAlign: "center", color: C.muted }}>No operations in this window.</div>
@@ -245,8 +245,8 @@ export function OpsMetricsPanel({ session }: { session: any }) {
                 {services.map(svc => (
                   <tr key={svc.service} style={{ borderBottom: `1px solid ${C.border}22` }}>
                     <td style={{ ...CELL, color: C.text, fontWeight: 600 }}>{svc.service}</td>
-                    <td style={{ ...CELL, fontFamily: "monospace" }}>{fmt(svc.total_ops ?? 0)}</td>
-                    <td style={{ ...CELL, fontFamily: "monospace", color: (svc.total_errors ?? 0) > 0 ? C.amberFg : C.muted }}>{svc.total_errors ?? 0}</td>
+                    <td style={{ ...CELL, fontFamily: "var(--font-mono)" }}>{fmt(svc.total_ops ?? 0)}</td>
+                    <td style={{ ...CELL, fontFamily: "var(--font-mono)", color: (svc.total_errors ?? 0) > 0 ? C.amberFg : C.muted }}>{svc.total_errors ?? 0}</td>
                     <td style={CELL}>
                       <span style={{ color: (svc.error_rate ?? 0) > 0.02 ? C.redFg : C.greenFg, fontWeight: 600 }}>
                         {pct(svc.error_rate ?? 0)}
@@ -263,7 +263,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
 
       {/* Error Breakdown */}
       {!loadErr && section === "errors" && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, overflow: "hidden" }}>
           <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, fontSize: 13, fontWeight: 700 }}>
             Error Breakdown <span style={{ fontSize: 11, fontWeight: 400, color: C.muted, marginLeft: 8 }}>by service and operation</span>
           </div>
@@ -285,9 +285,9 @@ export function OpsMetricsPanel({ session }: { session: any }) {
                   return (
                     <tr key={i} style={{ borderBottom: `1px solid ${C.border}22` }}>
                       <td style={{ ...CELL, fontWeight: 600, color: C.text }}>{err.service}</td>
-                      <td style={{ ...CELL, fontFamily: "monospace", color: C.amberFg, fontWeight: 600, fontSize: 11, textTransform: "capitalize" }}>{err.op_type}</td>
-                      <td style={{ ...CELL, fontFamily: "monospace", fontWeight: 700, color: C.redFg }}>{err.error_count ?? 0}</td>
-                      <td style={{ ...CELL, fontFamily: "monospace" }}>{fmt(err.total_count ?? 0)}</td>
+                      <td style={{ ...CELL, fontFamily: "var(--font-mono)", color: C.amberFg, fontWeight: 600, fontSize: 11, textTransform: "capitalize" }}>{err.op_type}</td>
+                      <td style={{ ...CELL, fontFamily: "var(--font-mono)", fontWeight: 700, color: C.redFg }}>{err.error_count ?? 0}</td>
+                      <td style={{ ...CELL, fontFamily: "var(--font-mono)" }}>{fmt(err.total_count ?? 0)}</td>
                       <td style={CELL}>
                         <span style={{ color: rate > 0.05 ? C.redFg : rate > 0.01 ? C.amberFg : C.greenFg, fontWeight: 600 }}>{pct(rate)}</span>
                       </td>

@@ -360,7 +360,7 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
             <div className="vk-fold" tabIndex={0} style={{ fontSize: 10, color: C.muted, marginBottom: 8 }}>Policy edges come from workload registrations. Usage edges come from live audit-backed key operations performed with workload identity.</div>
             <div style={{ display: "grid", gap: 8 }}>
               {graphPreview.edges.map((edge: any) => (
-                <div key={`${edge.source}-${edge.target}-${edge.kind}`} style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, background: C.card }}>
+                <div key={`${edge.source}-${edge.target}-${edge.kind}`} style={{ border: `1px solid ${C.border}`, borderRadius: 4, padding: 10, background: C.card }}>
                   <div style={{ fontSize: 11, color: C.text, fontWeight: 600 }}>{String(edge.source).replace(/^workload:/, "")}{" -> "}{String(edge.target).replace(/^key:/, "")}</div>
                   <div style={{ fontSize: 10, color: C.dim }}>{edge.kind === "usage" ? `Observed ${edge.label}` : `Policy ${edge.label}`}{edge.weight ? ` x${edge.weight}` : ""}</div>
                 </div>
@@ -400,7 +400,7 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
             <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>Registered Workloads</div>
             <div style={{ display: "grid", gap: 8 }}>
               {registrations.map((item: any) => (
-                <div key={item.id} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 12, background: C.card }}>
+                <div key={item.id} style={{ border: `1px solid ${C.border}`, borderRadius: 4, padding: 12, background: C.card }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>{String(item?.name || item?.spiffe_id || item?.id)}</div>
                     <B c={item?.enabled ? "green" : "amber"}>{item?.enabled ? "Enabled" : "Disabled"}</B>
@@ -441,7 +441,7 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
             <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>Configured Federation</div>
             <div style={{ display: "grid", gap: 8 }}>
               {bundles.map((item: any) => (
-                <div key={item.id} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 12, background: C.card }}>
+                <div key={item.id} style={{ border: `1px solid ${C.border}`, borderRadius: 4, padding: 12, background: C.card }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>{String(item?.trust_domain || item?.id)}</div>
                     <B c={item?.enabled ? "green" : "amber"}>{item?.enabled ? "Enabled" : "Disabled"}</B>
@@ -544,7 +544,7 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
             )}
             <div style={{ display: "grid", gap: 8 }}>
               {issuances.slice(0, 8).map((item: any) => (
-                <div key={item.id} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 10, background: C.card }}>
+                <div key={item.id} style={{ border: `1px solid ${C.border}`, borderRadius: 4, padding: 10, background: C.card }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
                     <div style={{ fontSize: 11, color: C.text, fontWeight: 600 }}>{item.spiffe_id}</div>
                     <B c={String(item?.status || "").toLowerCase() === "expired" ? "amber" : "green"}>{item.svid_type}</B>
@@ -565,7 +565,7 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
             {usageError && <div style={{ fontSize: 11, color: C.amberFg, marginBottom: 8 }}>Usage unavailable: {usageError}</div>}
             <div style={{ display: "grid", gap: 8 }}>
               {usage.map((item: any) => (
-                <div key={`${item.event_id}-${item.key_id}-${item.operation}`} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 10, background: C.card }}>
+                <div key={`${item.event_id}-${item.key_id}-${item.operation}`} style={{ border: `1px solid ${C.border}`, borderRadius: 4, padding: 10, background: C.card }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                     <div style={{ fontSize: 11, color: C.text, fontWeight: 600 }}>{item.workload_identity}</div>
                     <B c={String(item?.result || "").toLowerCase() === "success" ? "green" : "amber"}>{item.operation}</B>

@@ -49,7 +49,7 @@ export class AppErrorBoundary extends React.Component<Props, State> {
           justifyContent: "center",
           minHeight: "100vh",
           padding: "2rem",
-          fontFamily: "system-ui, sans-serif",
+          fontFamily: "inherit",
           background: "#0f172a",
           color: "#e2e8f0",
           textAlign: "center",

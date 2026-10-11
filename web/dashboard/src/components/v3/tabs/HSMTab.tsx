@@ -22,7 +22,7 @@ const copyText=(text:string,onToast?:any)=>{
 
 /* ── monospace code block ── */
 const CodeBlock=({value,onToast,label}:{value:string,onToast?:any,label?:string})=>(
-  <div style={{position:"relative",background:"rgba(0,0,0,.35)",borderRadius:6,padding:"8px 10px",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:C.text,whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.6}}>
+  <div style={{position:"relative",background:"rgba(0,0,0,.35)",borderRadius:3,padding:"8px 10px",fontFamily:"var(--font-mono)",fontSize:10,color:C.text,whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.6}}>
     {label&&<div style={{fontSize: 10,color:C.muted,marginBottom:4,textTransform:"uppercase",letterSpacing:1}}>{label}</div>}
     {value}
     <span onClick={()=>copyText(value,onToast)} style={{position:"absolute",top:6,right:6,cursor:"pointer",color:C.dim,fontSize:10}} title="Copy"><Copy size={12}/></span>
@@ -38,7 +38,7 @@ const Dot=({ok}:{ok:boolean})=>(
 const KV=({k,v,mono}:{k:string,v:string,mono?:boolean})=>(
   <div style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:10,gap:8}}>
     <span style={{color:C.muted}}>{k}</span>
-    <span style={{color:C.text,textAlign:"right",...(mono?{fontFamily:"'JetBrains Mono',monospace"}:{})}}>{v}</span>
+    <span style={{color:C.text,textAlign:"right",...(mono?{fontFamily:"var(--font-mono)"}:{})}}>{v}</span>
   </div>
 );
 
@@ -263,7 +263,7 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
   return <div>
     {/* ── Vendor Header ── */}
     <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
-      <div style={{width:40,height:40,borderRadius:8,background:"rgba(76,157,255,.08)",display:"flex",alignItems:"center",justifyContent:"center"}}><Cpu size={20} style={{color:C.accentFg}}/></div>
+      <div style={{width:40,height:40,borderRadius:4,background:"rgba(20,147,168,.08)",display:"flex",alignItems:"center",justifyContent:"center"}}><Cpu size={20} style={{color:C.accentFg}}/></div>
       <div>
         <div style={{fontSize:14,fontWeight:700,color:C.text}}>{activeVendor?.label||"Generic PKCS#11 HSM"}</div>
         <div style={{fontSize:10,color:C.muted}}>Hardware Security Module integration via PKCS#11 — {activeVendor?.slotTerm} / {activeVendor?.partitionTerm} / {activeVendor?.tokenTerm}</div>
@@ -276,7 +276,7 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
     <HSMIntegrationCard session={session} onToast={onToast}/>
     <HSMActivityPanel session={session} onToast={onToast}/>
 
-    {activeVendorID==="securosys"&&<Card style={{padding:12,marginBottom:12,background:"rgba(76,157,255,.06)",border:`1px solid ${C.accent}33`}}>
+    {activeVendorID==="securosys"&&<Card style={{padding:12,marginBottom:12,background:"rgba(20,147,168,.06)",border:`1px solid ${C.accent}33`}}>
       <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:6}}>Securosys Primus Setup</div>
       <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.muted,lineHeight:1.6}}>
         Upload the Primus PKCS#11 library, discover the published PKCS#11 slot IDs, then bind the selected slot to the target Primus partition user. The default provider profile is <code style={{color:C.accentFg}}>securosys-primus</code> and the default PIN environment variable is <code style={{color:C.accentFg}}>SECUROSYS_HSM_PIN</code>.
@@ -416,7 +416,7 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
         <div style={{display:"grid",gap:4}}>
           {slots.map((slot:any,i:number)=>(
             <div key={i} style={{display:"grid",gridTemplateColumns:"60px 1fr 1fr 1fr 80px",gap:8,fontSize:10,padding:"4px 0",borderBottom:`1px solid ${C.border}`}}>
-              <span style={{color:C.accentFg,fontFamily:"'JetBrains Mono',monospace"}}>{String(slot?.slot_id||"")}</span>
+              <span style={{color:C.accentFg,fontFamily:"var(--font-mono)"}}>{String(slot?.slot_id||"")}</span>
               <span style={{color:C.text}}>{String(slot?.slot_name||"—")}</span>
               <span style={{color:C.muted}}>{String(slot?.token_label||slot?.partition||"—")}</span>
               <span style={{color:C.dim}}>{String(slot?.token_manufacturer||"—")}</span>
@@ -439,7 +439,7 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
     <Section title="Key Export Policy & Conditions">
       <Card style={{padding:14}}>
         <div style={{fontSize:11,fontWeight:600,color:C.muted,marginBottom:10}}>WHEN CAN AN HSM KEY BE EXPORTED?</div>
-        <div style={{fontSize:10,color:C.dim,marginBottom:12}}>
+        <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim,marginBottom:12}}>
           Keys stored in an HSM follow a dual-check export model. Both the KMS policy <b>and</b> the HSM attributes must permit export for key material to leave the HSM boundary.
         </div>
         <div style={{display:"grid",gap:8}}>
@@ -450,17 +450,17 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
             { condition: "Wrapping Key Available", field: "wrapping_key_id required", desc: "A wrapping key (KEK) must exist and be accessible to wrap the target key for secure export.", icon: HardDrive },
             { condition: "Approval Workflow (if configured)", field: "approval_required = true", desc: "If quorum policy is attached, M-of-N approvals must be granted before export proceeds.", icon: CheckCircle2 },
           ].map((item) => (
-            <div key={item.condition} style={{display:"grid",gridTemplateColumns:"32px 1fr",gap:10,padding:"8px 10px",borderRadius:6,background:"rgba(255,255,255,.02)",border:`1px solid ${C.border}`}}>
+            <div key={item.condition} style={{display:"grid",gridTemplateColumns:"32px 1fr",gap:10,padding:"8px 10px",borderRadius:3,background:"rgba(255,255,255,.02)",border:`1px solid ${C.border}`}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}><item.icon size={16} style={{color:C.accentFg}}/></div>
               <div>
                 <div style={{fontSize:11,fontWeight:700,color:C.text}}>{item.condition}</div>
-                <div style={{fontSize: 10,color:C.accentFg,fontFamily:"'JetBrains Mono',monospace",marginTop:2}}>{item.field}</div>
+                <div style={{fontSize: 10,color:C.accentFg,fontFamily:"var(--font-mono)",marginTop:2}}>{item.field}</div>
                 <div style={{fontSize:10,color:C.dim,marginTop:3}}>{item.desc}</div>
               </div>
             </div>
           ))}
         </div>
-        <div style={{marginTop:12,padding:"8px 12px",borderRadius:6,background:`${C.amber}12`,border:`1px solid ${C.amber}33`,fontSize:10,color:C.dim}}>
+        <div data-keep="" style={{marginTop:12,padding:"8px 12px",borderRadius:3,background:`${C.amber}12`,border:`1px solid ${C.amber}33`,fontSize:10,color:C.dim}}>
           <b style={{color:C.amberFg}}>Sync behavior:</b> Non-exportable keys sync as <code style={{color:C.accentFg}}>metadata_only</code> across cluster nodes. Exportable keys sync as <code style={{color:C.accentFg}}>wrapped_blob_allowed</code>, meaning a wrapped copy can be replicated.
         </div>
       </Card>
@@ -504,13 +504,13 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
             <div key={item.label} style={{display:"grid",gridTemplateColumns:"160px 1fr",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
               <div style={{fontSize:10,fontWeight:600,color:C.text}}>{item.label}</div>
               <div>
-                <div style={{fontSize:10,color:C.accentFg,fontFamily:"'JetBrains Mono',monospace"}}>{item.value}</div>
+                <div style={{fontSize:10,color:C.accentFg,fontFamily:"var(--font-mono)"}}>{item.value}</div>
                 <div style={{fontSize: 10,color:C.dim}}>{item.desc}</div>
               </div>
             </div>
           ))}
         </div>
-        <div style={{marginTop:12,padding:"8px 12px",borderRadius:6,background:`${C.blue}12`,border:`1px solid ${C.blue}33`,fontSize:10,color:C.dim}}>
+        <div className="vk-fold" tabIndex={0} style={{marginTop:12,padding:"8px 12px",borderRadius:3,background:`${C.blue}12`,border:`1px solid ${C.blue}33`,fontSize:10,color:C.dim}}>
           <b style={{color:C.blueFg}}>Supported HSM vendors:</b> Any PKCS#11 v2.40+ compliant HSM — Securosys Primus, Thales Luna, Entrust nShield, AWS CloudHSM, Marvell LiquidSecurity, Utimaco, YubiHSM, SoftHSM (dev).
         </div>
       </Card>

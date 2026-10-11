@@ -12,7 +12,7 @@ import type { AuthSession } from "../../../lib/auth";
 // inside one, and the service that uses it sends it to a private address
 // only inside one. A tenant sees its own ranges; the root tenant
 // sees every tenant's and is the only one that can approve or withdraw.
-const MONO = "'JetBrains Mono',monospace";
+const MONO = "var(--font-mono)";
 
 export function PrivateEndpoints({ session }: { session: AuthSession }) {
   const [items, setItems] = useState<PrivateEndpoint[]>([]);
@@ -64,7 +64,7 @@ export function PrivateEndpoints({ session }: { session: AuthSession }) {
   };
 
   return (
-    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, marginTop: 14 }}>
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, marginTop: 14 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px", borderBottom: `1px solid ${C.border}` }}>
         <Network size={14} color={C.accentFg} />
         <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Private endpoints</span>

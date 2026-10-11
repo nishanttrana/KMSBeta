@@ -9,6 +9,10 @@ import { getSession } from "./lib/auth";
 import { queryClient } from "./lib/queryClient";
 import { captureFrontendError } from "./lib/telemetry";
 import { applyTheme, useTheme } from "./store/theme";
+import "@fontsource-variable/ibm-plex-sans/wght.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
+import "@fontsource/ibm-plex-mono/600.css";
 import "./index.css";
 
 // Apply persisted/system theme synchronously before React mounts to prevent FOUC.

@@ -165,7 +165,7 @@ const CheckpointsSection = ({ session }: { session: any }) => {
   useEffect(() => { load(); }, []);
 
   const failed = items.filter((c) => c.status !== "verified").length;
-  const mono = { fontFamily: "monospace", fontSize: 10 };
+  const mono = { fontFamily: "var(--font-mono)", fontSize: 10 };
 
   return (
     <div>
@@ -390,7 +390,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
   const chainOk = chainResult ? chainResult.ok : null;
 
   const IntegrityBar = () => (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 14, padding: "8px 12px", borderRadius: 8, background: C.card, border: `1px solid ${C.border}` }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 14, padding: "8px 12px", borderRadius: 4, background: C.card, border: `1px solid ${C.border}` }}>
       <B c={chainOk === false ? "red" : "green"} pulse={chainOk === false}>
         {chainOk === null ? "CHAIN: UNVERIFIED" : chainOk ? "CHAIN: INTACT" : "CHAIN: BROKEN"}
       </B>
@@ -520,7 +520,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
                       {ev.fips_compliant ? "\u2713" : "-"}
                     </span>
                   </td>
-                  <td style={{ ...TD, fontFamily: "'JetBrains Mono',monospace", fontSize: 10 }}>
+                  <td style={{ ...TD, fontFamily: "var(--font-mono)", fontSize: 10 }}>
                     {abbrevHash(ev.chain_hash)}
                   </td>
                 </tr>
@@ -590,7 +590,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
                   border: `2px solid ${C.card}`
                 }} />
                 <div style={{
-                  background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 12px",
+                  background: C.surface, border: `1px solid ${C.border}`, borderRadius: 4, padding: "8px 12px",
                   cursor: "pointer"
                 }} onClick={() => setSelectedEvent(ev)}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = C.accent; }}
@@ -606,7 +606,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
                   <div style={{ fontSize: 10, color: C.dim }}>
                     Actor: {ev.actor_id || "-"} &bull; Target: {ev.target_id || "-"} &bull;
                     Risk: <span style={{ color: riskColor(Number(ev.risk_score || 0)) }}>{ev.risk_score ?? 0}</span> &bull;
-                    Seq: {ev.sequence} &bull; Hash: <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>{abbrevHash(ev.chain_hash)}</span>
+                    Seq: {ev.sequence} &bull; Hash: <span style={{ fontFamily: "var(--font-mono)" }}>{abbrevHash(ev.chain_hash)}</span>
                   </div>
                 </div>
               </div>
@@ -661,7 +661,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
           {fields.map(([label, value]) => (
             <div key={String(label)}>
               <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</div>
-              <div style={{ fontSize: 10, color: C.text, wordBreak: "break-all", fontFamily: String(label).includes("Hash") ? "'JetBrains Mono',monospace" : "inherit" }}>
+              <div style={{ fontSize: 10, color: C.text, wordBreak: "break-all", fontFamily: String(label).includes("Hash") ? "var(--font-mono)" : "inherit" }}>
                 {String(value ?? "-") || "-"}
               </div>
             </div>
@@ -692,9 +692,9 @@ export const AuditLogTab = ({ session, onToast }: any) => {
           <>
             <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Metadata</div>
             <pre style={{
-              background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, padding: 10,
+              background: C.bg, border: `1px solid ${C.border}`, borderRadius: 3, padding: 10,
               fontSize: 10, color: C.dim, overflow: "auto", maxHeight: 160,
-              fontFamily: "'JetBrains Mono',monospace"
+              fontFamily: "var(--font-mono)"
             }}>
               {JSON.stringify(ev.details, null, 2)}
             </pre>
@@ -729,7 +729,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
       {renderEventModal()}
 
       {/* audit integration note */}
-      <div style={{ marginTop: 16, padding: "8px 12px", borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, fontSize: 10, color: C.muted }}>
+      <div style={{ marginTop: 16, padding: "8px 12px", borderRadius: 4, background: C.card, border: `1px solid ${C.border}`, fontSize: 10, color: C.muted }}>
         Every service publishes to the single audit stream. Events are hash-chained (SHA-256), HMAC-signed, covered
         by signed checkpoints (ECDSA-P384) and stored append-only; a fail-closed WAL covers outages. Charts are under Activity, where
         clicking a chart lists the events it counts; alerts raised from these events are triaged in the Alert Center.

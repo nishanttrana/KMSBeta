@@ -95,7 +95,7 @@ export function KeyHistoryPanel({ session, keyID }: { session: AuthSession | nul
           const note = integrityNote(byEvent.get(e.id));
           return (
             <div key={e.id} style={{ ...line, borderBottom: `1px solid ${C.border}` }}>
-              <span style={{ fontFamily: "'JetBrains Mono',monospace", color: C.muted }}>{when(e.timestamp)}</span>{" "}
+              <span style={{ fontFamily: "var(--font-mono)", color: C.muted }}>{when(e.timestamp)}</span>{" "}
               <span style={{ color: C.text }}>{shortAction(e.action)}</span>{" "}
               by {e.actor_id || "-"}{" "}
               <span style={{ color: e.result === "success" ? C.greenFg : e.result === "refused" ? C.amberFg : C.redFg }}>{e.result}</span>

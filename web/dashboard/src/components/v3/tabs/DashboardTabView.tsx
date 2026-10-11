@@ -113,7 +113,7 @@ export const DashboardTabView = (props: any) => {
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${color}, transparent 75%)`, opacity: 0.7 }} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ fontSize: 10, fontWeight: 600, color: C.muted, letterSpacing: 1.1, textTransform: "uppercase" }}>{label}</div>
-        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 9, background: dim, color }}><KIcon size={15} strokeWidth={2.2} /></span>
+        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 4, background: dim, color }}><KIcon size={15} strokeWidth={2.2} /></span>
       </div>
       <div className="vk-num" style={{ fontSize: 34, fontWeight: 800, color, lineHeight: 1.05, marginTop: 8 }}>{value}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10.5, color: deltaColor, marginTop: 7, fontWeight: 500 }}>
@@ -121,7 +121,7 @@ export const DashboardTabView = (props: any) => {
         {delta}
       </div>
       {barPct != null && <div style={{ height: 3, borderRadius: 999, background: C.border, overflow: "hidden", marginTop: 10 }}>
-        <div style={{ height: "100%", width: `${barPct}%`, background: `linear-gradient(90deg, ${color}, color-mix(in oklab, ${color} 55%, transparent))`, borderRadius: 999, transition: "width .6s cubic-bezier(.4,0,.2,1)" }} />
+        <div style={{ height: "100%", width: `${barPct}%`, background: `linear-gradient(90deg, ${color}, color-mix(in oklab, ${color} 55%, transparent))`, borderRadius: 4, transition: "width .6s cubic-bezier(.4,0,.2,1)" }} />
       </div>}
     </div>
   );
@@ -135,7 +135,7 @@ export const DashboardTabView = (props: any) => {
         background: `linear-gradient(120deg, ${C.surface} 0%, ${C.card} 55%, ${C.surface} 100%)`,
         padding: "20px 24px",
       }}>
-        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: `radial-gradient(900px 240px at 8% -40%, ${C.glowStrong || "rgba(76,157,255,.18)"}, transparent 60%), radial-gradient(700px 220px at 95% 140%, ${C.glow || "rgba(99,102,241,.14)"}, transparent 60%)` }} />
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: `radial-gradient(900px 240px at 8% -40%, ${C.glowStrong || "rgba(20,147,168,.18)"}, transparent 60%), radial-gradient(700px 220px at 95% 140%, ${C.glow || "rgba(99,102,241,.14)"}, transparent 60%)` }} />
         <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div>
             <div style={{ fontSize: 20, fontWeight: 800, color: C.text, letterSpacing: -0.4, lineHeight: 1.2 }}>
@@ -147,13 +147,13 @@ export const DashboardTabView = (props: any) => {
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 10.5, fontWeight: 700, color: globalFipsEnabled ? C.greenFg : C.amberFg, background: globalFipsEnabled ? C.greenDim : C.amberDim, border: `1px solid color-mix(in oklab, ${globalFipsEnabled ? C.green : C.amber} 30%, transparent)` }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 4, fontSize: 10.5, fontWeight: 700, color: globalFipsEnabled ? C.greenFg : C.amberFg, background: globalFipsEnabled ? C.greenDim : C.amberDim, border: `1px solid color-mix(in oklab, ${globalFipsEnabled ? C.green : C.amber} 30%, transparent)` }}>
               <ShieldCheck size={12} strokeWidth={2.4} /> {globalFipsEnabled ? "FIPS 140-3 MODE" : "STANDARD MODE"}
             </span>
-            <span title={cryptoLibraryLabel} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 10.5, fontWeight: 700, color: cryptoLibraryValidated ? C.accentFg : C.dim, background: C.accentDim, border: `1px solid color-mix(in oklab, ${C.accent} 25%, transparent)`, maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span title={cryptoLibraryLabel} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 4, fontSize: 10.5, fontWeight: 700, color: cryptoLibraryValidated ? C.accentFg : C.dim, background: C.accentDim, border: `1px solid color-mix(in oklab, ${C.accent} 25%, transparent)`, maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               <Cpu size={12} strokeWidth={2.4} /> {cryptoLibraryValidated ? "VALIDATED CRYPTO" : (cryptoLibraryLabel || "CRYPTO LIBRARY")}
             </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 10.5, fontWeight: 700, color: (C as any)[`${clusterTone}Fg`], background: (C as any)[`${clusterTone}Dim`], border: `1px solid color-mix(in oklab, ${(C as any)[clusterTone]} 30%, transparent)` }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 4, fontSize: 10.5, fontWeight: 700, color: (C as any)[`${clusterTone}Fg`], background: (C as any)[`${clusterTone}Dim`], border: `1px solid color-mix(in oklab, ${(C as any)[clusterTone]} 30%, transparent)` }}>
               <GitBranch size={12} strokeWidth={2.4} /> {clusterSummary?.unavailable ? "CLUSTER unavailable" : `CLUSTER ${fmtInt(clusterSummary.online_nodes)}/${fmtInt(clusterSummary.total_nodes)}`}
             </span>
           </div>
@@ -255,11 +255,11 @@ export const DashboardTabView = (props: any) => {
                       <X size={11} strokeWidth={2} />
                     </button>
                   </div>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: primaryColor, fontFamily: "'JetBrains Mono',monospace", lineHeight: 1.15, marginBottom: 4 }}>{primary}</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: primaryColor, fontFamily: "var(--font-mono)", lineHeight: 1.15, marginBottom: 4 }}>{primary}</div>
                   <div style={{ fontSize: 10, color: C.dim, marginBottom: 12 }}>{secondary}</div>
                   <button
                     onClick={() => onNavigate?.(tabId)}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, padding: "4px 10px", cursor: "pointer", color: C.accentFg, fontSize: 10, fontWeight: 600, transition: "border-color .15s" }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 3, padding: "4px 10px", cursor: "pointer", color: C.accentFg, fontSize: 10, fontWeight: 600, transition: "border-color .15s" }}
                   >
                     Open <ArrowRight size={10} strokeWidth={2} />
                   </button>
@@ -310,7 +310,7 @@ export const DashboardTabView = (props: any) => {
                 <div key={`algo-${String(item?.name || "")}`} style={{ display: "grid", gridTemplateColumns: "130px 1fr 42px", alignItems: "center", gap: 10 }}>
                   <div style={{ fontSize: 11, color: C.text, textAlign: "right" }}>{String(item?.name || "-")}</div>
                   <div style={{ height: 10, borderRadius: 999, background: C.border, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${pct}%`, background: String(item?.color || C.accent), borderRadius: 999, transition: "width .4s" }} />
+                    <div style={{ height: "100%", width: `${pct}%`, background: String(item?.color || C.accent), borderRadius: 4, transition: "width .4s" }} />
                   </div>
                   <div style={{ fontSize: 11, color: String(item?.color || C.accentFg), fontWeight: 700, textAlign: "right" }}>{`${pct}%`}</div>
                 </div>
@@ -326,7 +326,7 @@ export const DashboardTabView = (props: any) => {
               <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>Cluster</div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 {Number(clusterSummary?.degraded_nodes || 0) > 0 && (
-                  <span style={{ padding: "2px 6px", borderRadius: 999, background: C.amberDim, color: C.amberFg, fontSize: 10, fontWeight: 700 }}>
+                  <span style={{ padding: "2px 6px", borderRadius: 4, background: C.amberDim, color: C.amberFg, fontSize: 10, fontWeight: 700 }}>
                     {`${fmtInt(clusterSummary.degraded_nodes)} degraded`}
                   </span>
                 )}
@@ -348,13 +348,13 @@ export const DashboardTabView = (props: any) => {
                       <div style={{ fontSize: 12, color: C.text, display: "inline-flex", alignItems: "center", gap: 8 }}>
                         <span style={{ width: 9, height: 9, borderRadius: 999, background: dotColor, display: "inline-block", flexShrink: 0, animation: tone === "red" ? "none" : "pulse 1.8s infinite" }} />
                         <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 130 }}>{String(node?.name || node?.id || "node")}</span>
-                        <span style={{ padding: "2px 6px", borderRadius: 999, background: pillBg, color: dotColor, fontSize: 10, fontWeight: 700, textTransform: "uppercase", whiteSpace: "nowrap" }}>{String(node?.status || "unknown")}</span>
+                        <span style={{ padding: "2px 6px", borderRadius: 4, background: pillBg, color: dotColor, fontSize: 10, fontWeight: 700, textTransform: "uppercase", whiteSpace: "nowrap" }}>{String(node?.status || "unknown")}</span>
                       </div>
-                      <div style={{ fontSize: 10, color: C.dim, fontFamily: "'JetBrains Mono',monospace", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <div style={{ fontSize: 10, color: C.dim, fontFamily: "var(--font-mono)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {String(node?.address || node?.endpoint || "n/a")}
                       </div>
                     </div>
-                    <div style={{ padding: "3px 8px", borderRadius: 999, background: roleBg, color: roleColor, fontSize: 10, fontWeight: 700, display: "inline-flex", alignItems: "center", textTransform: "capitalize", whiteSpace: "nowrap", flexShrink: 0, marginLeft: 6 }}>
+                    <div style={{ padding: "3px 8px", borderRadius: 4, background: roleBg, color: roleColor, fontSize: 10, fontWeight: 700, display: "inline-flex", alignItems: "center", textTransform: "capitalize", whiteSpace: "nowrap", flexShrink: 0, marginLeft: 6 }}>
                       {String(node?.role || "follower")}
                     </div>
                   </div>
@@ -362,7 +362,7 @@ export const DashboardTabView = (props: any) => {
               })}
               {!nodes.length && !clusterSummary?.unavailable && <div style={{ fontSize: 10, color: C.muted }}>No nodes reported.</div>}
             </div>
-            <div style={{ fontSize: 10, color: C.dim, marginTop: 10, fontFamily: "'JetBrains Mono',monospace" }}>
+            <div style={{ fontSize: 10, color: C.dim, marginTop: 10, fontFamily: "var(--font-mono)" }}>
               {clusterSummary?.unavailable ? "Cluster status unavailable (cluster service did not answer)" : `Lag: ${clusterLagText} | Nodes: ${fmtInt(clusterSummary.total_nodes)} | Quorum: ${fmtInt(clusterSummary.online_nodes)}/${fmtInt(clusterSummary.total_nodes)}`}
             </div>
           </Card>
@@ -378,7 +378,7 @@ export const DashboardTabView = (props: any) => {
               {pending.slice(0, 4).map((item: any) => {
                 const reqID = String(item?.id || "");
                 return (
-                  <div key={`home-approval-${reqID}`} style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: 8 }}>
+                  <div key={`home-approval-${reqID}`} style={{ border: `1px solid ${C.border}`, borderRadius: 4, padding: 8 }}>
                     <div style={{ fontSize: 10, color: C.text, fontWeight: 700, marginBottom: 3 }}>
                       {String(item?.action || "approval").replace(/^key\./, "").replaceAll("_", " ")}
                     </div>

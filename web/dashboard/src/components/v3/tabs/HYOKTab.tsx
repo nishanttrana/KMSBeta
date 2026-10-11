@@ -399,7 +399,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
       ].map((stat) => (
         <Card key={stat.label} style={{ padding: "10px 12px" }}>
           <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{stat.label}</div>
-          <div style={{ fontSize: 16, color: stat.color, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{stat.value}</div>
+          <div style={{ fontSize: 16, color: stat.color, fontWeight: 700, fontFamily: "var(--font-mono)" }}>{stat.value}</div>
           {stat.sub && <div style={{ fontSize: 10, color: C.dim }}>{stat.sub}</div>}
         </Card>
       ))}
@@ -434,9 +434,9 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
             {/* Status details */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 8px", fontSize: 10, marginBottom: 8 }}>
               <span style={{ color: C.muted }}>Auth Mode</span>
-              <span style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{String(item?.auth_mode === "mtls_or_jwt" ? "jwt" : item?.auth_mode || "jwt")}</span>
+              <span style={{ color: C.text, fontFamily: "var(--font-mono)" }}>{String(item?.auth_mode === "mtls_or_jwt" ? "jwt" : item?.auth_mode || "jwt")}</span>
               <span style={{ color: C.muted }}>Policy</span>
-              <span style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{String(item?.policy_id || "default")}</span>
+              <span style={{ color: C.text, fontFamily: "var(--font-mono)" }}>{String(item?.policy_id || "default")}</span>
               <span style={{ color: C.muted }}>Governance</span>
               <span style={{ color: Boolean(item?.governance_required) ? C.amberFg : C.dim }}>{Boolean(item?.governance_required) ? "Required" : "No"}</span>
               <span style={{ color: C.muted }}>Operations</span>
@@ -476,7 +476,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
                 style={{ display: "grid", gridTemplateColumns: "30px 100px 80px 70px 90px 1fr 80px", padding: "8px 12px", borderBottom: `1px solid ${C.border}`, fontSize: 10, alignItems: "center", cursor: "pointer" }}
               >
                 <div style={{ color: C.dim }}>{isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}</div>
-                <div style={{ color: C.dim, fontFamily: "'JetBrains Mono',monospace" }}>{formatAgo(item.created_at)}</div>
+                <div style={{ color: C.dim, fontFamily: "var(--font-mono)" }}>{formatAgo(item.created_at)}</div>
                 <div style={{ color: C.accentFg }}>{String(item.protocol || "-")}</div>
                 <div style={{ color: C.text }}>{String(item.operation || "-")}</div>
                 <div><B c={statusColor}>{String(item.status || "unknown")}</B></div>
@@ -489,11 +489,11 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
               {isExpanded && (
                 <div style={{ padding: "8px 12px 12px 42px", background: C.bg, borderBottom: `1px solid ${C.border}` }}>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", fontSize: 10, marginBottom: 8 }}>
-                    <div><span style={{ color: C.muted }}>Request ID:</span> <span style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{item.id}</span></div>
-                    <div><span style={{ color: C.muted }}>Endpoint:</span> <span style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{String(item.endpoint || "-")}</span></div>
+                    <div><span style={{ color: C.muted }}>Request ID:</span> <span style={{ color: C.text, fontFamily: "var(--font-mono)" }}>{item.id}</span></div>
+                    <div><span style={{ color: C.muted }}>Endpoint:</span> <span style={{ color: C.text, fontFamily: "var(--font-mono)" }}>{String(item.endpoint || "-")}</span></div>
                     <div><span style={{ color: C.muted }}>Policy Decision:</span> <span style={{ color: item.policy_decision === "DENY" ? C.redFg : C.greenFg }}>{String(item.policy_decision || "-")}</span></div>
                     <div><span style={{ color: C.muted }}>Governance:</span> <span style={{ color: C.text }}>{Boolean(item.governance_required) ? "Required" : "No"}</span></div>
-                    {item.approval_request_id && <div><span style={{ color: C.muted }}>Approval ID:</span> <span style={{ color: C.amberFg, fontFamily: "'JetBrains Mono',monospace" }}>{item.approval_request_id}</span></div>}
+                    {item.approval_request_id && <div><span style={{ color: C.muted }}>Approval ID:</span> <span style={{ color: C.amberFg, fontFamily: "var(--font-mono)" }}>{item.approval_request_id}</span></div>}
                     <div><span style={{ color: C.muted }}>Requester Email:</span> <span style={{ color: C.text }}>{String(item.requester_email || "-")}</span></div>
                     <div><span style={{ color: C.muted }}>Created:</span> <span style={{ color: C.text }}>{formatDate(item.created_at)}</span></div>
                     <div><span style={{ color: C.muted }}>Completed:</span> <span style={{ color: C.text }}>{formatDate(item.completed_at)}</span></div>
@@ -506,7 +506,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
                   {item.response_json && item.response_json !== "{}" && (
                     <div>
                       <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>Response:</div>
-                      <pre style={{ fontSize: 10, color: C.dim, fontFamily: "'JetBrains Mono',monospace", background: C.surface, padding: "6px 8px", borderRadius: 4, maxHeight: 100, overflow: "auto", margin: 0, whiteSpace: "pre-wrap" }}>
+                      <pre style={{ fontSize: 10, color: C.dim, fontFamily: "var(--font-mono)", background: C.surface, padding: "6px 8px", borderRadius: 4, maxHeight: 100, overflow: "auto", margin: 0, whiteSpace: "pre-wrap" }}>
                         {(() => { try { return JSON.stringify(JSON.parse(item.response_json), null, 2); } catch { return item.response_json; } })()}
                       </pre>
                     </div>
@@ -603,7 +603,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
     {/* === Endpoint URLs Modal === */}
     <Modal open={modal === "urls"} onClose={() => setModal(null)} title={`Endpoint URLs — ${HYOK_PROTOCOL_LABELS[urlsProtocol] || urlsProtocol}`} wide>
       <div style={{ fontSize: 10, color: C.muted, marginBottom: 10, padding: "8px 10px", background: C.bg, borderRadius: 6 }}>
-        Configure your cloud service to point to these URLs. Replace <code style={{ color: C.accentFg, fontFamily: "'JetBrains Mono',monospace" }}>{"{keyId}"}</code> with your actual Vecta key ID.
+        Configure your cloud service to point to these URLs. Replace <code style={{ color: C.accentFg, fontFamily: "var(--font-mono)" }}>{"{keyId}"}</code> with your actual Vecta key ID.
       </div>
       <FG label="Protocol">
         <Sel value={urlsProtocol} onChange={(e) => setUrlsProtocol(e.target.value)}>
@@ -623,7 +623,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
               </div>
               <button onClick={() => copyToClipboard(url.path)} style={{ background: "transparent", border: "none", color: C.dim, cursor: "pointer" }} title="Copy URL path"><Copy size={12} /></button>
             </div>
-            <div style={{ fontSize: 11, color: C.accentFg, fontFamily: "'JetBrains Mono',monospace", padding: "4px 6px", background: C.surface, borderRadius: 4, userSelect: "all" }}>{url.path}</div>
+            <div style={{ fontSize: 11, color: C.accentFg, fontFamily: "var(--font-mono)", padding: "4px 6px", background: C.surface, borderRadius: 4, userSelect: "all" }}>{url.path}</div>
           </div>
         ))}
       </div>
@@ -653,7 +653,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
         <div style={{ fontSize: 11, color: C.text, fontWeight: 600, marginTop: 16, marginBottom: 8 }}>Endpoint URLs</div>
         <div style={{ display: "grid", gap: 4 }}>
           {(HYOK_PROTOCOL_URLS[guideProtocol] || []).map((url, idx) => (
-            <div key={idx} style={{ fontSize: 10, fontFamily: "'JetBrains Mono',monospace", color: C.accentFg, padding: "4px 8px", background: C.surface, borderRadius: 4 }}>
+            <div key={idx} style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: C.accentFg, padding: "4px 8px", background: C.surface, borderRadius: 4 }}>
               <B c="blue" style={{ marginRight: 6 }}>{url.methods}</B> {url.path}
             </div>
           ))}

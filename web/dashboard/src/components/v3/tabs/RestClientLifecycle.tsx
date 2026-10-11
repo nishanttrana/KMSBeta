@@ -16,7 +16,7 @@ const isServiceIdentity = (id: string) => String(id || "").trim().startsWith("km
 
 function OneTimeKeyPanel({ issued, onDismiss }: { issued: OneTimeKey; onDismiss: () => void }) {
   const [copied, setCopied] = useState(false);
-  return <div style={{ border: `1px solid ${C.amber}`, background: C.amberDim, borderRadius: 10, padding: "10px 12px", display: "grid", gap: 6 }}>
+  return <div style={{ border: `1px solid ${C.amber}`, background: C.amberDim, borderRadius: 4, padding: "10px 12px", display: "grid", gap: 6 }}>
     <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>API key for {issued.clientID}: shown once</div>
     <div style={{ fontSize: 10, color: C.dim }}>Store it in your CI secret store now. The KMS keeps only its hash; it can't be shown again. Exchange it at POST /svc/auth/auth/client-token (docs/CI_CD_AUTOMATION.md).</div>
     <Inp value={issued.key} readOnly mono onFocus={(e) => e.currentTarget.select()} />
@@ -96,7 +96,7 @@ export function RestClientLifecycle({ session, client, onChanged, onToast }: { s
     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
       <span style={{ fontSize: 10, color: C.muted }}>Credential</span>
       <B c={status === "approved" ? "green" : status === "revoked" ? "red" : "amber"}>{status}</B>
-      {client?.api_key_prefix && status === "approved" && <span style={{ fontSize: 10, color: C.dim, fontFamily: "'JetBrains Mono',monospace" }}>{String(client.api_key_prefix)}…</span>}
+      {client?.api_key_prefix && status === "approved" && <span style={{ fontSize: 10, color: C.dim, fontFamily: "var(--font-mono)" }}>{String(client.api_key_prefix)}…</span>}
       <div style={{ flex: 1 }} />
       {status === "pending" && <>
         <Inp value={approvalID} onChange={(e) => setApprovalID(e.target.value)} placeholder="Governance approval ID (if required)" style={{ maxWidth: 240 }} />

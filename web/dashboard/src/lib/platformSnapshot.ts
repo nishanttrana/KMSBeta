@@ -8,7 +8,7 @@ import { listCertificates } from "./certs";
 import { listPolicies as listRotationPolicies } from "./rotationScheduler";
 import { listGovernancePolicies, listGovernanceBackups } from "./governance";
 import { getPQCReadiness } from "./pqc";
-import { listPostureFindings } from "./posture";
+import { getPostureRisk, listPostureFindings } from "./posture";
 import { getClusterOverview } from "./cluster";
 import { listAuthUsers } from "./authAdmin";
 import type { PlatformSnapshot } from "./recommendations";
@@ -22,7 +22,7 @@ async function opt<T>(p: Promise<T>): Promise<T | undefined> {
 }
 
 export async function loadPlatformSnapshot(session: AuthSession, fipsEnabled?: boolean): Promise<PlatformSnapshot> {
-  const [keys, certs, rotationPolicies, backups, keyAccess, governancePolicies, pqc, postureFindings, cluster, users] =
+  const [keys, certs, rotationPolicies, backups, keyAccess, governancePolicies, pqc, postureFindings, postureRisk, cluster, users] =
     await Promise.all([
       opt(listKeys(session, { limit: 5000 })),
       opt(listCertificates(session, { limit: 500 })),
@@ -32,6 +32,7 @@ export async function loadPlatformSnapshot(session: AuthSession, fipsEnabled?: b
       opt(listGovernancePolicies(session)),
       opt(getPQCReadiness(session).then((r) => r ?? null)),
       opt(listPostureFindings(session, { limit: 500 })),
+      opt(getPostureRisk(session)),
       opt(getClusterOverview(session).then((c) => c?.summary)),
       opt(listAuthUsers(session)),
     ]);
@@ -45,6 +46,9 @@ export async function loadPlatformSnapshot(session: AuthSession, fipsEnabled?: b
     governancePolicies: governancePolicies as Array<{ status?: string }> | undefined,
     pqc,
     postureFindings,
+    // A posture scan stores a risk snapshot; without one, an empty findings
+    // list means "never evaluated", not "nothing found".
+    postureEvaluated: postureRisk ? Boolean(postureRisk.captured_at) : undefined,
     cluster,
     users,
     fipsEnabled,

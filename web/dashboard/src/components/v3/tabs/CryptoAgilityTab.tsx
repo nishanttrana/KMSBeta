@@ -86,15 +86,15 @@ function StatusBadge({ status }: { status?: PolicyStatus | undefined }) {
 
 function Unavailable({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
-    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 28, display: "flex", gap: 14, alignItems: "flex-start" }}>
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: 28, display: "flex", gap: 14, alignItems: "flex-start" }}>
       <XCircle size={18} color={C.red} style={{ flexShrink: 0, marginTop: 2 }} />
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Not assessed: crypto agility data is unavailable</div>
         <div style={{ fontSize: 12, color: C.dim, marginTop: 6 }}>
           keycore did not return the key inventory or migration policy, so no status, schedule or migration progress is shown.
         </div>
-        <div style={{ fontSize: 11, color: C.redFg, marginTop: 8, fontFamily: "'JetBrains Mono',monospace", wordBreak: "break-word" }}>{error}</div>
-        <button onClick={onRetry} style={{ marginTop: 14, background: C.card, border: `1px solid ${C.border}`, borderRadius: 7, color: C.dim, padding: "7px 13px", cursor: "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <div style={{ fontSize: 11, color: C.redFg, marginTop: 8, fontFamily: "var(--font-mono)", wordBreak: "break-word" }}>{error}</div>
+        <button onClick={onRetry} style={{ marginTop: 14, background: C.card, border: `1px solid ${C.border}`, borderRadius: 3, color: C.dim, padding: "7px 13px", cursor: "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6 }}>
           <RefreshCw size={13} /> Retry
         </button>
       </div>
@@ -281,12 +281,12 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
   const divider: CSSProperties = { borderTop: `1px solid ${C.border}`, margin: "24px 0" };
   const sectionTitle: CSSProperties = { fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 };
   const sectionHint: CSSProperties = { fontSize: 11, color: C.muted, marginBottom: 12 };
-  const panel: CSSProperties = { background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" };
+  const panel: CSSProperties = { background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, overflow: "hidden" };
   const empty: CSSProperties = { ...panel, padding: 28, textAlign: "center", color: C.muted, fontSize: 13 };
   const th: CSSProperties = { textAlign: "left", fontSize: 10, color: C.muted, fontWeight: 600, padding: "8px 12px", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" };
   const td: CSSProperties = { padding: "10px 12px", fontSize: 12, color: C.text, verticalAlign: "middle" };
-  const mono: CSSProperties = { fontFamily: "'JetBrains Mono',monospace", fontSize: 12 };
-  const smallBtn: CSSProperties = { background: "transparent", border: `1px solid ${C.border}`, borderRadius: 5, color: C.dim, padding: "3px 7px", cursor: "pointer", display: "inline-flex", alignItems: "center" };
+  const mono: CSSProperties = { fontFamily: "var(--font-mono)", fontSize: 12 };
+  const smallBtn: CSSProperties = { background: "transparent", border: `1px solid ${C.border}`, borderRadius: 3, color: C.dim, padding: "3px 7px", cursor: "pointer", display: "inline-flex", alignItems: "center" };
 
   if (loading) {
     return (
@@ -299,7 +299,7 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
   }
 
   return (
-    <div style={{ fontFamily: "IBM Plex Sans, sans-serif", color: C.text, padding: "4px 0" }}>
+    <div style={{ fontFamily: "inherit", color: C.text, padding: "4px 0" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, gap: 12, flexWrap: "wrap" }}>
         <div>
@@ -310,10 +310,10 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
           </div>
         </div>
         {view === "policy" && <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button onClick={() => load(true)} disabled={refreshing} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 7, color: C.dim, padding: "7px 13px", cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+          <button onClick={() => load(true)} disabled={refreshing} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 3, color: C.dim, padding: "7px 13px", cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
             <RefreshCw size={13} style={refreshing ? { animation: "spin 1s linear infinite" } : {}} /> Refresh
           </button>
-          <button onClick={() => setRuleModal({ rule: null })} disabled={Boolean(error)} style={{ background: C.card, border: `1px solid ${C.accent}`, borderRadius: 7, color: C.accentFg, padding: "7px 13px", cursor: error ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, opacity: error ? 0.5 : 1 }}>
+          <button onClick={() => setRuleModal({ rule: null })} disabled={Boolean(error)} style={{ background: C.card, border: `1px solid ${C.accent}`, borderRadius: 3, color: C.accentFg, padding: "7px 13px", cursor: error ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, opacity: error ? 0.5 : 1 }}>
             <ListChecks size={13} /> Add Migration Rule
           </button>
         </div>}

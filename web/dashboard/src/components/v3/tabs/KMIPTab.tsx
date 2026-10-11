@@ -524,10 +524,10 @@ export const KMIPTab=({session,onToast})=>{
       <Stat l="Registered Clients" v={String(stats.total)} c="accent"/>
       <Stat l="Active Clients" v={String(stats.active)} c="green"/>
       <Stat l="Expiring <=30d" v={String(stats.expiringSoon)} c={stats.expiringSoon>0?"amber":"blue"}/>
-      <div style={{flex:"1 1 140px",background:C.elevated,borderRadius:10,padding:"10px 14px",border:`1px solid ${C.border}`,minWidth:160}}>
+      <div style={{flex:"1 1 140px",background:C.elevated,borderRadius:4,padding:"10px 14px",border:`1px solid ${C.border}`,minWidth:160}}>
         <div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Protocol Version</div>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{display:"flex",background:C.bg,borderRadius:8,border:`1px solid ${C.border}`,overflow:"hidden"}}>
+          <div style={{display:"flex",background:C.bg,borderRadius:4,border:`1px solid ${C.border}`,overflow:"hidden"}}>
             {(supportedVersions.length>0?supportedVersions:["3.2","3.1","3.0","2.1"]).slice(0,4).map((v)=>(
               <div key={v} onClick={()=>setPreferredKMIPVersion(String(v))} style={{
                 padding:"4px 10px",fontSize:11,fontWeight:preferredKMIPVersion===String(v)?700:500,
@@ -560,14 +560,14 @@ export const KMIPTab=({session,onToast})=>{
       {capsExpanded&&<div style={{display:"grid",gap:10}}>
         {/* Protocol & Auth row */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          <div style={{background:C.elevated,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.border}`}}>
+          <div style={{background:C.elevated,borderRadius:4,padding:"10px 12px",border:`1px solid ${C.border}`}}>
             <div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Protocol Versions</div>
             <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
               {supportedVersions.map((v)=><B key={`ver-${String(v)}`} c="purple">{String(v)}</B>)}
               {!supportedVersions.length&&<span style={{fontSize:10,color:C.dim}}>-</span>}
             </div>
           </div>
-          <div style={{background:C.elevated,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.border}`}}>
+          <div style={{background:C.elevated,borderRadius:4,padding:"10px 12px",border:`1px solid ${C.border}`}}>
             <div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Authentication</div>
             <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
               {authModes.map((v)=><B key={`auth-${String(v)}`} c="blue">{String(v)}</B>)}
@@ -578,42 +578,42 @@ export const KMIPTab=({session,onToast})=>{
 
         {/* Operations — compact two-column */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          <div style={{background:C.elevated,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.border}`}}>
+          <div style={{background:C.elevated,borderRadius:4,padding:"10px 12px",border:`1px solid ${C.border}`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
               <div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Implemented Operations</div>
               <B c="green">{implementedOps.length}</B>
             </div>
             <div style={{display:"flex",gap:4,flexWrap:"wrap",maxHeight:80,overflowY:"auto"}}>
-              {implementedOps.map((op)=><span key={`op-${String(op)}`} style={{fontSize: 10,color:C.greenFg,background:`${C.green}15`,padding:"2px 6px",borderRadius:4,fontFamily:"'JetBrains Mono',monospace"}}>{String(op)}</span>)}
+              {implementedOps.map((op)=><span key={`op-${String(op)}`} style={{fontSize: 10,color:C.greenFg,background:`${C.green}15`,padding:"2px 6px",borderRadius:4,fontFamily:"var(--font-mono)"}}>{String(op)}</span>)}
               {!implementedOps.length&&<span style={{fontSize:10,color:C.dim}}>-</span>}
             </div>
           </div>
-          <div style={{background:C.elevated,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.border}`}}>
+          <div style={{background:C.elevated,borderRadius:4,padding:"10px 12px",border:`1px solid ${C.border}`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
               <div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Implemented Object Types</div>
               <B c="green">{implementedObjects.length}</B>
             </div>
             <div style={{display:"flex",gap:4,flexWrap:"wrap",maxHeight:80,overflowY:"auto"}}>
-              {implementedObjects.map((ot)=><span key={`ot-${String(ot)}`} style={{fontSize: 10,color:C.greenFg,background:`${C.green}15`,padding:"2px 6px",borderRadius:4,fontFamily:"'JetBrains Mono',monospace"}}>{String(ot)}</span>)}
+              {implementedObjects.map((ot)=><span key={`ot-${String(ot)}`} style={{fontSize: 10,color:C.greenFg,background:`${C.green}15`,padding:"2px 6px",borderRadius:4,fontFamily:"var(--font-mono)"}}>{String(ot)}</span>)}
               {!implementedObjects.length&&<span style={{fontSize:10,color:C.dim}}>-</span>}
             </div>
           </div>
         </div>
 
         {/* Missing coverage — only show if there are gaps */}
-        {(unimplementedOps.length>0||unimplementedObjects.length>0)&&<div style={{background:`${C.amber}08`,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.amber}25`}}>
+        {(unimplementedOps.length>0||unimplementedObjects.length>0)&&<div style={{background:`${C.amber}08`,borderRadius:4,padding:"10px 12px",border:`1px solid ${C.amber}25`}}>
           <div style={{fontSize: 10,color:C.amberFg,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>KMIP 3.2 Coverage Gaps</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             {unimplementedOps.length>0&&<div>
               <div style={{fontSize: 10,color:C.muted,marginBottom:4}}>Missing Operations ({unimplementedOps.length})</div>
               <div style={{display:"flex",gap:4,flexWrap:"wrap",maxHeight:60,overflowY:"auto"}}>
-                {unimplementedOps.map((op)=><span key={`miss-${String(op)}`} style={{fontSize: 10,color:C.amberFg,background:`${C.amber}15`,padding:"2px 6px",borderRadius:4,fontFamily:"'JetBrains Mono',monospace"}}>{String(op)}</span>)}
+                {unimplementedOps.map((op)=><span key={`miss-${String(op)}`} style={{fontSize: 10,color:C.amberFg,background:`${C.amber}15`,padding:"2px 6px",borderRadius:4,fontFamily:"var(--font-mono)"}}>{String(op)}</span>)}
               </div>
             </div>}
             {unimplementedObjects.length>0&&<div>
               <div style={{fontSize: 10,color:C.muted,marginBottom:4}}>Missing Object Types ({unimplementedObjects.length})</div>
               <div style={{display:"flex",gap:4,flexWrap:"wrap",maxHeight:60,overflowY:"auto"}}>
-                {unimplementedObjects.map((ot)=><span key={`missot-${String(ot)}`} style={{fontSize: 10,color:C.amberFg,background:`${C.amber}15`,padding:"2px 6px",borderRadius:4,fontFamily:"'JetBrains Mono',monospace"}}>{String(ot)}</span>)}
+                {unimplementedObjects.map((ot)=><span key={`missot-${String(ot)}`} style={{fontSize: 10,color:C.amberFg,background:`${C.amber}15`,padding:"2px 6px",borderRadius:4,fontFamily:"var(--font-mono)"}}>{String(ot)}</span>)}
               </div>
             </div>}
           </div>
@@ -656,7 +656,7 @@ export const KMIPTab=({session,onToast})=>{
             {(profiles||[]).map((p)=><div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr .9fr .7fr .7fr .7fr",padding:"8px 12px",fontSize:10,borderBottom:`1px solid ${C.border}`,gap:8}}>
               <div>
                 <div style={{fontSize:11,color:C.text,fontWeight:600}}>{p.name}</div>
-                <div style={{fontSize: 10,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{p.id}</div>
+                <div style={{fontSize: 10,color:C.muted,fontFamily:"var(--font-mono)"}}>{p.id}</div>
               </div>
               <div style={{fontSize: 10,color:C.dim}}>{(caItems.find((ca)=>String(ca.id)===String(p.ca_id))?.name)||p.ca_id||"-"}</div>
               <div style={{fontSize: 10,color:C.dim}}>{`${Number(p.certificate_duration_days||0)||365}d`}</div>
@@ -691,7 +691,7 @@ export const KMIPTab=({session,onToast})=>{
               </div>
               <div><B c={String(c.status||"").toLowerCase()==="active"?"green":"red"}>{String(c.status||"-").toUpperCase()}</B></div>
               <div style={{fontSize: 10,color:C.dim}}>{String(c.enrollment_mode||"-")}</div>
-              <div style={{fontSize: 10,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>{String(c.cert_fingerprint_sha256||"-").slice(0,16)}...</div>
+              <div style={{fontSize: 10,color:C.dim,fontFamily:"var(--font-mono)"}}>{String(c.cert_fingerprint_sha256||"-").slice(0,16)}...</div>
               <div style={{fontSize: 10,color:C.dim}}>{c.cert_not_after?new Date(String(c.cert_not_after)).toLocaleString():"-"}</div>
               <div style={{display:"flex",alignItems:"center",justifyContent:"flex-start"}}>
                 <Btn small danger onClick={()=>void removeClient(c)} disabled={deletingClientID!==""||deletingProfileID!==""}>
@@ -726,7 +726,7 @@ export const KMIPTab=({session,onToast})=>{
                 <div style={{fontSize: 10,color:C.muted}}>Checked: {String(target?.last_checked_at?new Date(String(target.last_checked_at)).toLocaleString():"Never")}</div>
               </div>
               <div style={{fontSize: 10,color:C.dim}}>{String(target?.vendor||"generic")}</div>
-              <div style={{fontSize: 10,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>{String(target?.endpoint||"-")}</div>
+              <div style={{fontSize: 10,color:C.dim,fontFamily:"var(--font-mono)"}}>{String(target?.endpoint||"-")}</div>
               <div style={{fontSize: 10,color:C.dim}}>{String(target?.expected_min_version||"-")}</div>
               <div>
                 <B c={tone}>{String(target?.last_status||"unknown").toUpperCase()}</B>

@@ -410,7 +410,7 @@ export const AutokeyTab = ({ session, onToast }: any) => {
             <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 8 }}>Per-Service Autokey Coverage</div>
             <div style={{ display: "grid", gap: 8 }}>
               {sortedServices.map((item: any) => (
-                <div key={String(item?.service_name || "service")} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.surface }}>
+                <div key={String(item?.service_name || "service")} style={{ padding: "10px 12px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.surface }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>{String(item?.service_name || "-")}</div>
                     <B c={Number(item?.policy_mismatch_count || 0) > 0 ? "amber" : Number(item?.pending_approvals || 0) > 0 ? "blue" : "green"}>
@@ -523,7 +523,7 @@ export const AutokeyTab = ({ session, onToast }: any) => {
             <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 8 }}>Saved Templates</div>
             <div style={{ display: "grid", gap: 8 }}>
               {templates.map((item: any) => (
-                <div key={String(item?.id || "")} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.surface }}>
+                <div key={String(item?.id || "")} style={{ padding: "10px 12px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.surface }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
                     <div>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>{String(item?.name || item?.id || "-")}</div>
@@ -598,7 +598,7 @@ export const AutokeyTab = ({ session, onToast }: any) => {
             <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 8 }}>Saved Service Defaults</div>
             <div style={{ display: "grid", gap: 8 }}>
               {policies.map((item: any) => (
-                <div key={String(item?.service_name || "")} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.surface }}>
+                <div key={String(item?.service_name || "")} style={{ padding: "10px 12px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.surface }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
                     <div>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>{String(item?.display_name || item?.service_name || "-")}</div>
@@ -668,7 +668,7 @@ export const AutokeyTab = ({ session, onToast }: any) => {
               <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 8 }}>Recent Requests</div>
               <div style={{ display: "grid", gap: 8, maxHeight: 380, overflow: "auto" }}>
                 {requests.map((item: any) => (
-                  <div key={String(item?.id || "")} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.surface }}>
+                  <div key={String(item?.id || "")} style={{ padding: "10px 12px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.surface }}>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
                       <div>
                         <div style={{ fontSize: 10, fontWeight: 700, color: C.text }}>{String(item?.service_name || "-")} • {String(item?.resource_ref || "-")}</div>
@@ -693,7 +693,7 @@ export const AutokeyTab = ({ session, onToast }: any) => {
               <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 8 }}>Managed Handles</div>
               <div style={{ display: "grid", gap: 8, maxHeight: 300, overflow: "auto" }}>
                 {handles.map((item: any) => (
-                  <div key={String(item?.id || "")} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.surface }}>
+                  <div key={String(item?.id || "")} style={{ padding: "10px 12px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.surface }}>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
                       <div>
                         <div style={{ fontSize: 10, fontWeight: 700, color: C.text }}>{String(item?.handle_name || "-")}</div>

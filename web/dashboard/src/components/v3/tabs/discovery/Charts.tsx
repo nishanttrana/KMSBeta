@@ -37,7 +37,7 @@ type BarRowProps = {
 export function BarRow({ label, value, max, bar, active, dim, title, mono, onClick }: BarRowProps) {
   return (
     <button type="button" onClick={onClick} title={title}
-      style={{ display: "grid", gridTemplateColumns: "minmax(96px, 40%) 1fr 40px", alignItems: "center", gap: 10, width: "100%", background: active ? C.accentDim : "transparent", border: "none", borderRadius: 6, padding: "4px 6px", cursor: "pointer", opacity: dim ? 0.45 : 1, textAlign: "left", transition: "opacity .15s, background .15s" }}>
+      style={{ display: "grid", gridTemplateColumns: "minmax(96px, 40%) 1fr 40px", alignItems: "center", gap: 10, width: "100%", background: active ? C.accentDim : "transparent", border: "none", borderRadius: 3, padding: "4px 6px", cursor: "pointer", opacity: dim ? 0.45 : 1, textAlign: "left", transition: "opacity .15s, background .15s" }}>
       <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11, color: C.text, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", fontFamily: mono ? MONO : "inherit" }}>{label}</span>
       <span style={{ height: 10, display: "flex", width: `${max > 0 && value > 0 ? Math.max(2, (value / max) * 100) : 0}%`, transition: "width .4s" }}>{bar}</span>
       <span style={{ fontSize: 11, color: C.text, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{value.toLocaleString()}</span>

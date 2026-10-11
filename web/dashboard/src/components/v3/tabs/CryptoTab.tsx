@@ -678,7 +678,7 @@ export const CryptoTab=({session,keyCatalog,onToast,fipsMode})=>{
   const topControlColumns=keyRequired&&showModeSelector?"1fr 1fr":"1fr";
 
   return <div style={{display:"grid",gridTemplateColumns:"270px 1fr",gap:12,alignItems:"start"}}>
-    <div style={{background:C.card,border:`1px solid ${C.borderHi}`,borderRadius:12,padding:12,maxHeight:680,overflowY:"auto"}}>
+    <div style={{background:C.card,border:`1px solid ${C.borderHi}`,borderRadius:6,padding:12,maxHeight:680,overflowY:"auto"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8}}>
         <div style={{fontSize:11,fontWeight:700,color:C.dim,textTransform:"uppercase",letterSpacing:1}}>Algorithms</div>
         <div
@@ -688,7 +688,7 @@ export const CryptoTab=({session,keyCatalog,onToast,fipsMode})=>{
             alignItems:"center",
             gap:5,
             padding:"4px 8px",
-            borderRadius:999,
+            borderRadius:4,
             border:`1px solid ${runtimeFipsEnabled?(currentMechanismFips?C.green:C.red):C.blue}`,
             background:runtimeFipsEnabled?(currentMechanismFips?C.greenDim:C.redDim):C.blueDim,
             color:runtimeFipsEnabled?(currentMechanismFips?C.greenFg:C.redFg):C.blueFg,
@@ -721,7 +721,7 @@ export const CryptoTab=({session,keyCatalog,onToast,fipsMode})=>{
                     alignItems:"center",
                     gap:8,
                     padding:"4px 6px",
-                    borderRadius:6,
+                    borderRadius:3,
                     border:`1px solid ${selectedAlgorithmInRail===String(name).toUpperCase()?C.accent:C.border}`,
                     background:selectedAlgorithmInRail===String(name).toUpperCase()?C.accentDim:"transparent",
                     cursor:allowedByMode?"pointer":"not-allowed",
@@ -753,7 +753,7 @@ export const CryptoTab=({session,keyCatalog,onToast,fipsMode})=>{
                 background:op===item.id?C.accent:"transparent",
                 color:op===item.id?C.bg:(!tabAllowed?C.muted:C.dim),
                 border:`1px solid ${op===item.id?C.accent:C.border}`,
-                borderRadius:8,
+                borderRadius:4,
                 padding:"7px 14px",
                 fontSize:11,
                 fontWeight:700,
@@ -770,20 +770,20 @@ export const CryptoTab=({session,keyCatalog,onToast,fipsMode})=>{
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        <div style={{background:C.card,border:`1px solid ${C.borderHi}`,borderRadius:12,padding:12}}>
+        <div style={{background:C.card,border:`1px solid ${C.borderHi}`,borderRadius:6,padding:12}}>
           <div style={{fontSize:10,fontWeight:700,color:C.dim,textTransform:"uppercase",letterSpacing:.9,marginBottom:8}}>Input</div>
           <div style={{display:"grid",gap:9}}>
             <div style={{display:"grid",gridTemplateColumns:topControlColumns,gap:8}}>
-              {keyRequired&&<Sel value={selectedKeyId} onChange={(e)=>setSelectedKeyId(e.target.value)} style={{height:40,borderRadius:9,fontSize:12}}>
+              {keyRequired&&<Sel value={selectedKeyId} onChange={(e)=>setSelectedKeyId(e.target.value)} style={{height:40,borderRadius:4,fontSize:12}}>
                 {renderKeyOptions(keyChoices)}
               </Sel>}
               {showModeSelector&&(
                 op==="Sign"||op==="Verify"||op==="MAC"
-                  ?<Sel value={hmacAlgorithm} onChange={(e)=>setHmacAlgorithm(e.target.value)} style={{height:40,borderRadius:9,fontSize:12}}>
+                  ?<Sel value={hmacAlgorithm} onChange={(e)=>setHmacAlgorithm(e.target.value)} style={{height:40,borderRadius:4,fontSize:12}}>
                     {signatureModeOptions.map((item)=><option key={item.value} value={item.value}>{item.label}</option>)}
                   </Sel>
                   :op==="Hash"
-                  ?<Sel value={hashAlgorithm} onChange={(e)=>setHashAlgorithm(e.target.value)} style={{height:40,borderRadius:9,fontSize:12}}>
+                  ?<Sel value={hashAlgorithm} onChange={(e)=>setHashAlgorithm(e.target.value)} style={{height:40,borderRadius:4,fontSize:12}}>
                     <option value="sha-256">SHA-256</option>
                     <option value="sha-384">SHA-384</option>
                     <option value="sha-512">SHA-512</option>
@@ -793,12 +793,12 @@ export const CryptoTab=({session,keyCatalog,onToast,fipsMode})=>{
                     <option value="blake2b-256">BLAKE2b-256</option>
                   </Sel>
                   :op==="Key Derive"
-                  ?<Sel value={kdfAlgorithm} onChange={(e)=>setKdfAlgorithm(e.target.value)} style={{height:40,borderRadius:9,fontSize:12}}>
+                  ?<Sel value={kdfAlgorithm} onChange={(e)=>setKdfAlgorithm(e.target.value)} style={{height:40,borderRadius:4,fontSize:12}}>
                     <option value="hkdf-sha256">HKDF-SHA256</option>
                     <option value="hkdf-sha384">HKDF-SHA384</option>
                     <option value="hkdf-sha512">HKDF-SHA512</option>
                   </Sel>
-                  :<Sel value={kemAlgorithm} onChange={(e)=>setKemAlgorithm(e.target.value)} style={{height:40,borderRadius:9,fontSize:12}}>
+                  :<Sel value={kemAlgorithm} onChange={(e)=>setKemAlgorithm(e.target.value)} style={{height:40,borderRadius:4,fontSize:12}}>
                     <option value="ml-kem-768">ML-KEM-768</option>
                     <option value="ml-kem-1024">ML-KEM-1024</option>
                   </Sel>
@@ -874,7 +874,7 @@ export const CryptoTab=({session,keyCatalog,onToast,fipsMode})=>{
                 background:`linear-gradient(180deg, ${C.glowStrong}, ${C.glow})`,
                 color:C.accentFg,
                 border:`1px solid ${C.accent}`,
-                borderRadius:10,
+                borderRadius:4,
                 height:38,
                 fontSize:13,
                 fontWeight:700,
@@ -889,11 +889,11 @@ export const CryptoTab=({session,keyCatalog,onToast,fipsMode})=>{
           </div>
         </div>
 
-        <div style={{background:C.card,border:`1px solid ${C.borderHi}`,borderRadius:12,padding:12,display:"grid",gap:8}}>
+        <div style={{background:C.card,border:`1px solid ${C.borderHi}`,borderRadius:6,padding:12,display:"grid",gap:8}}>
           <div style={{fontSize:10,fontWeight:700,color:C.dim,textTransform:"uppercase",letterSpacing:.9}}>Output</div>
           <Txt rows={16} value={resultText} readOnly style={{minHeight:300}}/>
           <div style={{display:"flex",justifyContent:"space-between",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-            <div style={{fontSize:10,color:errorText?C.redFg:C.greenFg,fontFamily:"'JetBrains Mono',monospace"}}>{auditEvent} - {durationMs}</div>
+            <div style={{fontSize:10,color:errorText?C.redFg:C.greenFg,fontFamily:"var(--font-mono)"}}>{auditEvent} - {durationMs}</div>
             <div style={{display:"flex",gap:6}}>
               <Btn small onClick={renderResultAsHex}>Hex</Btn>
               <Btn small onClick={renderResultAsBase64}>Base64</Btn>

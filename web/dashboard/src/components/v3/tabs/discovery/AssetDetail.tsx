@@ -157,10 +157,10 @@ export function AssetDetail({ asset, stale, session, onClose, onChanged, onToast
           <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>Review</span>
           {md.reviewed_by ? <span style={{ fontSize: 10.5, color: C.muted }}>{String(md.reviewed_by)} · {relTime(String(md.reviewed_at || ""))}</span> : null}
         </div>
-        <div style={{ display: "inline-flex", flexWrap: "wrap", padding: 2, border: `1px solid ${C.border}`, borderRadius: 8, marginBottom: 8 }}>
+        <div style={{ display: "inline-flex", flexWrap: "wrap", padding: 2, border: `1px solid ${C.border}`, borderRadius: 4, marginBottom: 8 }}>
           {REVIEW_STATUSES.map((s) => (
             <button key={s} type="button" onClick={() => setStatus(s)}
-              style={{ border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", background: status === s ? C.accentDim : "transparent", color: status === s ? C.accentFg : C.muted }}>
+              style={{ border: "none", borderRadius: 3, padding: "5px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", background: status === s ? C.accentDim : "transparent", color: status === s ? C.accentFg : C.muted }}>
               {REVIEW_LABEL[s]}
             </button>
           ))}

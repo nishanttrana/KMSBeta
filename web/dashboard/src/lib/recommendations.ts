@@ -80,6 +80,7 @@ export type PlatformSnapshot = {
   governancePolicies?: Array<{ status?: string | undefined }> | undefined;
   pqc?: { total_assets: number; pqc_ready_assets: number; hybrid_assets: number; classical_assets: number } | null | undefined;
   postureFindings?: Array<{ severity: string; status: string }> | undefined;
+  postureEvaluated?: boolean | undefined;
   cluster?: { total_nodes?: number | undefined; online_nodes?: number | undefined; degraded_nodes?: number | undefined; down_nodes?: number | undefined } | undefined;
   users?: Array<{ username: string; role: string; status: string; must_change_password: boolean }> | undefined;
   fipsEnabled?: boolean | undefined;
@@ -489,7 +490,7 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
   if (s.postureFindings) {
     const open = s.postureFindings.filter((f) => !/resolved|closed|accepted|suppressed/i.test(f.status));
     const crit = open.filter((f) => /critical|high/i.test(f.severity));
-    check("posture", "No open critical/high posture findings", "Posture", true, crit.length > 0);
+    check("posture", "No open critical/high posture findings", "Posture", s.postureFindings.length > 0 || s.postureEvaluated === true, crit.length > 0);
     if (crit.length) {
       recs.push({
         id: "posture-open", severity: "high", category: "Posture",

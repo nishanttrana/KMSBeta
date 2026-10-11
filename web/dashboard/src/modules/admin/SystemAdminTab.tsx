@@ -227,7 +227,7 @@ const BackupRestoreFilePicker = ({
           gap: 12,
           minHeight: 72,
           padding: "12px 14px",
-          borderRadius: 12,
+          borderRadius: 6,
           border: `1px solid ${hasFile ? C.accent : C.borderHi}`,
           background: hasFile
             ? `linear-gradient(135deg, ${C.accentDim}, ${C.blueDim})`
@@ -246,7 +246,7 @@ const BackupRestoreFilePicker = ({
             onClick={() => inputRef.current?.click()}
             style={{
               padding: "8px 14px",
-              borderRadius: 10,
+              borderRadius: 4,
               boxShadow: `0 0 18px ${C.glowStrong}`
             }}
           >
@@ -266,7 +266,7 @@ const BackupRestoreFilePicker = ({
                 borderColor: C.borderHi,
                 color: C.dim,
                 background: "rgba(15,21,33,.72)",
-                borderRadius: 10,
+                borderRadius: 4,
                 padding: "8px 12px"
               }}
             >
@@ -504,10 +504,10 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const ScopeBanner=({section}:{section:string})=>{
     const isWide=(inheritancePolicy[section]||"kms_wide")==="kms_wide";
     return(
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"8px 14px",background:isWide?`${C.accent}18`:`${C.amber}18`,borderRadius:8,border:`1px solid ${isWide?C.accent:C.amber}44`}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"8px 14px",background:isWide?`${C.accent}18`:`${C.amber}18`,borderRadius:4,border:`1px solid ${isWide?C.accent:C.amber}44`}}>
         <span style={{fontSize:14}}>{isWide?"\u{1F512}":"\u{1F513}"}</span>
         <span style={{flex:1,fontSize:12,color:C.text}}>{isWide?"KMS-Wide (Uniform) — All tenants inherit these settings":"Tenant-Specific — Tenants may override these settings"}</span>
-        <button onClick={()=>toggleScope(section)} style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:`1px solid ${C.border}`,background:C.surface,color:C.text,cursor:"pointer"}}>{isWide?"Allow Tenant Override":"Enforce KMS-Wide"}</button>
+        <button onClick={()=>toggleScope(section)} style={{fontSize:11,padding:"4px 10px",borderRadius:3,border:`1px solid ${C.border}`,background:C.surface,color:C.text,cursor:"pointer"}}>{isWide?"Allow Tenant Override":"Enforce KMS-Wide"}</button>
       </div>
     );
   };
@@ -1252,14 +1252,14 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       title="System Health"
       actions={<Btn small onClick={()=>void loadHealth()}>{healthLoading?"Refreshing...":"Refresh Health"}</Btn>}
     >
-      <Card style={{padding:10,borderRadius:8}}>
+      <Card style={{padding:10,borderRadius:4}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
-          <span style={{fontSize:11,color:C.blueFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999}}>{`${totalServices} Total`}</span>
-          <span style={{fontSize:11,color:C.greenFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999}}>{`${Number(health.summary?.running||0)} Running`}</span>
-          <span style={{fontSize:11,color:C.amberFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999}}>{`${Number(health.summary?.degraded||0)} Degraded`}</span>
-          <span style={{fontSize:11,color:C.redFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999}}>{`${Number(health.summary?.down||0)} Down`}</span>
-          <span style={{fontSize:11,color:C.blueFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999}}>{`${Number(health.summary?.unknown||0)} Unknown`}</span>
-          {totalServices>0 && <span style={{fontSize:11,color:runtimeAllOk?C.greenFg:C.amberFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999,fontWeight:700}}>{runtimeAllOk?"ALL OK":"ATTN"}</span>}
+          <span style={{fontSize:11,color:C.blueFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:4}}>{`${totalServices} Total`}</span>
+          <span style={{fontSize:11,color:C.greenFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:4}}>{`${Number(health.summary?.running||0)} Running`}</span>
+          <span style={{fontSize:11,color:C.amberFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:4}}>{`${Number(health.summary?.degraded||0)} Degraded`}</span>
+          <span style={{fontSize:11,color:C.redFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:4}}>{`${Number(health.summary?.down||0)} Down`}</span>
+          <span style={{fontSize:11,color:C.blueFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:4}}>{`${Number(health.summary?.unknown||0)} Unknown`}</span>
+          {totalServices>0 && <span style={{fontSize:11,color:runtimeAllOk?C.greenFg:C.amberFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:4,fontWeight:700}}>{runtimeAllOk?"ALL OK":"ATTN"}</span>}
         </div>
         <div style={{maxHeight:420,overflowY:"auto",paddingRight:2}}>
           {(health.services||[]).map((svc)=>{
@@ -1270,7 +1270,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
                 <div style={{fontSize:11,color:C.text,fontWeight:700}}>{name}</div>
                 <div style={{fontSize:10,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={String(svc?.output||svc?.source||"-")}>{String(svc?.output||svc?.source||"-")}</div>
               </div>
-              <span style={{fontSize:11,color:C[tone(status)],textTransform:"capitalize",fontWeight:700,border:`1px solid ${C.border}`,background:C.bg,borderRadius:999,padding:"4px 10px"}}>
+              <span style={{fontSize:11,color:C[tone(status)],textTransform:"capitalize",fontWeight:700,border:`1px solid ${C.border}`,background:C.bg,borderRadius:4,padding:"4px 10px"}}>
                 <span className={`vecta-hb-dot ${heartbeatToneClass(status)}`} />
                 {status}
               </span>
@@ -1282,13 +1282,13 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       </Card>
     </Section>
     <Section title="Heartbeats & Watchdog">
-      <Card style={{padding:10,borderRadius:8}}>
+      <Card style={{padding:10,borderRadius:4}}>
         <div style={{fontSize:10,color:C.dim,marginBottom:8}}>Liveness each service reports over NATS every 30s. The watchdog marks a service unhealthy after 90s of silence or a degraded report, and raises an audited incident. It alerts; it does not remediate.</div>
         <HealthListBody list={heartbeats} empty="No service has published a heartbeat yet.">
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:6}}>
             {heartbeats.items.map((h)=>{
               const status=h.healthy?"running":h.state==="degraded"?"degraded":"down";
-              return <div key={h.service} style={{border:`1px solid ${C.border}`,background:C.bg,borderRadius:8,padding:"6px 9px"}}>
+              return <div key={h.service} style={{border:`1px solid ${C.border}`,background:C.bg,borderRadius:4,padding:"6px 9px"}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:6}}>
                   <span style={{fontSize:11,color:C.text,fontWeight:700}}>{h.service}</span>
                   <span style={{fontSize:10,color:C[tone(status)],fontWeight:700}}><span className={`vecta-hb-dot ${heartbeatToneClass(status)}`} />{h.healthy?"alive":"silent"}</span>
@@ -1311,7 +1311,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       </Card>
     </Section>
     <Section title="Reconciler Controllers">
-      <Card style={{padding:10,borderRadius:8}}>
+      <Card style={{padding:10,borderRadius:4}}>
         <div style={{fontSize:10,color:C.dim,marginBottom:8}}>Control loops that converge live state (tenants, key lifecycle, KMIP clients, quotas) to the declared manifest.</div>
         <HealthListBody list={reconcilers} empty="No reconciler controllers registered.">
           {reconcilers.items.map((r)=>{
@@ -1337,7 +1337,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         <Btn small onClick={()=>setFipsConfigModalOpen(true)}>Configure FIPS</Btn>
       </div>}
     >
-      <Card style={{padding:10,borderRadius:8}}>
+      <Card style={{padding:10,borderRadius:4}}>
         <div style={{fontSize:11,color:C.dim,marginBottom:8}}>The tenant algorithm policy, and the TLS minimum and random-number generator this platform actually runs with.</div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
           <div><span style={{fontSize:10,color:C.muted}}>Mode:</span><span style={{fontSize:13,color:C.text,fontWeight:700,marginLeft:4}}>{runtimeModeLabel}</span></div>
@@ -1348,7 +1348,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}>
           <Btn small primary={fipsMode!=="enabled"} onClick={()=>{setSystemState((p)=>({...p,fips_mode:"enabled"}));onFipsModeChange("enabled");}}>Enable FIPS</Btn>
           <Btn small primary={fipsMode!=="disabled"} onClick={()=>{setSystemState((p)=>({...p,fips_mode:"disabled"}));onFipsModeChange("disabled");}}>Disable FIPS</Btn>
-          <span style={{fontSize:11,color:C.greenFg,fontWeight:700,border:`1px solid ${C.border}`,background:C.bg,borderRadius:999,padding:"4px 9px",alignSelf:"center"}}>
+          <span style={{fontSize:11,color:C.greenFg,fontWeight:700,border:`1px solid ${C.border}`,background:C.bg,borderRadius:4,padding:"4px 9px",alignSelf:"center"}}>
             <span className={`vecta-hb-dot ${heartbeatToneClass(fipsMode==="enabled"?"running":"unknown")}`} />
             OK
           </span>
@@ -1387,7 +1387,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         marginTop:8,
         padding:"10px 12px",
         border:`1px solid ${C.border}`,
-        borderRadius:10,
+        borderRadius:4,
         background:C.bg
       }}>
         <div>{`RNG: ${String(systemState?.fips_rng_mode||"not reported")} from ${String(systemState?.fips_entropy_source||"not reported")}; last read ${String(systemState?.fips_entropy_health||"not reported")}`}</div>
@@ -1414,7 +1414,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       <Btn small onClick={()=>void testSnmpSettings()} disabled={snmpTesting}>{snmpTesting?"Testing...":"Test SNMP"}</Btn>
       <Btn small primary onClick={()=>void saveSnmpSettings()} disabled={systemStateSaving}>{systemStateSaving?"Saving...":"Save SNMP"}</Btn>
     </div>}>
-      <Card style={{padding:10,borderRadius:8}}>
+      <Card style={{padding:10,borderRadius:4}}>
         <Row3>
           <FG label="Transport">
             <Sel value={String(systemState?.snmp_transport||"udp")} onChange={(e)=>setSystemState((p)=>({...p,snmp_transport:String(e.target.value||"udp")}))}>
@@ -1495,7 +1495,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
 
     {panel==="tags"&&<>
     <Section title="Tags" actions={<Btn small onClick={()=>void loadTags()}>Refresh</Btn>}>
-      <Card style={{padding:10,borderRadius:8}}>
+      <Card style={{padding:10,borderRadius:4}}>
         <div style={{display:"flex",gap:8,alignItems:"end",flexWrap:"wrap"}}>
           <FG label="Tag Name"><Inp value={newTagName} onChange={(e)=>setNewTagName(e.target.value)} placeholder="tag-name"/></FG>
           <FG label="Color"><Inp type="color" value={newTagColor} onChange={(e)=>setNewTagColor(e.target.value)} w={90}/></FG>
@@ -1526,7 +1526,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     {panel==="password"&&<>
     <Section title="Password Policy" actions={<div style={{display:"flex",gap:8}}><Btn small onClick={()=>void loadPasswordPolicy()} disabled={passwordPolicyLoading||passwordPolicySaving}>{passwordPolicyLoading?"Reloading...":"Reload Policy"}</Btn><Btn small primary onClick={()=>void savePasswordPolicy()} disabled={passwordPolicyLoading||passwordPolicySaving||!passwordPolicy}>{passwordPolicySaving?"Saving...":"Save Policy"}</Btn></div>}>
       <ScopeBanner section="passwordPolicy"/>
-      <Card style={{padding:10,borderRadius:8}}>
+      <Card style={{padding:10,borderRadius:4}}>
         <Row2>
           <FG label="Min Length"><Inp type="number" value={String(passwordPolicy?.min_length||12)} onChange={(e)=>setPasswordPolicy((p)=>({...p,min_length:Math.max(8,Number(e.target.value||12))}))}/></FG>
           <FG label="Max Length"><Inp type="number" value={String(passwordPolicy?.max_length||128)} onChange={(e)=>setPasswordPolicy((p)=>({...p,max_length:Math.max(8,Number(e.target.value||128))}))}/></FG>
@@ -1551,7 +1551,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     {panel==="login"&&<>
     <Section title="Login Security" actions={<Btn small primary onClick={()=>void saveSecurityPolicy()} disabled={securityPolicyLoading||securityPolicySaving||!securityPolicy}>{securityPolicySaving?"Saving...":"Save"}</Btn>}>
       <ScopeBanner section="loginSecurity"/>
-      <Card style={{padding:10,borderRadius:8}}>
+      <Card style={{padding:10,borderRadius:4}}>
         <Row3>
           <FG label="Max Failed Attempts"><Inp type="number" value={String(securityPolicy?.max_failed_attempts||5)} onChange={(e)=>setSecurityPolicy((p)=>({...p,max_failed_attempts:Math.max(3,Number(e.target.value||5))}))}/></FG>
           <FG label="Lockout Minutes"><Inp type="number" value={String(securityPolicy?.lockout_minutes||15)} onChange={(e)=>setSecurityPolicy((p)=>({...p,lockout_minutes:Math.max(1,Number(e.target.value||15))}))}/></FG>
@@ -1571,7 +1571,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       <Btn small onClick={()=>void loadAccessHardening()} disabled={accessSettingsLoading}>{accessSettingsLoading?"Refreshing...":"Refresh"}</Btn>
       <Btn small primary onClick={()=>void saveAccessHardening()} disabled={accessSettingsSaving||!accessSettings}>{accessSettingsSaving?"Saving...":"Save"}</Btn>
     </div>}>
-      <Card style={{padding:10,borderRadius:8}}>
+      <Card style={{padding:10,borderRadius:4}}>
         <Row3>
           <FG label="Default Grant Type">
             <Sel value={String(accessSettings?.grant_default_type||"creator-default")} onChange={(e)=>setAccessSettings((p)=>({...p,grant_default_type:e.target.value}))}>
@@ -1601,7 +1601,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     {panel==="platform"&&<>
     <Section title="Platform Hardening and Crypto" actions={<div style={{display:"flex",gap:6}}><Btn small onClick={()=>void loadSystemState()} disabled={systemStateLoading}>{systemStateLoading?"Refreshing...":"Refresh"}</Btn><Btn small primary onClick={()=>void saveSystemState()} disabled={systemStateLoading||systemStateSaving}>{systemStateSaving?"Saving...":"Save"}</Btn></div>}>
       <Row2>
-        <Card style={{padding:10,borderRadius:8}}>
+        <Card style={{padding:10,borderRadius:4}}>
           <div style={{fontSize:10,color:C.muted,marginBottom:8}}>Hardening / Crypto Runtime</div>
           <Row2>
             <FG label="FIPS Policy">
@@ -1643,7 +1643,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           </div>
         </Card>
 
-        <Card style={{padding:10,borderRadius:8}}>
+        <Card style={{padding:10,borderRadius:4}}>
           <div style={{fontSize:10,color:C.muted,marginBottom:8}}>KMS Rules / Platform Policy</div>
           <Chk label="Force quorum for destructive operations" checked={Boolean(systemState?.posture_force_quorum_destructive_ops)} onChange={()=>setSystemState((p)=>({...p,posture_force_quorum_destructive_ops:!p.posture_force_quorum_destructive_ops}))}/>
           <Chk label="Require step-up auth for risky operations" checked={Boolean(systemState?.posture_require_step_up_auth)} onChange={()=>setSystemState((p)=>({...p,posture_require_step_up_auth:!p.posture_require_step_up_auth}))}/>
@@ -1654,7 +1654,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
 
 
       <Row2>
-        <Card style={{padding:10,borderRadius:8}}>
+        <Card style={{padding:10,borderRadius:4}}>
           <div style={{fontSize:10,color:C.muted,marginBottom:8}}>TLS / Interface Governance</div>
           <div style={{display:"grid",gap:8}}>
             <div style={{fontSize:11,color:C.text,fontWeight:700}}>{tlsPolicyLabel}</div>
@@ -1674,16 +1674,16 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     {panel==="cli"&&<>
     <Section title="CLI / HSM Onboarding" actions={<Btn small onClick={()=>{void loadCli(); void loadHsm();}}>{cliLoading||hsmLoading?"Refreshing...":"Refresh"}</Btn>}>
       <Row2>
-        <Card style={{padding:10,borderRadius:8}}>
+        <Card style={{padding:10,borderRadius:4}}>
           <div style={{fontSize:10,color:C.muted}}>CLI Status</div>
           <div style={{marginTop:6,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}><span style={{color:C.text,fontSize:12,fontWeight:700}}>{cliStatus?.enabled?"Enabled":"Disabled"}</span><span style={{color:C.dim,fontSize:10}}>{`${String(cliStatus?.host||"127.0.0.1")}:${Number(cliStatus?.port||22)}`}</span><span style={{color:C.muted,fontSize:10}}>{String(cliStatus?.transport||"ssh")}</span></div>
           <FG label="CLI Username"><Inp value={cliUser} onChange={(e)=>setCliUser(e.target.value)}/></FG>
           <FG label="CLI Password"><Inp type="password" value={cliPass} onChange={(e)=>setCliPass(e.target.value)}/></FG>
           <div style={{display:"flex",justifyContent:"flex-end"}}><Btn small primary onClick={()=>void openCli()} disabled={cliOpening}>{cliOpening?"Opening...":"Open CLI Session"}</Btn></div>
           {String(cliSession||"").trim()?<div style={{marginTop:8,fontSize:10,color:C.muted}}>{`Session ID: ${cliSession}`}</div>:null}
-          {String(cliSsh||"").trim()?<div style={{marginTop:4,fontSize:10,color:C.text,fontFamily:"'JetBrains Mono', monospace"}}>{cliSsh}</div>:null}
+          {String(cliSsh||"").trim()?<div style={{marginTop:4,fontSize:10,color:C.text,fontFamily:"var(--font-mono)"}}>{cliSsh}</div>:null}
         </Card>
-        <Card style={{padding:10,borderRadius:8}}>
+        <Card style={{padding:10,borderRadius:4}}>
           <div style={{fontSize:10,color:C.muted}}>PKCS#11 Provider Configuration</div>
           <FG label="Provider Name"><Inp value={String(hsm.provider_name||"")} onChange={(e)=>setHsm((p)=>({...p,provider_name:e.target.value}))}/></FG>
           <FG label="Integration Service"><Inp value={String(hsm.integration_service||"")} onChange={(e)=>setHsm((p)=>({...p,integration_service:e.target.value}))}/></FG>
@@ -1726,7 +1726,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
             <Btn small onClick={async()=>{if(!session?.token) return; const lib=String(hsm.library_path||"").trim(); if(!lib){onToast("PKCS#11 library path is required before partition fetch."); return;} setSlotsLoading(true); try{const listing=await listAuthCLIHSMPartitions(session,lib,String(slotHint||"").trim()); setSlots(Array.isArray(listing.items)?listing.items:[]); setSlotRaw(String(listing.raw_output||"")); onToast("HSM partitions fetched.");}catch(error){if(!sessionGuard(error)) onToast(`Partition fetch failed: ${errMsg(error)}`);} finally{setSlotsLoading(false);}}} disabled={slotsLoading}>{slotsLoading?"Fetching...":"Fetch Partitions"}</Btn>
           </div>
           <div style={{marginTop:8,display:"flex",gap:8}}><Inp w={180} placeholder="slot filter (optional)" value={slotHint} onChange={(e)=>setSlotHint(e.target.value)}/></div>
-          <div style={{display:"grid",gap:8,marginTop:8}}>{slots.map((slot:CLIHSMPartitionSlot)=>{const key=`${String(slot.slot_id||"")}:${String(slot.partition||slot.token_label||slot.slot_name||"")}`; return <div key={key} style={{borderBottom:`1px solid ${C.border}`,paddingBottom:8}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><div style={{fontSize:12,color:C.text,fontWeight:700}}>{`${String(slot.slot_name||"slot")} (${String(slot.slot_id||"-")})`}</div><div style={{fontSize:10,color:C.dim}}>{`partition: ${String(slot.partition||"-")} | token: ${String(slot.token_label||"-")} | serial: ${String(slot.serial_number||"-")}`}</div></div><Btn small onClick={()=>setHsm((p)=>({...p,slot_id:String(slot.slot_id||""),partition_label:String(slot.partition||slot.slot_name||""),token_label:String(slot.token_label||slot.slot_name||"")}))}>Use</Btn></div></div>;})}{!slots.length?<div style={{fontSize:10,color:C.muted}}>No partitions loaded yet.</div>:null}{String(slotRaw||"").trim()?<div style={{fontSize: 10,color:C.muted,fontFamily:"'JetBrains Mono', monospace",whiteSpace:"pre-wrap"}}>{slotRaw}</div>:null}</div>
+          <div style={{display:"grid",gap:8,marginTop:8}}>{slots.map((slot:CLIHSMPartitionSlot)=>{const key=`${String(slot.slot_id||"")}:${String(slot.partition||slot.token_label||slot.slot_name||"")}`; return <div key={key} style={{borderBottom:`1px solid ${C.border}`,paddingBottom:8}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><div style={{fontSize:12,color:C.text,fontWeight:700}}>{`${String(slot.slot_name||"slot")} (${String(slot.slot_id||"-")})`}</div><div style={{fontSize:10,color:C.dim}}>{`partition: ${String(slot.partition||"-")} | token: ${String(slot.token_label||"-")} | serial: ${String(slot.serial_number||"-")}`}</div></div><Btn small onClick={()=>setHsm((p)=>({...p,slot_id:String(slot.slot_id||""),partition_label:String(slot.partition||slot.slot_name||""),token_label:String(slot.token_label||slot.slot_name||"")}))}>Use</Btn></div></div>;})}{!slots.length?<div style={{fontSize:10,color:C.muted}}>No partitions loaded yet.</div>:null}{String(slotRaw||"").trim()?<div style={{fontSize: 10,color:C.muted,fontFamily:"var(--font-mono)",whiteSpace:"pre-wrap"}}>{slotRaw}</div>:null}</div>
         </Card>
       </Row2>
     </Section>
@@ -1755,7 +1755,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     {panel==="backup"&&<>
     <Section title="Encrypted Backups" actions={<div style={{display:"flex",gap:6}}><Btn small onClick={()=>void loadJobs()}>{jobsLoading?"Refreshing...":"Refresh Jobs"}</Btn></div>}>
       <ScopeBanner section="backupPolicy"/>
-      <Card style={{padding:10,borderRadius:8,marginBottom:8}}>
+      <Card style={{padding:10,borderRadius:4,marginBottom:8}}>
         <div style={{fontSize:10,color:C.muted,marginBottom:8}}>Create Backup</div>
         <Row2><FG label="Scope"><Sel value={backupScope} onChange={(e)=>setBackupScope(String(e.target.value||"system") as "system"|"tenant")}><option value="system">System</option><option value="tenant">Tenant</option></Sel></FG><FG label="Target Tenant ID (tenant scope)"><Inp value={backupTenant} onChange={(e)=>setBackupTenant(e.target.value)} placeholder="tenant-id"/></FG></Row2>
         <Chk label="Bind backup key package to HSM (when configured)" checked={backupBindToHsm&&!backupSplit} onChange={()=>setBackupBindToHsm((v)=>!v)} disabled={backupSplit}/>
@@ -1785,7 +1785,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
             await loadJobs();
           }catch(error){if(!sessionGuard(error)) onToast(`Backup create failed: ${errMsg(error)}`);} finally{setBackupCreating(false);}
         }} disabled={backupCreating}>{backupCreating?"Creating...":"Create Backup"}</Btn></div>
-        {backupCreatedShares.length>0&&<div role="region" aria-label="Guardian key shares" style={{marginTop:10,padding:10,borderRadius:8,border:`1px solid ${C.amber}`,background:C.amberDim}}>
+        {backupCreatedShares.length>0&&<div role="region" aria-label="Guardian key shares" style={{marginTop:10,padding:10,borderRadius:4,border:`1px solid ${C.amber}`,background:C.amberDim}}>
           <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:4}}>Guardian key shares: shown once</div>
           <div style={{fontSize:10,color:C.dim,marginBottom:8}}>Give each file to its guardian only. Close this panel once every share is handed out; the platform can't produce them again.</div>
           {backupCreatedShares.map((sh)=>(
@@ -1797,7 +1797,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}><Btn small onClick={()=>setBackupCreatedShares([])}>All shares handed out: close</Btn></div>
         </div>}
       </Card>
-      <Card style={{padding:10,borderRadius:8,marginBottom:8}}>
+      <Card style={{padding:10,borderRadius:4,marginBottom:8}}>
         <div style={{fontSize:10,color:C.muted,marginBottom:8}}>Restore Backup</div>
         <Row2>
           <FG label={`Artifact (${BACKUP_ARTIFACT_EXTENSION})`}>
@@ -1833,7 +1833,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           </div>
         </div>
         <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim,marginTop:6}}>Verify opens the backup with the key file or guardian shares and reports what it holds, without changing any data. Use it to prove your backups and keys still work.</div>
-        {backupVerifyResult&&<div role="status" style={{marginTop:8,padding:10,borderRadius:8,border:`1px solid ${C.green}`,background:C.greenDim,fontSize:11,color:C.text}}>
+        {backupVerifyResult&&<div role="status" style={{marginTop:8,padding:10,borderRadius:4,border:`1px solid ${C.green}`,background:C.greenDim,fontSize:11,color:C.text}}>
           <div style={{fontWeight:700,marginBottom:4}}>Backup opens: verified</div>
           <div>{`Scope ${backupVerifyResult.scope}${backupVerifyResult.target_tenant_id?` (${backupVerifyResult.target_tenant_id})`:""} · captured ${backupVerifyResult.backup_captured_at||"unknown"}`}</div>
           <div>{`${backupVerifyResult.table_count} tables · ${backupVerifyResult.row_count_total} rows · opened in ${backupVerifyResult.elapsed_ms} ms`}</div>
@@ -1841,7 +1841,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           <div style={{color:C.dim,marginTop:4}}>No data was changed. A restore also needs each service to re-wrap rows under retired master keys; it checks that before applying anything.</div>
         </div>}
       </Card>
-      <Card style={{marginTop:8,padding:10,borderRadius:8}}>
+      <Card style={{marginTop:8,padding:10,borderRadius:4}}>
         <div style={{display:"grid",gridTemplateColumns:"1.2fr 0.8fr 0.8fr 0.8fr 1fr",gap:8,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>{["Backup","Scope","Status","Rows","Actions"].map((h)=><div key={h} style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>{h}</div>)}</div>
         {sortedJobs.map((job)=>{const id=String(job.id||""); const st=String(job.status||"unknown"); return <div key={id} style={{display:"grid",gridTemplateColumns:"1.2fr 0.8fr 0.8fr 0.8fr 1fr",gap:8,alignItems:"center",borderBottom:`1px solid ${C.border}`,padding:"9px 0"}}><div style={{minWidth:0}}><div style={{fontSize:12,color:C.text,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{id}</div><div style={{fontSize:10,color:C.dim}}>{String(job.created_at||"-")}</div></div><div style={{fontSize:11,color:C.text}}>{String(job.scope||"-")}</div><div style={{fontSize:11,color:C[tone(st)]}}>{st}</div><div style={{fontSize:11,color:C.text}}>{Number(job.row_count_total||0)}</div><div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}><Btn small onClick={async()=>{if(!session?.token||!id) return; setBackupDownloading(`${id}:artifact`); try{const p=await downloadGovernanceBackupArtifact(session,id); dl(p.file_name,p.content_base64,p.content_type); onToast("Backup artifact downloaded.");}catch(error){if(!sessionGuard(error)) onToast(`Backup download failed: ${errMsg(error)}`);} finally{setBackupDownloading("");}}} disabled={backupDownloading===`${id}:artifact`}>Artifact</Btn>{governanceBackupKeyRetained(job)&&<Btn small onClick={async()=>{if(!session?.token||!id) return; setBackupDownloading(`${id}:key`); try{const p=await downloadGovernanceBackupKey(session,id); dl(p.file_name,p.content_base64,p.content_type); onToast("Backup key package downloaded.");}catch(error){if(!sessionGuard(error)) onToast(`Backup download failed: ${errMsg(error)}`);} finally{setBackupDownloading("");}}} disabled={backupDownloading===`${id}:key`}>Key</Btn>}<Btn small danger onClick={async()=>{if(!session?.token||!id) return; setBackupDeleting(id); try{await deleteGovernanceBackup(session,id,session.username); onToast("Backup deleted."); await loadJobs();}catch(error){if(!sessionGuard(error)) onToast(`Backup delete failed: ${errMsg(error)}`);} finally{setBackupDeleting("");}}} disabled={backupDeleting===id}>Delete</Btn></div></div>;})}
         {!sortedJobs.length?<div style={{fontSize:10,color:C.muted,paddingTop:10}}>No backups found.</div>:null}
@@ -1850,14 +1850,14 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     </>}
     {panel==="alertrules"&&<>
     <Section title={<>{`Alert Rules`}<span style={{fontWeight:400,fontSize:11,color:C.muted,marginLeft:8}}>{alertRulesLoading?"loading...": `${alertRules.length} rule${alertRules.length!==1?"s":""}`}</span></>} actions={<div style={{display:"flex",gap:6}}><Btn small onClick={()=>void refreshAlertRules()} disabled={alertRulesLoading}>{alertRulesLoading?"Refreshing...":"Refresh"}</Btn><Btn small primary onClick={()=>openRuleModal()}>Create Rule</Btn></div>}>
-      {alertRules.map((rule)=>{const id=String(rule.id||""); const cond=String(rule.condition||"threshold"); return <Card key={id} style={{padding:10,borderRadius:8,marginBottom:8}}>
+      {alertRules.map((rule)=>{const id=String(rule.id||""); const cond=String(rule.condition||"threshold"); return <Card key={id} style={{padding:10,borderRadius:4,marginBottom:8}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div style={{minWidth:0,flex:1}}>
             <div style={{fontSize:13,color:C.text,fontWeight:700}}>{rule.name||"Unnamed Rule"}</div>
             <div style={{fontSize:10,color:C.dim,marginTop:2}}>
               {cond==="expression"
-                ?<span>Expression: <span style={{fontFamily:"'JetBrains Mono', monospace",color:C.text}}>{rule.expression||"-"}</span></span>
-                :<span>Pattern: <span style={{fontFamily:"'JetBrains Mono', monospace",color:C.text}}>{rule.event_pattern||"*"}</span> | Threshold: {rule.threshold||1} in {rule.window_seconds||300}s</span>}
+                ?<span>Expression: <span style={{fontFamily:"var(--font-mono)",color:C.text}}>{rule.expression||"-"}</span></span>
+                :<span>Pattern: <span style={{fontFamily:"var(--font-mono)",color:C.text}}>{rule.event_pattern||"*"}</span> | Threshold: {rule.threshold||1} in {rule.window_seconds||300}s</span>}
             </div>
             <div style={{display:"flex",gap:8,marginTop:4,fontSize:10}}>
               <span style={{color:rule.severity==="critical"?C.redFg:rule.severity==="high"?C.orangeFg:rule.severity==="warning"?C.amberFg:C.blueFg}}>{rule.severity||"warning"}</span>
@@ -1896,7 +1896,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         <FG label="Expression">
           <Inp value={ruleExpression} onChange={(e)=>setRuleExpression(e.target.value)} placeholder={'e.g. action == "audit.key.export" AND actor_id != "backup-svc"'}/>
         </FG>
-        <div style={{fontSize: 10,color:C.muted,marginTop:4,lineHeight:1.5,fontFamily:"'JetBrains Mono', monospace"}}>
+        <div style={{fontSize: 10,color:C.muted,marginTop:4,lineHeight:1.5,fontFamily:"var(--font-mono)"}}>
           <div><B>Fields:</B> action, severity, actor_id, source_ip, service, target_type, target_id</div>
           <div><B>Operators:</B> == != contains startsWith matches</div>
           <div><B>Combinators:</B> AND OR ( )</div>
@@ -1919,7 +1919,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           {ruleChannelsAvail.map((ch)=><Chk key={ch} label={ch} checked={ruleChannels.includes(ch)} onChange={()=>toggleRuleChannel(ch)}/>)}
         </div>
       </FG>
-      <div style={{border:`1px solid ${C.border}`,borderRadius:8,padding:10,marginTop:8}}>
+      <div style={{border:`1px solid ${C.border}`,borderRadius:4,padding:10,marginTop:8}}>
         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
           <span style={{fontSize:11,color:C.dim}}>Test against the audit events of the last</span>
           <Sel value={String(ruleReplayHours)} onChange={(e)=>setRuleReplayHours(Number(e.target.value))} style={{width:110}}>
@@ -1933,7 +1933,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
             ?<div style={{fontSize:11,color:C.amberFg,marginTop:8}}>Valid. Replay not assessed: {ruleCheck.replay_error}</div>
             :ruleCheck.replay&&<div style={{fontSize:11,color:C.text,marginTop:8,lineHeight:1.6}}>
               <div>Valid. Over {ruleCheck.replay.events_scanned} audit events{ruleCheck.replay.truncated?` (only since ${new Date(ruleCheck.replay.from).toLocaleString()}: the audit service returned its maximum)`:""}: <B>{ruleCheck.replay.matched}</B> matched, the rule would have fired <B>{ruleCheck.replay.fired}</B> time{ruleCheck.replay.fired===1?"":"s"}.</div>
-              {ruleCheck.replay.samples.map((s)=><div key={s.event_id} style={{fontFamily:"'JetBrains Mono', monospace",fontSize:10,color:C.dim}}>{new Date(s.timestamp).toLocaleString()} · {s.action} · {s.actor_id||"—"}</div>)}
+              {ruleCheck.replay.samples.map((s)=><div key={s.event_id} style={{fontFamily:"var(--font-mono)",fontSize:10,color:C.dim}}>{new Date(s.timestamp).toLocaleString()} · {s.action} · {s.actor_id||"—"}</div>)}
               <div style={{fontSize:10,color:C.muted,marginTop:4}}>{ruleCheck.replay.basis}.</div>
             </div>)}
       </div>
@@ -1983,8 +1983,8 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
                   {policy.description&&<div style={{fontSize:10,color:C.muted,marginTop:2}}>{policy.description}</div>}
                 </div>
                 <div style={{display:"flex",gap:6}}>
-                  <button onClick={()=>openGovPolicyModal(policy)} style={{fontSize:10,padding:"3px 8px",borderRadius:5,border:`1px solid ${C.border}`,background:C.surface,color:C.text,cursor:"pointer"}}>Edit</button>
-                  <button onClick={async()=>{if(!session?.token) return; try{await updateGovernancePolicy(session,policy.id,{status:policy.status==="active"?"inactive":"active"}); onToast(policy.status==="active"?"Policy disabled.":"Policy activated."); await loadGovPolicies();}catch(e){onToast(`Toggle failed: ${errMsg(e)}`);}}} style={{fontSize:10,padding:"3px 8px",borderRadius:5,border:`1px solid ${policy.status==="active"?C.amber:C.green}44`,background:policy.status==="active"?`${C.amber}11`:`${C.green}11`,color:policy.status==="active"?C.amberFg:C.greenFg,cursor:"pointer"}}>{policy.status==="active"?"Disable":"Enable"}</button>
+                  <button onClick={()=>openGovPolicyModal(policy)} style={{fontSize:10,padding:"3px 8px",borderRadius:3,border:`1px solid ${C.border}`,background:C.surface,color:C.text,cursor:"pointer"}}>Edit</button>
+                  <button onClick={async()=>{if(!session?.token) return; try{await updateGovernancePolicy(session,policy.id,{status:policy.status==="active"?"inactive":"active"}); onToast(policy.status==="active"?"Policy disabled.":"Policy activated."); await loadGovPolicies();}catch(e){onToast(`Toggle failed: ${errMsg(e)}`);}}} style={{fontSize:10,padding:"3px 8px",borderRadius:3,border:`1px solid ${policy.status==="active"?C.amber:C.green}44`,background:policy.status==="active"?`${C.amber}11`:`${C.green}11`,color:policy.status==="active"?C.amberFg:C.greenFg,cursor:"pointer"}}>{policy.status==="active"?"Disable":"Enable"}</button>
                 </div>
               </div>
 
@@ -2003,7 +2003,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
             </Card>
           );
         })}
-        {!govPolicies.length&&!govPoliciesLoading&&<div className="vk-fold" tabIndex={0} style={{textAlign:"center",padding:24,color:C.muted,fontSize:11,background:C.surface,borderRadius:10,border:`1px solid ${C.border}`}}>
+        {!govPolicies.length&&!govPoliciesLoading&&<div className="vk-fold" tabIndex={0} style={{textAlign:"center",padding:24,color:C.muted,fontSize:11,background:C.surface,borderRadius:4,border:`1px solid ${C.border}`}}>
           No approval policies configured. Create a policy to enforce quorum-based approvals for key operations, user management, or system administration tasks.
         </div>}
       </div>
@@ -2086,7 +2086,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         </div>
 
         {/* Hold State Enforcement */}
-        <div style={{padding:"10px 14px",background:`${C.green}12`,border:`1px solid ${C.green}33`,borderRadius:8}}>
+        <div style={{padding:"10px 14px",background:`${C.green}12`,border:`1px solid ${C.green}33`,borderRadius:4}}>
           <Chk label="Enforce Hold State — Operations are held (queued) until approval is granted or timeout expires. Denied or timed-out operations are rejected." checked={gpEnforceHold} onChange={()=>setGpEnforceHold((v)=>!v)}/>
           <div className="vk-fold" tabIndex={0} style={{fontSize: 10,color:C.dim,marginTop:4,marginLeft:24}}>
             When enabled: the KMS suspends the operation, notifies all approvers via configured channels, and waits for quorum. The operation proceeds only after sufficient approvals. If the timeout expires without quorum, the operation is automatically denied.
@@ -2094,7 +2094,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         </div>
 
         {/* Quorum explanation */}
-        <div style={{padding:"8px 12px",borderRadius:8,background:`${C.blue}12`,border:`1px solid ${C.blue}33`,fontSize:10,color:C.dim}}>
+        <div style={{padding:"8px 12px",borderRadius:4,background:`${C.blue}12`,border:`1px solid ${C.blue}33`,fontSize:10,color:C.dim}}>
           {gpQuorum==="threshold"&&`Threshold (M-of-N): ${gpRequired} out of ${gpTotal} designated approvers must approve. Any group member can cast their vote. ${gpTotal-gpRequired+1} denials will reject the operation.`}
           {gpQuorum==="and"&&"Unanimous (AND): ALL designated approvers must vote to approve. A single denial from any approver immediately rejects the operation."}
           {gpQuorum==="or"&&"Any Single (OR): ONE approval from any designated approver is sufficient to proceed. All approvers must deny to reject."}

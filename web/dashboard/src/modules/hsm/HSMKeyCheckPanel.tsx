@@ -48,7 +48,7 @@ export function HSMKeyCheckPanel({ session, keyID }: { session: AuthSession | nu
           </div>
           {check.versions.map((v) => (
             <div key={v.version} style={{ marginBottom: 6 }}>
-              <div style={{ fontFamily: "'JetBrains Mono',monospace", color: C.muted }}>v{v.version} {v.protection === "tenant_hsm" ? "(material under the tenant key)" : ""} {v.label}</div>
+              <div style={{ fontFamily: "var(--font-mono)", color: C.muted }}>v{v.version} {v.protection === "tenant_hsm" ? "(material under the tenant key)" : ""} {v.label}</div>
               {v.error && <div style={{ color: C.redFg }}>{v.error}</div>}
               {(v.objects || []).map((o, i) => {
                 const secret = o.class !== "public_key";

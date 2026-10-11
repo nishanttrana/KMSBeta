@@ -35,6 +35,10 @@ describe("evaluate", () => {
     const status = (id: string) => checks.find((c) => c.id === id)?.status;
     for (const id of ["algo-broken", "pqc-keys", "cryptoperiod", "non-exportable", "inventory", "cert-expiry"]) expect(status(id), id).toBe("unknown");
     expect(status("backup")).toBe("fail");
+    // No findings and no scan on record is "never evaluated"; after a scan it is a pass.
+    expect(evaluate({ now, postureFindings: [] }).checks.find((c) => c.id === "posture")?.status).toBe("unknown");
+    expect(evaluate({ now, postureFindings: [], postureEvaluated: true }).checks.find((c) => c.id === "posture")?.status).toBe("pass");
+    expect(evaluate({ now, postureFindings: [{ severity: "high", status: "open" }] }).checks.find((c) => c.id === "posture")?.status).toBe("fail");
     const symmetricOnly = evaluate({ now, keys: [{ id: "1", name: "dek", algorithm: "AES-256-GCM", status: "active", expires_at: "2027-01-01T00:00:00Z", labels: { owner: "db" } }] }).checks;
     expect(symmetricOnly.find((c) => c.id === "pqc-keys")?.status).toBe("unknown");
     expect(symmetricOnly.find((c) => c.id === "algo-broken")?.status).toBe("pass");

@@ -51,7 +51,7 @@ export function IdleWarningModal({ open, secondsRemaining, onStayActive, onLogou
       }} />
       <div style={{
         position: "relative", background: C.surface,
-        border: `1px solid ${C.borderHi}`, borderRadius: 16,
+        border: `1px solid ${C.borderHi}`, borderRadius: 6,
         padding: "32px 40px", width: 380, textAlign: "center",
         boxShadow: "0 24px 60px rgba(0,0,0,.5)"
       }}>
@@ -75,7 +75,7 @@ export function IdleWarningModal({ open, secondsRemaining, onStayActive, onLogou
               x={size / 2} y={size / 2}
               textAnchor="middle" dominantBaseline="central"
               fill="#f59e0b" fontSize="22" fontWeight="700"
-              fontFamily="monospace"
+              fontFamily="var(--font-mono)"
             >
               {display}
             </text>

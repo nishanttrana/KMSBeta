@@ -522,7 +522,7 @@ export const RestAPITab=({session,keyCatalog,onToast}: RestAPITabProps)=>{
                     textAlign:"left",
                     border:`1px solid ${selected?C.accent:C.border}`,
                     background:selected?C.accentDim:C.surface,
-                    borderRadius:12,
+                    borderRadius:6,
                     padding:"10px 12px",
                     cursor:"pointer"
                   }}
@@ -621,15 +621,15 @@ export const RestAPITab=({session,keyCatalog,onToast}: RestAPITabProps)=>{
         <Card>
           <div style={{fontSize:12,fontWeight:700,color:C.text,marginBottom:8}}>What This Protects</div>
           <div style={{display:"grid",gap:8}}>
-            <div style={{padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:10,background:C.surface}}>
+            <div style={{padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:4,background:C.surface}}>
               <div style={{fontSize:10,color:C.text,fontWeight:700}}>OAuth mTLS</div>
               <div className="vk-fold" tabIndex={0} style={{fontSize: 10,color:C.dim,marginTop:4}}>Binds the access token to the client certificate thumbprint so a stolen bearer token cannot be replayed without the certificate.</div>
             </div>
-            <div style={{padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:10,background:C.surface}}>
+            <div style={{padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:4,background:C.surface}}>
               <div style={{fontSize:10,color:C.text,fontWeight:700}}>DPoP</div>
               <div style={{fontSize: 10,color:C.dim,marginTop:4}}>Adds a per-request proof JWT tied to the HTTP method, URL, access token hash, and a one-time nonce window.</div>
             </div>
-            <div style={{padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:10,background:C.surface}}>
+            <div style={{padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:4,background:C.surface}}>
               <div style={{fontSize:10,color:C.text,fontWeight:700}}>HTTP Message Signatures</div>
               <div className="vk-fold" tabIndex={0} style={{fontSize: 10,color:C.dim,marginTop:4}}>Signs request components and body digests using the client public key so automation and SDK calls become tamper-evident and replay-aware.</div>
             </div>

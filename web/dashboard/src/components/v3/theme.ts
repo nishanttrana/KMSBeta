@@ -1,6 +1,6 @@
 // Two-tier color strategy:
 //   C.*       = hex literals → safe for `${C.color}33` alpha-suffix interpolation.
-//                These are the *base* hue (Ink dark palette); they do NOT
+//                These are the *base* hue (Basalt dark palette); they do NOT
 //                react to theme switches. Used for borders, faint backgrounds,
 //                and decorative tints that don't need contrast guarantees.
 //   C.*Fg     = CSS vars → theme-reactive text/icon colors. Use these whenever
@@ -25,18 +25,18 @@ export const C = {
   glowStrong:"var(--c-glow-strong)",
   dimTint:   "var(--c-dim-tint)",
 
-  // ── Brand gradient stops (theme-reactive) ───────────────────────────
+  // ── Brass core of the mark (theme-reactive) ───────────────────────────
   auroraFrom: "var(--c-aurora-from)",
   auroraMid:  "var(--c-aurora-mid)",
   auroraTo:   "var(--c-aurora-to)",
 
-  // ── Semantic hex (Ink palette — safe for `${C.color}NN` alpha) ────
+  // ── Semantic hex (Basalt palette — safe for `${C.color}NN` alpha) ────
   // Mid-tones on purpose: a hue passed as a prop ends up as text or as a fill
   // on either theme, so each reads on the light and the dark card
   // (tests/unit/brandAndLegibility.test.ts).
   white:     "#ffffff",
-  accent:    "#3586f0",  // Azure (single accent)
-  accentMid: "rgba(76,157,255,0.16)",
+  accent:    "#1493a8",  // Petrol (single accent)
+  accentMid: "rgba(20,147,168,0.16)",
   teal:      "#17a398",
   green:     "#1fa463",
   red:       "#e8555a",
@@ -82,14 +82,14 @@ export const C = {
   orangeTint:  "rgba(251,146,60,.04)",
   purpleTint:  "rgba(167,139,250,.04)",
   blueTint:    "rgba(96,165,250,.04)",
-  accentTint:  "rgba(76,157,255,.05)",
+  accentTint:  "rgba(20,147,168,.05)",
   pinkTint:    "rgba(244,114,182,.04)",
   cyanTint:    "rgba(34,211,238,.04)",
   tealTint:    "rgba(45,212,191,.04)",
   yellowTint:  "rgba(253,224,71,.04)",
   greenTint3:  "rgba(52,211,153,.03)",
   redTint3:    "rgba(248,113,113,.03)",
-  accentTint3: "rgba(76,157,255,.04)",
+  accentTint3: "rgba(20,147,168,.04)",
 };
 
 // Status -> theme-reactive foreground color

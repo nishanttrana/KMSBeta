@@ -53,7 +53,7 @@ export function HSMTargetPicker({ session, supported, unsupportedReason, materia
     return <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>{note}No HSM is set up for keys. {data.credentials_state === "not_deployed" ? "Turn on HSM keys in the HSM tab." : add}{data.credentials_state === "not_deployed" ? "" : "."}</div>;
   }
   return (
-    <div style={{ padding: "10px 12px", marginBottom: 10, borderRadius: 8, border: `1px solid ${checked ? C.accent : C.border}`, background: C.card }}>
+    <div style={{ padding: "10px 12px", marginBottom: 10, borderRadius: 4, border: `1px solid ${checked ? C.accent : C.border}`, background: C.card }}>
       <Chk disabled={!supported || usable.length === 0}
         label={material === "generated" ? "Create in HSM (generated and used only inside the HSM)" : "Place in HSM (the material is kept only in the HSM)"}
         checked={checked && supported} onChange={() => onChecked(!checked)} />
@@ -66,7 +66,7 @@ export function HSMTargetPicker({ session, supported, unsupportedReason, materia
             return (
               <div key={t.id || "tenant"} role="radio" aria-checked={on} tabIndex={t.usable ? 0 : -1} title={t.usable ? "" : t.reason}
                 onClick={() => { if (t.usable) onConnection(t.id); }} onKeyDown={(e) => { if (e.key === "Enter" && t.usable) onConnection(t.id); }}
-                style={{ cursor: t.usable ? "pointer" : "not-allowed", opacity: t.usable ? 1 : 0.55, borderRadius: 8, padding: "8px 10px", border: `1px solid ${on ? C.accent : C.border}`, background: on ? C.accentDim : "transparent" }}>
+                style={{ cursor: t.usable ? "pointer" : "not-allowed", opacity: t.usable ? 1 : 0.55, borderRadius: 4, padding: "8px 10px", border: `1px solid ${on ? C.accent : C.border}`, background: on ? C.accentDim : "transparent" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
                   <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{t.name}</span>
                   <B c={t.kind === "tenant_profile" ? "blue" : t.topology === "ha_group" ? "purple" : "accent"}>{t.kind === "tenant_profile" ? "Tenant HSM" : topologyLabel(t.topology)}</B>

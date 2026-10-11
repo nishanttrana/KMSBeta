@@ -73,7 +73,8 @@ async function stub(page: Page, created: unknown[]): Promise<void> {
 async function openPlaybooks(page: Page, view: string): Promise<void> {
   await page.goto("/");
   await page.getByText("Playbooks", { exact: true }).first().click();
-  await page.getByRole("button", { name: view }).first().click();
+  // A module's views are its sub-options in the sidebar.
+  await page.getByTestId("subnav-playbooks").getByRole("button", { name: view }).click();
 }
 
 test("event streaming is a Playbooks view; there is no separate Webhooks tab", async ({ page }) => {
@@ -144,7 +145,7 @@ test("a tenant sees its approved ranges and cannot change them", async ({ page }
   await expect(page.getByRole("button", { name: /Withdraw/ })).toHaveCount(0);
   privateEndpoints = { data: [], can_approve: false };
   await page.reload();
-  await page.getByText("Playbooks", { exact: true }).first().click();
-  await page.getByRole("button", { name: "Credentials" }).first().click();
+  // The module is still open after a reload; clicking its name again would fold it.
+  await page.getByTestId("subnav-playbooks").getByRole("button", { name: "Credentials" }).click();
   await expect(page.getByText("No private ranges approved for this tenant. A root administrator approves them here.")).toBeVisible();
 });

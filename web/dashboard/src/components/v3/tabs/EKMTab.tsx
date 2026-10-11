@@ -719,7 +719,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
                   {/* Menu button */}
                   <div style={{position:"absolute",top:8,right:8,cursor:"pointer",color:C.dim}} onClick={(e)=>{e.stopPropagation();setDbMenu(dbMenu===agent.id?"":agent.id);}}>
                     <MoreVertical size={16}/>
-                    {dbMenu===agent.id&&(<div style={{position:"absolute",right:0,top:20,background:C.surface,border:"1px solid "+C.border,borderRadius:6,padding:4,zIndex:10,minWidth:140}} onClick={(e)=>e.stopPropagation()}>
+                    {dbMenu===agent.id&&(<div style={{position:"absolute",right:0,top:20,background:C.surface,border:"1px solid "+C.border,borderRadius:3,padding:4,zIndex:10,minWidth:140}} onClick={(e)=>e.stopPropagation()}>
                       <div style={{padding:"5px 10px",cursor:"pointer",fontSize:12}} onClick={()=>{setDbMenu("");openLogs(agent);}}>View Logs</div>
                       <div style={{padding:"5px 10px",cursor:"pointer",fontSize:12}} onClick={()=>{setDbMenu("");openHealthDetail(agent);}}>Health Details</div>
                       <div style={{padding:"5px 10px",cursor:"pointer",fontSize:12}} onClick={()=>{setDbMenu("");runRotate(agent);}}>Rotate Key</div>
@@ -737,7 +737,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
                   {/* TDE Key info */}
                   {agent.assigned_key_id&&(<div style={{fontSize:12,marginBottom:4}}>
                     <span style={{color:C.dim}}>TDE Key: </span>
-                    <span style={{fontFamily:"monospace",fontSize:11}}>{String(agent.assigned_key_id).slice(0,20)}</span>
+                    <span style={{fontFamily:"var(--font-mono)",fontSize:11}}>{String(agent.assigned_key_id).slice(0,20)}</span>
                     {keyAlg&&(<span style={{color:C.dim}}> ({keyAlg} {agent.assigned_key_version||""})</span>)}
                   </div>)}
 
@@ -770,7 +770,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
             </div>
           ):(
             /* ── List view ── */
-            <div style={{border:"1px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
+            <div style={{border:"1px solid "+C.border,borderRadius:4,overflow:"hidden"}}>
               <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr 1.5fr 120px",padding:"8px 12px",background:C.surface,fontSize:11,fontWeight:600,color:C.dim,borderBottom:"1px solid "+C.border}}>
                 <span>Agent</span><span>Engine</span><span>Status</span><span>Heartbeat</span><span>DBs</span><span>Rotation</span><span>Actions</span>
               </div>
@@ -799,7 +799,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
                       <div>
                         <div style={{fontWeight:600,marginBottom:4}}>Agent Details</div>
-                        <div style={{color:C.dim}}>ID: <span style={{fontFamily:"monospace"}}>{agent.id}</span></div>
+                        <div style={{color:C.dim}}>ID: <span style={{fontFamily:"var(--font-mono)"}}>{agent.id}</span></div>
                         <div style={{color:C.dim}}>Role: {agent.role}</div>
                         <div style={{color:C.dim}}>Version: {agent.version||"n/a"}</div>
                         <div style={{color:C.dim}}>Config v{agent.config_version} (ack: {agent.config_version_ack})</div>
@@ -807,7 +807,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
                       <div>
                         <div style={{fontWeight:600,marginBottom:4}}>TDE Key</div>
                         {agent.assigned_key_id?(<>
-                          <div style={{color:C.dim}}>Key ID: <span style={{fontFamily:"monospace",fontSize:11}}>{agent.assigned_key_id}</span></div>
+                          <div style={{color:C.dim}}>Key ID: <span style={{fontFamily:"var(--font-mono)",fontSize:11}}>{agent.assigned_key_id}</span></div>
                           <div style={{color:C.dim}}>Version: {agent.assigned_key_version||"v1"}</div>
                           {st.assigned_key_algorithm&&(<div style={{color:C.dim}}>Algorithm: {st.assigned_key_algorithm}</div>)}
                         </>):(<div style={{color:C.dim}}>No key assigned</div>)}
@@ -843,7 +843,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
       {/* ── Database Inventory section ── */}
       {databases.length>0&&(<div style={{marginTop:20}}>
         <B style={{fontSize:14,marginBottom:8,display:"block"}}>Database Inventory ({databases.length})</B>
-        <div style={{border:"1px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
+        <div style={{border:"1px solid "+C.border,borderRadius:4,overflow:"hidden"}}>
           <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr 1fr 1fr 100px",padding:"8px 12px",background:C.surface,fontSize:11,fontWeight:600,color:C.dim,borderBottom:"1px solid "+C.border}}>
             <span>Database</span><span>Engine</span><span>Agent</span><span>Host</span><span>TDE State</span><span>Rotation</span><span>Last Seen</span><span>Actions</span>
           </div>
@@ -883,7 +883,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
           <Btn onClick={()=>loadAgentKeyAccessLogs(expandedAgent)} disabled={agentLogsPanelLoading===expandedAgent} style={{fontSize:11,padding:"3px 8px"}}>{agentLogsPanelLoading===expandedAgent?"Loading...":"Load Logs"}</Btn>
         </div>
         {agentLogsPanel[expandedAgent]&&agentLogsPanel[expandedAgent].length>0?(
-          <div style={{border:"1px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
+          <div style={{border:"1px solid "+C.border,borderRadius:4,overflow:"hidden"}}>
             <div style={{display:"grid",gridTemplateColumns:"130px 90px 80px 1fr 1fr 80px",padding:"6px 10px",background:C.surface,fontSize:11,fontWeight:600,color:C.dim,borderBottom:"1px solid "+C.border}}>
               <span>Timestamp</span><span>Operation</span><span>Status</span><span>Key ID</span><span>Database</span><span>Latency</span>
             </div>
@@ -891,7 +891,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
               <span style={{color:C.dim}}>{formatAgo(log.created_at)}</span>
               <span style={{fontWeight:500}}>{log.operation}</span>
               <span style={{color:log.status==="success"?C.greenFg:C.redFg}}>{log.status}</span>
-              <span style={{fontFamily:"monospace",fontSize:10,color:C.dim}}>{String(log.key_id||"").slice(0,16)}</span>
+              <span style={{fontFamily:"var(--font-mono)",fontSize:10,color:C.dim}}>{String(log.key_id||"").slice(0,16)}</span>
               <span style={{fontSize:10,color:C.dim}}>{databases.find(d=>d.id===log.database_id)?.name||String(log.database_id||"").slice(0,16)||"n/a"}</span>
               <span style={{color:C.dim}}>{log.error_message||"--"}</span>
             </div>))}
@@ -954,7 +954,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
           </div>
         ):(
           /* ── List view ── */
-          <div style={{border:"1px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
+          <div style={{border:"1px solid "+C.border,borderRadius:4,overflow:"hidden"}}>
             <div style={{display:"grid",gridTemplateColumns:"2fr 1.5fr 1fr 1fr 1fr 1fr 140px",padding:"8px 12px",background:C.surface,fontSize:11,fontWeight:600,color:C.dim,borderBottom:"1px solid "+C.border}}>
               <span>Client</span><span>Host</span><span>Status</span><span>Encryption</span><span>TPM</span><span>Heartbeat</span><span>Actions</span>
             </div>
@@ -1005,17 +1005,17 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
       {/* ── Vault Configs Table ── */}
       <B style={{fontSize:14,marginBottom:8,display:"block"}}>Azure Key Vault Configurations</B>
       {azureConfigs.length===0?(<div style={{color:C.dim,fontSize:12,padding:16,textAlign:"center"}}>No Azure vault configurations. Click "+ Add Azure Vault" to connect.</div>):(
-        <div style={{border:"1px solid "+C.border,borderRadius:8,overflow:"hidden",marginBottom:24}}>
+        <div style={{border:"1px solid "+C.border,borderRadius:4,overflow:"hidden",marginBottom:24}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 100px 80px 180px",padding:"8px 12px",fontSize:11,fontWeight:600,color:C.dim,borderBottom:"1px solid "+C.border,background:C.surface}}>
             <span>Vault Name</span><span>Azure Tenant</span><span>Auth Mode</span><span>Mappings</span><span>Status</span><span>Actions</span>
           </div>
           {azureConfigs.map(cfg=>(<div key={cfg.id} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 100px 80px 180px",padding:"8px 12px",fontSize:12,borderBottom:"1px solid "+C.border,alignItems:"center"}}>
             <div>
               <div style={{fontWeight:600}}>{cfg.vault_name}</div>
-              <div style={{fontSize:10,color:C.dim,fontFamily:"monospace"}}>{cfg.vault_url}</div>
+              <div style={{fontSize:10,color:C.dim,fontFamily:"var(--font-mono)"}}>{cfg.vault_url}</div>
               {cfg.managed_hsm_name&&(<div style={{fontSize:10,color:C.accentFg}}>HSM: {cfg.managed_hsm_name}</div>)}
             </div>
-            <span style={{fontFamily:"monospace",fontSize:10,color:C.dim}}>{cfg.azure_tenant_id}</span>
+            <span style={{fontFamily:"var(--font-mono)",fontSize:10,color:C.dim}}>{cfg.azure_tenant_id}</span>
             <span>{cfg.auth_mode}</span>
             <span>{cfg.key_mappings}</span>
             <span style={{color:cfg.status==="active"?C.greenFg:C.redFg}}>{cfg.status}</span>
@@ -1049,7 +1049,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
       {Object.keys(azureTestResults).length>0&&(<div style={{marginBottom:16}}>
         {Object.entries(azureTestResults).map(([cfgId,res])=>{
           const cfg=azureConfigs.find(c=>c.id===cfgId);
-          return (<div key={cfgId} style={{fontSize:12,padding:"6px 10px",background:res.connected?C.green+"15":C.red+"15",borderRadius:6,marginBottom:4}}>
+          return (<div key={cfgId} style={{fontSize:12,padding:"6px 10px",background:res.connected?C.green+"15":C.red+"15",borderRadius:3,marginBottom:4}}>
             <span style={{fontWeight:600}}>{cfg?.vault_name||cfgId}:</span>{" "}
             <span style={{color:res.connected?C.greenFg:C.redFg}}>{res.connected?"Connected":"Failed"}</span>
             {res.error&&(<span style={{color:C.redFg,marginLeft:8,fontSize:11}}>{res.error}</span>)}
@@ -1060,14 +1060,14 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
       {/* ── Key Mappings Table ── */}
       <B style={{fontSize:14,marginBottom:8,display:"block"}}>Key Mappings (Vecta KMS to Azure)</B>
       {azureMappings.length===0?(<div style={{color:C.dim,fontSize:12,padding:16,textAlign:"center"}}>No key mappings. Click "+ Add Key Mapping" to map a Vecta key to Azure.</div>):(
-        <div style={{border:"1px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
+        <div style={{border:"1px solid "+C.border,borderRadius:4,overflow:"hidden"}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 100px 80px 200px",padding:"8px 12px",fontSize:11,fontWeight:600,color:C.dim,borderBottom:"1px solid "+C.border,background:C.surface}}>
             <span>Azure Key</span><span>Vecta Key</span><span>Azure Key ID</span><span>Purpose</span><span>Sync</span><span>Actions</span>
           </div>
           {azureMappings.map(m=>(<div key={m.id} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 100px 80px 200px",padding:"8px 12px",fontSize:12,borderBottom:"1px solid "+C.border,alignItems:"center"}}>
             <span style={{fontWeight:600}}>{m.azure_key_name}</span>
-            <span style={{fontFamily:"monospace",fontSize:10,color:C.dim}}>{m.vecta_key_id.slice(0,20)}</span>
-            <span style={{fontFamily:"monospace",fontSize:10,color:C.dim}}>{m.azure_key_id?m.azure_key_id.split("/").slice(-2).join("/"):"(not imported)"}</span>
+            <span style={{fontFamily:"var(--font-mono)",fontSize:10,color:C.dim}}>{m.vecta_key_id.slice(0,20)}</span>
+            <span style={{fontFamily:"var(--font-mono)",fontSize:10,color:C.dim}}>{m.azure_key_id?m.azure_key_id.split("/").slice(-2).join("/"):"(not imported)"}</span>
             <span style={{textTransform:"uppercase",fontSize:10}}>{m.purpose}</span>
             <span style={{color:m.sync_status==="synced"?C.greenFg:m.sync_status==="error"?C.redFg:C.amberFg,fontSize:11}}>{m.sync_status}</span>
             <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
@@ -1141,7 +1141,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
       {googleCSEConfigs.length>0&&(<Card style={{padding:14,marginBottom:14}}>
         <B style={{fontSize:13,marginBottom:8,display:"block"}}>Workspace Configurations</B>
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {googleCSEConfigs.map(cfg=>(<div key={cfg.id} style={{background:C.surface,borderRadius:8,padding:10,border:`1px solid ${C.border}`}}>
+          {googleCSEConfigs.map(cfg=>(<div key={cfg.id} style={{background:C.surface,borderRadius:4,padding:10,border:`1px solid ${C.border}`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <div>
                 <div style={{fontSize:12,fontWeight:600}}>{cfg.google_workspace_customer_id}</div>
@@ -1205,12 +1205,12 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
       {googleCSEKeys.length>0&&(<Card style={{padding:14,marginBottom:14}}>
         <B style={{fontSize:13,marginBottom:8,display:"block"}}>CSE Keys</B>
         <div style={{display:"flex",flexDirection:"column",gap:6}}>
-          {googleCSEKeys.map(k=>(<div key={k.id} style={{background:C.surface,borderRadius:8,padding:10,border:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          {googleCSEKeys.map(k=>(<div key={k.id} style={{background:C.surface,borderRadius:4,padding:10,border:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div>
               <div style={{fontSize:12,fontWeight:600}}>{k.key_name} <span style={{fontSize:10,fontWeight:400,color:C.muted}}>({k.purpose})</span></div>
               <div style={{fontSize:10,color:C.muted}}>Vecta Key: {k.vecta_key_id} &middot; Status: <span style={{color:k.status==="active"?C.greenFg||"#4ade80":C.redFg}}>{k.status}</span></div>
               <div style={{fontSize:10,color:C.muted}}>Wraps: {k.wrap_count||0} &middot; Unwraps: {k.unwrap_count||0}{k.last_used_at?` \u00b7 Last used: ${formatAgo(k.last_used_at)}`:""}</div>
-              <div style={{fontSize: 10,color:C.muted,fontFamily:"monospace",marginTop:2}}>URI: {k.google_key_uri}</div>
+              <div style={{fontSize: 10,color:C.muted,fontFamily:"var(--font-mono)",marginTop:2}}>URI: {k.google_key_uri}</div>
             </div>
             <div style={{display:"flex",gap:4}}>
               <Btn onClick={async()=>{
@@ -1227,13 +1227,13 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
         <B style={{fontSize:13,marginBottom:8,display:"block"}}>KACLS Endpoint Information</B>
         <div style={{fontSize:11,color:C.muted,lineHeight:1.6}}>
           <div>Google CSE calls the following KACLS API endpoints on this Vecta KMS instance:</div>
-          <div style={{fontFamily:"monospace",fontSize:10,marginTop:6,background:C.surface,padding:8,borderRadius:6,border:`1px solid ${C.border}`}}>
+          <div style={{fontFamily:"var(--font-mono)",fontSize:10,marginTop:6,background:C.surface,padding:8,borderRadius:3,border:`1px solid ${C.border}`}}>
             <div>GET  /ekm/kacls/status &mdash; KACLS health check</div>
             <div>POST /ekm/kacls/wrap &mdash; Wrap DEK for encryption</div>
             <div>POST /ekm/kacls/unwrap &mdash; Unwrap DEK for decryption</div>
             <div>POST /ekm/kacls/privilegedunwrap &mdash; Admin/legal hold unwrap</div>
           </div>
-          <div style={{marginTop:8}}>Configure these endpoints in your Google Workspace Admin Console under <b>Security &gt; Client-side encryption &gt; External key service</b>.</div>
+          <div className="vk-fold" tabIndex={0} style={{marginTop:8}}>Configure these endpoints in your Google Workspace Admin Console under <b>Security &gt; Client-side encryption &gt; External key service</b>.</div>
         </div>
       </Card>
     </div>)}
@@ -1397,7 +1397,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
               onToast?.(result?.valid?"Agent verified successfully":"Verification returned issues");
             }catch(e){ setVerifyResult({valid:false,error:errMsg(e)}); onToast?.(`Verify failed: ${errMsg(e)}`); }finally{ setVerifyingAgentId(""); }
           }} disabled={!!verifyingAgentId}>{verifyingAgentId?"Verifying...":"Verify Connection"}</Btn>
-          {verifyResult&&(<div style={{marginTop:12,padding:10,borderRadius:6,background:verifyResult.valid?C.green+"15":C.red+"15",border:`1px solid ${verifyResult.valid?C.green:C.red}44`}}>
+          {verifyResult&&(<div style={{marginTop:12,padding:10,borderRadius:3,background:verifyResult.valid?C.green+"15":C.red+"15",border:`1px solid ${verifyResult.valid?C.green:C.red}44`}}>
             <div style={{fontSize:12,fontWeight:600,color:verifyResult.valid?C.greenFg:C.redFg,marginBottom:4}}>{verifyResult.valid?"Verification Successful":"Verification Failed"}</div>
             {verifyResult.error&&(<div style={{fontSize:11,color:C.redFg}}>{verifyResult.error}</div>)}
             {verifyResult.agent_status&&(<div style={{fontSize:11,color:C.dim}}>Agent Status: {verifyResult.agent_status}</div>)}
@@ -1419,7 +1419,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
               <span style={{color:C.dim}}>{formatAgo(log.created_at)}</span>
               <span>{log.operation}</span>
               <span style={{color:log.status==="success"?C.greenFg:C.redFg}}>{log.status}</span>
-              <span style={{fontFamily:"monospace",fontSize:10,color:C.dim}}>{String(log.key_id||"").slice(0,16)}</span>
+              <span style={{fontFamily:"var(--font-mono)",fontSize:10,color:C.dim}}>{String(log.key_id||"").slice(0,16)}</span>
               <span style={{color:C.redFg,fontSize:10}}>{log.error_message||""}</span>
             </div>))}
           </div>
@@ -1462,7 +1462,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
           <div style={{fontSize:12,color:C.dim}}>Host: {bitLockerDeletePreview.host}</div>
           <div style={{fontSize:12,color:C.dim}}>Recovery keys available: {bitLockerDeletePreview.recovery_keys_available}</div>
           {bitLockerDeletePreview.latest_recovery_key_masked&&(<div style={{fontSize:12,color:C.amberFg}}>Latest recovery key (masked): {bitLockerDeletePreview.latest_recovery_key_masked}</div>)}
-          {bitLockerDeletePreview.latest_recovery_key&&(<div style={{fontSize:12,color:C.redFg,fontFamily:"monospace",background:C.surface,padding:6,borderRadius:4,marginTop:4}}>Full key: {bitLockerDeletePreview.latest_recovery_key}</div>)}
+          {bitLockerDeletePreview.latest_recovery_key&&(<div style={{fontSize:12,color:C.redFg,fontFamily:"var(--font-mono)",background:C.surface,padding:6,borderRadius:4,marginTop:4}}>Full key: {bitLockerDeletePreview.latest_recovery_key}</div>)}
         </div>)}
         <Chk label="I confirm that the recovery key has been backed up securely" checked={bitLockerDeleteConfirmBackup} onChange={(e)=>setBitLockerDeleteConfirmBackup(e.target.checked)}/>
         <div style={{display:"flex",gap:8,marginTop:12}}>
@@ -1490,10 +1490,10 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
       {bitLockerScanResult&&(<div style={{marginTop:16}}>
         <div style={{fontSize:12,color:C.dim,marginBottom:8}}>Scanned {bitLockerScanResult.scanned_hosts} hosts in {bitLockerScanResult.duration_ms}ms. Found {bitLockerScanResult.windows_hosts} Windows endpoint(s).</div>
         {bitLockerScanCandidates.length>0&&(<>
-          <div style={{border:"1px solid "+C.border,borderRadius:8,overflow:"hidden",maxHeight:300,overflowY:"auto"}}>
+          <div style={{border:"1px solid "+C.border,borderRadius:4,overflow:"hidden",maxHeight:300,overflowY:"auto"}}>
             {bitLockerScanCandidates.map((row,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",borderBottom:"1px solid "+C.border,fontSize:12}}>
               <Chk checked={Boolean(bitLockerScanSelected[row.ip])} onChange={()=>toggleBitLockerCandidate(row.ip)}/>
-              <span style={{fontFamily:"monospace",minWidth:120}}>{row.ip}</span>
+              <span style={{fontFamily:"var(--font-mono)",minWidth:120}}>{row.ip}</span>
               <span style={{flex:1,color:C.dim}}>{row.host}</span>
               <span style={{fontSize:11}}>{row.os_guess}</span>
               <span style={{fontSize:11,color:row.confidence==="high"?C.greenFg:C.amberFg}}>{row.confidence}</span>
@@ -1524,7 +1524,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
         {bitLockerRecovery.length===0?(<div style={{color:C.dim,fontSize:12}}>No recovery keys stored.</div>):(
           <div style={{maxHeight:200,overflow:"auto"}}>
             {bitLockerRecovery.map((rec,i)=>(<div key={rec.id||i} style={{padding:"6px 0",borderBottom:"1px solid "+C.border,fontSize:12}}>
-              <div style={{fontFamily:"monospace",fontSize:11}}>{rec.key_masked||rec.key_fingerprint}</div>
+              <div style={{fontFamily:"var(--font-mono)",fontSize:11}}>{rec.key_masked||rec.key_fingerprint}</div>
               <div style={{color:C.dim,fontSize:11}}>Volume: {rec.volume_mount_point} | Protector: {rec.protector_id||"n/a"} | {formatAgo(rec.created_at)}</div>
             </div>))}
           </div>

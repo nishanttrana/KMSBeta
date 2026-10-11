@@ -2,8 +2,8 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Play, Plus, RefreshCcw, Trash2, Edit2, CheckCircle2, XCircle,
-  Zap, Shield, Clock, Activity, ChevronDown, ChevronRight,
-  ToggleLeft, ToggleRight, ListChecks, Link2, AlertTriangle, FlaskConical, Ban, RotateCcw, Radio
+  Zap, Shield, Clock, ChevronDown, ChevronRight,
+  ToggleLeft, ToggleRight, ListChecks, AlertTriangle, FlaskConical, Ban, RotateCcw
 } from "lucide-react";
 import { C } from "../../v3/theme";
 import { takePlaybooksView } from "../../../lib/credentials";
@@ -58,13 +58,13 @@ const TH = ({ children }: any) => (
   <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}`, whiteSpace: "nowrap" }}>{children}</th>
 );
 const TD = ({ children, mono }: any) => (
-  <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{children}</td>
+  <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "var(--font-mono)" } : {}) }}>{children}</td>
 );
 const Badge = ({ color, children }: any) => (
   <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 7px", borderRadius: 4, background: color + "18", color, fontSize: 10, fontWeight: 600, textTransform: "capitalize", letterSpacing: 0.3 }}>{children}</span>
 );
 const Btn = ({ onClick, children, variant = "default", disabled = false, small = false }: any) => {
-  const base: any = { display: "inline-flex", alignItems: "center", gap: 5, padding: small ? "4px 10px" : "6px 14px", borderRadius: 6, fontSize: small ? 11 : 12, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer", border: "none", transition: "opacity .15s", opacity: disabled ? 0.5 : 1 };
+  const base: any = { display: "inline-flex", alignItems: "center", gap: 5, padding: small ? "4px 10px" : "6px 14px", borderRadius: 3, fontSize: small ? 11 : 12, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer", border: "none", transition: "opacity .15s", opacity: disabled ? 0.5 : 1 };
   const styles: any = {
     default: { background: C.accent, color: C.bg },
     ghost: { background: "rgba(255,255,255,.06)", color: C.dim, border: `1px solid ${C.border}` },
@@ -76,19 +76,19 @@ const Btn = ({ onClick, children, variant = "default", disabled = false, small =
 const Inp = ({ label, ...props }: any) => (
   <div style={{ marginBottom: 12 }}>
     {label && <div style={{ fontSize: 11, color: C.dim, marginBottom: 4, fontWeight: 500 }}>{label}</div>}
-    <input {...props} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, padding: "7px 10px", color: C.text, fontSize: 12, outline: "none", boxSizing: "border-box", ...props.style }} />
+    <input {...props} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 3, padding: "7px 10px", color: C.text, fontSize: 12, outline: "none", boxSizing: "border-box", ...props.style }} />
   </div>
 );
 const Sel = ({ label, children, ...props }: any) => (
   <div style={{ marginBottom: 12 }}>
     {label && <div style={{ fontSize: 11, color: C.dim, marginBottom: 4, fontWeight: 500 }}>{label}</div>}
-    <select {...props} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, padding: "7px 10px", color: C.text, fontSize: 12, outline: "none", boxSizing: "border-box", ...props.style }}>{children}</select>
+    <select {...props} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 3, padding: "7px 10px", color: C.text, fontSize: 12, outline: "none", boxSizing: "border-box", ...props.style }}>{children}</select>
   </div>
 );
 const Txt = ({ label, ...props }: any) => (
   <div style={{ marginBottom: 12 }}>
     {label && <div style={{ fontSize: 11, color: C.dim, marginBottom: 4, fontWeight: 500 }}>{label}</div>}
-    <textarea {...props} rows={props.rows || 3} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, padding: "7px 10px", color: C.text, fontSize: 12, outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit", ...props.style }} />
+    <textarea {...props} rows={props.rows || 3} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 3, padding: "7px 10px", color: C.text, fontSize: 12, outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit", ...props.style }} />
   </div>
 );
 const Chk = ({ label, checked, onChange }: any) => (
@@ -100,7 +100,7 @@ const Chk = ({ label, checked, onChange }: any) => (
   </div>
 );
 const StatCard = ({ icon, label, value, color = C.accent, tint, sublabel }: any) => (
-  <div style={{ flex: 1, minWidth: 150, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 6, backgroundImage: tint ? `linear-gradient(135deg, ${tint}, transparent)` : undefined }}>
+  <div style={{ flex: 1, minWidth: 150, background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 6, backgroundImage: tint ? `linear-gradient(135deg, ${tint}, transparent)` : undefined }}>
     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
       <span style={{ color }}>{icon}</span>
       <span style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, fontWeight: 600 }}>{label}</span>
@@ -153,7 +153,7 @@ const textToParams = (text: string) => {
 };
 
 const Card = ({ title, icon, right, children }: any) => (
-  <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden", marginBottom: 20 }}>
+  <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, overflow: "hidden", marginBottom: 20 }}>
     {title && (
       <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
         {icon}<span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{title}</span>
@@ -176,12 +176,12 @@ function FiltersEditor({ filters, onChange, catalog, label }: any) {
       {filters.map((f: any, i: number) => (
         <div key={i} style={{ display: "flex", gap: 6, marginBottom: 6 }}>
           <input list="pb-event-fields" value={f.field} placeholder="field (e.g. severity, details.key_id)" onChange={(e: any) => set(i, "field", e.target.value)}
-            style={{ flex: 2, background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, padding: "6px 8px", color: C.text, fontSize: 11 }} />
-          <select value={f.op} onChange={(e: any) => set(i, "op", e.target.value)} style={{ flex: 1, background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, fontSize: 11 }}>
+            style={{ flex: 2, background: C.card, border: `1px solid ${C.border}`, borderRadius: 3, padding: "6px 8px", color: C.text, fontSize: 11 }} />
+          <select value={f.op} onChange={(e: any) => set(i, "op", e.target.value)} style={{ flex: 1, background: C.card, border: `1px solid ${C.border}`, borderRadius: 3, color: C.text, fontSize: 11 }}>
             {(catalog?.filter_ops || []).map((o: string) => <option key={o} value={o}>{o}</option>)}
           </select>
           <input value={f.value} placeholder="value (comma list for in)" onChange={(e: any) => set(i, "value", e.target.value)}
-            style={{ flex: 2, background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, padding: "6px 8px", color: C.text, fontSize: 11 }} />
+            style={{ flex: 2, background: C.card, border: `1px solid ${C.border}`, borderRadius: 3, padding: "6px 8px", color: C.text, fontSize: 11 }} />
           <button onClick={() => onChange(filters.filter((_: any, idx: number) => idx !== i))} style={{ background: "none", border: "none", color: C.redFg, cursor: "pointer" }}><Trash2 size={12} /></button>
         </div>
       ))}
@@ -193,11 +193,15 @@ function FiltersEditor({ filters, onChange, catalog, label }: any) {
 
 // ── main component ────────────────────────────────────────────────────────────
 
-export function PlaybooksTab({ session, onNavigate }: { session: any; onNavigate?: (tab: string) => void }) {
+export function PlaybooksTab({ session, onNavigate, subView, onSubViewChange }: { session: any; onNavigate?: (tab: string) => void; subView?: string; onSubViewChange?: (view: string) => void }) {
   const api = useCallback((service: string, method: string, path: string, body?: any) => call(session, service, method, path, body), [session]);
   const cp = useCallback((method: string, path: string, body?: any) => api("compliance", method, `/compliance${path}`, body), [api]);
+  // The view is the sidebar sub-option (SUB_PANES); only the editor is local.
+  const [editing, setEditing] = useState(false);
+  const view = editing ? "editor" : subView || "overview";
+  const setView = (v: string) => { setEditing(v === "editor"); if (v !== "editor") onSubViewChange?.(v); };
   // Another tab's "add a credential" link opens this one on Credentials.
-  const [view, setView] = useState(() => takePlaybooksView() || "overview");
+  useEffect(() => { const v = takePlaybooksView(); if (v) onSubViewChange?.(v); setEditing(false); }, [subView]); // eslint-disable-line react-hooks/exhaustive-deps
   const [catalog, setCatalog] = useState<any>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [playbooks, setPlaybooks] = useState<any[]>([]);
@@ -416,19 +420,13 @@ export function PlaybooksTab({ session, onNavigate }: { session: any; onNavigate
     );
   };
 
-  const views = [["overview", "Overview", Activity], ["playbooks", "Playbooks", ListChecks], ["runs", "Runs", Zap], ["incidents", "Incidents", AlertTriangle], ["connections", "Credentials", Link2], ["streams", "Event streaming", Radio]];
 
   return (
     <div style={{ padding: "24px 28px", maxWidth: 1240, margin: "0 auto" }}>
-      {toast && <div style={{ position: "fixed", bottom: 24, right: 24, background: C.card, border: `1px solid ${C.borderHi}`, borderRadius: 8, padding: "10px 16px", color: C.text, fontSize: 12, zIndex: 999, maxWidth: 440 }}>{toast}</div>}
+      {toast && <div style={{ position: "fixed", bottom: 24, right: 24, background: C.card, border: `1px solid ${C.borderHi}`, borderRadius: 4, padding: "10px 16px", color: C.text, fontSize: 12, zIndex: 999, maxWidth: 440 }}>{toast}</div>}
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <Play size={20} color={C.accent} />
-          <span style={{ fontSize: 18, fontWeight: 700, color: C.text }}>Playbooks</span>
-        </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 12 }}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {views.map(([v, label, Icon]: any) => <Btn key={v} small variant={view === v ? "default" : "ghost"} onClick={() => setView(v)}><Icon size={12} /> {label}</Btn>)}
           <Btn small disabled={!catalog} onClick={() => openEditor()}><Plus size={12} /> New</Btn>
           <Btn variant="ghost" small onClick={() => { load(); loadRuns(); }}><RefreshCcw size={12} /></Btn>
         </div>
@@ -462,9 +460,9 @@ export function PlaybooksTab({ session, onNavigate }: { session: any; onNavigate
                     <div style={{ fontSize: 11, fontWeight: 700, color: groupColor(g.group), marginBottom: 6 }}>{g.group}</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                       {g.items.map((t: any) => (
-                        <div key={t.type} style={{ background: covered.has(t.type) ? C.greenDim : C.card, border: `1px solid ${covered.has(t.type) ? C.green + "33" : C.border}`, borderRadius: 6, padding: "6px 10px", minWidth: 170 }}>
+                        <div key={t.type} style={{ background: covered.has(t.type) ? C.greenDim : C.card, border: `1px solid ${covered.has(t.type) ? C.green + "33" : C.border}`, borderRadius: 3, padding: "6px 10px", minWidth: 170 }}>
                           <div style={{ fontSize: 10, fontWeight: 600, color: C.text }}>{covered.has(t.type) ? <CheckCircle2 size={10} color={C.green} /> : <XCircle size={10} color={C.muted} />} {t.label}</div>
-                          <div style={{ fontSize: 10, color: C.muted, fontFamily: "'JetBrains Mono', monospace" }}>{(t.subjects || []).join(", ") || "any subject you name"}</div>
+                          <div style={{ fontSize: 10, color: C.muted, fontFamily: "var(--font-mono)" }}>{(t.subjects || []).join(", ") || "any subject you name"}</div>
                         </div>
                       ))}
                     </div>
@@ -535,11 +533,11 @@ export function PlaybooksTab({ session, onNavigate }: { session: any; onNavigate
 
       {view === "runs" && (
         <Card title="Runs" icon={<Zap size={14} color={C.accent} />} right={<>
-          <select value={runFilter.status} onChange={(e: any) => setRunFilter(p => ({ ...p, status: e.target.value }))} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, fontSize: 11 }}>
+          <select value={runFilter.status} onChange={(e: any) => setRunFilter(p => ({ ...p, status: e.target.value }))} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 3, color: C.text, fontSize: 11 }}>
             <option value="">all statuses</option>
             {["running", "awaiting_approval", "completed", "pending_approval", "partial_failure", "failed", "cancelled", "approval_denied", "approval_expired"].map(s => <option key={s} value={s}>{prettify(s)}</option>)}
           </select>
-          <input placeholder="incident id" value={runFilter.incident_id} onChange={(e: any) => setRunFilter(p => ({ ...p, incident_id: e.target.value }))} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, fontSize: 11, padding: "3px 6px" }} />
+          <input placeholder="incident id" value={runFilter.incident_id} onChange={(e: any) => setRunFilter(p => ({ ...p, incident_id: e.target.value }))} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 3, color: C.text, fontSize: 11, padding: "3px 6px" }} />
         </>}>
           <Err>{errors.runs && <div style={{ padding: 12 }}>Runs unavailable: {errors.runs}</div>}</Err>
           {runs.length === 0 ? <div style={{ padding: 28, textAlign: "center", color: C.muted, fontSize: 12 }}>No runs match.</div> : (
@@ -559,7 +557,7 @@ export function PlaybooksTab({ session, onNavigate }: { session: any; onNavigate
               <thead><tr><TH>Incident</TH><TH>Severity</TH><TH>Status</TH><TH>Alerts</TH><TH>Assigned</TH><TH>Playbook runs</TH></tr></thead>
               <tbody>{incidents.map((inc: any) => (
                 <tr key={inc.id}>
-                  <TD><span style={{ fontWeight: 600 }}>{inc.title}</span><div style={{ fontSize: 10, color: C.muted, fontFamily: "'JetBrains Mono', monospace" }}>{inc.id}</div></TD>
+                  <TD><span style={{ fontWeight: 600 }}>{inc.title}</span><div style={{ fontSize: 10, color: C.muted, fontFamily: "var(--font-mono)" }}>{inc.id}</div></TD>
                   <TD><Badge color={statusColor(inc.severity === "critical" ? "failed" : "running")}>{inc.severity}</Badge></TD>
                   <TD>{prettify(inc.status)}</TD><TD>{inc.alert_count}</TD><TD>{inc.assigned_to || "—"}</TD>
                   <TD>{(incidentRuns[inc.id] || []).length === 0 ? <span style={{ color: C.muted }}>none</span> :
@@ -587,7 +585,7 @@ export function PlaybooksTab({ session, onNavigate }: { session: any; onNavigate
 
       {view === "editor" && catalog && (
         <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
-          <div style={{ flex: "1 1 380px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "20px 24px" }}>
+          <div style={{ flex: "1 1 380px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: "20px 24px" }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 16 }}>{editingId ? "Edit playbook" : "New playbook"}</div>
             <Inp label="Name *" value={form.name} onChange={(e: any) => setForm((p: any) => ({ ...p, name: e.target.value }))} />
             <Txt label="Description" rows={2} value={form.description} onChange={(e: any) => setForm((p: any) => ({ ...p, description: e.target.value }))} />
@@ -601,7 +599,7 @@ export function PlaybooksTab({ session, onNavigate }: { session: any; onNavigate
             {form.trigger.type === "custom_event" ? (
               <Inp label="Audit subject (exact, or ending in .*) — fires only if a service emits it" placeholder="audit.cert.*" value={form.trigger.subject} onChange={(e: any) => setTrigger("subject", e.target.value)} />
             ) : (
-              <div style={{ fontSize: 10, color: C.muted, marginTop: -6, marginBottom: 12, fontFamily: "'JetBrains Mono', monospace" }}>
+              <div style={{ fontSize: 10, color: C.muted, marginTop: -6, marginBottom: 12, fontFamily: "var(--font-mono)" }}>
                 fires on {(triggerSpec(form.trigger.type)?.subjects || []).join(", ")}{triggerSpec(form.trigger.type)?.success_only ? " (success only)" : ""}
               </div>
             )}
@@ -616,14 +614,14 @@ export function PlaybooksTab({ session, onNavigate }: { session: any; onNavigate
             <div style={{ fontSize: 11, color: C.dim }}>{neededPerms.length ? <>Enabling it needs: <b>{neededPerms.join(", ")}</b>. It will run on your authority.</> : "These actions need no extra permission."}</div>
           </div>
 
-          <div style={{ flex: "1 1 460px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "20px 24px" }}>
+          <div style={{ flex: "1 1 460px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: "20px 24px" }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>Actions</div>
             <div style={{ fontSize: 10, color: C.muted, marginBottom: 14 }}>Run in order. Templates: {(catalog.templates || []).join(" ")}</div>
             {form.actions.map((a: any, i: number) => {
               const spec = actionSpec(a.type);
               const conns = connections.filter((c: any) => spec?.connection && fits(spec.connection, c.type));
               return (
-                <div key={i} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", marginBottom: 10 }}>
+                <div key={i} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4, padding: "12px 14px", marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                     <span style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>Action {i + 1}</span>
                     {form.actions.length > 1 && <button onClick={() => setForm((p: any) => ({ ...p, actions: p.actions.filter((_: any, idx: number) => idx !== i) }))} style={{ background: "none", border: "none", color: C.redFg, cursor: "pointer" }}><Trash2 size={13} /></button>}
@@ -639,7 +637,7 @@ export function PlaybooksTab({ session, onNavigate }: { session: any; onNavigate
                     </Sel>
                   )}
                   <Txt label="Parameters (one key=value per line)" rows={3} value={a.params} onChange={(e: any) => setAction(i, "params", e.target.value)}
-                    placeholder={(spec?.required || []).filter((k: string) => k !== "connection_id").map((k: string) => `${k}=`).join("\n")} style={{ fontFamily: "'JetBrains Mono', monospace" }} />
+                    placeholder={(spec?.required || []).filter((k: string) => k !== "connection_id").map((k: string) => `${k}=`).join("\n")} style={{ fontFamily: "var(--font-mono)" }} />
                   {spec && (
                     <div style={{ fontSize: 10, color: C.muted, lineHeight: 1.6, marginBottom: 8 }}>
                       {(spec.required || []).filter((k: string) => k !== "connection_id").length ? <>Required: {spec.required.filter((k: string) => k !== "connection_id").join(", ")}. </> : null}

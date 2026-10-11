@@ -405,7 +405,7 @@ export const GovernanceTab = ({ session, onToast, onNavigate }: any) => {
                     <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Vote History</div>
                     <div style={{ display: "grid", gap: 4 }}>
                       {reqDetail.votes.map((v: any, i: number) => (
-                        <div key={v?.id || i} style={{ display: "grid", gridTemplateColumns: "1fr 0.6fr 0.6fr 1.2fr", gap: 8, padding: "6px 10px", borderRadius: 6, background: C.card, fontSize: 11, alignItems: "center" }}>
+                        <div key={v?.id || i} style={{ display: "grid", gridTemplateColumns: "1fr 0.6fr 0.6fr 1.2fr", gap: 8, padding: "6px 10px", borderRadius: 3, background: C.card, fontSize: 11, alignItems: "center" }}>
                           <div style={{ color: C.text, fontWeight: 500 }}>{v?.approver_email || v?.approver_id || "—"}</div>
                           <div><B c={v?.vote === "approved" ? "green" : "red"}>{v?.vote}</B></div>
                           <div style={{ fontSize: 10, color: C.dim }}>{v?.vote_method || "—"}</div>
@@ -619,7 +619,7 @@ export const GovernanceTab = ({ session, onToast, onNavigate }: any) => {
 const MiniField = ({ label, value, mono }: { label: string; value: string; mono?: boolean }) => (
   <div>
     <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>{label}</div>
-    <div style={{ fontSize: 11, color: C.text, fontFamily: mono ? "'JetBrains Mono',monospace" : "inherit", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
+    <div style={{ fontSize: 11, color: C.text, fontFamily: mono ? "var(--font-mono)" : "inherit", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
   </div>
 );
 

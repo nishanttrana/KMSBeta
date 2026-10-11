@@ -12,7 +12,7 @@ import { RuleRow, type GroupNames } from "./Access";
 import { TypeBadge } from "./Charts";
 import { defaultFormatForType, expiryBucket, fmtDate, ttlLabel } from "./meta";
 
-const MONO = "'JetBrains Mono',ui-monospace,monospace";
+const MONO = "var(--font-mono)";
 const FORMATS = ["raw", "pem", "openssh", "armored", "jwk", "extract"];
 const changeColor = (action: string) =>
   action === "created" || action === "restored" ? C.greenFg : action === "rotated" || action === "rolled_back" ? C.amberFg : action.includes("destroyed") || action === "deleted" ? C.redFg : C.blueFg;
@@ -106,7 +106,7 @@ export function SecretDetail({ session, secret, groups, now, confirm, onClose, o
     <Modal open onClose={onClose} title={`Secret: ${secret.name}`} wide>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 14 }}>
         {facts.map(([label, value]) => (
-          <div key={label} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px" }}>
+          <div key={label} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: "10px 12px" }}>
             <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>{label}</div>
             <div style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{value}</div>
           </div>
@@ -158,7 +158,7 @@ export function SecretDetail({ session, secret, groups, now, confirm, onClose, o
           <div style={{ maxHeight: 190, overflow: "auto" }}>
             {(versions || []).map((v) => {
               const current = v.version === secret.current_version;
-              return <div key={v.version} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, padding: "5px 8px", fontSize: 11, borderRadius: 6, marginBottom: 4, border: `1px solid ${current ? C.accentFg : C.border}` }}>
+              return <div key={v.version} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, padding: "5px 8px", fontSize: 11, borderRadius: 3, marginBottom: 4, border: `1px solid ${current ? C.accentFg : C.border}` }}>
                 <span style={{ fontWeight: 600, color: C.text }}>v{v.version} {current && <B c="accent">current</B>}</span>
                 <span style={{ color: C.muted, marginLeft: "auto" }}>{fmtDate(v.created_at)}</span>
                 {!current && !deleted && <>

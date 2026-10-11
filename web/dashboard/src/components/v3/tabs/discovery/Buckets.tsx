@@ -124,7 +124,7 @@ export function BucketsModal({ open, onClose, session, buckets, error, onChanged
         </Sel>
         <button type="button" role="switch" aria-checked={deep} onClick={() => setDeep((d) => !d)}
           title="Also read objects whose names say nothing: up to 2 MB whole, larger ones (to 256 MB) read through for keys and certificates, media by their first kilobyte. One request per object, once per version."
-          style={{ border: `1px solid ${deep ? C.accentFg : C.border}`, background: deep ? C.accentDim : "transparent", color: deep ? C.accentFg : C.muted, borderRadius: 7, padding: "7px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+          style={{ border: `1px solid ${deep ? C.accentFg : C.border}`, background: deep ? C.accentDim : "transparent", color: deep ? C.accentFg : C.muted, borderRadius: 3, padding: "7px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
           Deep scan
         </button>
         <Btn primary onClick={() => void add()} disabled={busy || !ready}><Plus size={12} />{busy ? "Adding..." : "Add"}</Btn>
@@ -136,7 +136,7 @@ export function BucketsModal({ open, onClose, session, buckets, error, onChanged
       {error ? (
         <div style={{ fontSize: 11, color: C.redFg }}>Buckets unavailable: {error}</div>
       ) : buckets.length ? (
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 4, overflow: "hidden" }}>
           {buckets.map((b, i) => {
             const t = tests[b.id] || {};
             return (

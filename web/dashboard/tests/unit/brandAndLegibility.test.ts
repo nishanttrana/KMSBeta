@@ -71,10 +71,20 @@ describe("dashboard legibility and brand", () => {
   });
 
   // Pages lead with numbers and charts (CLAUDE.md). A text-only element
-  // holding a paragraph folds to one line (.vk-fold) unless it is a warning
+  // holding a paragraph (text, with or without inline code or links) folds to one line (.vk-fold) unless it is a warning
   // or confirmation that must stay open (data-keep).
   it("folds paragraphs of explanation", () => {
-    expect(inFiles(/<(div|p|span)\b(?![^<>]*(?:vk-fold|data-keep))[^<>]*>\s*[A-Z][^<>{}=;]{120,}?\s*<\/\1>/g)).toEqual([]);
+    const inline = String.raw`<(code|b|strong|a|em|i|kbd|span|B)\b[^<>]*>[^<>{}]*<\/\4>`;
+    const para = new RegExp(String.raw`<(div|p|span)\b((?:(?!className=|data-keep)[^<>])*?)>((?:[^<>{}]|\{" "\}|\{[\w.?]+\}|<br\s*\/>|${inline})+)<\/\1>`, "g");
+    const hits: string[] = [];
+    for (const file of FILES) {
+      const text = readFileSync(file, "utf8");
+      for (const m of text.matchAll(para)) {
+        const prose = m[3]!.replace(/<[^>]+>|\{[^}]*\}/g, "").replace(/\s+/g, " ").trim();
+        if (prose.length >= 120 && /^[A-Z]/.test(prose) && !/=>|;/.test(prose)) hits.push(`${file.slice(ROOT.length + 1)}:${text.slice(0, m.index).split("\n").length}`);
+      }
+    }
+    expect(hits).toEqual([]);
   });
 
   // The hex hues are fixed for both themes, and reach text and fills through
@@ -91,6 +101,12 @@ describe("dashboard legibility and brand", () => {
       expect(contrast(C[hue], card("light")), `${hue} on the light card`).toBeGreaterThanOrEqual(3);
       expect(contrast(C[hue], card("dark")), `${hue} on the dark card`).toBeGreaterThanOrEqual(4.5);
     }
+  });
+
+  // The typeface is bundled and named once, in index.css. A literal family in
+  // a component is one that is not shipped and falls back per machine.
+  it("names fonts only through the tokens", () => {
+    expect(offenders(/fontFamily[:=]\s*\{?["'`](?!var\(--font-(sans|mono)\)|inherit)/)).toEqual([]);
   });
 
   it("loads no font or stylesheet from another host", () => {

@@ -60,7 +60,7 @@ export function ScansView({ scans }: { scans: DiscoveryScan[] }) {
                   {sourcesOf(s).map((src) => {
                     const SI = sourceMeta(src).icon;
                     return (
-                      <span key={src} title={errs[src] || ""} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: errs[src] ? C.amberFg : C.text, border: `1px solid ${errs[src] ? C.amberFg : C.border}`, borderRadius: 12, padding: "2px 9px" }}>
+                      <span key={src} title={errs[src] || ""} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: errs[src] ? C.amberFg : C.text, border: `1px solid ${errs[src] ? C.amberFg : C.border}`, borderRadius: 6, padding: "2px 9px" }}>
                         <SI size={11} />{sourceMeta(src).label}
                         <b style={{ fontWeight: 600 }}>{countOf(s, src)}</b>
                       </span>

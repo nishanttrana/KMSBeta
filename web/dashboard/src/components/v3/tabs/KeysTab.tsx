@@ -1784,13 +1784,13 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
           w={360}
           value={search}
           onChange={(e)=>setSearch(e.target.value)}
-          style={{height:40,borderRadius:10,fontSize:12}}
+          style={{height:40,borderRadius:4,fontSize:12}}
         />
-        <Sel w={170} value={algoFilter} onChange={(e)=>setAlgoFilter(e.target.value)} style={{height:40,borderRadius:10,fontSize:12}}>
+        <Sel w={170} value={algoFilter} onChange={(e)=>setAlgoFilter(e.target.value)} style={{height:40,borderRadius:4,fontSize:12}}>
           <option value="all">All Algorithms</option>
           {algorithms.map((name)=><option key={name} value={name}>{name}</option>)}
         </Sel>
-        <Sel w={170} value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)} style={{height:40,borderRadius:10,fontSize:12}}>
+        <Sel w={170} value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)} style={{height:40,borderRadius:4,fontSize:12}}>
           <option value="all">All Status</option>
           <option value="pre-active">Pre-active</option>
           <option value="active">Active</option>
@@ -1799,37 +1799,37 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
           <option value="destroy-pending">Delete Pending</option>
           <option value="deleted">Deleted</option>
         </Sel>
-        <Sel w={170} value={tagFilter} onChange={(e)=>setTagFilter(e.target.value)} style={{height:40,borderRadius:10,fontSize:12}}>
+        <Sel w={170} value={tagFilter} onChange={(e)=>setTagFilter(e.target.value)} style={{height:40,borderRadius:4,fontSize:12}}>
           <option value="all">All Tags</option>
           {availableTags.map((name)=><option key={name} value={name}>{name}</option>)}
         </Sel>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center",justifyContent:"flex-end",flexWrap:"wrap"}}>
-          <Btn onClick={()=>void refreshKeyInventory()} style={{height:40,padding:"0 16px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:108,color:C.text,border:`1px solid ${C.borderHi}`}} disabled={refreshingKeys}>
+          <Btn onClick={()=>void refreshKeyInventory()} style={{height:40,padding:"0 16px",borderRadius:4,fontSize:12,fontWeight:700,minWidth:108,color:C.text,border:`1px solid ${C.borderHi}`}} disabled={refreshingKeys}>
             <span style={{display:"inline-flex",alignItems:"center",gap:7}}><RefreshCcw size={13} strokeWidth={2.1}/>{refreshingKeys?"Refreshing...":"Refresh"}</span>
           </Btn>
           <Btn
             onClick={()=>{setInHSM(hsmKeysEnabled&&hsmSupportsAlgorithm(algo));setModal("create");}}
             primary
-            style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:130}}
+            style={{height:40,padding:"0 20px",borderRadius:4,fontSize:12,fontWeight:700,minWidth:130}}
           >
             <span style={{display:"inline-flex",alignItems:"center",gap:7}}><Plus size={13} strokeWidth={2.2}/>Create Key</span>
           </Btn>
-          <Btn onClick={()=>setModal("form-key")} style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:112,color:C.text,border:`1px solid ${C.borderHi}`}}>
+          <Btn onClick={()=>setModal("form-key")} style={{height:40,padding:"0 20px",borderRadius:4,fontSize:12,fontWeight:700,minWidth:112,color:C.text,border:`1px solid ${C.borderHi}`}}>
             <span style={{display:"inline-flex",alignItems:"center",gap:7}}><PenTool size={13} strokeWidth={2.1}/>Form Key</span>
           </Btn>
-          <Btn onClick={()=>{resetImportForm();setModal("import");}} style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:96,color:C.text,border:`1px solid ${C.borderHi}`}}>
+          <Btn onClick={()=>{resetImportForm();setModal("import");}} style={{height:40,padding:"0 20px",borderRadius:4,fontSize:12,fontWeight:700,minWidth:96,color:C.text,border:`1px solid ${C.borderHi}`}}>
             <span style={{display:"inline-flex",alignItems:"center",gap:7}}><ArrowDownToLine size={13} strokeWidth={2.1}/>Import</span>
           </Btn>
-          <Btn onClick={()=>setModal("generate-pqc")} style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:110,color:C.text,border:`1px solid ${C.borderHi}`}}>
+          <Btn onClick={()=>setModal("generate-pqc")} style={{height:40,padding:"0 20px",borderRadius:4,fontSize:12,fontWeight:700,minWidth:110,color:C.text,border:`1px solid ${C.borderHi}`}}>
             <span style={{display:"inline-flex",alignItems:"center",gap:7}}><Atom size={13} strokeWidth={2.1}/>PQC Key</span>
           </Btn>
-          <Btn onClick={()=>setModal("canary")} style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:110,color:C.text,border:`1px solid ${C.borderHi}`}}>
+          <Btn onClick={()=>setModal("canary")} style={{height:40,padding:"0 20px",borderRadius:4,fontSize:12,fontWeight:700,minWidth:110,color:C.text,border:`1px solid ${C.borderHi}`}}>
             <span style={{display:"inline-flex",alignItems:"center",gap:7}}><Radar size={13} strokeWidth={2.1}/>Canary Key</span>
           </Btn>
         </div>
       </div>
-      <div style={{background:C.card,borderRadius:12,border:`1px solid ${C.borderHi}`,overflowX:"auto",overflowY:"visible"}}>
+      <div style={{background:C.card,borderRadius:6,border:`1px solid ${C.borderHi}`,overflowX:"auto",overflowY:"visible"}}>
         <table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr style={{borderBottom:`1px solid ${C.borderHi}`}}>
           {visibleColumns.map((column)=><th key={column.id} style={{padding:"8px 10px",fontSize: 10,color:C.muted,textAlign:"left",textTransform:"uppercase",letterSpacing:.8}}>{column.label}</th>)}
           <th style={{padding:"8px 10px",fontSize: 10,color:C.muted,textAlign:"right",textTransform:"uppercase",letterSpacing:.8,width:48}}>
@@ -1848,7 +1848,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                 style={{
                   background:"transparent",
                   border:`1px solid ${C.border}`,
-                  borderRadius:7,
+                  borderRadius:3,
                   color:C.accentFg,
                   width:28,
                   height:24,
@@ -1868,7 +1868,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                 minWidth:190,
                 background:C.surface,
                 border:`1px solid ${C.borderHi}`,
-                borderRadius:8,
+                borderRadius:4,
                 boxShadow:"0 12px 24px rgba(0,0,0,.35)",
                 padding:8,
                 display:"grid",
@@ -1916,14 +1916,14 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
               {columnVisibility.name&&<td style={{padding:"8px 10px"}}>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
                   <div style={{fontSize:11,color:rowText,fontWeight:700}}>{k.name}{k.inHSM&&<span title="Generated in and used only inside the tenant's HSM" style={{marginLeft:6,fontSize: 10,fontWeight:700,color:C.accentFg,border:`1px solid ${C.accent}`,borderRadius:3,padding:"0 4px"}}>HSM</span>}</div>
-                  {k.componentRole&&<span style={{padding:"1px 6px",borderRadius:999,border:`1px solid ${k.componentRole==="private"?C.pink:C.blue}`,background:`${k.componentRole==="private"?C.pink:C.blue}22`,fontSize: 10,color:k.componentRole==="private"?C.pinkFg:C.blueFg,textTransform:"capitalize"}}>{k.componentRole}</span>}
+                  {k.componentRole&&<span style={{padding:"1px 6px",borderRadius:4,border:`1px solid ${k.componentRole==="private"?C.pink:C.blue}`,background:`${k.componentRole==="private"?C.pink:C.blue}22`,fontSize: 10,color:k.componentRole==="private"?C.pinkFg:C.blueFg,textTransform:"capitalize"}}>{k.componentRole}</span>}
                 </div>
-                <div style={{fontSize: 10,color:isDeletedState?C.muted:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{k.id}</div>
+                <div style={{fontSize: 10,color:isDeletedState?C.muted:C.muted,fontFamily:"var(--font-mono)"}}>{k.id}</div>
               </td>}
               {columnVisibility.algorithm&&<td style={{padding:"8px 10px",fontSize:10,color:rowAccent,fontWeight:700}}>{k.algoFamily||"-"}</td>}
-              {columnVisibility.sizeCurve&&<td style={{padding:"8px 10px",fontSize:10,color:rowText,fontFamily:"'JetBrains Mono',monospace"}}>{k.algoSizeCurve||"-"}</td>}
+              {columnVisibility.sizeCurve&&<td style={{padding:"8px 10px",fontSize:10,color:rowText,fontFamily:"var(--font-mono)"}}>{k.algoSizeCurve||"-"}</td>}
               {columnVisibility.status&&<td style={{padding:"8px 10px"}}><B c={isDeletedState?"muted":tone}>{stateLabel}</B></td>}
-              {columnVisibility.destroyAt&&<td style={{padding:"8px 10px",fontSize:10,color:isDeletePending?C.amberFg:rowText,fontFamily:"'JetBrains Mono',monospace"}}>
+              {columnVisibility.destroyAt&&<td style={{padding:"8px 10px",fontSize:10,color:isDeletePending?C.amberFg:rowText,fontFamily:"var(--font-mono)"}}>
                 {formatDestroyAt(k.destroyAt)}
               </td>}
               {columnVisibility.fips&&<td style={{padding:"8px 10px"}}>
@@ -1933,7 +1933,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                   justifyContent:"center",
                   width:22,
                   height:22,
-                  borderRadius:7,
+                  borderRadius:3,
                   border:`1px solid ${isDeletedState?C.muted:(fipsOk?C.green:C.red)}`,
                   background:isDeletedState?"rgba(100,116,139,.10)":(fipsOk?C.greenDim:C.redDim),
                   color:isDeletedState?C.muted:(fipsOk?C.greenFg:C.redFg)
@@ -1941,18 +1941,18 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                   {fipsOk?<Check size={12} strokeWidth={2.5}/>:<X size={12} strokeWidth={2.5}/>}
                 </span>
               </td>}
-              {columnVisibility.kcv&&<td style={{padding:"8px 10px",fontSize:10,color:rowAccent,fontFamily:"'JetBrains Mono',monospace"}}>{k.kcv||"-"}</td>}
-              {columnVisibility.version&&<td style={{padding:"8px 10px",fontSize:10,color:rowText,fontFamily:"'JetBrains Mono',monospace"}}>{k.ver}</td>}
+              {columnVisibility.kcv&&<td style={{padding:"8px 10px",fontSize:10,color:rowAccent,fontFamily:"var(--font-mono)"}}>{k.kcv||"-"}</td>}
+              {columnVisibility.version&&<td style={{padding:"8px 10px",fontSize:10,color:rowText,fontFamily:"var(--font-mono)"}}>{k.ver}</td>}
               {columnVisibility.operations&&<td style={{padding:"8px 10px",minWidth:140}}>
-                <div style={{fontSize:10,color:rowText,fontFamily:"'JetBrains Mono',monospace"}}>{opsText}</div>
+                <div style={{fontSize:10,color:rowText,fontFamily:"var(--font-mono)"}}>{opsText}</div>
                 <div style={{marginTop:3,height:4,borderRadius:999,background:C.border,overflow:"hidden"}}>
-                  <div style={{height:"100%",width:`${opsPct}%`,background:isDeletedState?C.muted:C.accent,borderRadius:999}}/>
+                  <div style={{height:"100%",width:`${opsPct}%`,background:isDeletedState?C.muted:C.accent,borderRadius:4}}/>
                 </div>
               </td>}
               {columnVisibility.tags&&<td style={{padding:"8px 10px",maxWidth:220}}>
                 <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
                   {keyTags.slice(0,3).map((tag)=>(
-                    <span key={`${k.id}-${tag}`} style={{padding:"2px 7px",borderRadius:999,border:`1px solid ${tagColorByName(tagCatalog,tag)}`,background:`${tagColorByName(tagCatalog,tag)}22`,fontSize: 10,color:tagColorByName(tagCatalog,tag),whiteSpace:"nowrap"}}>
+                    <span key={`${k.id}-${tag}`} style={{padding:"2px 7px",borderRadius:4,border:`1px solid ${tagColorByName(tagCatalog,tag)}`,background:`${tagColorByName(tagCatalog,tag)}22`,fontSize: 10,color:tagColorByName(tagCatalog,tag),whiteSpace:"nowrap"}}>
                       {tag}
                     </span>
                   ))}
@@ -1978,7 +1978,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                     style={{
                       background:"transparent",
                       border:`1px solid ${C.border}`,
-                      borderRadius:7,
+                      borderRadius:3,
                       color:isDeletedState?C.muted:C.accentFg,
                       width:28,
                       height:24,
@@ -1998,7 +1998,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                     minWidth:170,
                     background:C.surface,
                     border:`1px solid ${C.borderHi}`,
-                    borderRadius:8,
+                    borderRadius:4,
                     boxShadow:"0 12px 24px rgba(0,0,0,.35)",
                     padding:4,
                     display:"grid",
@@ -2009,7 +2009,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                         e.stopPropagation();
                         openPolicyEditor(k);
                       }}
-                      style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6}}
+                      style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:3}}
                     >
                       Edit Key Policy
                     </button>}
@@ -2022,19 +2022,19 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                         setRotateType("standard");
                         setModal("rotate");
                       }}
-                      style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6}}
+                      style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:3}}
                     >
                       Rotate
                     </button>}
                     {!isDeletedLike&&<button
                       onClick={(e)=>{e.stopPropagation(); verifyKeyAction(k);}}
-                      style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6}}
+                      style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:3}}
                     >
                       Verify Integrity
                     </button>}
                     {!isDeletedLike&&<button
                       onClick={(e)=>{e.stopPropagation(); attestKeyAction(k);}}
-                      style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6}}
+                      style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:3}}
                     >
                       Attest
                     </button>}
@@ -2044,7 +2044,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                         updateKeyStatus(k,"deactivated");
                       }}
                       disabled={stateBusy}
-                      style={{background:"transparent",border:"none",color:stateBusy?C.muted:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:stateBusy?"not-allowed":"pointer",borderRadius:6}}
+                      style={{background:"transparent",border:"none",color:stateBusy?C.muted:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:stateBusy?"not-allowed":"pointer",borderRadius:3}}
                     >
                       Deactivate
                     </button>}
@@ -2054,7 +2054,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                         updateKeyStatus(k,"active");
                       }}
                       disabled={stateBusy}
-                      style={{background:"transparent",border:"none",color:stateBusy?C.muted:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:stateBusy?"not-allowed":"pointer",borderRadius:6}}
+                      style={{background:"transparent",border:"none",color:stateBusy?C.muted:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:stateBusy?"not-allowed":"pointer",borderRadius:3}}
                     >
                       Activate
                     </button>}
@@ -2064,7 +2064,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                         updateKeyStatus(k,"disabled");
                       }}
                       disabled={stateBusy}
-                      style={{background:"transparent",border:"none",color:stateBusy?C.muted:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:stateBusy?"not-allowed":"pointer",borderRadius:6}}
+                      style={{background:"transparent",border:"none",color:stateBusy?C.muted:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:stateBusy?"not-allowed":"pointer",borderRadius:3}}
                     >
                       Disable
                     </button>}
@@ -2077,7 +2077,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                         setExportMode(isPublicComponentLike(k)?"public-plaintext":"wrapped");
                         setModal("export");
                       }}
-                      style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6}}
+                      style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:3}}
                     >
                       Export
                     </button>:(!isDeletedLike&&<div style={{padding:"6px 8px",fontSize:10,color:C.muted}}>Export disabled</div>)}
@@ -2089,7 +2089,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                         resetDestroyForm();
                         setModal("destroy");
                       }}
-                      style={{background:"transparent",border:"none",color:C.redFg,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6}}
+                      style={{background:"transparent",border:"none",color:C.redFg,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:3}}
                     >
                       Delete
                     </button>:<div style={{padding:"6px 8px",fontSize:10,color:C.muted}}>Deleted (forensic record)</div>}
@@ -2129,7 +2129,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
     <Modal open={modal==="create"} onClose={()=>setModal(null)} title="Create New Key" width={920}>
       <HSMTargetPicker session={session} material="generated" supported={hsmSupportsAlgorithm(algo)} unsupportedReason="This algorithm can't be generated in an HSM (AES-GCM, RSA or ECDSA P-256/P-384 can): the key will be created in the KMS."
         checked={inHSM} onChecked={(on)=>{setInHSM(on);setExportable(false);}} connection={hsmConn} onConnection={setHsmConn} onNavigate={onNavigate}/>
-      {!inHSM&&hsmTenantKey&&<div style={{padding:"8px 10px",marginBottom:10,borderRadius:6,border:`1px solid ${C.accent}`,fontSize:11,color:C.text}}>
+      {!inHSM&&hsmTenantKey&&<div style={{padding:"8px 10px",marginBottom:10,borderRadius:3,border:`1px solid ${C.accent}`,fontSize:11,color:C.text}}>
         The key's material will be encrypted by this tenant's key in the HSM{hsmName?` (${hsmName})`:""}.
       </div>}
       <Row2>
@@ -2221,7 +2221,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                 alignItems:"center",
                 gap:6,
                 padding:"3px 8px",
-                borderRadius:999,
+                borderRadius:4,
                 background:`${tagColorByName(tagCatalog,tag)}22`,
                 border:`1px solid ${tagColorByName(tagCatalog,tag)}`,
                 color:tagColorByName(tagCatalog,tag),
@@ -2240,7 +2240,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
           {!createTags.length&&<div style={{fontSize:10,color:C.muted}}>No tags selected.</div>}
         </div>
         <Btn small onClick={()=>setShowCreateTagPicker(!showCreateTagPicker)}>Add More Tags</Btn>
-        {showCreateTagPicker&&<div style={{marginTop:8,maxHeight:120,overflowY:"auto",border:`1px solid ${C.border}`,borderRadius:8,padding:8,display:"grid",gap:6}}>
+        {showCreateTagPicker&&<div style={{marginTop:8,maxHeight:120,overflowY:"auto",border:`1px solid ${C.border}`,borderRadius:4,padding:8,display:"grid",gap:6}}>
           {availableTags.map((tag)=>(
             <label key={tag} style={{display:"flex",alignItems:"center",gap:8,fontSize:10,color:C.text,cursor:"pointer"}}>
               <input
@@ -2319,7 +2319,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       <FG label="Components" required>
         <div style={{display:"grid",gap:8}}>
           {formComponents.slice(0,Math.max(2,Math.min(8,Number(formComponentCount)||2))).map((component,idx)=>(
-            <div key={`component-${idx}`} style={{border:`1px solid ${C.border}`,borderRadius:8,padding:10}}>
+            <div key={`component-${idx}`} style={{border:`1px solid ${C.border}`,borderRadius:4,padding:10}}>
               <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:6}}>{`Component ${idx+1}`}</div>
               {formComponentMode==="clear-generated"&&<div style={{fontSize:10,color:C.muted}}>Generated by KMS CSPRNG during submit.</div>}
               {formComponentMode==="clear-user"&&<Txt rows={2} placeholder="Clear component (hex or base64)" value={component.material} onChange={(e)=>updateFormComponent(idx,"material",e.target.value)}/>}
@@ -2365,7 +2365,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         <Chk label="Require governance approval for all operations" checked={formApprovalReq} onChange={()=>setFormApprovalReq(!formApprovalReq)}/>
       </FG>
       <FG label="Tags">
-        <div style={{display:"grid",gap:6,maxHeight:140,overflowY:"auto",border:`1px solid ${C.border}`,borderRadius:8,padding:8}}>
+        <div style={{display:"grid",gap:6,maxHeight:140,overflowY:"auto",border:`1px solid ${C.border}`,borderRadius:4,padding:8}}>
           {availableTags.map((tag)=>(
             <label key={`form-tag-${tag}`} style={{display:"flex",alignItems:"center",gap:8,fontSize:10,color:C.text,cursor:"pointer"}}>
               <input
@@ -2505,11 +2505,11 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         const selectedCanExport=!selectedDeletedLike&&Boolean(selectedKey.exportAllowed);
         const selectedStateBusy=statusUpdatingId===selectedKey.id;
         return <><Row3>
-        <FG label="Key ID"><div style={{fontFamily:"monospace",fontSize:11,color:C.accentFg}}>{selectedKey.id}</div></FG>
+        <FG label="Key ID"><div style={{fontFamily:"var(--font-mono)",fontSize:11,color:C.accentFg}}>{selectedKey.id}</div></FG>
         <FG label="Algorithm"><div style={{fontSize:11,color:C.text}}>{selectedKey.algoFamily||"-"}</div></FG>
-        <FG label="KCV"><div style={{fontFamily:"monospace",fontSize:11,color:C.greenFg}}>{selectedKey.kcv}</div></FG>
+        <FG label="KCV"><div style={{fontFamily:"var(--font-mono)",fontSize:11,color:C.greenFg}}>{selectedKey.kcv}</div></FG>
       </Row3>
-      <FG label="Size / Curve"><div style={{fontSize:11,color:C.text,fontFamily:"'JetBrains Mono',monospace"}}>{selectedKey.algoSizeCurve||"-"}</div></FG>
+      <FG label="Size / Curve"><div style={{fontSize:11,color:C.text,fontFamily:"var(--font-mono)"}}>{selectedKey.algoSizeCurve||"-"}</div></FG>
       <Row3>
         <FG label="State"><B c={keyStateTone(selectedNormState)}>{keyStateLabel(selectedNormState)}</B></FG>
         <FG label="Version"><div style={{fontSize:11,color:C.text}}>{selectedKey.ver}</div></FG>
@@ -2529,13 +2529,13 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       <FG label="Tags">
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           {(Array.isArray(selectedKey.tags)?selectedKey.tags:[]).map((tag)=>(
-            <span key={tag} style={{padding:"3px 8px",borderRadius:999,border:`1px solid ${tagColorByName(tagCatalog,tag)}`,background:`${tagColorByName(tagCatalog,tag)}22`,fontSize:10,color:tagColorByName(tagCatalog,tag)}}>{tag}</span>
+            <span key={tag} style={{padding:"3px 8px",borderRadius:4,border:`1px solid ${tagColorByName(tagCatalog,tag)}`,background:`${tagColorByName(tagCatalog,tag)}22`,fontSize:10,color:tagColorByName(tagCatalog,tag)}}>{tag}</span>
           ))}
           {!Array.isArray(selectedKey.tags)||!selectedKey.tags.length?<span style={{fontSize:10,color:C.muted}}>No tags</span>:null}
         </div>
       </FG>
       {selectedAsymmetricComponents.length>1&&<FG label="Asymmetric Components">
-        <div style={{background:C.surface,borderRadius:7,padding:10,border:`1px solid ${C.border}`,display:"grid",gap:6}}>
+        <div style={{background:C.surface,borderRadius:3,padding:10,border:`1px solid ${C.border}`,display:"grid",gap:6}}>
           {selectedAsymmetricComponents.map((comp)=>{
             const compNorm=normalizeKeyState(String(comp.state||"unknown"));
             const compBusy=statusUpdatingId===comp.id;
@@ -2545,7 +2545,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                   <span style={{fontSize:10,color:C.text,fontWeight:700}}>{comp.name}</span>
                   <span style={{fontSize: 10,color:comp.componentRole==="private"?C.pinkFg:C.blueFg,textTransform:"capitalize"}}>{comp.componentRole||"component"}</span>
                 </div>
-                <div style={{fontSize: 10,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{comp.id}</div>
+                <div style={{fontSize: 10,color:C.muted,fontFamily:"var(--font-mono)"}}>{comp.id}</div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
                 <B c={keyStateTone(compNorm)}>{keyStateLabel(compNorm)}</B>
@@ -2558,7 +2558,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         </div>
       </FG>}
       <FG label="Key Versions">
-        <div style={{background:C.surface,borderRadius:7,padding:10,border:`1px solid ${C.border}`}}>
+        <div style={{background:C.surface,borderRadius:3,padding:10,border:`1px solid ${C.border}`}}>
           {[...keyVersions]
             .sort((a,b)=>Number(b.version||0)-Number(a.version||0))
             .map((v)=>{
@@ -2566,7 +2566,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
               const isCurrent=String(selectedKey?.ver||"")===(Number(v.version||0)>0?`v${v.version}`:"");
               const createdAt=v.created_at?new Date(v.created_at).toLocaleString():"-";
               const line=`v${v.version} - ${vStatus}${isCurrent?" (current)":""} - KCV: ${String(v.kcv||"-")} - Created: ${createdAt}`;
-              return <div key={String(v.id||v.version)} style={{fontSize:10,color:C.dim,padding:"4px 0",borderBottom:`1px solid ${C.border}`,fontFamily:"monospace"}}>{line}</div>;
+              return <div key={String(v.id||v.version)} style={{fontSize:10,color:C.dim,padding:"4px 0",borderBottom:`1px solid ${C.border}`,fontFamily:"var(--font-mono)"}}>{line}</div>;
             })}
           {!Array.isArray(keyVersions)||!keyVersions.length?<div style={{fontSize:10,color:C.muted}}>No version history found.</div>:null}
         </div>
@@ -2663,7 +2663,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
               const reason=String(grant?.justification||"").trim();
               const ticket=String(grant?.ticket_id||"").trim();
               const extra=[windowParts,reason?`reason: ${reason}`:"",ticket?`ticket: ${ticket}`:""].filter(Boolean).join(" | ");
-              return <div key={`${subjectType}:${subjectID}`} style={{display:"grid",gridTemplateColumns:"1fr auto",alignItems:"center",gap:8,padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,background:C.surface}}>
+              return <div key={`${subjectType}:${subjectID}`} style={{display:"grid",gridTemplateColumns:"1fr auto",alignItems:"center",gap:8,padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:4,background:C.surface}}>
                 <div>
                   <div style={{fontSize:10,color:C.text,fontWeight:700}}>{`${subjectType==="group"?"Group":"User"}: ${subjectLabel}`}</div>
                   <div style={{fontSize: 10,color:C.muted}}>{operations||"No operations"}{extra?` | ${extra}`:""}</div>
@@ -2717,7 +2717,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
 
     {/*  EXPORT KEY MODAL  */}
     <Modal open={modal==="export"} onClose={()=>setModal(null)} title={`Export Key: ${selectedKey?.name||""}`}>
-      <div style={{background:C.amberDim,border:`1px solid ${C.amber}`,borderRadius:8,padding:10,marginBottom:12,fontSize:10,color:C.amberFg}}>
+      <div style={{background:C.amberDim,border:`1px solid ${C.amber}`,borderRadius:4,padding:10,marginBottom:12,fontSize:10,color:C.amberFg}}>
         {exportMode==="public-plaintext"
           ?"Warning: public key will be exported in plaintext (not wrapped)."
           :"Warning: key material will be exported wrapped. This is a HIGH severity audit event."}
@@ -2749,7 +2749,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
 
     {/*  DESTROY KEY MODAL  */}
     <Modal open={modal==="destroy"} onClose={()=>setModal(null)} title={`Destroy Key: ${selectedKey?.name||""}`}>
-      <div style={{background:C.redDim,border:`1px solid ${C.red}`,borderRadius:8,padding:12,marginBottom:12,fontSize:11,color:C.redFg}}>
+      <div data-keep="" style={{background:C.redDim,border:`1px solid ${C.red}`,borderRadius:4,padding:12,marginBottom:12,fontSize:11,color:C.redFg}}>
         <strong>CRITICAL: This action is irreversible.</strong><br/>All key material will be zeroized. Data encrypted with this key will become permanently unrecoverable.
       </div>
       <FG label="Destruction Method">
@@ -2778,7 +2778,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       <CanaryKeysPanel session={session}/>
     </Modal>
     <Modal open={modal==="generate-pqc"} onClose={()=>setModal(null)} title="Generate Post-Quantum Key" width={920}>
-      <div style={{background:C.purpleDim,border:`1px solid ${C.purple}`,borderRadius:8,padding:10,marginBottom:12,fontSize:10,color:C.purpleFg}}>Post-Quantum Cryptography - NIST FIPS 203/204/205 approved algorithms</div>
+      <div style={{background:C.purpleDim,border:`1px solid ${C.purple}`,borderRadius:4,padding:10,marginBottom:12,fontSize:10,color:C.purpleFg}}>Post-Quantum Cryptography - NIST FIPS 203/204/205 approved algorithms</div>
       <Row2>
         <FG label="PQC Algorithm" required>
           <Sel value={pqcAlgorithm} onChange={(e)=>setPqcAlgorithm(e.target.value)}>
@@ -2794,7 +2794,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary onClick={generatePQCKey} disabled={pqcGenerating}>{pqcGenerating?"Generating...":"Generate PQC Key"}</Btn></div>
     </Modal>
     {attestResult&&<div onClick={()=>setAttestResult(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:60,padding:24}}>
-      <div onClick={(e)=>e.stopPropagation()} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:20,width:720,maxWidth:"100%",maxHeight:"80vh",overflowY:"auto"}}>
+      <div onClick={(e)=>e.stopPropagation()} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:4,padding:20,width:720,maxWidth:"100%",maxHeight:"80vh",overflowY:"auto"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
           <div style={{fontSize:14,fontWeight:700,color:C.text}}>Signed Key Attestation</div>
           <Btn onClick={()=>setAttestResult(null)}>Close</Btn>
@@ -2802,7 +2802,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         <div style={{fontSize:11,color:C.muted,marginBottom:10}}>
           {attestResult.signing_algorithm} · integrity {attestResult.statement?.integrity_verified?"verified":"FAILED"} · verify offline against GET /attestation/public-key
         </div>
-        <pre style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:6,padding:12,fontSize:10,color:C.text,overflowX:"auto",maxHeight:"48vh"}}>{JSON.stringify(attestResult,null,2)}</pre>
+        <pre style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:3,padding:12,fontSize:10,color:C.text,overflowX:"auto",maxHeight:"48vh"}}>{JSON.stringify(attestResult,null,2)}</pre>
         <div style={{display:"flex",gap:8,marginTop:12}}>
           <Btn primary onClick={()=>{const b=new Blob([JSON.stringify(attestResult,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`attestation-${attestResult.statement?.key_id||"key"}.json`;a.click();URL.revokeObjectURL(a.href);}}>Download</Btn>
           <Btn onClick={()=>navigator.clipboard?.writeText(JSON.stringify(attestResult,null,2))}>Copy</Btn>

@@ -1,4 +1,6 @@
 import {
+  Activity,
+  AlertTriangle,
   Building2,
   Cloud,
   Cpu,
@@ -9,8 +11,10 @@ import {
   Layers,
   Link,
   List,
+  ListChecks,
   Lock,
   Plug,
+  Radio,
   RefreshCw,
   Server,
   Settings,
@@ -73,6 +77,14 @@ export const SUB_PANES: Record<string, SubPane[]> = {
     { id: "profiles", label: "Deploy Profiles", hint: "Replication profiles with deployment tier presets", icon: Layers, feature: "clustering" },
     { id: "sync", label: "Sync Monitor", hint: "Real-time sync events, checkpoints, and replication lag", icon: RefreshCw, feature: "clustering" }
   ],
+  playbooks: [
+    { id: "overview", label: "Overview", hint: "Counts, runs awaiting approval and recent activity", icon: Activity },
+    { id: "playbooks", label: "Playbooks", hint: "Triggers, actions and who authorised them", icon: ListChecks },
+    { id: "runs", label: "Runs", hint: "Every run and its steps", icon: Zap },
+    { id: "incidents", label: "Incidents", hint: "Alert Center incidents and the runs that responded", icon: AlertTriangle },
+    { id: "connections", label: "Credentials", hint: "The one store for every external credential", icon: Link },
+    { id: "streams", label: "Event streaming", hint: "Audit events to a SIEM or webhook", icon: Radio }
+  ],
   admin: [
     { id: "system", label: "System Administration", hint: "Platform health, runtime hardening, FIPS and governance settings", icon: Settings },
     { id: "tenant", label: "Tenant Administration", hint: "Tenant lifecycle disable/delete workflow", icon: Building2 },
@@ -101,7 +113,7 @@ export function SidebarSubNav({ tabId, items, activeId, onSelect }: {
             onClick={() => onSelect(item.id)}
             style={{
               display: "flex", alignItems: "center", gap: 8, width: "100%",
-              padding: "5px 8px", margin: "1px 0", border: 0, borderRadius: 6,
+              padding: "5px 8px", margin: "1px 0", border: 0, borderRadius: 3,
               background: isActive ? C.accentDim : "transparent",
               cursor: "pointer", textAlign: "left", font: "inherit",
             }}

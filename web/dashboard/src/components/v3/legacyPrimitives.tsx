@@ -193,7 +193,7 @@ type InpProps = InputHTMLAttributes<HTMLInputElement> & {
   style?: CSSProperties;
 };
 
-export const Inp = ({ placeholder, w, mono = false, style, ...p }: InpProps) => <input placeholder={placeholder} style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: "var(--radius-md)", padding: "8px 10px", color: C.text, fontSize: 12.5, width: w || "100%", outline: "none", fontFamily: mono ? "'JetBrains Mono',monospace" : "inherit", boxSizing: "border-box", ...(style || {}) }} {...p} />;
+export const Inp = ({ placeholder, w, mono = false, style, ...p }: InpProps) => <input placeholder={placeholder} style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: "var(--radius-md)", padding: "8px 10px", color: C.text, fontSize: 12.5, width: w || "100%", outline: "none", fontFamily: mono ? "var(--font-mono)" : "inherit", boxSizing: "border-box", ...(style || {}) }} {...p} />;
 
 type TxtProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
   rows?: number;
@@ -201,7 +201,7 @@ type TxtProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
   style?: CSSProperties;
 };
 
-export const Txt = ({ placeholder, rows = 3, mono = true, style, ...p }: TxtProps) => <textarea placeholder={placeholder} rows={rows} style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: "var(--radius-md)", padding: "8px 10px", color: C.text, fontSize: 12.5, width: "100%", outline: "none", resize: "vertical", fontFamily: mono ? "'JetBrains Mono',monospace" : "inherit", boxSizing: "border-box", ...(style || {}) }} {...p} />;
+export const Txt = ({ placeholder, rows = 3, mono = true, style, ...p }: TxtProps) => <textarea placeholder={placeholder} rows={rows} style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: "var(--radius-md)", padding: "8px 10px", color: C.text, fontSize: 12.5, width: "100%", outline: "none", resize: "vertical", fontFamily: mono ? "var(--font-mono)" : "inherit", boxSizing: "border-box", ...(style || {}) }} {...p} />;
 
 type SelProps = SelectHTMLAttributes<HTMLSelectElement> & {
   children?: ReactNode;
@@ -468,7 +468,7 @@ export const Sel = ({ children, w, style, value, defaultValue, onChange, disable
         ...menuStyle,
         background: `linear-gradient(180deg, ${C.surface} 0%, ${C.card} 100%)`,
         border: `1px solid ${C.borderHi}`,
-        borderRadius: 12,
+        borderRadius: 6,
         boxShadow: `0 22px 48px rgba(0,0,0,.45), 0 0 0 1px ${C.glow}`,
         padding: 8,
         backdropFilter: "blur(12px)"
@@ -503,7 +503,7 @@ export const Sel = ({ children, w, style, value, defaultValue, onChange, disable
                   gap: 10,
                   width: "100%",
                   padding: "10px 12px",
-                  borderRadius: 10,
+                  borderRadius: 4,
                   border: `1px solid ${highlighted ? C.borderHi : "transparent"}`,
                   background: selected
                     ? C.accentDim
@@ -555,7 +555,7 @@ export const Sel = ({ children, w, style, value, defaultValue, onChange, disable
           style={{
             background: open ? `linear-gradient(180deg, ${C.cardHover} 0%, ${C.card} 100%)` : C.card,
             border: `1px solid ${open ? C.accentFg : C.border}`,
-            borderRadius: 7,
+            borderRadius: 3,
             padding: "8px 34px 8px 10px",
             color: disabled ? C.muted : C.text,
             fontSize: 11,
@@ -662,7 +662,7 @@ export const B = ({ children, c = "accent", pulse = false }: BadgeProps) => {
   const textColor = palette[`${c}Fg`] || palette[c] || C.accentFg;
   const bgColor = palette[`${c}Dim`] || C.accentDim;
   return (
-    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 999, fontSize: 10.5, fontWeight: 600, color: textColor, background: bgColor, letterSpacing: 0.1, whiteSpace: "nowrap", border: `1px solid ${bgColor}`, animation: pulse ? "pulse 2s infinite" : "none" }}>{children}</span>
+    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 10.5, fontWeight: 600, color: textColor, background: bgColor, letterSpacing: 0.1, whiteSpace: "nowrap", border: `1px solid ${bgColor}`, animation: pulse ? "pulse 2s infinite" : "none" }}>{children}</span>
   );
 };
 
@@ -713,8 +713,8 @@ export const Stat = ({ l, v, s, c = "accent", i }: StatProps) => {
   return (
     <div className="vecta-stat-card" style={{ flex: 1, background: C.card, borderRadius: "var(--radius-md)", border: `1px solid ${C.border}`, padding: "14px 16px", boxShadow: "var(--shadow-sm)", position: "relative", overflow: "hidden" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 12, fontWeight: 500, color: C.dim, letterSpacing: 0 }}>{l}</span>
-        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 8, background: dimColor, color: accentColor }}><Icon size={13} strokeWidth={2.2} /></span>
+        <span style={{ fontSize: 10.5, fontWeight: 500, color: C.muted, letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>{l}</span>
+        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 4, background: dimColor, color: accentColor }}><Icon size={13} strokeWidth={2.2} /></span>
       </div>
       <div className="vk-num" style={{ fontSize: 26, fontWeight: 600, color: C.text, marginTop: 6, letterSpacing: -0.6 }}>{v}</div>
       {s && <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{s}</div>}

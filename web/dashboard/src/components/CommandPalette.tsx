@@ -24,7 +24,7 @@ function highlight(text: string, query: string): React.ReactNode {
       {text.slice(0, idx)}
       <mark
         style={{
-          background: "rgba(76,157,255,0.25)",
+          background: "rgba(20,147,168,0.25)",
           color: "#06d6e0",
           borderRadius: 2,
           fontWeight: 700,
@@ -132,7 +132,7 @@ export function CommandPalette({ open, onClose, items, onSelect }: Props) {
           width: "min(540px, 92vw)",
           background: "#0f1521",
           border: "1px solid #243656",
-          borderRadius: 12,
+          borderRadius: 6,
           boxShadow: "0 24px 64px rgba(0,0,0,0.8)",
           overflow: "hidden",
           display: "flex",
@@ -179,7 +179,7 @@ export function CommandPalette({ open, onClose, items, onSelect }: Props) {
               outline: "none",
               color: "#e2e8f0",
               fontSize: 14,
-              fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
+              fontFamily: "inherit",
             }}
           />
           <kbd
@@ -190,7 +190,7 @@ export function CommandPalette({ open, onClose, items, onSelect }: Props) {
               border: "1px solid #1a2944",
               borderRadius: 4,
               padding: "2px 6px",
-              fontFamily: "'JetBrains Mono', monospace",
+              fontFamily: "var(--font-mono)",
             }}
           >
             ESC
@@ -241,9 +241,9 @@ export function CommandPalette({ open, onClose, items, onSelect }: Props) {
                     style={{
                       width: 28,
                       height: 28,
-                      borderRadius: 6,
-                      background: active ? "rgba(76,157,255,0.12)" : "#131d2e",
-                      border: `1px solid ${active ? "rgba(76,157,255,0.3)" : "#1a2944"}`,
+                      borderRadius: 3,
+                      background: active ? "rgba(20,147,168,0.12)" : "#131d2e",
+                      border: `1px solid ${active ? "rgba(20,147,168,0.3)" : "#1a2944"}`,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -294,7 +294,7 @@ export function CommandPalette({ open, onClose, items, onSelect }: Props) {
                         borderRadius: 3,
                         padding: "1px 5px",
                         flexShrink: 0,
-                        fontFamily: "'JetBrains Mono', monospace",
+                        fontFamily: "var(--font-mono)",
                       }}
                     >
                       ↵
@@ -316,7 +316,7 @@ export function CommandPalette({ open, onClose, items, onSelect }: Props) {
             borderTop: "1px solid #1a2944",
             fontSize: 10,
             color: "#334155",
-            fontFamily: "'JetBrains Mono', monospace",
+            fontFamily: "var(--font-mono)",
           }}
         >
           <span>↑↓ navigate</span>

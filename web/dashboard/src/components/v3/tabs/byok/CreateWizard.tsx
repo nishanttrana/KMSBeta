@@ -146,12 +146,12 @@ export function BYOKCreateWizard({ session, accounts, providers, keyCatalog, onC
           {account?.provider === "salesforce" && <>
             <FG label="BYOK certificate name" required hint="The BYOK-compatible certificate created in Salesforce Setup."><Inp value={certName} onChange={(e) => setCertName(e.target.value)} mono /></FG>
             <FG label="Certificate (PEM)" required>
-              <textarea value={certPEM} onChange={(e) => setCertPEM(e.target.value)} rows={4} style={{ width: "100%", fontFamily: MONO, fontSize: 10, background: C.card, color: C.text, border: `1px solid ${C.border}`, borderRadius: 7, padding: 8, boxSizing: "border-box" }} />
+              <textarea value={certPEM} onChange={(e) => setCertPEM(e.target.value)} rows={4} style={{ width: "100%", fontFamily: MONO, fontSize: 10, background: C.card, color: C.text, border: `1px solid ${C.border}`, borderRadius: 3, padding: 8, boxSizing: "border-box" }} />
             </FG>
           </>}
         </>}
         {error && <div style={{ fontSize: 11, color: C.redFg }}>{error}</div>}
-        {run && <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: 10 }}><RunSteps run={run} /></div>}
+        {run && <div style={{ border: `1px solid ${C.border}`, borderRadius: 4, padding: 10 }}><RunSteps run={run} /></div>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <Btn onClick={onClose}>{run?.status === "succeeded" ? "Close" : "Cancel"}</Btn>
           {run?.status !== "succeeded" && <Btn primary disabled={!ready || busy} onClick={() => void submit()}>{busy ? "Importing…" : "Create and import"}</Btn>}

@@ -101,7 +101,7 @@ export const ExposurePanel = ({ session, onToast }: Props) => {
         <Btn small onClick={() => setShowClosed((v) => !v)}>{showClosed ? "Hide closed" : `Show ${sum.remediated} closed`}</Btn>
       )}
       {ack && (
-        <div style={{ border: `1px solid ${C.amber}`, borderRadius: 8, padding: 8, display: "grid", gap: 6 }}>
+        <div style={{ border: `1px solid ${C.amber}`, borderRadius: 4, padding: 8, display: "grid", gap: 6 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: C.amberFg }}>Acknowledge {ack.item.item_type} {ack.item.item_id}</div>
           <div style={{ fontSize: 10, color: C.dim }}>
             Only when the material is not in use or its exposure is accepted. The reason is recorded in the audit log.

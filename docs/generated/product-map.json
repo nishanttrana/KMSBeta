@@ -19266,7 +19266,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setCollapsed((v) => !v)} title= className=\"vk-icon-btn\" style={{ width: 22, h...",
-      "line": 626,
+      "line": 627,
       "tabs": [],
       "tag": "button"
     },
@@ -19274,7 +19274,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "onLogout",
       "label": "Sign out",
-      "line": 812,
+      "line": 813,
       "tabs": [],
       "tag": "button"
     },
@@ -19282,7 +19282,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "togglePin(tab)} title= style={{ display: \"inline-flex\", alignItems: \"center\",...",
-      "line": 864,
+      "line": 865,
       "tabs": [],
       "tag": "button"
     },
@@ -19290,7 +19290,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setPaletteOpen(true)} title=\"Command palette (\u2318K)\" className=\"vk-search-btn\"...",
-      "line": 887,
+      "line": 888,
       "tabs": [],
       "tag": "button"
     },
@@ -19298,7 +19298,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "selectTab(\"admin\")} style={cliEnabled ? : }>",
-      "line": 936,
+      "line": 937,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19306,7 +19306,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" aria-label=\"About this KMS build\" aria-expanded= ti...",
-      "line": 973,
+      "line": 974,
       "tabs": [],
       "tag": "button"
     },
@@ -19314,7 +19314,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" style={{ display: \"inline-flex\", alignItems: \"cente...",
-      "line": 1008,
+      "line": 1009,
       "tabs": [],
       "tag": "button"
     },
@@ -19330,7 +19330,7 @@
       "file": "web/dashboard/src/components/v3/SidebarSubNav.tsx",
       "handler": "",
       "label": "onSelect(item.id)} style={ } >",
-      "line": 95,
+      "line": 107,
       "tabs": [],
       "tag": "button"
     },
@@ -19400,7 +19400,7 @@
     },
     {
       "file": "web/dashboard/src/components/v3/runtimeUtils.tsx",
-      "handler": "reset} style={{ border: \"1px solid #243656\", borderRadius: 6, padding: \"4px 10px\", background: \"transparent\", color:...",
+      "handler": "reset} style={{ border: \"1px solid #243656\", borderRadius: 3, padding: \"4px 10px\", background: \"transparent\", color:...",
       "label": "Retry",
       "line": 66,
       "tabs": [],
@@ -19985,7 +19985,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/BackupTab.tsx",
       "handler": "",
-      "label": "setShowCreate(false)} style={{ padding: \"7px 16px\", borderRadius: 6, border:...",
+      "label": "setShowCreate(false)} style={{ padding: \"7px 16px\", borderRadius: 3, border:...",
       "line": 337,
       "tabs": [
         "backup"
@@ -20904,7 +20904,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "void refresh()} disabled= style={{ display: \"inline-flex\", alignItems: \"cente...",
-      "line": 308,
+      "line": 301,
       "tabs": [
         "home",
         "recommendations"
@@ -20915,7 +20915,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "onNavigate(\"recommendations\")} style={ }>View all \u2192",
-      "line": 347,
+      "line": 340,
       "tabs": [
         "home",
         "recommendations"
@@ -20926,7 +20926,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "onNavigate(\"ops\")} style={ }> Operations dashboard",
-      "line": 362,
+      "line": 355,
       "tabs": [
         "home",
         "recommendations"
@@ -20937,7 +20937,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "void refresh()} disabled= style={ }>",
-      "line": 393,
+      "line": 386,
       "tabs": [
         "home",
         "recommendations"
@@ -20948,7 +20948,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "setSev(\"all\")}>All ( )",
-      "line": 398,
+      "line": 391,
       "tabs": [
         "home",
         "recommendations"
@@ -20959,7 +20959,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "setSev(s)}> ( )",
-      "line": 400,
+      "line": 393,
       "tabs": [
         "home",
         "recommendations"
@@ -20970,7 +20970,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "unsnoozeAll",
       "label": "Show snoozed",
-      "line": 407,
+      "line": 400,
       "tabs": [
         "home",
         "recommendations"
@@ -22744,7 +22744,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
-      "label": "void refreshKeyInventory()} style={{height:40,padding:\"0 16px\",borderRadius:1...",
+      "label": "void refreshKeyInventory()} style={{height:40,padding:\"0 16px\",borderRadius:4...",
       "line": 1808,
       "tabs": [
         "keys"
@@ -22764,7 +22764,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
-      "label": "setModal(\"form-key\")} style={{height:40,padding:\"0 20px\",borderRadius:10,font...",
+      "label": "setModal(\"form-key\")} style={{height:40,padding:\"0 20px\",borderRadius:4,fontS...",
       "line": 1818,
       "tabs": [
         "keys"
@@ -22774,7 +22774,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
-      "label": "} style={{height:40,padding:\"0 20px\",borderRadius:10,fontSize:12,fontWeight:7...",
+      "label": "} style={{height:40,padding:\"0 20px\",borderRadius:4,fontSize:12,fontWeight:70...",
       "line": 1821,
       "tabs": [
         "keys"
@@ -22784,7 +22784,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
-      "label": "setModal(\"generate-pqc\")} style={{height:40,padding:\"0 20px\",borderRadius:10,...",
+      "label": "setModal(\"generate-pqc\")} style={{height:40,padding:\"0 20px\",borderRadius:4,f...",
       "line": 1824,
       "tabs": [
         "keys"
@@ -22794,7 +22794,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
-      "label": "setModal(\"canary\")} style={{height:40,padding:\"0 20px\",borderRadius:10,fontSi...",
+      "label": "setModal(\"canary\")} style={{height:40,padding:\"0 20px\",borderRadius:4,fontSiz...",
       "line": 1827,
       "tabs": [
         "keys"
@@ -23329,7 +23329,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "setOpenRun(open ? \"\" : r.id)} style={ }>{open ? : }",
-      "line": 378,
+      "line": 382,
       "tabs": [
         "playbooks"
       ],
@@ -23339,7 +23339,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "handleCancel(r)}> Cancel",
-      "line": 388,
+      "line": 392,
       "tabs": [
         "playbooks"
       ],
@@ -23349,17 +23349,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "handleRetry(r)}> Retry",
-      "line": 389,
-      "tabs": [
-        "playbooks"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
-      "handler": "",
-      "label": "setView(v)}>",
-      "line": 431,
+      "line": 393,
       "tabs": [
         "playbooks"
       ],
@@ -23369,7 +23359,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "openEditor()}> New",
-      "line": 432,
+      "line": 430,
       "tabs": [
         "playbooks"
       ],
@@ -23379,7 +23369,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "}>",
-      "line": 433,
+      "line": 431,
       "tabs": [
         "playbooks"
       ],
@@ -23389,7 +23379,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "setDryRun(null)} style={ }>",
-      "line": 486,
+      "line": 484,
       "tabs": [
         "playbooks"
       ],
@@ -23399,7 +23389,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "handleToggle(pb)} style={ }>{pb.enabled ? : }",
-      "line": 517,
+      "line": 515,
       "tabs": [
         "playbooks"
       ],
@@ -23409,7 +23399,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "openEditor(pb)}>",
-      "line": 523,
+      "line": 521,
       "tabs": [
         "playbooks"
       ],
@@ -23419,7 +23409,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "handleDryRun(pb)}> Dry run",
-      "line": 524,
+      "line": 522,
       "tabs": [
         "playbooks"
       ],
@@ -23429,7 +23419,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "handleRun(pb)}> Run",
-      "line": 525,
+      "line": 523,
       "tabs": [
         "playbooks"
       ],
@@ -23439,7 +23429,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "handleDelete(pb)}>",
-      "line": 526,
+      "line": 524,
       "tabs": [
         "playbooks"
       ],
@@ -23449,7 +23439,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "{ setRunFilter( ); setView(\"runs\"); }} style={ }>",
-      "line": 568,
+      "line": 566,
       "tabs": [
         "playbooks"
       ],
@@ -23459,7 +23449,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "setForm((p: any) => ( ))} style={ }>",
-      "line": 629,
+      "line": 627,
       "tabs": [
         "playbooks"
       ],
@@ -23469,7 +23459,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "setForm((p: any) => ({ ...p, actions: [...p.actions, ] }))}> Add action",
-      "line": 661,
+      "line": 659,
       "tabs": [
         "playbooks"
       ],
@@ -23479,7 +23469,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "handleSave} disabled={saving || !form.name",
       "label": "(icon or dynamic label)",
-      "line": 663,
+      "line": 661,
       "tabs": [
         "playbooks"
       ],
@@ -23489,7 +23479,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "}>Cancel",
-      "line": 664,
+      "line": 662,
       "tabs": [
         "playbooks"
       ],
@@ -25270,7 +25260,7 @@
     {
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
-      "label": "inputRef.current?.click()} style={{ padding: \"8px 14px\", borderRadius: 10, bo...",
+      "label": "inputRef.current?.click()} style={{ padding: \"8px 14px\", borderRadius: 4, box...",
       "line": 242,
       "tabs": [],
       "tag": "Btn"
@@ -25286,7 +25276,7 @@
     {
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
-      "label": "toggleScope(section)} style={{fontSize:11,padding:\"4px 10px\",borderRadius:6,b...",
+      "label": "toggleScope(section)} style={{fontSize:11,padding:\"4px 10px\",borderRadius:3,b...",
       "line": 510,
       "tabs": [],
       "tag": "button"
@@ -33059,7 +33049,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-11T17:47:01Z",
+  "generated_at": "2026-10-11T18:01:52Z",
   "navigation": [
     {
       "group": "Overview",
@@ -90039,6 +90029,32 @@
         "label": "Generic PKCS#11 HSM"
       }
     ],
+    "playbooks": [
+      {
+        "id": "overview",
+        "label": "Overview"
+      },
+      {
+        "id": "playbooks",
+        "label": "Playbooks"
+      },
+      {
+        "id": "runs",
+        "label": "Runs"
+      },
+      {
+        "id": "incidents",
+        "label": "Incidents"
+      },
+      {
+        "id": "connections",
+        "label": "Credentials"
+      },
+      {
+        "id": "streams",
+        "label": "Event streaming"
+      }
+    ],
     "workbench": [
       {
         "id": "crypto",
@@ -90065,7 +90081,7 @@
   "summary": {
     "backend_routes": 900,
     "backend_services": 28,
-    "button_inventory": 763,
+    "button_inventory": 762,
     "frontend_call_sites": 537,
     "matched_frontend_call_sites": 515,
     "nav_items": 26,
@@ -90074,7 +90090,7 @@
     "request_flows_with_internal_package_calls": 160,
     "request_flows_with_service_calls": 532,
     "request_flows_with_store_calls": 637,
-    "subpane_groups": 8,
+    "subpane_groups": 9,
     "tab_components": 33,
     "unmatched_frontend_call_sites": 22
   },
@@ -121836,7 +121852,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-11T17:47:01Z",
+    "generatedAt": "2026-10-11T18:01:52Z",
     "methods": [
       "DELETE",
       "GET",

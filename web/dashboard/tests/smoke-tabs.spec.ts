@@ -277,6 +277,16 @@ test("operations status shows unavailable, not zero, when a source fails", async
 // A module's views are sub-options under its name in the sidebar, never a
 // second column (9.6.0-beta). Clicking the name lists them and a second click
 // folds them; choosing one opens that view and names it in the breadcrumb.
+// Playbooks has no tab strip of its own: its views are sidebar sub-options.
+test("Playbooks views are sidebar sub-options, not a tab strip", async ({ page }) => {
+  await page.getByText("Playbooks", { exact: true }).first().click();
+  const sub = page.getByTestId("subnav-playbooks");
+  for (const view of ["Overview", "Playbooks", "Runs", "Incidents", "Credentials", "Event streaming"]) await expect(sub.getByRole("button", { name: view, exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Runs", exact: true })).toHaveCount(1);
+  await sub.getByRole("button", { name: "Runs", exact: true }).click();
+  await expect(page.getByLabel("Breadcrumb")).toContainText("Runs");
+});
+
 test("a module's sub-options expand under its name in the sidebar", async ({ page }) => {
   const module = (label: string) => page.getByText(label, { exact: true }).first();
   const crumb = page.getByRole("navigation", { name: "Breadcrumb" });

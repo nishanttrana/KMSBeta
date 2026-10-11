@@ -368,6 +368,24 @@ an approach, record it here or in the matching doc below.
   separation in the light and dark themes. Look at the rendered page in
   both themes before calling it done.
 
+- **The console has its own look, one plane per theme** (owner directive,
+  2026-10-11: a dark sidebar beside a white page "do not match"; wants an
+  "enterprise text font"; "the UI should be unique", not look generated).
+  - Sidebar, top bar and page share the theme's plane. No part of the shell
+    carries the other theme.
+  - The typeface is IBM Plex Sans and IBM Plex Mono, bundled and served
+    from the console's own origin. Components name fonts only through
+    `--font-sans` and `--font-mono`.
+  - Colour, corner radius and shadow come from the tokens in `index.css`
+    (Basalt and Limestone, a petrol accent, brass only in the mark). A
+    component doesn't hard-code a family, text below 10px, or a fixed hue as
+    text colour.
+  - An explanatory paragraph folds to one line (`.vk-fold`); a warning or
+    confirmation stays open (`data-keep`).
+  - `web/dashboard/tests/unit/brandAndLegibility.test.ts` enforces these
+    (docs/DECISIONS.md).
+
+
 ## Documentation is part of done
 
 Every change is documented in the same commit. Don't leave it for later, and

@@ -3,7 +3,7 @@ import { Cloud, Code2, Database, FileBadge, GitBranch, Globe, Upload } from "luc
 import type { AssetQuery, CryptoAsset, DiscoverySource, DiscoverySummary } from "../../../../lib/discovery";
 import type { ServerDrill } from "../../chartDrill";
 
-export const MONO = "'JetBrains Mono',monospace";
+export const MONO = "var(--font-mono)";
 
 // Classes from pkg/cryptocatalog, plus "exposed" for a secret found in code
 // or an upload. Risk first; each is shown with its label, never color alone.

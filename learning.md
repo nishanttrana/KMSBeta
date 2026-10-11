@@ -5,6 +5,28 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### A dark sidebar beside a light page; a font decision reversed (11.3.0-beta)
+- **The owner rejected the ink sidebar on the light theme** ("do not
+  match") and the system fonts (wanted an "enterprise text font"), both
+  chosen in 11.1.0-beta. What went wrong: the sidebar was themed by putting
+  `data-theme="dark"` on it, which looked deliberate in one screenshot and
+  split the shell in two in use; and "the CSP refuses Google Fonts" was read
+  as "no web font", when the CSP only refuses another host. A bundled font
+  on our own origin was always allowed. Both are now rules in CLAUDE.md.
+- **The posture rule had no way to know a scan had run.** The snapshot held
+  findings only. It now also reads the latest risk snapshot: a scan stores
+  one, so `captured_at` tells "none found" from "never evaluated".
+- **A fixer and its gate must share the pattern.** The Perl pass that folded
+  mixed paragraphs missed two that the test's regex then caught (a `{value}`
+  inside the text). The test is the authority; run it after any bulk edit.
+- **Trap: clicking a module's name twice folds its sub-options.** A smoke
+  test reloaded, clicked "Playbooks" again and lost the view it wanted. The
+  module is still open after a reload; tests go straight to
+  `subnav-<module>`.
+- **Bulk corner-radius edit:** a radius of at least half the element's
+  height is a deliberate dot, avatar, toggle or progress track and is left
+  alone; everything else maps to the scale.
+
 ### "Every key has X" passed with no keys (11.2.0-beta)
 - **The second copy of the "ALL OK" fault below.** The recommendation engine
   already reported a missing source as "not assessed", but an empty one

@@ -228,7 +228,7 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
   };
 
   const pickDrill = (d) => setDrill((cur) => cur?.key === d.key ? null : d);
-  const chip = (on) => ({ height: 30, padding: "0 12px", borderRadius: 8, border: `1px solid ${on ? C.accentFg : C.border}`, background: on ? C.accentDim : "transparent", color: on ? C.accentFg : C.muted, fontSize: 11, cursor: "pointer", fontWeight: 600 });
+  const chip = (on) => ({ height: 30, padding: "0 12px", borderRadius: 4, border: `1px solid ${on ? C.accentFg : C.border}`, background: on ? C.accentDim : "transparent", color: on ? C.accentFg : C.muted, fontSize: 11, cursor: "pointer", fontWeight: 600 });
 
   return <div>
     <Section title={<><Lock size={16} color={C.accentFg} />Secret Vault</>} actions={<>
@@ -300,7 +300,7 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
       {subfolders.length > 0 && <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
         {subfolders.map((path) => (
           <button key={path} type="button" onClick={() => setCurrentPath(path)} title={path}
-            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "7px 12px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, cursor: "pointer", color: C.text, fontSize: 11, fontWeight: 600 }}>
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "7px 12px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, cursor: "pointer", color: C.text, fontSize: 11, fontWeight: 600 }}>
             <Folder size={13} color={C.accentFg} />{path.split("/").pop()}
             <span style={{ color: C.muted, fontWeight: 400 }}>{inPath(path).length}</span>
           </button>

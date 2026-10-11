@@ -8,13 +8,13 @@ const base = "/svc/keycore";
 const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
-const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
+const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "var(--font-mono)" } : {}) }}>{c ?? "—"}</td>;
 const Badge = ({ color, children }: any) => <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 4, background: color + "18", color, fontSize: 10, fontWeight: 600 }}>{children}</span>;
 const Btn = ({ onClick, children, small, variant = "default" }: any) => {
   const s: any = { default: { background: C.accent, color: C.bg }, ghost: { background: "rgba(255,255,255,.06)", color: C.dim, border: `1px solid ${C.border}` } };
-  return <button onClick={onClick} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: small ? "4px 10px" : "6px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none", ...s[variant] }}>{children}</button>;
+  return <button onClick={onClick} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: small ? "4px 10px" : "6px 14px", borderRadius: 3, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none", ...s[variant] }}>{children}</button>;
 };
-const Card = ({ children, style }: any) => <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: 16, ...style }}>{children}</div>;
+const Card = ({ children, style }: any) => <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: 16, ...style }}>{children}</div>;
 
 // Key inventory section of Overview → Operations: key counts, algorithm
 // mix and rotation summary from keycore's enterprise summary.
@@ -60,7 +60,7 @@ export function KeyInventoryPanel({ session }: any) {
         <Btn onClick={load} small><RefreshCcw size={12} />{loading ? "Loading…" : "Refresh"}</Btn>
       </div>
 
-      {err && <div style={{ padding: 12, borderRadius: 6, background: C.redDim, color: C.redFg, fontSize: 12, marginBottom: 16 }}>{err}</div>}
+      {err && <div style={{ padding: 12, borderRadius: 3, background: C.redDim, color: C.redFg, fontSize: 12, marginBottom: 16 }}>{err}</div>}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 12, marginBottom: 24 }}>
         {[
@@ -70,7 +70,7 @@ export function KeyInventoryPanel({ session }: any) {
           { label: "Avg Key Age (days)", value: analytics.avg_age_days?.toFixed?.(1), icon: TrendingUp },
         ].map(({ label, value, icon: Icon }: any) => (
           <Card key={label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ background: C.accent + "22", borderRadius: 8, padding: 10 }}><Icon size={16} style={{ color: C.accentFg }} /></div>
+            <div style={{ background: C.accent + "22", borderRadius: 4, padding: 10 }}><Icon size={16} style={{ color: C.accentFg }} /></div>
             <div>
               <div style={{ fontSize: 20, fontWeight: 700, color: C.text }}>{value ?? "—"}</div>
               <div style={{ fontSize: 11, color: C.muted }}>{label}</div>

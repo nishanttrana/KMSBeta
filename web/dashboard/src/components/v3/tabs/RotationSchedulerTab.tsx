@@ -200,7 +200,7 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Not assessed: rotation data is unavailable</div>
             <div style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>keycore did not return rotation policies, schedule or history, so none are shown.</div>
-            <div style={{ fontSize: 10, color: C.redFg, marginTop: 6, fontFamily: "'JetBrains Mono', monospace", wordBreak: "break-word" }}>{unavailable}</div>
+            <div style={{ fontSize: 10, color: C.redFg, marginTop: 6, fontFamily: "var(--font-mono)", wordBreak: "break-word" }}>{unavailable}</div>
             <div style={{ marginTop: 10 }}><Btn small onClick={() => void refresh()}><RefreshCw size={11} /> Retry</Btn></div>
           </div>
         </div>
@@ -221,12 +221,12 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
 
       {/* ── Error ── */}
       {error && (
-        <div style={{ padding: "8px 12px", borderRadius: 7, background: C.redDim, border: `1px solid ${C.red}`, fontSize: 11, color: C.redFg }}>
+        <div style={{ padding: "8px 12px", borderRadius: 3, background: C.redDim, border: `1px solid ${C.red}`, fontSize: 11, color: C.redFg }}>
           {error}
         </div>
       )}
       {notice && (
-        <div style={{ padding: "8px 12px", borderRadius: 7, background: C.greenDim, border: `1px solid ${C.green}`, fontSize: 11, color: C.greenFg }}>
+        <div style={{ padding: "8px 12px", borderRadius: 3, background: C.greenDim, border: `1px solid ${C.green}`, fontSize: 11, color: C.greenFg }}>
           {notice}
         </div>
       )}
@@ -286,7 +286,7 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
                   <div>
                     <B c="accent">{p.target_type}</B>
                   </div>
-                  <div style={{ color: C.dim, fontFamily: "'JetBrains Mono', monospace", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <div style={{ color: C.dim, fontFamily: "var(--font-mono)", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {p.target_filter || "—"}
                   </div>
                   <div style={{ color: C.text, fontWeight: 600 }}>{p.interval_days}d</div>
@@ -345,7 +345,7 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
                   onMouseLeave={(e) => { if (!u.overdue) e.currentTarget.style.background = "transparent"; }}
                 >
                   <div style={{ color: C.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.policy_name}</div>
-                  <div style={{ color: C.dim, fontFamily: "'JetBrains Mono', monospace", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>keys matching {policyById.get(u.policy_id)?.target_filter ?? "—"}</div>
+                  <div style={{ color: C.dim, fontFamily: "var(--font-mono)", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>keys matching {policyById.get(u.policy_id)?.target_filter ?? "—"}</div>
                   <div>
                     <B c={policyById.get(u.policy_id)?.auto_rotate ? "green" : "muted"}>{policyById.get(u.policy_id)?.auto_rotate ? "auto" : "manual"}</B>
                   </div>
@@ -404,7 +404,7 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
                 >
                   <div style={{ color: C.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.policy_name}</div>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ color: C.dim, fontFamily: "'JetBrains Mono', monospace", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.target_name}</div>
+                    <div style={{ color: C.dim, fontFamily: "var(--font-mono)", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.target_name}</div>
                     {r.error && <div style={{ fontSize: 10, color: C.redFg, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.error}</div>}
                   </div>
                   <div style={{ color: C.dim, fontSize: 10 }}>{fmtDateTime(r.started_at)}</div>

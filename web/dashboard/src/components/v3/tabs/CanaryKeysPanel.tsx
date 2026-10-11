@@ -85,11 +85,11 @@ export function CanaryKeysPanel({ session }: { session: AuthSession }) {
         <Btn primary onClick={create} disabled={busy || !name.trim()}>Create canary</Btn>
       </div>
       {created && (
-        <div style={{ padding: "8px 10px", marginBottom: 12, borderRadius: 6, border: `1px solid ${C.accent}`, fontSize: 11, color: C.text }}>
-          Created <b>{created.name}</b>. Plant this key ID: <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>{created.id}</span>
+        <div style={{ padding: "8px 10px", marginBottom: 12, borderRadius: 3, border: `1px solid ${C.accent}`, fontSize: 11, color: C.text }}>
+          Created <b>{created.name}</b>. Plant this key ID: <span style={{ fontFamily: "var(--font-mono)" }}>{created.id}</span>
         </div>
       )}
-      {err && <div style={{ padding: "8px 10px", marginBottom: 12, borderRadius: 6, background: C.redDim, color: C.redFg, fontSize: 11 }}>{err}</div>}
+      {err && <div style={{ padding: "8px 10px", marginBottom: 12, borderRadius: 3, background: C.redDim, color: C.redFg, fontSize: 11 }}>{err}</div>}
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead><tr>{["Name", "Key ID", "Status", "Trips", "Last tripped", ""].map((h) => <th key={h} style={head}>{h}</th>)}</tr></thead>
         <tbody>
@@ -97,7 +97,7 @@ export function CanaryKeysPanel({ session }: { session: AuthSession }) {
           {items.map((k) => (
             <tr key={k.id}>
               <td style={cell}>{k.name}</td>
-              <td style={{ ...cell, fontFamily: "'JetBrains Mono',monospace" }}>{k.id}</td>
+              <td style={{ ...cell, fontFamily: "var(--font-mono)" }}>{k.id}</td>
               <td style={cell}>{k.active ? "Active" : "Deactivated"}</td>
               <td style={{ ...cell, color: k.trip_count > 0 ? C.redFg : C.text, fontWeight: k.trip_count > 0 ? 700 : 400 }}>{k.trip_count}</td>
               <td style={cell}>{fmt(k.last_tripped)}</td>

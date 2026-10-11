@@ -24,7 +24,7 @@ import {
 } from "../../../lib/sbom";
 
 const ChartTip = ({ children }: { children: ReactNode }) => (
-  <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "6px 10px", fontSize: 10, color: C.text }}>
+  <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 3, padding: "6px 10px", fontSize: 10, color: C.text }}>
     {children}
   </div>
 );
@@ -492,7 +492,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
           </Btn>
           <div style={{ position: "relative" }}>
             <Btn small onClick={() => setExportMenuOpen((prev) => !prev)} disabled={Boolean(exportingSBOM)} style={{ height: 30, fontSize: 11 }}>Export</Btn>
-            {exportMenuOpen ? <div style={{ position: "absolute", right: 0, top: 34, minWidth: 120, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 6, zIndex: 20 }}>
+            {exportMenuOpen ? <div style={{ position: "absolute", right: 0, top: 34, minWidth: 120, background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: 6, zIndex: 20 }}>
               <Btn small onClick={() => { setExportMenuOpen(false); void exportSBOMFile("pdf"); }} disabled={Boolean(exportingSBOM)} style={{ width: "100%", justifyContent: "flex-start", height: 28, borderColor: "transparent", fontSize: 11 }}>
                 {exportingSBOM === "pdf" ? "Exporting..." : "PDF"}
               </Btn>
@@ -589,7 +589,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
             <BarChart data={strengthBars} layout="vertical">
               <XAxis type="number" tick={{ fill: C.muted, fontSize: 10 }} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={false} tickLine={false} width={60} />
-              <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: C.accentFg }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value} assets</ChartTip> : null} cursor={{ fill: "rgba(76,157,255,.04)" }} />
+              <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: C.accentFg }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value} assets</ChartTip> : null} cursor={{ fill: "rgba(20,147,168,.04)" }} />
               <RBar dataKey="value" radius={[0, 4, 4, 0]} fill={C.accent} />
             </BarChart>
           </ResponsiveContainer> : <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: C.muted }}>No strength data available.</div>}

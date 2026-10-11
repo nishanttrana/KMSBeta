@@ -46,7 +46,7 @@ export function CredentialDetail({ session, credential: c, type, exposedSince, n
   return (
     <Modal open onClose={onClose} title={c.name} width={600}>
       {exposedSince ? (
-        <div style={{ padding: "8px 10px", marginBottom: 10, borderRadius: 6, border: `1px solid ${C.redFg}`, color: C.redFg, fontSize: 11 }}>
+        <div style={{ padding: "8px 10px", marginBottom: 10, borderRadius: 3, border: `1px solid ${C.redFg}`, color: C.redFg, fontSize: 11 }}>
           Stored in plaintext by an earlier release (exposed since {fmtDate(exposedSince)}). Rotate it where it was issued, then edit this credential and enter every new value.
         </div>
       ) : null}
@@ -69,7 +69,7 @@ export function CredentialDetail({ session, credential: c, type, exposedSince, n
               : usedBy.map((u) => <div key={u}>{u}</div>)}
         {home && onNavigate ? <div style={{ marginTop: 4 }}><span onClick={() => onNavigate(home.tab)} style={{ ...clickable, color: C.accentFg }}>Choose it in {home.label}</span></div> : null}
       </Line>
-      <Line label="ID"><span style={{ fontFamily: "'JetBrains Mono',ui-monospace,monospace", fontSize: 10.5 }}>{c.id}</span></Line>
+      <Line label="ID"><span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5 }}>{c.id}</span></Line>
       <Line label="Added">{fmtDate(c.created_at)} by {c.created_by || "-"}</Line>
       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
         <Btn danger onClick={onDelete}>Delete</Btn>

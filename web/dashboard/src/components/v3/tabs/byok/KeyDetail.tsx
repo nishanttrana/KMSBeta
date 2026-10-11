@@ -118,7 +118,7 @@ export function BYOKKeyDetail({ session, id, listed, caps, onClose, onChanged, o
             <div style={{ fontSize: 11, color: C.muted }}>The cloud generated this key's material (created before 10.0.0-beta). It is listed for inventory; bring a KMS key to the cloud to manage material here.</div>
           )}
 
-          {lastRun && <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: 10 }}><RunSteps run={lastRun} /></div>}
+          {lastRun && <div style={{ border: `1px solid ${C.border}`, borderRadius: 4, padding: 10 }}><RunSteps run={lastRun} /></div>}
 
           <div>
             <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 6 }}>Custody</div>
@@ -143,7 +143,7 @@ export function BYOKKeyDetail({ session, id, listed, caps, onClose, onChanged, o
             <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 6 }}>Runs</div>
             <div style={{ display: "grid", gap: 6 }}>
               {(detail?.runs ?? []).map((r) => (
-                <div key={r.id} style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 10px" }}>
+                <div key={r.id} style={{ border: `1px solid ${C.border}`, borderRadius: 4, padding: "6px 10px" }}>
                   <button type="button" onClick={() => setOpen(open === r.id ? "" : r.id)} style={{ all: "unset", cursor: "pointer", display: "flex", justifyContent: "space-between", width: "100%", fontSize: 11 }}>
                     <span style={{ color: C.text }}>{r.operation} · {r.steps.length} steps</span>
                     <span style={{ display: "flex", gap: 8, color: C.muted }}>{r.actor} · {fmtDate(r.started_at)} <B c={r.status === "succeeded" ? "green" : "red"}>{r.status}</B></span>

@@ -52,7 +52,7 @@ export const KeyDerivationPanel = ({ session, onToast }: Props) => {
   return (
     <Section title="Working-Key Derivation" actions={<Btn small onClick={() => void load()}>Refresh</Btn>}>
       <Card>
-        <div style={{ fontSize: 10, color: C.dim, lineHeight: 1.5, marginBottom: 8 }}>
+        <div data-keep="" style={{ fontSize: 10, color: C.dim, lineHeight: 1.5, marginBottom: 8 }}>
           Legacy keys derive tokenization, FPE and field-protection keys from public identifiers (KCV / key id). Migrate each
           key: start, re-protect your data (read with header <code>X-Vecta-KDF-Version: v1</code>, write with <code>v2</code>;
           stored vault tokens are re-protected here), then complete. After completion v1 is refused.
@@ -67,7 +67,7 @@ export const KeyDerivationPanel = ({ session, onToast }: Props) => {
             <div style={{ display: "grid", gap: 6 }}>
               {items.map((k) => (
                 <div key={k.key_id} style={{ display: "grid", gridTemplateColumns: "minmax(0,1.4fr) auto minmax(0,1fr) auto", gap: 8, alignItems: "center", fontSize: 11, color: C.text }}>
-                  <span style={{ fontFamily: "'JetBrains Mono',monospace", overflow: "hidden", textOverflow: "ellipsis" }}>{k.key_id}</span>
+                  <span style={{ fontFamily: "var(--font-mono)", overflow: "hidden", textOverflow: "ellipsis" }}>{k.key_id}</span>
                   {stateBadge(k.state)}
                   <span style={{ color: C.dim }}>
                     {k.state === "v2" ? `pinned to key version ${k.key_version}` : `legacy uses ${k.legacy_uses} · v1 vault tokens ${k.legacy_vault_tokens}`}

@@ -10,12 +10,12 @@ import {
   fmtAgo, fmtDate, getBadge, neverRotatedDrill, restrictedDrill, typeDrill, VAULT_ROUTES, type VaultDrill,
 } from "./meta";
 
-const MONO = "'JetBrains Mono',ui-monospace,monospace";
+const MONO = "var(--font-mono)";
 
 export const TypeBadge = ({ type }: { type?: string }) => {
   const badge = getBadge(type);
   const Icon = badge.icon;
-  return <span style={{ background: badge.bg, color: badge.fg, borderRadius: 6, padding: "3px 8px", fontSize: 10, fontWeight: 600, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}><Icon size={10} /> {badge.t}</span>;
+  return <span style={{ background: badge.bg, color: badge.fg, borderRadius: 3, padding: "3px 8px", fontSize: 10, fontWeight: 600, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}><Icon size={10} /> {badge.t}</span>;
 };
 
 // One entry of a drill-down; it opens the secret's detail view.

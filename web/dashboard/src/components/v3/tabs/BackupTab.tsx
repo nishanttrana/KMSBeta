@@ -97,7 +97,7 @@ export function BackupTab({ session }: { session: any }) {
   const m = metrics ?? {} as BackupMetrics;
 
   const statCard = (icon: React.ReactNode, label: string, value: string, sub?: string, color?: string) => (
-    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px", flex: 1, display: "flex", gap: 12, alignItems: "flex-start" }}>
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: "14px 16px", flex: 1, display: "flex", gap: 12, alignItems: "flex-start" }}>
       <div style={{ color: color || C.accentFg, marginTop: 2 }}>{icon}</div>
       <div>
         <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
@@ -108,9 +108,9 @@ export function BackupTab({ session }: { session: any }) {
   );
 
   return (
-    <div style={{ padding: 24, fontFamily: '"IBM Plex Sans", sans-serif', color: C.text, minHeight: "100%" }}>
+    <div style={{ padding: 24, color: C.text, minHeight: "100%" }}>
       {PREVIEW && (
-        <div role="note" style={{ border: `1px solid ${C.amber}`, borderRadius: 8, padding: "10px 12px", marginBottom: 16, fontSize: 12, color: C.text }}>
+        <div role="note" style={{ border: `1px solid ${C.amber}`, borderRadius: 4, padding: "10px 12px", marginBottom: 16, fontSize: 12, color: C.text }}>
           <b style={{ color: C.amberFg }}>Preview.</b> {PREVIEW.limitation} Runs recorded before 2026-09-25 were simulated and are marked "simulated".
         </div>
       )}
@@ -124,11 +124,11 @@ export function BackupTab({ session }: { session: any }) {
           <div style={{ fontSize: 12, color: C.muted }}>Backup policies, run history, and restore points</div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={load} style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, padding: "6px 12px", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
+          <button onClick={load} style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 3, padding: "6px 12px", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
             <RefreshCw size={12} /> Refresh
           </button>
           {section === "policies" && (
-            <button onClick={() => setShowCreate(true)} style={{ background: C.accent, border: "none", borderRadius: 6, padding: "6px 14px", color: "#000", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600 }}>
+            <button onClick={() => setShowCreate(true)} style={{ background: C.accent, border: "none", borderRadius: 3, padding: "6px 14px", color: "#000", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600 }}>
               <Plus size={13} /> New Policy
             </button>
           )}
@@ -158,7 +158,7 @@ export function BackupTab({ session }: { session: any }) {
 
       {/* Policies */}
       {section === "policies" && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, overflow: "hidden" }}>
           {loading ? <div style={{ padding: 32, textAlign: "center", color: C.muted }}>Loading...</div> : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -178,7 +178,7 @@ export function BackupTab({ session }: { session: any }) {
                         {p.scope === "tagged" ? `tag:${p.tag_filter}` : p.scope.replace("_", " ")}
                       </span>
                     </td>
-                    <td style={{ ...CELL, fontFamily: "monospace", fontSize: 11 }}>{p.cron_expr}</td>
+                    <td style={{ ...CELL, fontFamily: "var(--font-mono)", fontSize: 11 }}>{p.cron_expr}</td>
                     <td style={CELL}>{p.retention_days}d</td>
                     <td style={CELL}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -213,7 +213,7 @@ export function BackupTab({ session }: { session: any }) {
 
       {/* Run History */}
       {section === "runs" && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, overflow: "hidden" }}>
           {loading ? <div style={{ padding: 32, textAlign: "center", color: C.muted }}>Loading...</div> : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -230,7 +230,7 @@ export function BackupTab({ session }: { session: any }) {
                         {r.status === "running" ? `Running (${Math.round(r.backed_up_keys / Math.max(r.total_keys, 1) * 100)}%)` : r.status}
                       </span>
                     </td>
-                    <td style={{ ...CELL, fontFamily: "monospace" }}>{r.backed_up_keys}/{r.total_keys}</td>
+                    <td style={{ ...CELL, fontFamily: "var(--font-mono)" }}>{r.backed_up_keys}/{r.total_keys}</td>
                     <td style={CELL}>{fmtBytes(r.backup_size_bytes)}</td>
                     <td style={{ ...CELL, fontSize: 10, color: C.muted, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.destination_path || r.destination}</td>
                     <td style={CELL}>{r.completed_at ? fmtDuration(r.started_at, r.completed_at) : "In progress…"}</td>
@@ -249,7 +249,7 @@ export function BackupTab({ session }: { session: any }) {
 
       {/* Restore Points */}
       {section === "restore" && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, overflow: "hidden" }}>
           {loading ? <div style={{ padding: 32, textAlign: "center", color: C.muted }}>Loading...</div> : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -261,9 +261,9 @@ export function BackupTab({ session }: { session: any }) {
                 {points.map(p => (
                   <tr key={p.id} style={{ borderBottom: `1px solid ${C.border}22` }}>
                     <td style={{ ...CELL, color: C.text, fontWeight: 600 }}>{p.name}</td>
-                    <td style={{ ...CELL, fontFamily: "monospace" }}>{p.key_count.toLocaleString()}</td>
+                    <td style={{ ...CELL, fontFamily: "var(--font-mono)" }}>{p.key_count.toLocaleString()}</td>
                     <td style={CELL}>{fmtBytes(p.backup_size_bytes)}</td>
-                    <td style={{ ...CELL, fontFamily: "monospace", fontSize: 10, color: C.muted, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <td style={{ ...CELL, fontFamily: "var(--font-mono)", fontSize: 10, color: C.muted, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>
                       {p.checksum.replace("sha256:", "").slice(0, 16)}…
                     </td>
                     <td style={{ ...CELL, fontSize: 11 }}>{fmtDate(p.created_at)}</td>
@@ -292,7 +292,7 @@ export function BackupTab({ session }: { session: any }) {
       {/* Create Policy Modal */}
       {showCreate && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 24, width: 480, maxHeight: "80vh", overflowY: "auto" }}>
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, padding: 24, width: 480, maxHeight: "80vh", overflowY: "auto" }}>
             <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>Create Backup Policy</div>
             {[
               { label: "Name", key: "name", type: "text", placeholder: "Daily Full Backup" },
@@ -305,12 +305,12 @@ export function BackupTab({ session }: { session: any }) {
                 <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>{f.label}</div>
                 <input type={f.type} value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: f.type === "number" ? +e.target.value : e.target.value }))}
                   placeholder={f.placeholder}
-                  style={{ width: "100%", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "7px 10px", color: C.text, fontSize: 12, boxSizing: "border-box" }} />
+                  style={{ width: "100%", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 3, padding: "7px 10px", color: C.text, fontSize: 12, boxSizing: "border-box" }} />
               </div>
             ))}
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Scope</div>
-              <select value={form.scope} onChange={e => setForm(p => ({ ...p, scope: e.target.value }))} style={{ width: "100%", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "7px 10px", color: C.text, fontSize: 12 }}>
+              <select value={form.scope} onChange={e => setForm(p => ({ ...p, scope: e.target.value }))} style={{ width: "100%", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 3, padding: "7px 10px", color: C.text, fontSize: 12 }}>
                 <option value="all_keys">All Keys</option>
                 <option value="critical_keys">Critical Keys</option>
                 <option value="tagged">Tagged (specify filter)</option>
@@ -318,7 +318,7 @@ export function BackupTab({ session }: { session: any }) {
             </div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Destination</div>
-              <select value={form.destination} onChange={e => setForm(p => ({ ...p, destination: e.target.value }))} style={{ width: "100%", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "7px 10px", color: C.text, fontSize: 12 }}>
+              <select value={form.destination} onChange={e => setForm(p => ({ ...p, destination: e.target.value }))} style={{ width: "100%", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 3, padding: "7px 10px", color: C.text, fontSize: 12 }}>
                 <option value="local">Local Filesystem</option>
                 <option value="s3">Amazon S3</option>
                 <option value="gcs">Google Cloud Storage</option>
@@ -334,8 +334,8 @@ export function BackupTab({ session }: { session: any }) {
               ))}
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button onClick={() => setShowCreate(false)} style={{ padding: "7px 16px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.dim, cursor: "pointer", fontSize: 12 }}>Cancel</button>
-              <button onClick={handleCreate} disabled={creating || !form.name} style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: C.accent, color: "#000", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
+              <button onClick={() => setShowCreate(false)} style={{ padding: "7px 16px", borderRadius: 3, border: `1px solid ${C.border}`, background: "transparent", color: C.dim, cursor: "pointer", fontSize: 12 }}>Cancel</button>
+              <button onClick={handleCreate} disabled={creating || !form.name} style={{ padding: "7px 16px", borderRadius: 3, border: "none", background: C.accent, color: "#000", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                 {creating ? "Creating…" : "Create Policy"}
               </button>
             </div>

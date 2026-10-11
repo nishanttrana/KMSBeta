@@ -88,7 +88,7 @@ async function open(page: Page): Promise<void> {
   await page.setViewportSize({ width: 1440, height: 1200 });
   await page.goto("/");
   await page.getByText("Playbooks", { exact: true }).first().click();
-  await page.getByRole("button", { name: "Credentials" }).first().click();
+  await page.getByTestId("subnav-playbooks").getByRole("button", { name: "Credentials" }).click();
   await expect(page.getByRole("button", { name: "Add credential" })).toBeVisible();
 }
 

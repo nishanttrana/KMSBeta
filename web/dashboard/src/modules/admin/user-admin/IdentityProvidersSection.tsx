@@ -271,7 +271,7 @@ export function IdentityProvidersSection({ model }: Props) {
                   const groupID = String(group.external_id || "").trim();
                   const selected = groupID === model.idpSelectedGroupID;
                   return (
-                    <div key={groupID} style={{ border: `1px solid ${selected ? C.accent : C.border}`, borderRadius: 8, padding: "8px 10px" }}>
+                    <div key={groupID} style={{ border: `1px solid ${selected ? C.accent : C.border}`, borderRadius: 4, padding: "8px 10px" }}>
                       <div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{String(group.name || groupID)}</div>
                       <div style={{ fontSize: 10, color: C.dim }}>{groupID}</div>
                       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
@@ -304,7 +304,7 @@ export function IdentityProvidersSection({ model }: Props) {
                   const userID = String(user.external_id || "").trim();
                   const selected = model.idpSelectedUserIDs.includes(userID);
                   return (
-                    <div key={userID} style={{ border: `1px solid ${selected ? C.accent : C.border}`, borderRadius: 8, padding: "8px 10px" }}>
+                    <div key={userID} style={{ border: `1px solid ${selected ? C.accent : C.border}`, borderRadius: 4, padding: "8px 10px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                         <div>
                           <div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{String(user.display_name || user.username || userID)}</div>

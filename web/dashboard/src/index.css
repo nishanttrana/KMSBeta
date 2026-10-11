@@ -1,59 +1,46 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
-/* Fonts are the operating system's own: the console makes no request to a
-   font host (its CSP would refuse one) and paints text on the first frame.
-   Monospace literals across the tabs name "JetBrains Mono"; this maps that
-   name to the platform's coding face, so they all render the same. */
-@font-face {
-  font-family: "JetBrains Mono";
-  font-weight: 100 500;
-  src: local("JetBrains Mono Regular"), local("JetBrainsMono-Regular"), local("SF Mono Regular"), local("SFMono-Regular"), local("Menlo Regular"), local("Menlo-Regular"),
-       local("Cascadia Mono Regular"), local("CascadiaMono-Regular"), local("Consolas"), local("DejaVu Sans Mono"), local("Liberation Mono");
-}
-@font-face {
-  font-family: "JetBrains Mono";
-  font-weight: 600 900;
-  src: local("JetBrains Mono Bold"), local("JetBrainsMono-Bold"), local("SF Mono Bold"), local("SFMono-Bold"), local("Menlo Bold"), local("Menlo-Bold"),
-       local("Cascadia Mono Bold"), local("CascadiaMono-Bold"), local("Consolas Bold"), local("Consolas-Bold"), local("DejaVu Sans Mono Bold"), local("Liberation Mono Bold");
-}
+/* IBM Plex Sans and IBM Plex Mono are bundled with the console (imported in
+   main.tsx, served from this origin). Nothing is fetched from a font host.
+   Components name fonts only through --font-sans and --font-mono. */
 
 /* ===================================================================
-   THEME: INK (dark, default)
-   Cool ink surfaces, one azure accent, colour reserved for status.
-   The brand gradient (azure to mint) is used only for the mark and
-   progress. Token names are stable so every module re-skins with them.
+   THEME: BASALT (dark, default)
+   Warm near-black stone, one petrol accent, colour reserved for status.
+   Sidebar, top bar and canvas are one plane in each theme. Brass appears
+   only in the mark. Token names are stable so every module re-skins.
    =================================================================== */
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "IBM Plex Sans Variable", "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  --c-bg:          #090c12;
-  --c-sidebar:     #0b0f17;
-  --c-surface:     #0e131c;
-  --c-card:        #121823;
-  --c-card-hover:  #18202d;
-  --c-elevated:    rgba(255, 255, 255, 0.03);
-  --c-border:      #1e2735;
-  --c-border-hi:   #2e3a4d;
-  --c-text:        #e9eef6;
-  --c-dim:         #a7b1c3;
-  --c-muted:       #7f8ba3;
-  --c-scrim:       rgba(4, 7, 12, 0.66);
+  --c-bg:          #100f0d;
+  --c-sidebar:     #141310;
+  --c-surface:     #171613;
+  --c-card:        #1b1a17;
+  --c-card-hover:  #23211d;
+  --c-elevated:    rgba(255, 248, 235, 0.03);
+  --c-border:      #2c2a25;
+  --c-border-hi:   #403d36;
+  --c-text:        #edeae3;
+  --c-dim:         #b5b0a4;
+  --c-muted:       #8f8a7e;
+  --c-scrim:       rgba(8, 7, 6, 0.68);
 
-  /* Brand gradient stops (the "aurora" names are kept for compatibility) */
-  --c-aurora-from: #4c9dff;
-  --c-aurora-mid:  #3bb8e6;
-  --c-aurora-to:   #2fd3b3;
-  --c-glow:        rgba(76, 157, 255, 0.10);
-  --c-glow-strong: rgba(76, 157, 255, 0.20);
-  --c-accent-dim:  rgba(76, 157, 255, 0.10);
-  --c-dim-tint:    rgba(148, 163, 190, 0.05);
+  /* The brass core of the mark (the "aurora" names are kept for compatibility). */
+  --c-aurora-from: #e6b54a;
+  --c-aurora-mid:  #d79f34;
+  --c-aurora-to:   #c4861f;
+  --c-glow:        rgba(79, 195, 212, 0.10);
+  --c-glow-strong: rgba(79, 195, 212, 0.20);
+  --c-accent-dim:  rgba(79, 195, 212, 0.10);
+  --c-dim-tint:    rgba(190, 180, 160, 0.05);
 
-  --s-accent: #62adff;  --s-accent-dim: rgba(76,157,255,.13);  --s-accent-mid: rgba(76,157,255,.20);
+  --s-accent: #4fc3d4;  --s-accent-dim: rgba(79,195,212,.12);  --s-accent-mid: rgba(79,195,212,.20);
   --s-teal:   #3cc9b4;  --s-teal-dim:   rgba(60,201,180,.10);
   --s-green:  #45c987;  --s-green-dim:  rgba(69,201,135,.10);
   --s-red:    #f07474;  --s-red-dim:    rgba(240,116,116,.11);
@@ -69,47 +56,48 @@
      against this surface (CVD and normal-vision separation). */
   --cls-exposed: #9370e3; --cls-weak: #c93b40; --cls-qv: #b08a12; --cls-strong: #2b9e8e; --cls-unknown: #5d6370;
 
-  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.30);
-  --shadow-md:  0 4px 14px rgba(0, 0, 0, 0.30), 0 1px 2px rgba(0, 0, 0, 0.20);
-  --shadow-lg:  0 18px 44px rgba(0, 0, 0, 0.48), 0 2px 6px rgba(0, 0, 0, 0.25);
-  --shadow-glow: 0 0 0 1px rgba(76, 157, 255, 0.35);
+  /* Cards are flat with a hairline; only overlays cast a shadow. */
+  --shadow-sm:  none;
+  --shadow-md:  0 4px 14px rgba(0, 0, 0, 0.32), 0 1px 2px rgba(0, 0, 0, 0.22);
+  --shadow-lg:  0 18px 44px rgba(0, 0, 0, 0.52), 0 2px 6px rgba(0, 0, 0, 0.28);
+  --shadow-glow: 0 0 0 1px rgba(79, 195, 212, 0.35);
 
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
 }
 
 /* ===================================================================
-   THEME: FROST (light)
-   Cool grey canvas, white cards, hairline borders, AA contrast. The
-   sidebar stays ink in both themes (it carries data-theme="dark").
+   THEME: LIMESTONE (light)
+   Warm stone canvas and sidebar, near-white cards, hairline borders,
+   AA contrast.
    =================================================================== */
 [data-theme="light"] {
   color-scheme: light;
 
-  --c-bg:          #f3f5f9;
-  --c-sidebar:     #ffffff;
-  --c-surface:     #ffffff;
-  --c-card:        #ffffff;
-  --c-card-hover:  #eef2f7;
-  --c-elevated:    #ffffff;
-  --c-border:      #dee3eb;
-  --c-border-hi:   #c3ccd8;
-  --c-text:        #0e1626;
-  --c-dim:         #3f495b;
-  --c-muted:       #5f6a7f;
-  --c-scrim:       rgba(14, 22, 38, 0.42);
+  --c-bg:          #f4f2ec;
+  --c-sidebar:     #ebe8e0;
+  --c-surface:     #f9f8f4;
+  --c-card:        #fffefc;
+  --c-card-hover:  #f0ede6;
+  --c-elevated:    #fffefc;
+  --c-border:      #dcd8cd;
+  --c-border-hi:   #c4bfb1;
+  --c-text:        #1c1b18;
+  --c-dim:         #4b483f;
+  --c-muted:       #6b675c;
+  --c-scrim:       rgba(28, 27, 24, 0.45);
 
-  --c-aurora-from: #1463d9;
-  --c-aurora-mid:  #0f84c4;
-  --c-aurora-to:   #0a9a86;
-  --c-glow:        rgba(20, 99, 217, 0.06);
-  --c-glow-strong: rgba(20, 99, 217, 0.14);
-  --c-accent-dim:  rgba(20, 99, 217, 0.07);
-  --c-dim-tint:    rgba(14, 22, 38, 0.035);
+  --c-aurora-from: #d9a336;
+  --c-aurora-mid:  #c88f25;
+  --c-aurora-to:   #b3771a;
+  --c-glow:        rgba(11, 107, 125, 0.07);
+  --c-glow-strong: rgba(11, 107, 125, 0.15);
+  --c-accent-dim:  rgba(11, 107, 125, 0.08);
+  --c-dim-tint:    rgba(28, 27, 24, 0.035);
 
-  --s-accent: #1463d9;  --s-accent-dim: rgba(20,99,217,.08);  --s-accent-mid: rgba(20,99,217,.13);
+  --s-accent: #0b6b7d;  --s-accent-dim: rgba(11,107,125,.09);  --s-accent-mid: rgba(11,107,125,.14);
   --s-teal:   #0f7f72;  --s-teal-dim:   rgba(15,127,114,.08);
   --s-green:  #1a7f4b;  --s-green-dim:  rgba(26,127,75,.08);
   --s-red:    #c53030;  --s-red-dim:    rgba(197,48,48,.08);
@@ -123,10 +111,10 @@
 
   --cls-exposed: #7a4fd0; --cls-weak: #e5484d; --cls-qv: #e8a317; --cls-strong: #2f9e8f; --cls-unknown: #c3c7cf;
 
-  --shadow-sm:  0 1px 2px rgba(14, 22, 38, 0.05);
-  --shadow-md:  0 2px 8px rgba(14, 22, 38, 0.06), 0 1px 2px rgba(14, 22, 38, 0.04);
-  --shadow-lg:  0 14px 36px rgba(14, 22, 38, 0.12), 0 2px 6px rgba(14, 22, 38, 0.05);
-  --shadow-glow: 0 0 0 1px rgba(20, 99, 217, 0.30);
+  --shadow-sm:  none;
+  --shadow-md:  0 2px 8px rgba(28, 27, 24, 0.07), 0 1px 2px rgba(28, 27, 24, 0.05);
+  --shadow-lg:  0 14px 36px rgba(28, 27, 24, 0.14), 0 2px 6px rgba(28, 27, 24, 0.06);
+  --shadow-glow: 0 0 0 1px rgba(11, 107, 125, 0.30);
 }
 
 /* ===================================================================
@@ -223,7 +211,7 @@ code, pre, kbd { font-family: var(--font-mono); }
   width: 40%;
   height: 100%;
   border-radius: 2px;
-  background: linear-gradient(90deg, var(--c-aurora-from), var(--c-aurora-to));
+  background: var(--s-accent);
   animation: vk-slide 1.2s ease-in-out infinite;
 }
 
@@ -243,7 +231,7 @@ code, pre, kbd { font-family: var(--font-mono); }
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  border-radius: 999px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--c-border-hi);
   background: var(--c-card);
   color: var(--c-text);

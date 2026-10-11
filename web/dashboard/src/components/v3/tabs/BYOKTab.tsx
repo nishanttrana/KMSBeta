@@ -394,10 +394,10 @@ export const BYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
                 <div style={{ color: C.dim }}>{String(card.bindings.length)}</div>
                 <div style={{ color: C.dim, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{card.regions.length ? card.regions.join(", ") : "-"}</div>
                 <div style={{ position: "relative", justifySelf: "end" }}>
-                  <button onClick={() => setConnectorMenu(menuOpen ? "" : String(card.provider))} style={{ border: `1px solid ${C.border}`, background: "transparent", color: C.accentFg, borderRadius: 8, padding: "4px 6px", cursor: "pointer" }}>
+                  <button onClick={() => setConnectorMenu(menuOpen ? "" : String(card.provider))} style={{ border: `1px solid ${C.border}`, background: "transparent", color: C.accentFg, borderRadius: 4, padding: "4px 6px", cursor: "pointer" }}>
                     <MoreVertical size={13} strokeWidth={2} />
                   </button>
-                  {menuOpen && <div style={{ position: "absolute", right: 0, top: 30, zIndex: 20, minWidth: 150, background: C.surface, border: `1px solid ${C.borderHi}`, borderRadius: 8, padding: 6, display: "grid", gap: 4 }}>
+                  {menuOpen && <div style={{ position: "absolute", right: 0, top: 30, zIndex: 20, minWidth: 150, background: C.surface, border: `1px solid ${C.borderHi}`, borderRadius: 4, padding: 6, display: "grid", gap: 4 }}>
                     <button onClick={() => { setConnectorMenu(""); void runSync(card.provider, accountId); }} disabled={!accountId || syncingAccount === accountId} style={{ textAlign: "left", background: "transparent", border: "none", color: C.text, cursor: "pointer", padding: "6px 8px", borderRadius: 6 }}>Sync Now</button>
                     <button onClick={() => { setConnectorMenu(""); if (accountId) void openInventory(card.provider, accountId); }} disabled={!accountId} style={{ textAlign: "left", background: "transparent", border: "none", color: C.text, cursor: "pointer", padding: "6px 8px", borderRadius: 6 }}>Browse Inventory</button>
                     <button onClick={() => { void deleteConnector(card.provider, activeAccount); }} disabled={!accountId || deletingAccount === accountId} style={{ textAlign: "left", background: "transparent", border: "none", color: C.redFg, cursor: "pointer", padding: "6px 8px", borderRadius: 6 }}>Delete Connector</button>
@@ -425,8 +425,8 @@ export const BYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
           {(Array.isArray(regionMappings) ? regionMappings : []).map((m, i) => (
             <div key={`${m.provider}-${m.vecta_region}-${i}`} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", padding: "6px 12px", borderBottom: `1px solid ${C.border}`, fontSize: 10, alignItems: "center" }}>
               <div style={{ color: C.accentFg }}>{CLOUD_PROVIDER_LABELS[m.provider] || m.provider}</div>
-              <div style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{m.vecta_region}</div>
-              <div style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{m.cloud_region}</div>
+              <div style={{ color: C.text, fontFamily: "var(--font-mono)" }}>{m.vecta_region}</div>
+              <div style={{ color: C.text, fontFamily: "var(--font-mono)" }}>{m.cloud_region}</div>
               <div style={{ color: C.dim }}>{formatAgo(String(m.updated_at || ""))}</div>
             </div>
           ))}
@@ -478,8 +478,8 @@ export const BYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
             {(Array.isArray(regionMappings) ? regionMappings : []).map((m, i) => (
               <div key={`${m.provider}-${m.vecta_region}-${i}`} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, padding: "4px 8px", background: C.bg, borderRadius: 4, fontSize: 10 }}>
                 <span style={{ color: C.accentFg }}>{CLOUD_PROVIDER_LABELS[m.provider] || m.provider}</span>
-                <span style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{m.vecta_region} →</span>
-                <span style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{m.cloud_region}</span>
+                <span style={{ color: C.text, fontFamily: "var(--font-mono)" }}>{m.vecta_region} →</span>
+                <span style={{ color: C.text, fontFamily: "var(--font-mono)" }}>{m.cloud_region}</span>
               </div>
             ))}
           </div>
@@ -530,8 +530,8 @@ export const BYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
           <div style={{ maxHeight: 350, overflowY: "auto" }}>
             {(Array.isArray(inventoryItems) ? inventoryItems : []).map((item, idx) => (
               <div key={`${item.cloud_key_id}-${idx}`} style={{ display: "grid", gridTemplateColumns: ".8fr 1.2fr .6fr .6fr .6fr .6fr", padding: "6px 12px", borderBottom: `1px solid ${C.border}`, fontSize: 10, alignItems: "center" }}>
-                <div style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={item.cloud_key_id}>{item.cloud_key_id}</div>
-                <div style={{ color: C.dim, fontFamily: "'JetBrains Mono',monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={item.cloud_key_ref}>{item.cloud_key_ref || "-"}</div>
+                <div style={{ color: C.text, fontFamily: "var(--font-mono)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={item.cloud_key_id}>{item.cloud_key_id}</div>
+                <div style={{ color: C.dim, fontFamily: "var(--font-mono)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={item.cloud_key_ref}>{item.cloud_key_ref || "-"}</div>
                 <div style={{ color: C.dim }}>{item.region || "-"}</div>
                 <div style={{ color: C.dim }}>{item.algorithm || "-"}</div>
                 <div><B c={item.state === "Enabled" || item.state === "active" ? "green" : item.state === "Disabled" || item.state === "disabled" ? "amber" : "red"}>{item.state || "unknown"}</B></div>

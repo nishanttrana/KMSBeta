@@ -9,7 +9,7 @@ import { B, Btn, Chk, FG, Inp, Modal, Row2, Sel } from "../../legacyPrimitives";
 import { errMsg } from "../../runtimeUtils";
 import { C } from "../../theme";
 
-const MONO = "'JetBrains Mono',ui-monospace,monospace";
+const MONO = "var(--font-mono)";
 
 // What each capability lets the named callers do (services/secrets/access.go).
 export const CAPABILITY_HINT: Record<string, string> = {

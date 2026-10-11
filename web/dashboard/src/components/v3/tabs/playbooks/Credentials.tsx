@@ -116,7 +116,7 @@ export function Credentials({ session, exposed, exposureError, onToast, onNaviga
         {c.name}{exposed[c.id] ? <span style={{ marginLeft: 6 }}><B c="red">Rotate</B></span> : null}
       </span>
       <span style={{ color: C.dim }}>{typeOf(c.type)?.label ?? c.type}</span>
-      <span style={{ color: C.dim, fontFamily: "'JetBrains Mono',ui-monospace,monospace", fontSize: 10.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.endpoint || "-"}</span>
+      <span style={{ color: C.dim, fontFamily: "var(--font-mono)", fontSize: 10.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.endpoint || "-"}</span>
       <span><HealthBadge c={c} /></span>
       <span style={{ color: rotationDue(c, now) || ["expired", "7d"].includes(expiryBucket(c, now)) ? C.amberFg : C.dim }}>
         {c.expires_at ? `expires ${fmtDate(c.expires_at)}` : `secret ${ageDays(c, now)}d old`}
@@ -136,7 +136,7 @@ export function Credentials({ session, exposed, exposureError, onToast, onNaviga
           <Btn small primary disabled={types.length === 0} onClick={() => setForm({})}><Plus size={11} /> Add credential</Btn>
         </span>
       </div>
-      {error ? <div style={{ padding: 12, marginBottom: 12, border: `1px solid ${C.redFg}`, borderRadius: 8, color: C.redFg, fontSize: 11 }}>Credentials unavailable: {error}</div> : null}
+      {error ? <div style={{ padding: 12, marginBottom: 12, border: `1px solid ${C.redFg}`, borderRadius: 4, color: C.redFg, fontSize: 11 }}>Credentials unavailable: {error}</div> : null}
       {exposureError ? <div style={{ fontSize: 11, color: C.amberFg, marginBottom: 10 }}>Exposure register unavailable; which credentials need rotating is not assessed: {exposureError}</div> : null}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 10, marginBottom: 12 }}>
