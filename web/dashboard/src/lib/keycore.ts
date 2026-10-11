@@ -1,5 +1,6 @@
 import type { AuthSession } from "./auth";
 import { serviceRequestRaw } from "./serviceApi";
+import { parseServiceJSON } from "./wire";
 
 export type KeyItem = {
   id: string;
@@ -497,7 +498,7 @@ async function apiRequest<T>(session: AuthSession, path: string, init?: RequestI
   if (!response.ok) {
     throw new Error(await parseError(response));
   }
-  return (await response.json()) as T;
+  return parseServiceJSON<T>(await response.text());
 }
 
 export async function listKeys(

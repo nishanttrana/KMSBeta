@@ -1,4 +1,5 @@
 import type { AuthSession } from "./auth";
+import { parseServiceJSON } from "./wire";
 import { serviceRequest, serviceRequestRaw } from "./serviceApi";
 
 // Exposure register (pkg/mek, docs/SECURITY/SERVICE_MASTER_KEYS.md): items
@@ -85,7 +86,7 @@ export async function listExposureReports(session: AuthSession): Promise<Exposur
         const res = await serviceRequestRaw(session, service, "/mek/exposure?open=false", { skipGlobalLoading: true });
         let body: unknown = null;
         try {
-          body = await res.json();
+          body = parseServiceJSON(await res.text());
         } catch {
           body = null;
         }

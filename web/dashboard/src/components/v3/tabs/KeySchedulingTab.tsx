@@ -1,5 +1,6 @@
 // @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
 import { apiFetch } from "../../../lib/apiFetch";
+import { parseServiceJSON } from "../../../lib/wire";
 import { useCallback, useEffect, useState } from "react";
 import { CalendarClock, RefreshCcw, Plus, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { C } from "../../v3/theme";
@@ -37,7 +38,7 @@ export function KeySchedulingTab({ session }: any) {
     setLoading(true); setErr("");
     try {
       const r = await apiFetch(`${base}/scheduling/jobs`, { headers: hdr(session.token, tid) });
-      const d = await r.json().catch(() => ({}));
+      const d = await r.text().then((t) => parseServiceJSON<any>(t)).catch(() => ({}));
       setJobs(Array.isArray(d.jobs) ? d.jobs : Array.isArray(d) ? d : []);
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }

@@ -322,6 +322,9 @@ export default function VectaDashboardV3Shell(props: Props) {
   const [cliEnabled, setCliEnabled] = useState(false);
   const [tenantOptions, setTenantOptions] = useState<Array<{ id: string; name: string; status?: string }>>([]);
   const [tenantScope, setTenantScope] = useState(String(sessionBase?.tenantId || ""));
+  // Counts sub-option clicks, so a module can leave a local view (an editor)
+  // when its current sub-option is chosen again.
+  const [subNavTick, setSubNavTick] = useState(0);
   const [subPaneSelection, setSubPaneSelection] = useState<any>(() => ({
     workbench: "crypto",
     dataprotection: "fieldenc",
@@ -767,6 +770,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                       activeId={isActive ? activeSubPaneSelection : ""}
                       onSelect={(subId) => {
                         setSubPaneSelection((prev: any) => ({ ...prev, [it.id]: subId }));
+                        setSubNavTick((n) => n + 1);
                         if (!isActive) selectTab(it.id);
                       }}
                     />
@@ -1068,6 +1072,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                   onFipsModeChange={setFipsMode}
                   onUnreadSync={setReportedUnread}
                   subView={activeSubPaneSelection}
+                  subViewTick={subNavTick}
                   onSubViewChange={(next: string) => setSubPaneSelection((prev: any) => ({ ...prev, [tab]: String(next || "") }))}
                   pinnedTabs={pinnedTabs}
                   onTogglePin={togglePin}

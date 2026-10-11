@@ -149,3 +149,14 @@ test("a tenant sees its approved ranges and cannot change them", async ({ page }
   await page.getByTestId("subnav-playbooks").getByRole("button", { name: "Credentials" }).click();
   await expect(page.getByText("No private ranges approved for this tenant. A root administrator approves them here.")).toBeVisible();
 });
+
+// The editor is a local view over a sidebar sub-option. Choosing any
+// sub-option leaves it, including the one that was already selected.
+test("the playbook editor closes when a sidebar view is chosen, even the current one", async ({ page }) => {
+  await stub(page, []);
+  await openPlaybooks(page, "Playbooks");
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  await expect(page.getByText("New playbook", { exact: true })).toBeVisible();
+  await page.getByTestId("subnav-playbooks").getByRole("button", { name: "Playbooks", exact: true }).click();
+  await expect(page.getByText("New playbook", { exact: true })).toHaveCount(0);
+});

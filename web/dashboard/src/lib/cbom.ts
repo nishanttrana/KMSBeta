@@ -7,6 +7,8 @@
 
 // Classical tiers are security strengths (pkg/cryptocatalog); "deprecated"
 // (weak) and "not-assessed" meet no floor.
+import { parseServiceJSON } from "./wire";
+
 export type CBOMTier =
   | "classical-112"
   | "classical-128"
@@ -56,7 +58,7 @@ async function get<T>(path: string, init?: RequestInit): Promise<T> {
   if (!resp.ok) {
     throw new Error(`CBOM ${path} → HTTP ${resp.status}`);
   }
-  return resp.json() as Promise<T>;
+  return parseServiceJSON<T>(await resp.text());
 }
 
 export async function fetchCBOMInventory(tenantID: string, floor?: CBOMTier): Promise<CBOMInventory> {

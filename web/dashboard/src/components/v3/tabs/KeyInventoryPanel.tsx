@@ -1,5 +1,6 @@
 // @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
 import { apiFetch } from "../../../lib/apiFetch";
+import { parseServiceJSON } from "../../../lib/wire";
 import { useCallback, useEffect, useState } from "react";
 import { BarChart3, RefreshCcw, Download, TrendingUp } from "lucide-react";
 import { C } from "../../v3/theme";
@@ -30,7 +31,7 @@ export function KeyInventoryPanel({ session }: any) {
     setLoading(true); setErr("");
     try {
       const aRes = await apiFetch(`${base}/enterprise/summary`, { headers: hdr(session.token, tid) });
-      const a = await aRes.json().catch(() => ({}));
+      const a = await aRes.text().then((t) => parseServiceJSON<any>(t)).catch(() => ({}));
       if (!aRes.ok) throw new Error(a?.error?.message || a?.message || `key analytics unavailable (HTTP ${aRes.status})`);
       setAnalytics(a);
       setKeyStats(Array.isArray(a.by_algorithm) ? a.by_algorithm : []);
@@ -43,7 +44,7 @@ export function KeyInventoryPanel({ session }: any) {
   const handleExport = async () => {
     const tid = session?.tenantId ?? "";
     const r = await apiFetch(`${base}/enterprise/summary`, { headers: hdr(session.token, tid) });
-    const d = await r.json().catch(() => ({}));
+    const d = await r.text().then((t) => parseServiceJSON<any>(t)).catch(() => ({}));
     if (!r.ok) { setErr(d?.error?.message || `export failed (HTTP ${r.status})`); return; }
     const blob = new Blob([JSON.stringify(d, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);

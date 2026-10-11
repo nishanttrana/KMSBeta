@@ -1,5 +1,6 @@
 import type { AuthSession } from "./auth";
 import { serviceRequest, serviceRequestRaw } from "./serviceApi";
+import { parseServiceJSON } from "./wire";
 
 export type AssessmentFinding = {
   id: string;
@@ -171,7 +172,7 @@ export async function getComplianceAssessment(session: AuthSession, templateId =
   if (!response.ok) {
     throw new Error(await parseComplianceError(response));
   }
-  const out = (await response.json()) as { assessment?: AssessmentResult };
+  const out = parseServiceJSON(await response.text()) as { assessment?: AssessmentResult };
   return out?.assessment || null;
 }
 
@@ -215,7 +216,7 @@ export async function getComplianceAssessmentDelta(session: AuthSession, templat
   if (!response.ok) {
     throw new Error(await parseComplianceError(response));
   }
-  const out = (await response.json()) as { delta?: AssessmentDelta };
+  const out = parseServiceJSON(await response.text()) as { delta?: AssessmentDelta };
   return out?.delta || null;
 }
 

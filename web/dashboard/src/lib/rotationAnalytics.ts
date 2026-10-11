@@ -1,11 +1,12 @@
 import { trackedFetch } from "./serviceApi";
+import { parseServiceJSON } from "./wire";
 
 const BASE = "/svc/keycore";
 
 export async function getRotationAnalytics(token: string) {
   const r = await trackedFetch(`${BASE}/rotation/analytics`, { headers: { Authorization: `Bearer ${token}` } });
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error?.message ?? "Failed");
-  return r.json();
+  return parseServiceJSON(await r.text());
 }
 
 export async function listRotationRuns(token: string, policyId = "", limit = 50) {
@@ -14,17 +15,17 @@ export async function listRotationRuns(token: string, policyId = "", limit = 50)
   if (limit) params.set("limit", String(limit));
   const r = await trackedFetch(`${BASE}/rotation/runs?${params}`, { headers: { Authorization: `Bearer ${token}` } });
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error?.message ?? "Failed");
-  return r.json();
+  return parseServiceJSON(await r.text());
 }
 
 export async function listOverdueRotations(token: string) {
   const r = await trackedFetch(`${BASE}/rotation/analytics/overdue`, { headers: { Authorization: `Bearer ${token}` } });
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error?.message ?? "Failed");
-  return r.json();
+  return parseServiceJSON(await r.text());
 }
 
 export async function getEnterpriseSummary(token: string) {
   const r = await trackedFetch(`${BASE}/enterprise/summary`, { headers: { Authorization: `Bearer ${token}` } });
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error?.message ?? "Failed");
-  return r.json();
+  return parseServiceJSON(await r.text());
 }

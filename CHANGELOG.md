@@ -4,6 +4,25 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [11.4.0-beta] — 2026-10-11
+
+### Fixed
+- **The posture rule still passed on a tenant that had never been scanned.**
+  11.3.0-beta made "No open critical/high posture findings" wait for a scan
+  on record, but the posture service answers an unscanned tenant with a
+  zero timestamp (`0001-01-01T00:00:00Z`), which the dashboard took for a
+  scan. The rule now reads "not assessed" there, as intended.
+- **Zero timestamps are no longer shown or counted as real times.** Every
+  service response the dashboard reads treats that value as "no time", so
+  Posture no longer shows "Captured: 1/1/1" before the first scan.
+- **The Playbooks editor now closes when a sidebar view is chosen**,
+  including the view that was already selected. Clicking "Playbooks" in the
+  sidebar while creating a playbook did nothing.
+
+Enforced by `web/dashboard/tests/unit/zeroTime.test.ts` (the service's real
+response; every place a response body is read) and the smoke test "the
+playbook editor closes when a sidebar view is chosen".
+
 ## [11.3.0-beta] — 2026-10-11
 
 ### A look of its own: one plane per theme, IBM Plex, petrol and brass

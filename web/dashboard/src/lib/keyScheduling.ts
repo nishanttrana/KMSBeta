@@ -1,11 +1,12 @@
 import { trackedFetch } from "./serviceApi";
+import { parseServiceJSON } from "./wire";
 
 const BASE = "/svc/keycore";
 
 export async function listSchedulingJobs(token: string) {
   const r = await trackedFetch(`${BASE}/scheduling/jobs`, { headers: { Authorization: `Bearer ${token}` } });
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error?.message ?? "Failed");
-  return r.json();
+  return parseServiceJSON(await r.text());
 }
 
 export async function createSchedulingJob(token: string, body: {
@@ -17,7 +18,7 @@ export async function createSchedulingJob(token: string, body: {
     body: JSON.stringify(body),
   });
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error?.message ?? "Failed");
-  return r.json();
+  return parseServiceJSON(await r.text());
 }
 
 export async function updateSchedulingJob(token: string, id: string, body: Partial<{
@@ -29,7 +30,7 @@ export async function updateSchedulingJob(token: string, id: string, body: Parti
     body: JSON.stringify(body),
   });
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error?.message ?? "Failed");
-  return r.json();
+  return parseServiceJSON(await r.text());
 }
 
 export async function deleteSchedulingJob(token: string, id: string) {

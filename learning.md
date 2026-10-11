@@ -5,6 +5,29 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### A fix tested against a value I made up (11.4.0-beta)
+- **11.3.0-beta's posture fix did not work on a real stack.** It read
+  `captured_at` from `GET /posture/risk` as "a scan is on record". For a
+  tenant with no snapshot the handler returns `RiskSnapshot{TenantID: ...}`,
+  and Go writes the unset `time.Time` as `"0001-01-01T00:00:00Z"`: a
+  non-empty string, so the rule passed again. How it slipped through: the
+  test handed `evaluate` a boolean (`postureEvaluated: true/undefined`) and
+  never the service's response; the smoke mocks answer `{}`. I read the
+  TypeScript type (`captured_at?: string`) and not the Go handler.
+  **Rule: a test of "is X on record" uses the bytes the service sends for
+  "no X".** `zeroTime.test.ts` does, from `handleLatestRisk`.
+- **The class:** any Go response with an unset time carries year 1. The
+  dashboard had one local guard (`discovery/meta.ts`, year < 2000) and
+  showed "Captured: 1/1/1" in Posture. Every response body is now read with
+  `parseServiceJSON` (`lib/wire.ts`), which turns that value into `""`.
+  Ten clients read bodies with `response.json()` and bypassed
+  `serviceRequest`; a test lists the three that still may (the API
+  playground, sign-in, SSO) and fails on any other.
+- **A local view over a sidebar sub-option needs a way out.** The Playbooks
+  editor sat on top of the "Playbooks" sub-option; choosing that sub-option
+  again changed nothing, so the click was dead. The shell now passes a
+  click count (`subViewTick`) beside `subView`.
+
 ### A dark sidebar beside a light page; a font decision reversed (11.3.0-beta)
 - **The owner rejected the ink sidebar on the light theme** ("do not
   match") and the system fonts (wanted an "enterprise text font"), both

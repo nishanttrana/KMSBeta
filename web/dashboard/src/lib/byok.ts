@@ -1,5 +1,6 @@
 import type { AuthSession } from "./auth";
 import { serviceRequest, serviceRequestRaw } from "./serviceApi";
+import { parseServiceJSON } from "./wire";
 
 // Cloud BYOK (services/cloud byok_*.go, docs/SECURITY/CLOUD_BYOK.md): KMS
 // keys whose material is imported into a cloud KMS, wrapped by keycore or
@@ -109,7 +110,7 @@ type RunResponse = { key: BYOKKey; run: BYOKRun; error?: { code?: string; messag
 
 async function run(session: AuthSession, path: string, body: unknown): Promise<{ key: BYOKKey; run: BYOKRun }> {
   const res = await serviceRequestRaw(session, "cloud", path, { method: "POST", body: JSON.stringify(body ?? {}) }, BYOK_TIMEOUT_MS);
-  const payload = (await res.json().catch(() => ({}))) as Partial<RunResponse>;
+  const payload = (await res.text().then((t) => parseServiceJSON(t)).catch(() => ({}))) as Partial<RunResponse>;
   if (!res.ok) {
     throw new BYOKRunError(payload.error?.message || `Request failed (${res.status})`, payload.run);
   }

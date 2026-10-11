@@ -1,5 +1,6 @@
 // @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
 import { useCallback, useEffect, useState } from "react";
+import { parseServiceJSON } from "../../../lib/wire";
 import {
   Play, Plus, RefreshCcw, Trash2, Edit2, CheckCircle2, XCircle,
   Zap, Shield, Clock, ChevronDown, ChevronRight,
@@ -45,7 +46,7 @@ async function call(session: any, service: string, method: string, path: string,
   try {
     // eslint-disable-next-line no-restricted-globals -- intentional: legacy direct call, refactor to typed client tracked separately
     const r = await fetch(`/svc/${service}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
-    const json = await r.json().catch(() => ({}));
+    const json = await r.text().then((t) => parseServiceJSON<any>(t)).catch(() => ({}));
     return { ok: r.ok, status: r.status, data: json, error: json?.error?.message || json?.message || (r.ok ? "" : `HTTP ${r.status}`) };
   } catch (e: any) {
     return { ok: false, status: 0, data: {}, error: String(e?.message || e) };
@@ -193,7 +194,7 @@ function FiltersEditor({ filters, onChange, catalog, label }: any) {
 
 // ── main component ────────────────────────────────────────────────────────────
 
-export function PlaybooksTab({ session, onNavigate, subView, onSubViewChange }: { session: any; onNavigate?: (tab: string) => void; subView?: string; onSubViewChange?: (view: string) => void }) {
+export function PlaybooksTab({ session, onNavigate, subView, onSubViewChange, subViewTick }: { session: any; onNavigate?: (tab: string) => void; subView?: string; onSubViewChange?: (view: string) => void; subViewTick?: number }) {
   const api = useCallback((service: string, method: string, path: string, body?: any) => call(session, service, method, path, body), [session]);
   const cp = useCallback((method: string, path: string, body?: any) => api("compliance", method, `/compliance${path}`, body), [api]);
   // The view is the sidebar sub-option (SUB_PANES); only the editor is local.
@@ -201,7 +202,7 @@ export function PlaybooksTab({ session, onNavigate, subView, onSubViewChange }: 
   const view = editing ? "editor" : subView || "overview";
   const setView = (v: string) => { setEditing(v === "editor"); if (v !== "editor") onSubViewChange?.(v); };
   // Another tab's "add a credential" link opens this one on Credentials.
-  useEffect(() => { const v = takePlaybooksView(); if (v) onSubViewChange?.(v); setEditing(false); }, [subView]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { const v = takePlaybooksView(); if (v) onSubViewChange?.(v); setEditing(false); }, [subView, subViewTick]); // eslint-disable-line react-hooks/exhaustive-deps
   const [catalog, setCatalog] = useState<any>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [playbooks, setPlaybooks] = useState<any[]>([]);

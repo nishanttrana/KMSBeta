@@ -13,6 +13,12 @@ import { getClusterOverview } from "./cluster";
 import { listAuthUsers } from "./authAdmin";
 import type { PlatformSnapshot } from "./recommendations";
 
+// True only for a real capture time. The posture service answers a tenant it
+// has never scanned with a zero time, which is not a scan.
+export function scanOnRecord(capturedAt?: string): boolean {
+  return Date.parse(capturedAt || "") > 0;
+}
+
 async function opt<T>(p: Promise<T>): Promise<T | undefined> {
   try {
     return await p;
@@ -48,7 +54,7 @@ export async function loadPlatformSnapshot(session: AuthSession, fipsEnabled?: b
     postureFindings,
     // A posture scan stores a risk snapshot; without one, an empty findings
     // list means "never evaluated", not "nothing found".
-    postureEvaluated: postureRisk ? Boolean(postureRisk.captured_at) : undefined,
+    postureEvaluated: postureRisk ? scanOnRecord(postureRisk.captured_at) : undefined,
     cluster,
     users,
     fipsEnabled,

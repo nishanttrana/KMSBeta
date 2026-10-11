@@ -1,4 +1,5 @@
 import type { AuthSession } from "./auth";
+import { parseServiceJSON } from "./wire";
 import { clearSession } from "./auth";
 
 type APIErrorShape = {
@@ -142,7 +143,7 @@ export async function serviceRequest<T = unknown>(
   }
   const ct = response.headers.get("content-type") || "";
   if (ct.includes("application/json")) {
-    return (await response.json()) as T;
+    return parseServiceJSON<T>(await response.text());
   }
   return (await response.text()) as T;
 }
