@@ -313,7 +313,7 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
           onClick={()=>setActiveFilter(tab.id)}
           style={{
             background:activeFilter===tab.id?(palette[`${tab.tone}Dim`]||C.accentDim):"transparent",
-            color:activeFilter===tab.id?(palette[tab.tone]||C.accent):C.text,
+            color:activeFilter===tab.id?(palette[tab.tone]||C.accentFg):C.text,
             borderColor:activeFilter===tab.id?(palette[tab.tone]||C.accent):C.border,
             height:28
           }}

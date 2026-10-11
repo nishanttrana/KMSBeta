@@ -278,7 +278,7 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
 
     {activeVendorID==="securosys"&&<Card style={{padding:12,marginBottom:12,background:"rgba(76,157,255,.06)",border:`1px solid ${C.accent}33`}}>
       <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:6}}>Securosys Primus Setup</div>
-      <div style={{fontSize:10,color:C.muted,lineHeight:1.6}}>
+      <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.muted,lineHeight:1.6}}>
         Upload the Primus PKCS#11 library, discover the published PKCS#11 slot IDs, then bind the selected slot to the target Primus partition user. The default provider profile is <code style={{color:C.accentFg}}>securosys-primus</code> and the default PIN environment variable is <code style={{color:C.accentFg}}>SECUROSYS_HSM_PIN</code>.
       </div>
     </Card>}
@@ -304,7 +304,7 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
           <Dot ok={cliEnabled}/>
           <span style={{fontSize: 10,color:cliEnabled?C.greenFg:C.redFg,marginLeft:2}}>{cliEnabled?"CLI Enabled":"CLI Disabled"}</span>
         </div>
-        {!cliEnabled&&<div style={{fontSize:10,color:C.muted,padding:"8px 0"}}>
+        {!cliEnabled&&<div data-keep="" style={{fontSize:10,color:C.muted,padding:"8px 0"}}>
           The CLI user must be enabled in the Admin panel before SSH access is available. Navigate to Admin → CLI to enable the cli-user account.
         </div>}
         {cliEnabled&&<>
@@ -470,7 +470,7 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
     <Section title="Certificate Storage in HSM">
       <Card style={{padding:14}}>
         <div style={{fontSize:11,fontWeight:600,color:C.muted,marginBottom:10}}>STORE CERTIFICATES IN HSM</div>
-        <div style={{fontSize:10,color:C.dim,marginBottom:12}}>
+        <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim,marginBottom:12}}>
           Just like individual keys, X.509 certificates can be stored with their private keys inside the HSM. The KMS holds a reference (metadata) while the actual private key and optionally the certificate object remain on the HSM.
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>

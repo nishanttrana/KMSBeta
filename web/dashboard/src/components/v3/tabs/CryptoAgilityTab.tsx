@@ -365,11 +365,11 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
             <div style={sectionTitle}>Your migration policy</div>
             <span style={{ fontSize: 11, color: C.muted }}>{rules.length} {rules.length === 1 ? "rule" : "rules"}</span>
           </div>
-          <div style={sectionHint}>
+          <div className="vk-fold" tabIndex={0} style={sectionHint}>
             Each rule applies from its effective date to every key operation. To require post-quantum algorithms for new protection, add a "every quantum-vulnerable algorithm → decrypt/verify only" rule.
           </div>
           {rules.length === 0 ? (
-            <div style={empty}>No migration rules yet. Add one to decide when keys on an algorithm become deprecated, decrypt/verify only or disallowed.</div>
+            <div className="vk-fold" tabIndex={0} style={empty}>No migration rules yet. Add one to decide when keys on an algorithm become deprecated, decrypt/verify only or disallowed.</div>
           ) : (
             <div style={panel}>
               <div style={{ overflowX: "auto" }}>

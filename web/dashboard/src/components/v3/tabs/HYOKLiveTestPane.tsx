@@ -108,7 +108,7 @@ export const HYOKLiveTestPane = ({ session, keyCatalog, onToast }) => {
 
   return (
     <Section title="HYOK Live Test Console">
-      <div style={{ fontSize: 10, color: C.muted, marginBottom: 12, padding: "6px 8px", background: C.bg, borderRadius: 4 }}>
+      <div className="vk-fold" tabIndex={0} style={{ fontSize: 10, color: C.muted, marginBottom: 12, padding: "6px 8px", background: C.bg, borderRadius: 4 }}>
         Test HYOK crypto operations against your configured endpoints. All requests go through the full policy + governance pipeline.
       </div>
       <Row2>

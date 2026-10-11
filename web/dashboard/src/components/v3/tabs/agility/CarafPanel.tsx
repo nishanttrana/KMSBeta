@@ -341,7 +341,7 @@ export function CarafPanel({ session, keyCatalog }: { session: any; keyCatalog: 
 
   return (
     <div>
-      <div style={{ fontSize: 12, color: C.dim, marginBottom: 16, maxWidth: 780 }}>
+      <div className="vk-fold" tabIndex={0} style={{ fontSize: 12, color: C.dim, marginBottom: 16, maxWidth: 780 }}>
         Record the threats that drive your migration and when you expect each, then profile your assets. An asset is exposed when the years its data or device must stay protected (X) plus the years a migration would take (Y) exceed the years until the soonest threat that breaks its algorithms (Z).
       </div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>

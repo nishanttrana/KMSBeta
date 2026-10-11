@@ -760,7 +760,7 @@ export const DataEncryptionTab=({session,keyCatalog,onToast})=>{
             onClick={()=>{setMode(name);if(name!=="Envelope"&&encMode==="generate-data-key")setEncMode("encrypt");}}
             style={{
               background:mode===name?C.accentDim:"transparent",
-              color:mode===name?C.accent:C.text,
+              color:mode===name?C.accentFg:C.text,
               border:`1px solid ${mode===name?C.accent:C.border}`,
               borderRadius:8,
               padding:"8px 12px",
@@ -788,7 +788,7 @@ export const DataEncryptionTab=({session,keyCatalog,onToast})=>{
             <FG label="Document JSON"><Txt value={docText} onChange={(e)=>setDocText(e.target.value)} rows={8}/></FG>
           </>}
           {mode==="Envelope"&&<>
-            {encMode==="generate-data-key"?<div style={{fontSize:11,color:C.dim,lineHeight:1.5,marginBottom:8}}>Returns a fresh 256-bit DEK and the same DEK wrapped under the selected key. Encrypt locally with the DEK, store only the wrapped DEK, and recover it with the key's unwrap operation.</div>:encMode==="encrypt"?<FG label="Plaintext"><Txt value={plainText} onChange={(e)=>setPlainText(e.target.value)} rows={6}/></FG>:<FG label="Envelope payload JSON"><Txt value={envelopeText} onChange={(e)=>setEnvelopeText(e.target.value)} rows={6}/></FG>}
+            {encMode==="generate-data-key"?<div className="vk-fold" tabIndex={0} style={{fontSize:11,color:C.dim,lineHeight:1.5,marginBottom:8}}>Returns a fresh 256-bit DEK and the same DEK wrapped under the selected key. Encrypt locally with the DEK, store only the wrapped DEK, and recover it with the key's unwrap operation.</div>:encMode==="encrypt"?<FG label="Plaintext"><Txt value={plainText} onChange={(e)=>setPlainText(e.target.value)} rows={6}/></FG>:<FG label="Envelope payload JSON"><Txt value={envelopeText} onChange={(e)=>setEnvelopeText(e.target.value)} rows={6}/></FG>}
           </>}
           {mode==="Searchable (AES-SIV)"&&<>
             {encMode==="encrypt"?<FG label="Plaintext"><Txt value={searchablePlaintext} onChange={(e)=>setSearchablePlaintext(e.target.value)} rows={6}/></FG>:<FG label="Ciphertext (base64)"><Txt value={searchableCiphertext} onChange={(e)=>setSearchableCiphertext(e.target.value)} rows={6}/></FG>}
@@ -1207,7 +1207,7 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
         <FG label="Metadata (JSON object)"><Txt rows={2} value={initMetadataJSON} onChange={(e)=>setInitMetadataJSON(e.target.value)} mono/></FG>
         <div style={{display:"flex",justifyContent:"flex-end"}}><Btn small primary onClick={()=>void submitInit()} disabled={busy}>{busy?"Working...":"Init Registration"}</Btn></div>
 
-        <div style={{height:1,background:C.line}}/>
+        <div style={{height:1,background:C.border}}/>
 
         <div style={{fontSize:11,color:C.text,fontWeight:700}}>2) Registration Complete (challenge response)</div>
         <Row3>
@@ -1253,7 +1253,7 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
         </Row3>
         <div style={{display:"flex",justifyContent:"flex-end"}}><Btn small primary onClick={()=>void submitLease()} disabled={busy}>{busy?"Working...":"Issue Lease"}</Btn></div>
 
-        <div style={{height:1,background:C.line}}/>
+        <div style={{height:1,background:C.border}}/>
 
         <div style={{fontSize:11,color:C.text,fontWeight:700}}>4) Local Usage Receipt</div>
         <Row3>
@@ -1602,7 +1602,7 @@ const DataEncryptionPolicy=({session,onToast})=>{
     </>}>
       <Card>
         <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Policy Scope</div>
-        <div style={{fontSize:10,color:C.dim,lineHeight:1.4}}>
+        <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim,lineHeight:1.4}}>
           This tab controls data-encryption behavior for Field-Level, Envelope and Searchable application encryption flows. Changes apply immediately to all SDKs, wrappers, and REST API consumers.
         </div>
       </Card>
@@ -1624,7 +1624,7 @@ const DataEncryptionPolicy=({session,onToast})=>{
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
           {useCaseProfiles.map((profile)=>(
-            <div key={`alg-profile-${profile.id}`} style={{border:`1px solid ${C.line}`,borderRadius:10,padding:"8px 10px"}}>
+            <div key={`alg-profile-${profile.id}`} style={{border:`1px solid ${C.border}`,borderRadius:10,padding:"8px 10px"}}>
               <div style={{fontSize:12,color:C.text,fontWeight:700,marginBottom:6}}>{profile.label}</div>
               <div style={{display:"grid",gap:6}}>
                 {dataAlgoOptions.map((algo)=>{
@@ -1646,7 +1646,7 @@ const DataEncryptionPolicy=({session,onToast})=>{
           ))}
         </div>
 
-        <div style={{height:1,background:C.line,margin:"4px 0"}}/>
+        <div style={{height:1,background:C.border,margin:"4px 0"}}/>
 
         <div style={{fontSize:11,color:C.text,fontWeight:700}}>2. Key-Class Binding Policy</div>
         <div style={{fontSize:10,color:C.dim}}>Defines eligible key classes for data encryption operations.</div>
@@ -1658,7 +1658,7 @@ const DataEncryptionPolicy=({session,onToast})=>{
           </FG>
         </div>
 
-        <div style={{height:1,background:C.line,margin:"4px 0"}}/>
+        <div style={{height:1,background:C.border,margin:"4px 0"}}/>
 
         <div style={{fontSize:11,color:C.text,fontWeight:700}}>3. AAD Contract Policy</div>
         <div style={{fontSize:10,color:C.dim}}>Requires and validates structured AAD claims for AEAD and searchable operations.</div>
@@ -1673,7 +1673,7 @@ const DataEncryptionPolicy=({session,onToast})=>{
           </FG>
         </div>
 
-        <div style={{height:1,background:C.line,margin:"4px 0"}}/>
+        <div style={{height:1,background:C.border,margin:"4px 0"}}/>
 
         <div style={{fontSize:11,color:C.text,fontWeight:700}}>4. Field Scope Policy</div>
         <div style={{fontSize:10,color:C.dim}}>Restricts which JSONPaths can be encrypted/decrypted and blocks wildcard access when required.</div>
@@ -1691,7 +1691,7 @@ const DataEncryptionPolicy=({session,onToast})=>{
           </FG>
         </div>
 
-        <div style={{height:1,background:C.line,margin:"4px 0"}}/>
+        <div style={{height:1,background:C.border,margin:"4px 0"}}/>
 
         <div style={{fontSize:11,color:C.text,fontWeight:700}}>5. Deterministic/Searchable Policy</div>
         <div style={{fontSize:10,color:C.dim}}>Controls deterministic and searchable encryption behavior, including range search.</div>
@@ -1701,7 +1701,7 @@ const DataEncryptionPolicy=({session,onToast})=>{
           <Chk label="Allow range search" checked={Boolean(dataPolicy?.allow_range_search)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_range_search:!Boolean(prev?.allow_range_search)}))}/>
         </div>
 
-        <div style={{height:1,background:C.line,margin:"4px 0"}}/>
+        <div style={{height:1,background:C.border,margin:"4px 0"}}/>
 
         <div style={{fontSize:11,color:C.text,fontWeight:700}}>6. Envelope Policy</div>
         <div style={{fontSize:10,color:C.dim}}>Constrains KEK allowlist and wrapped DEK age enforcement during envelope operations.</div>
@@ -1715,7 +1715,7 @@ const DataEncryptionPolicy=({session,onToast})=>{
           <Chk label="Require re-wrap when DEK age exceeds limit" checked={Boolean(dataPolicy?.require_rewrap_on_dek_age_exceeded)} onChange={()=>setDataPolicy((prev)=>({...prev,require_rewrap_on_dek_age_exceeded:!Boolean(prev?.require_rewrap_on_dek_age_exceeded)}))}/>
         </div>
 
-        <div style={{height:1,background:C.line,margin:"4px 0"}}/>
+        <div style={{height:1,background:C.border,margin:"4px 0"}}/>
 
         <div style={{fontSize:11,color:C.text,fontWeight:700}}>7. Payload Policy</div>
         <div style={{fontSize:10,color:C.dim}}>Applies request/field/batch size limits across Data Encryption REST operations.</div>
@@ -1734,7 +1734,7 @@ const DataEncryptionPolicy=({session,onToast})=>{
           </FG>
         </div>
 
-        <div style={{height:1,background:C.line,margin:"4px 0"}}/>
+        <div style={{height:1,background:C.border,margin:"4px 0"}}/>
 
         <div style={{fontSize:11,color:C.text,fontWeight:700}}>8. Field Encryption Runtime Policy</div>
         <div style={{fontSize:10,color:C.dim}}>Enforces wrapper registration, local crypto leasing, cache controls, anti-replay checks, and mTLS requirements.</div>
@@ -2101,7 +2101,7 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
     </>}>
       <Card>
         <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Policy Scope</div>
-        <div style={{fontSize:10,color:C.dim,lineHeight:1.4}}>
+        <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim,lineHeight:1.4}}>
           Controls tokenization behavior, masking/redaction modes, regex policy, and token lifetime constraints. Changes propagate to all wrappers, SDKs, and REST API consumers.
         </div>
       </Card>
@@ -2179,7 +2179,7 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
           <div style={{fontSize:11,color:C.text,fontWeight:700}}>Tokenization Mode Policy (by data type)</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
             {tokenTypes.map((tokenType)=>(
-              <div key={`mode-policy-${tokenType}`} style={{display:"grid",gridTemplateColumns:"1fr auto auto",alignItems:"center",gap:8,border:`1px solid ${C.line}`,borderRadius:10,padding:"8px 10px"}}>
+              <div key={`mode-policy-${tokenType}`} style={{display:"grid",gridTemplateColumns:"1fr auto auto",alignItems:"center",gap:8,border:`1px solid ${C.border}`,borderRadius:10,padding:"8px 10px"}}>
                 <div style={{fontSize:12,color:C.text}}>{tokenType}</div>
                 <Chk
                   label="Vault"
@@ -2208,7 +2208,7 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
           <div style={{fontSize:11,color:C.text,fontWeight:700}}>Token Format Policy (by data type)</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
             {tokenTypes.map((tokenType)=>(
-              <div key={`fmt-policy-${tokenType}`} style={{border:`1px solid ${C.line}`,borderRadius:10,padding:"8px 10px"}}>
+              <div key={`fmt-policy-${tokenType}`} style={{border:`1px solid ${C.border}`,borderRadius:10,padding:"8px 10px"}}>
                 <div style={{fontSize:12,color:C.text,marginBottom:6}}>{tokenType}</div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:6}}>
                   {tokenFormats.map((format)=>(
@@ -2312,12 +2312,12 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
             {newVaultTokenType==="custom"&&<FG label="Custom Regex" required><Inp value={newVaultRegex} onChange={(e)=>setNewVaultRegex(e.target.value)} placeholder="^\\d{3}-\\d{2}-\\d{4}$" mono/></FG>}
             <FG label="Key ID" required><Inp value={newVaultKeyId} onChange={(e)=>setNewVaultKeyId(e.target.value)} placeholder="key-1" mono/></FG>
           </div>
-          <div style={{fontSize:10,color:C.dim}}>Vault tokens store token, token hash, ciphertext, original hash, metadata and lifecycle counters for deterministic lookup and detokenize controls.</div>
+          <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim}}>Vault tokens store token, token hash, ciphertext, original hash, metadata and lifecycle counters for deterministic lookup and detokenize controls.</div>
           <div style={{fontSize:10,color:C.text,fontWeight:700}}>Existing token vaults: {Array.isArray(vaultRows)?vaultRows.length:0}</div>
           <div style={{maxHeight:180,overflowY:"auto",border:`1px solid ${C.border}`,borderRadius:8,padding:8,display:"grid",gap:6}}>
             {(Array.isArray(vaultRows)?vaultRows:[]).map((row:any)=>{
               const id=String(row?.id||"");
-              return <div key={`policy-vault-row-${id}`} style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",border:`1px solid ${C.line}`,borderRadius:8,padding:"6px 8px"}}>
+              return <div key={`policy-vault-row-${id}`} style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",border:`1px solid ${C.border}`,borderRadius:8,padding:"6px 8px"}}>
                 <div style={{fontSize:10,color:C.text}}>
                   {`${String(row?.name||"")} (${id}) - ${String(row?.token_type||"")}/${String(row?.format||"")}`}
                 </div>
@@ -2375,7 +2375,7 @@ const AuditLogViewer=({session,onToast})=>{
         {entries.map((e,i)=>{
           const catColor=catColors[e?.category]||C.muted;
           const ts=e?.created_at?new Date(e.created_at).toLocaleString():"";
-          return <div key={e?.id||i} style={{display:"grid",gridTemplateColumns:"3px 1fr",gap:0,borderRadius:6,overflow:"hidden",border:`1px solid ${C.line}`}}>
+          return <div key={e?.id||i} style={{display:"grid",gridTemplateColumns:"3px 1fr",gap:0,borderRadius:6,overflow:"hidden",border:`1px solid ${C.border}`}}>
             <div style={{background:catColor}}/>
             <div style={{padding:"6px 10px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
               <div>

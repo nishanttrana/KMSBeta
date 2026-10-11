@@ -386,7 +386,7 @@ export const AutokeyTab = ({ session, onToast }: any) => {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 8 }}>
           <div>
             <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Tenant Autokey Status</div>
-            <div style={{ fontSize: 10, color: C.dim, marginTop: 3 }}>
+            <div className="vk-fold" tabIndex={0} style={{ fontSize: 10, color: C.dim, marginTop: 3 }}>
               Resource templates and per-service defaults are tenant-scoped. Approval-required requests wait in Governance until approved, then the Autokey service provisions the real key in KeyCore and binds a managed handle.
             </div>
           </div>

@@ -466,7 +466,7 @@ export const BYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
 
     {/* === Region Mapping Modal === */}
     <Modal open={modal === "region"} onClose={() => setModal(null)} title="Region Mappings" wide>
-      <div style={{ fontSize: 10, color: C.muted, marginBottom: 10, padding: "8px 10px", background: C.bg, borderRadius: 6 }}>
+      <div className="vk-fold" tabIndex={0} style={{ fontSize: 10, color: C.muted, marginBottom: 10, padding: "8px 10px", background: C.bg, borderRadius: 6 }}>
         Map your Vecta logical regions to cloud provider regions. When importing a key, if a cloud region isn't specified, the system will use this mapping to determine the target region.
       </div>
 
@@ -517,7 +517,7 @@ export const BYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
 
     {/* === Cloud Inventory Modal === */}
     <Modal open={modal === "inventory"} onClose={() => setModal(null)} title={`Cloud Key Inventory — ${CLOUD_PROVIDER_LABELS[inventoryProvider] || inventoryProvider}`} wide>
-      <div style={{ fontSize: 10, color: C.muted, marginBottom: 10, padding: "8px 10px", background: C.bg, borderRadius: 6 }}>
+      <div className="vk-fold" tabIndex={0} style={{ fontSize: 10, color: C.muted, marginBottom: 10, padding: "8px 10px", background: C.bg, borderRadius: 6 }}>
         Discovered keys in your cloud provider account. Keys marked "Managed by Vecta" have active bindings. Unmanaged keys exist only in the cloud and are not synced with Vecta KMS.
       </div>
       {inventoryLoading ? (

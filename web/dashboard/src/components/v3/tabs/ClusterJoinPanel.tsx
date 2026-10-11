@@ -72,7 +72,7 @@ export const ClusterJoinPanel = ({ session, profiles, onToast, onDone }: Props) 
       ) : (
         <>
           <FG label="Join bundle from the primary" required><Txt value={paste} onChange={(e: any) => setPaste(e.target.value)} rows={3} placeholder="vecta-join-v1:..." /></FG>
-          <div style={{ fontSize: 10, color: C.redFg, lineHeight: 1.5 }}>
+          <div data-keep="" style={{ fontSize: 10, color: C.redFg, lineHeight: 1.5 }}>
             Joining replaces this node's master key and its data for the assigned features with the primary's. Keys created on this node before joining become unreadable. This node's local admin and CLI accounts are kept.
           </div>
           <Chk label="I understand; replace this node's data with the cluster's" checked={confirm} onChange={() => setConfirm(!confirm)} />

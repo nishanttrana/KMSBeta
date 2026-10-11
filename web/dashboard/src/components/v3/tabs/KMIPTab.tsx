@@ -761,7 +761,7 @@ export const KMIPTab=({session,onToast})=>{
     </Section>
 
     <Card style={{marginTop:10}}>
-      <div style={{fontSize:10,color:C.dim}}>
+      <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim}}>
         KMIP access control is certificate-linked. Registered client certificates are validated and used during KMIP mTLS connect. External client certificates must chain to a CA configured in Certificates tab.
       </div>
     </Card>

@@ -139,7 +139,7 @@ function StreamModal({ initial, connections, typeLabel, onClose, onSave }: {
               {connections.map(c => <option key={c.id} value={c.id}>{c.name} — {typeLabel(c.type)} ({c.endpoint})</option>)}
             </select>
             {initial?.legacy && (
-              <div style={{ fontSize: 10, color: C.amberFg, marginTop: 4 }}>
+              <div data-keep="" style={{ fontSize: 10, color: C.amberFg, marginTop: 4 }}>
                 This stream still uses the URL and credentials an earlier release stored with it. Choosing a connection drops them.
               </div>
             )}
@@ -396,7 +396,7 @@ export function EventStreams({ session, connections, connectionTypes }: Props) {
   return (
     <div style={{ fontFamily: "IBM Plex Sans, sans-serif", color: C.text, padding: "4px 0" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, gap: 12 }}>
-        <div style={{ fontSize: 11, color: C.dim, lineHeight: 1.5 }}>
+        <div className="vk-fold" tabIndex={0} style={{ fontSize: 11, color: C.dim, lineHeight: 1.5 }}>
           Every audit event that matches a stream is delivered as it is recorded, through the stream's connection: Splunk, Datadog, Elasticsearch,
           Microsoft Sentinel, TLS syslog (CEF), Slack, Teams or an HTTPS webhook (signed with HMAC-SHA256 when the connection has a signing secret).
         </div>

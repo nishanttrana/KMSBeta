@@ -15,6 +15,7 @@ export const C = {
   surface:   "var(--c-surface)",
   card:      "var(--c-card)",
   cardHover: "var(--c-card-hover)",
+  elevated:  "var(--c-elevated)",
   border:    "var(--c-border)",
   borderHi:  "var(--c-border-hi)",
   text:      "var(--c-text)",
@@ -30,19 +31,22 @@ export const C = {
   auroraTo:   "var(--c-aurora-to)",
 
   // ── Semantic hex (Ink palette — safe for `${C.color}NN` alpha) ────
+  // Mid-tones on purpose: a hue passed as a prop ends up as text or as a fill
+  // on either theme, so each reads on the light and the dark card
+  // (tests/unit/brandAndLegibility.test.ts).
   white:     "#ffffff",
-  accent:    "#4c9dff",  // Azure (single accent)
+  accent:    "#3586f0",  // Azure (single accent)
   accentMid: "rgba(76,157,255,0.16)",
-  teal:      "#3cc9b4",
-  green:     "#45c987",
-  red:       "#f07474",
-  amber:     "#e9b44c",
-  orange:    "#ef9458",
-  purple:    "#b39cf5",
-  blue:      "#6ea8f5",
-  pink:      "#ea86b8",
-  cyan:      "#5cc6de",
-  yellow:    "#e8d25c",
+  teal:      "#17a398",
+  green:     "#1fa463",
+  red:       "#e8555a",
+  amber:     "#c2850f",
+  orange:    "#dd6b20",
+  purple:    "#8b6cf0",
+  blue:      "#4a90e2",
+  pink:      "#d9539a",
+  cyan:      "#1a9fbe",
+  yellow:    "#a88d10",
 
   // ── Fg variants = CSS vars (theme-reactive text/icon colors) ─────────
   // Dark: bright neon. Light: darker shade with WCAG contrast.

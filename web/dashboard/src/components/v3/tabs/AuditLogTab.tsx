@@ -171,7 +171,7 @@ const CheckpointsSection = ({ session }: { session: any }) => {
     <div>
       <Section t="Signed Checkpoints" act={<Btn l={loading ? "Verifying..." : "Re-verify"} c={C.cyan} click={load} />}>
         <Card>
-          <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>
+          <div className="vk-fold" tabIndex={0} style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>
             Every 10 minutes each node signs the head of each chain it writes (sequence and chain hash) with an
             ECDSA-P384 key held only in memory. The chain hash commits to every earlier event, so a verified
             checkpoint proves nothing before it has changed since. Keys and checkpoints are audit events, so they
@@ -209,7 +209,7 @@ const CheckpointsSection = ({ session }: { session: any }) => {
                         <td style={{ padding: "6px", color: st.color, fontWeight: 600 }}>{st.label}</td>
                         <td style={{ padding: "6px", color: C.cyanFg }}>#{c.sequence}</td>
                         <td style={{ padding: "6px" }}>{c.chain_node || "local"}</td>
-                        <td style={{ padding: "6px", ...mono, color: C.fg }}>{c.chain_hash.slice(0, 16)}…</td>
+                        <td style={{ padding: "6px", ...mono, color: C.text }}>{c.chain_hash.slice(0, 16)}…</td>
                         <td style={{ padding: "6px", ...mono, color: C.dim }}>{c.key_id.slice(0, 12)}…</td>
                         <td style={{ padding: "6px", color: C.dim, fontSize: 10 }}>{c.signed_at ? new Date(c.signed_at).toLocaleString() : "--"}</td>
                       </tr>
@@ -224,7 +224,7 @@ const CheckpointsSection = ({ session }: { session: any }) => {
 
       {open && (
         <Modal open wide title={`Checkpoint #${open.sequence}`} onClose={() => setOpen(null)}>
-          <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>
+          <div className="vk-fold" tabIndex={0} style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>
             Verify outside the KMS: save the message exactly (no trailing newline), the base64-decoded signature
             (DER) and the public key, then
             run <span style={mono}>openssl dgst -sha384 -verify key.pem -signature sig.der message.json</span>.
@@ -239,7 +239,7 @@ const CheckpointsSection = ({ session }: { session: any }) => {
           ].map(([k, v]) => (
             <div key={k} style={{ marginBottom: 8 }}>
               <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6 }}>{k}</div>
-              <div style={{ ...mono, color: C.fg, wordBreak: "break-all", whiteSpace: "pre-wrap" }}>{v}</div>
+              <div style={{ ...mono, color: C.text, wordBreak: "break-all", whiteSpace: "pre-wrap" }}>{v}</div>
             </div>
           ))}
         </Modal>

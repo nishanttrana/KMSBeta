@@ -414,10 +414,10 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
               <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 8 }}>Provider Notes</div>
                 <div style={{ fontSize: 10, color: C.dim, lineHeight: 1.7 }}>
-                  <div>AWS Nitro Enclaves / NitroTPM: the service verifies the COSE signature and AWS certificate chain, then evaluates PCRs plus bound user_data.</div>
-                  <div>Azure Secure Key Release: the service verifies the attestation JWT against the issuer discovery document and JWKS from your Azure Attestation endpoint.</div>
-                  <div>GCP Confidential Space: the service verifies the Google attestation JWT and derives image, workload, secure-boot, and debug claims from signed evidence.</div>
-                  <div>Generic: manual claims and measurements remain available when you use your own attestation broker instead of a native cloud document.</div>
+                  <div className="vk-fold" tabIndex={0}>AWS Nitro Enclaves / NitroTPM: the service verifies the COSE signature and AWS certificate chain, then evaluates PCRs plus bound user_data.</div>
+                  <div className="vk-fold" tabIndex={0}>Azure Secure Key Release: the service verifies the attestation JWT against the issuer discovery document and JWKS from your Azure Attestation endpoint.</div>
+                  <div className="vk-fold" tabIndex={0}>GCP Confidential Space: the service verifies the Google attestation JWT and derives image, workload, secure-boot, and debug claims from signed evidence.</div>
+                  <div className="vk-fold" tabIndex={0}>Generic: manual claims and measurements remain available when you use your own attestation broker instead of a native cloud document.</div>
                 </div>
               </div>
             </Card>
@@ -493,7 +493,7 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
                     <Txt rows={12} value={releaseInput.attestation_document || ""} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, attestation_document: e.target.value }))} />
                   </FG>
                   <Card style={{ padding: 12, marginTop: 10, background: `linear-gradient(135deg, ${C.card} 0%, rgba(44,109,178,.10) 100%)` }}>
-                    <div style={{ fontSize: 10, color: C.dim, lineHeight: 1.7 }}>
+                    <div className="vk-fold" tabIndex={0} style={{ fontSize: 10, color: C.dim, lineHeight: 1.7 }}>
                       Workload identity, attester, image metadata, evidence timestamp, secure-boot posture, debug state, and measurements will be derived from the signed provider document.
                       This request only supplies the expected audience, expected nonce, key scope, cluster node, and operator context for the release decision.
                     </div>
@@ -538,7 +538,7 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
             <Card>
               <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 10 }}>Decision Output</div>
               {!decision ? (
-                <div style={{ fontSize: 11, color: C.dim, lineHeight: 1.7 }}>
+                <div className="vk-fold" tabIndex={0} style={{ fontSize: 11, color: C.dim, lineHeight: 1.7 }}>
                   Run a release evaluation to see the attestation verdict, cryptographic verification status, issuer, key ID, evidence hashes, derived workload metadata, cluster node decision, and the effective tenant policy version that was applied.
                 </div>
               ) : (

@@ -478,7 +478,7 @@ export const RestAPITab=({session,keyCatalog,onToast}: RestAPITabProps)=>{
       <Btn small onClick={executeRequest} disabled={running}>{running?"Executing...":"Execute Call"}</Btn>
     </>}>
       <Card style={{marginBottom:10}}>
-        <div style={{fontSize:10,color:C.dim,lineHeight:1.5}}>
+        <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim,lineHeight:1.5}}>
           Live API playground for management and cryptographic endpoints. Calls are executed against real backend services over
           <span style={{color:C.text}}> /svc/&lt;service&gt;...</span> and require authentication.
         </div>
@@ -581,9 +581,9 @@ export const RestAPITab=({session,keyCatalog,onToast}: RestAPITabProps)=>{
                       <Inp value={String(clientDraft?.mtls_uri_san||"")} onChange={(e)=>setClientDraft((prev:any)=>({...prev,mtls_uri_san:e.target.value}))} placeholder="spiffe://root/workloads/sdk-client"/>
                     </FG>
                   </Row2>
-                  <div style={{fontSize:10,color:C.dim}}>OAuth mTLS binds issued access tokens to the presented client certificate thumbprint. The same certificate must be presented again on REST calls.</div>
+                  <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim}}>OAuth mTLS binds issued access tokens to the presented client certificate thumbprint. The same certificate must be presented again on REST calls.</div>
                 </>}
-                {String(clientDraft?.auth_mode||"api_key")==="dpop"&&<div style={{fontSize:10,color:C.dim}}>DPoP proof keys are supplied dynamically by the client during token issuance. The KMS binds the access token to the proof JWK thumbprint and checks anti-replay on each signed request.</div>}
+                {String(clientDraft?.auth_mode||"api_key")==="dpop"&&<div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim}}>DPoP proof keys are supplied dynamically by the client during token issuance. The KMS binds the access token to the proof JWK thumbprint and checks anti-replay on each signed request.</div>}
                 {String(clientDraft?.auth_mode||"api_key")==="http_message_signature"&&<>
                   <Row2>
                     <FG label="Signature Key ID">
@@ -601,9 +601,9 @@ export const RestAPITab=({session,keyCatalog,onToast}: RestAPITabProps)=>{
                   <FG label="HTTP Signature Public Key (PEM)">
                     <Txt rows={7} mono value={String(clientDraft?.http_signature_public_key_pem||"")} onChange={(e)=>setClientDraft((prev:any)=>({...prev,http_signature_public_key_pem:e.target.value}))} placeholder={"-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"}/>
                   </FG>
-                  <div style={{fontSize:10,color:C.dim}}>HTTP Message Signatures verify request components plus content digest using the registered public key, and they share the same replay-defense path as DPoP.</div>
+                  <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim}}>HTTP Message Signatures verify request components plus content digest using the registered public key, and they share the same replay-defense path as DPoP.</div>
                 </>}
-                {String(clientDraft?.auth_mode||"api_key")==="api_key"&&<div style={{fontSize:10,color:C.dim}}>Legacy bearer and API-key callers remain available here, but they are counted as non-compliant in posture and compliance until moved to a sender-constrained mode.</div>}
+                {String(clientDraft?.auth_mode||"api_key")==="api_key"&&<div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim}}>Legacy bearer and API-key callers remain available here, but they are counted as non-compliant in posture and compliance until moved to a sender-constrained mode.</div>}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8}}>
                   <Stat l="Verified" v={String(Number(clientDraft?.verified_request_count||0))} s={fmtClientTS(clientDraft?.last_verified_request_at)} c="green"/>
                   <Stat l="Replay" v={String(Number(clientDraft?.replay_violation_count||0))} s={fmtClientTS(clientDraft?.last_replay_violation_at)} c={Number(clientDraft?.replay_violation_count||0)>0?"red":"blue"}/>
@@ -623,7 +623,7 @@ export const RestAPITab=({session,keyCatalog,onToast}: RestAPITabProps)=>{
           <div style={{display:"grid",gap:8}}>
             <div style={{padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:10,background:C.surface}}>
               <div style={{fontSize:10,color:C.text,fontWeight:700}}>OAuth mTLS</div>
-              <div style={{fontSize: 10,color:C.dim,marginTop:4}}>Binds the access token to the client certificate thumbprint so a stolen bearer token cannot be replayed without the certificate.</div>
+              <div className="vk-fold" tabIndex={0} style={{fontSize: 10,color:C.dim,marginTop:4}}>Binds the access token to the client certificate thumbprint so a stolen bearer token cannot be replayed without the certificate.</div>
             </div>
             <div style={{padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:10,background:C.surface}}>
               <div style={{fontSize:10,color:C.text,fontWeight:700}}>DPoP</div>
@@ -631,7 +631,7 @@ export const RestAPITab=({session,keyCatalog,onToast}: RestAPITabProps)=>{
             </div>
             <div style={{padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:10,background:C.surface}}>
               <div style={{fontSize:10,color:C.text,fontWeight:700}}>HTTP Message Signatures</div>
-              <div style={{fontSize: 10,color:C.dim,marginTop:4}}>Signs request components and body digests using the client public key so automation and SDK calls become tamper-evident and replay-aware.</div>
+              <div className="vk-fold" tabIndex={0} style={{fontSize: 10,color:C.dim,marginTop:4}}>Signs request components and body digests using the client public key so automation and SDK calls become tamper-evident and replay-aware.</div>
             </div>
           </div>
         </Card>

@@ -1849,7 +1849,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                   background:"transparent",
                   border:`1px solid ${C.border}`,
                   borderRadius:7,
-                  color:C.accent,
+                  color:C.accentFg,
                   width:28,
                   height:24,
                   display:"inline-flex",
@@ -1936,7 +1936,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                   borderRadius:7,
                   border:`1px solid ${isDeletedState?C.muted:(fipsOk?C.green:C.red)}`,
                   background:isDeletedState?"rgba(100,116,139,.10)":(fipsOk?C.greenDim:C.redDim),
-                  color:isDeletedState?C.muted:(fipsOk?C.green:C.red)
+                  color:isDeletedState?C.muted:(fipsOk?C.greenFg:C.redFg)
                 }}>
                   {fipsOk?<Check size={12} strokeWidth={2.5}/>:<X size={12} strokeWidth={2.5}/>}
                 </span>
@@ -1979,7 +1979,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                       background:"transparent",
                       border:`1px solid ${C.border}`,
                       borderRadius:7,
-                      color:isDeletedState?C.muted:C.accent,
+                      color:isDeletedState?C.muted:C.accentFg,
                       width:28,
                       height:24,
                       display:"inline-flex",
@@ -2332,7 +2332,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                     {wrappingKeyChoices.map((item)=><option key={`${idx}-${item.id}`} value={item.id}>{`${item.name} (${item.id})`}</option>)}
                   </Sel>
                 </Row2>
-                <div style={{marginTop:6,fontSize: 10,color:C.muted}}>Each component is decrypted under selected KEK, then all components are XOR-combined with optional DES parity enforcement.</div>
+                <div className="vk-fold" tabIndex={0} style={{marginTop:6,fontSize: 10,color:C.muted}}>Each component is decrypted under selected KEK, then all components are XOR-combined with optional DES parity enforcement.</div>
               </>}
             </div>
           ))}

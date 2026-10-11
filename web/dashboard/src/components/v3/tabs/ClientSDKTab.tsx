@@ -51,7 +51,7 @@ export const ClientSDKTab = ({ session, onToast }: any) => {
         {(Array.isArray(provider?.capabilities) ? provider.capabilities : []).map((c: string) => <B key={c} c="green">{c}</B>)}
       </div>
       <Btn small primary onClick={() => void download()} disabled={downloading || !session?.token}>{downloading ? "Downloading..." : "Download Java SDK"}</Btn>
-      <div style={{ fontSize: 10, color: C.muted, marginTop: 10 }}>
+      <div className="vk-fold" tabIndex={0} style={{ fontSize: 10, color: C.muted, marginTop: 10 }}>
         Vecta does not ship a PKCS#11 module. Reach keys through the REST API, the KMIP server (port 5696, mTLS) or this provider.
       </div>
     </Card>

@@ -691,7 +691,7 @@ export const CryptoTab=({session,keyCatalog,onToast,fipsMode})=>{
             borderRadius:999,
             border:`1px solid ${runtimeFipsEnabled?(currentMechanismFips?C.green:C.red):C.blue}`,
             background:runtimeFipsEnabled?(currentMechanismFips?C.greenDim:C.redDim):C.blueDim,
-            color:runtimeFipsEnabled?(currentMechanismFips?C.green:C.red):C.blue,
+            color:runtimeFipsEnabled?(currentMechanismFips?C.greenFg:C.redFg):C.blueFg,
             fontSize:10,
             fontWeight:700
           }}
@@ -872,7 +872,7 @@ export const CryptoTab=({session,keyCatalog,onToast,fipsMode})=>{
               disabled={busy || (keyRequired && !selectedKeyId) || fipsExecutionBlocked || (keyRequired && !opAllowedForKey)}
               style={{
                 background:`linear-gradient(180deg, ${C.glowStrong}, ${C.glow})`,
-                color:C.accent,
+                color:C.accentFg,
                 border:`1px solid ${C.accent}`,
                 borderRadius:10,
                 height:38,

@@ -144,7 +144,9 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
 
   // ── Keys ──
   const keys = s.keys?.filter((k) => isActive(k.status));
-  if (keys) {
+  // A rule about keys or certificates is assessed only when there is one to
+  // judge: "every key has X" holds for no keys, and is not a pass.
+  if (keys?.length) {
     const broken = keys.filter((k) => algoStrength(k.algorithm) === "broken");
     check("algo-broken", "No broken algorithms in use", "Algorithms", true, broken.length > 0);
     if (broken.length) {
@@ -184,7 +186,7 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
 
     const qv = keys.filter((k) => isQuantumVulnerable(k.algorithm));
     const asym = keys.filter((k) => isAsymmetric(k.algorithm));
-    check("pqc-keys", "Asymmetric keys have a PQC path", "Post-quantum", true, qv.length > 0);
+    check("pqc-keys", "Asymmetric keys have a PQC path", "Post-quantum", keys.some((k) => isAsymmetric(k.algorithm)), qv.length > 0);
     if (qv.length) {
       const longLived = qv.filter((k) => { const e = ts(k.expires_at); return e === null || e > Date.UTC(2030, 0, 1); });
       recs.push({
@@ -388,7 +390,7 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
     const expired = live.filter((c) => { const e = ts(c.not_after); return e !== null && e < now; });
     const soon = live.filter((c) => { const e = ts(c.not_after); return e !== null && e >= now && e - now < 30 * DAY; });
     const urgent = soon.filter((c) => (ts(c.not_after) as number) - now < 7 * DAY);
-    check("cert-expiry", "No certificates expire within 30 days", "Certificates", true, soon.length + expired.length > 0);
+    check("cert-expiry", "No certificates expire within 30 days", "Certificates", live.length > 0, soon.length + expired.length > 0);
     if (expired.length) {
       recs.push({
         id: "cert-expired", severity: "high", category: "Certificates",

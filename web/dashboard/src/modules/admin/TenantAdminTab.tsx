@@ -429,7 +429,7 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
           onClick={() => setActiveTab(t)}
           style={{
             background: activeTab === t ? C.accentDim : "transparent",
-            color: activeTab === t ? C.accent : C.muted,
+            color: activeTab === t ? C.accentFg : C.muted,
             border: `1px solid ${activeTab === t ? C.accent : C.border}`,
             borderRadius: 6,
             padding: "6px 14px",

@@ -4,6 +4,35 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [11.2.0-beta] — 2026-10-11
+
+### Less text, honest posture, readable colours
+- **Explanatory paragraphs fold to one line.** 52 paragraphs across 23
+  files show their first line and open on click or keyboard focus. Four
+  warnings and confirmations stay open: joining a cluster, a stream's stored
+  credentials, registering an EKM agent, and the HSM CLI notice.
+- **The Command Center no longer passes rules it had nothing to judge.** The
+  five key rules with no active keys, "Asymmetric keys have a PQC path" with
+  no asymmetric keys, and "No certificates expire within 30 days" with no
+  certificates now read "not assessed". They were counted as passing
+  controls.
+- **Colours read on both themes.** The eleven fixed hues are retuned so each
+  reads as text or as a fill on the light and the dark card; status values
+  and active tabs were pale on the light theme.
+
+### Fixed
+- **Borders, dividers and text colours that were never drawn.** About 120 lines in
+  Enterprise KM, Tokenize, KMIP and the Audit Log named palette colours that
+  do not exist, so the style was dropped. They use the real ones.
+- Status text set in multi-line style blocks now follows the theme (the
+  11.1.0-beta pass covered single lines only).
+
+Enforced by `web/dashboard/tests/unit/brandAndLegibility.test.ts` and
+`recommendations.test.ts`. Open: "No open critical/high posture findings"
+still passes on an empty findings list, which cannot tell "none found" from
+"never evaluated"; paragraphs that mix text with inline code or links are
+not all folded.
+
 ## [11.1.0-beta] — 2026-10-11
 
 ### A new look for the console

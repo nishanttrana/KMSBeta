@@ -192,7 +192,7 @@ export const KeyAccessTab = ({ session, onToast }: any) => {
             <span style={{ fontSize: 11, color: C.text }}>{`Mode: ${String(summary?.mode || "enforce")}`}</span>
             <span style={{ fontSize: 11, color: C.dim }}>{`Default action: ${String(summary?.default_action || "deny")}`}</span>
           </div>
-          <div style={{ fontSize: 11, color: C.dim, lineHeight: 1.6 }}>
+          <div className="vk-fold" tabIndex={0} style={{ fontSize: 11, color: C.dim, lineHeight: 1.6 }}>
             Require per-request justification codes for external wrap, unwrap, sign, and decrypt access. Use approval-backed codes for regulated flows, and watch the recent decision stream to catch bypasses or unsigned operator behavior before those turn into larger posture drift.
           </div>
         </Card>

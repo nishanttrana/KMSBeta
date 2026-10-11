@@ -1980,7 +1980,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
                     background:"transparent",
                     border:`1px solid ${C.border}`,
                     borderRadius:7,
-                    color:C.accent,
+                    color:C.accentFg,
                     width:28,
                     height:24,
                     display:"inline-flex",
@@ -2431,7 +2431,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
 
     <Modal open={modal==="acme-star"} onClose={()=>setModal(null)} title="ACME STAR Short-Lived Certificates" wide>
       <div style={{display:"grid",gap:10}}>
-        <div style={{fontSize:11,color:C.dim,lineHeight:1.6}}>
+        <div className="vk-fold" tabIndex={0} style={{fontSize:11,color:C.dim,lineHeight:1.6}}>
           Create short-lived automatically renewed certificates for gateways, service mesh edges, and delegated subscribers. STAR subscriptions keep issuance cadence, rollout grouping, and delegated subscriber metadata under the tenant ACME policy.
         </div>
         <Row2>
@@ -2510,7 +2510,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
       {(()=>{
         const activeCA=(Array.isArray(cas)?cas:[]).find((c)=>String(c.status||"").toLowerCase()==="active");
         return <>
-          <div style={{fontSize:11,color:C.dim,marginBottom:12,lineHeight:1.6}}>
+          <div className="vk-fold" tabIndex={0} style={{fontSize:11,color:C.dim,marginBottom:12,lineHeight:1.6}}>
             Full ACME protocol flow: create account, create order with domain validation challenge,
             respond to challenge, and finalize to obtain a certificate. Nonce replay protection and
             rate limiting are enforced server-side.
@@ -2578,7 +2578,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
       {(()=>{
         const activeCA=(Array.isArray(cas)?cas:[]).find((c)=>String(c.status||"").toLowerCase()==="active");
         return <>
-          <div style={{fontSize:11,color:C.dim,marginBottom:12,lineHeight:1.6}}>
+          <div className="vk-fold" tabIndex={0} style={{fontSize:11,color:C.dim,marginBottom:12,lineHeight:1.6}}>
             EST (Enrollment over Secure Transport) is used for IoT device enrollment, re-enrollment,
             and server-side key generation. Supports mTLS, bearer, and basic auth modes.
             CSR attributes endpoint provides algorithm and profile guidance.
@@ -2640,7 +2640,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
       {(()=>{
         const activeCA=(Array.isArray(cas)?cas:[]).find((c)=>String(c.status||"").toLowerCase()==="active");
         return <>
-          <div style={{fontSize:11,color:C.dim,marginBottom:12,lineHeight:1.6}}>
+          <div className="vk-fold" tabIndex={0} style={{fontSize:11,color:C.dim,marginBottom:12,lineHeight:1.6}}>
             SCEP (Simple Certificate Enrollment Protocol) is widely used for MDM and legacy device enrollment.
             Supports PKCSReq, RenewalReq, and UpdateReq message types. Full PKIMessage wire format
             is supported via the smallstep/scep library including PKCS#7 envelope encryption/decryption.
@@ -2698,7 +2698,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
       {(()=>{
         const activeCA=(Array.isArray(cas)?cas:[]).find((c)=>String(c.status||"").toLowerCase()==="active");
         return <>
-          <div style={{fontSize:11,color:C.dim,marginBottom:12,lineHeight:1.6}}>
+          <div className="vk-fold" tabIndex={0} style={{fontSize:11,color:C.dim,marginBottom:12,lineHeight:1.6}}>
             CMPv2 (Certificate Management Protocol v2) supports enterprise PKI operations including
             initial registration (IR), certification request (CR), key update (KUR), and revocation (RR).
             Message protection and transaction tracking are enforced per policy. PKI confirmation endpoint

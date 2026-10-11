@@ -30,6 +30,16 @@ describe("evaluate", () => {
     expect(postureScore(recommendations, checks).assessed).toBe(0);
   });
 
+  it("does not pass key or certificate rules on a tenant that has none", () => {
+    const { checks } = evaluate({ now, keys: [], certs: [], backups: [] });
+    const status = (id: string) => checks.find((c) => c.id === id)?.status;
+    for (const id of ["algo-broken", "pqc-keys", "cryptoperiod", "non-exportable", "inventory", "cert-expiry"]) expect(status(id), id).toBe("unknown");
+    expect(status("backup")).toBe("fail");
+    const symmetricOnly = evaluate({ now, keys: [{ id: "1", name: "dek", algorithm: "AES-256-GCM", status: "active", expires_at: "2027-01-01T00:00:00Z", labels: { owner: "db" } }] }).checks;
+    expect(symmetricOnly.find((c) => c.id === "pqc-keys")?.status).toBe("unknown");
+    expect(symmetricOnly.find((c) => c.id === "algo-broken")?.status).toBe("pass");
+  });
+
   it("produces prioritised findings from live state", () => {
     const { recommendations, checks } = evaluate({
       now,

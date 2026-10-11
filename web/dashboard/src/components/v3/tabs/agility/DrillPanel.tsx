@@ -45,7 +45,7 @@ export function DrillPanel({ session, suggestions }: { session: any; suggestions
   const latest = drills[0];
   return (
     <div>
-      <div style={{ fontSize: 12, color: C.dim, maxWidth: 760, marginBottom: 16 }}>
+      <div className="vk-fold" tabIndex={0} style={{ fontSize: 12, color: C.dim, maxWidth: 760, marginBottom: 16 }}>
         Rehearse a swap before you schedule it. Keycore generates throwaway keys for both algorithms, runs each one's operation through the same engine your keys use, checks every round trip and times it on this node. Nothing is added to your key inventory. The target must be allowed by your FIPS mode and your migration policy, as it would be for a real key.
       </div>
       <div style={{ ...S.panel, padding: 16, display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>

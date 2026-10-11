@@ -149,7 +149,7 @@ export function BackupTab({ session }: { session: any }) {
           <button key={s.id} onClick={() => setSection(s.id as any)} style={{
             padding: "8px 16px", border: "none", background: "transparent", cursor: "pointer",
             fontSize: 12, fontWeight: section === s.id ? 700 : 400,
-            color: section === s.id ? C.accent : C.muted,
+            color: section === s.id ? C.accentFg : C.muted,
             borderBottom: section === s.id ? `2px solid ${C.accent}` : "2px solid transparent",
             marginBottom: -1,
           }}>{s.label}</button>

@@ -75,7 +75,7 @@ export function CanaryKeysPanel({ session }: { session: AuthSession }) {
 
   return (
     <div style={{ padding: 16 }}>
-      <div style={{ fontSize: 11, color: C.dim, lineHeight: 1.5, marginBottom: 12 }}>
+      <div className="vk-fold" tabIndex={0} style={{ fontSize: 11, color: C.dim, lineHeight: 1.5, marginBottom: 12 }}>
         A canary key is a key ID with no key material behind it. Plant it where only an attacker would find and use it, for
         example in a config file or a vault entry. Any use of it through the key API returns "not found" to the caller,
         records a trip and raises a critical finding in Posture and an alert in the Alert Center.

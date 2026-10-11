@@ -357,7 +357,7 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
               <Stat l="Nodes" v={String(graphPreview.nodeCount)} c="accent" />
               <Stat l="Edges" v={String(graphPreview.edgeCount)} c="blue" />
             </Row2>
-            <div style={{ fontSize: 10, color: C.muted, marginBottom: 8 }}>Policy edges come from workload registrations. Usage edges come from live audit-backed key operations performed with workload identity.</div>
+            <div className="vk-fold" tabIndex={0} style={{ fontSize: 10, color: C.muted, marginBottom: 8 }}>Policy edges come from workload registrations. Usage edges come from live audit-backed key operations performed with workload identity.</div>
             <div style={{ display: "grid", gap: 8 }}>
               {graphPreview.edges.map((edge: any) => (
                 <div key={`${edge.source}-${edge.target}-${edge.kind}`} style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, background: C.card }}>

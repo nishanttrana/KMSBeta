@@ -7,6 +7,19 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-11 — Explanations fold; warnings stay open
+**Decision:** a text-only element holding a paragraph (120 characters or
+more) shows one line and opens on click or focus (`.vk-fold`). A warning or
+confirmation is marked `data-keep` and is always shown in full (11.2.0-beta).
+**Why:** pages lead with numbers and charts, but the explanations are
+accurate and some operators need them; folding keeps them one click away.
+**Rejected:** deleting the paragraphs (loses real guidance); tooltips
+(unreachable by keyboard and touch, and unreadable at this length); a
+shared React component (an import line in every file, and most of these
+files are at their size ceiling).
+**Enforced by:** `brandAndLegibility.test.ts` ("folds paragraphs of
+explanation").
+
 ## 2026-10-11 — Console look: system fonts, an ink sidebar, one accent
 **Decision:** the console uses the operating system's fonts, an azure accent,
 and a sidebar that stays dark in both themes (11.1.0-beta). The brand

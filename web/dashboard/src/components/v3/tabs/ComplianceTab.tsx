@@ -659,7 +659,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
               <div>
                 <div style={{ fontSize: 12, color: C.text, fontWeight: 700, marginBottom: 4 }}>No compliance scan has been run yet</div>
-                <div style={{ fontSize: 10, color: C.dim }}>
+                <div className="vk-fold" tabIndex={0} style={{ fontSize: 10, color: C.dim }}>
                   The score stays at 0 until the first assessment completes. Run a scan to generate posture, framework coverage, and findings.
                 </div>
               </div>
@@ -705,7 +705,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
             </div>
           </Card>
         ) : null}
-        {selectedTemplateID === "default" ? <Card><div style={{ fontSize: 10, color: C.muted }}>Built-in Baseline is read-only. Create a custom template to configure framework/control weights, thresholds, and enabled controls.</div></Card> : null}
+        {selectedTemplateID === "default" ? <Card><div className="vk-fold" tabIndex={0} style={{ fontSize: 10, color: C.muted }}>Built-in Baseline is read-only. Create a custom template to configure framework/control weights, thresholds, and enabled controls.</div></Card> : null}
 
         <div style={{ height: 10 }} />
 
@@ -1163,7 +1163,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
           </div>
         }
       >
-        <div style={{ fontSize: 10, color: C.muted }}>
+        <div className="vk-fold" tabIndex={0} style={{ fontSize: 10, color: C.muted }}>
           Generates a structured compliance evidence document containing posture score, framework assessment,
           control status, open gaps, and key hygiene metrics — suitable for regulatory submissions and auditor review.
           The report is downloaded as a JSON file that can be imported into GRC platforms.

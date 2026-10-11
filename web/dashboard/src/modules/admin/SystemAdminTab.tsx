@@ -1832,7 +1832,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
             <Btn small primary onClick={()=>void restoreBackup()} disabled={backupRestoring||backupVerifying}>{backupRestoring?"Restoring...":"Restore Backup"}</Btn>
           </div>
         </div>
-        <div style={{fontSize:10,color:C.dim,marginTop:6}}>Verify opens the backup with the key file or guardian shares and reports what it holds, without changing any data. Use it to prove your backups and keys still work.</div>
+        <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim,marginTop:6}}>Verify opens the backup with the key file or guardian shares and reports what it holds, without changing any data. Use it to prove your backups and keys still work.</div>
         {backupVerifyResult&&<div role="status" style={{marginTop:8,padding:10,borderRadius:8,border:`1px solid ${C.green}`,background:C.greenDim,fontSize:11,color:C.text}}>
           <div style={{fontWeight:700,marginBottom:4}}>Backup opens: verified</div>
           <div>{`Scope ${backupVerifyResult.scope}${backupVerifyResult.target_tenant_id?` (${backupVerifyResult.target_tenant_id})`:""} · captured ${backupVerifyResult.backup_captured_at||"unknown"}`}</div>
@@ -1949,7 +1949,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       <Btn small onClick={()=>void loadGovPolicies()} disabled={govPoliciesLoading}>{govPoliciesLoading?"Refreshing...":"Refresh"}</Btn>
       <Btn small primary onClick={()=>openGovPolicyModal()}>+ Create Policy</Btn>
     </div>}>
-      <div style={{fontSize:11,color:C.dim,marginBottom:14}}>
+      <div className="vk-fold" tabIndex={0} style={{fontSize:11,color:C.dim,marginBottom:14}}>
         Define quorum-based approval policies for every administrative and key operation in the KMS. Operations matching a policy will be held until the required approvals are granted via dashboard, email, Slack, or Teams within the configured timeout window.
       </div>
 
@@ -2003,7 +2003,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
             </Card>
           );
         })}
-        {!govPolicies.length&&!govPoliciesLoading&&<div style={{textAlign:"center",padding:24,color:C.muted,fontSize:11,background:C.surface,borderRadius:10,border:`1px solid ${C.border}`}}>
+        {!govPolicies.length&&!govPoliciesLoading&&<div className="vk-fold" tabIndex={0} style={{textAlign:"center",padding:24,color:C.muted,fontSize:11,background:C.surface,borderRadius:10,border:`1px solid ${C.border}`}}>
           No approval policies configured. Create a policy to enforce quorum-based approvals for key operations, user management, or system administration tasks.
         </div>}
       </div>
@@ -2088,7 +2088,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         {/* Hold State Enforcement */}
         <div style={{padding:"10px 14px",background:`${C.green}12`,border:`1px solid ${C.green}33`,borderRadius:8}}>
           <Chk label="Enforce Hold State — Operations are held (queued) until approval is granted or timeout expires. Denied or timed-out operations are rejected." checked={gpEnforceHold} onChange={()=>setGpEnforceHold((v)=>!v)}/>
-          <div style={{fontSize: 10,color:C.dim,marginTop:4,marginLeft:24}}>
+          <div className="vk-fold" tabIndex={0} style={{fontSize: 10,color:C.dim,marginTop:4,marginLeft:24}}>
             When enabled: the KMS suspends the operation, notifies all approvers via configured channels, and waits for quorum. The operation proceeds only after sufficient approvals. If the timeout expires without quorum, the operation is automatically denied.
           </div>
         </div>

@@ -90,7 +90,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
     <div style={{ fontFamily: '"IBM Plex Sans", sans-serif', color: C.text }}>
       {/* Controls */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <div style={{ fontSize: 12, color: C.muted }}>Cryptographic operation throughput, latency and errors, from the audit event of every operation that ran, was refused or failed</div>
+        <div className="vk-fold" tabIndex={0} style={{ fontSize: 12, color: C.muted }}>Cryptographic operation throughput, latency and errors, from the audit event of every operation that ran, was refused or failed</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ display: "flex", gap: 2, background: C.surface, borderRadius: 6, padding: 2, border: `1px solid ${C.border}` }}>
             {(["1h", "24h", "7d", "30d"] as const).map(w => (
@@ -144,7 +144,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
           <button key={s.id} onClick={() => setSection(s.id as any)} style={{
             padding: "8px 16px", border: "none", background: "transparent", cursor: "pointer",
             fontSize: 12, fontWeight: section === s.id ? 700 : 400,
-            color: section === s.id ? C.accent : C.muted,
+            color: section === s.id ? C.accentFg : C.muted,
             borderBottom: section === s.id ? `2px solid ${C.accent}` : "2px solid transparent",
             marginBottom: -1,
           }}>{s.label}</button>
@@ -158,7 +158,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
           {loading ? <div style={{ color: C.muted, padding: 20, textAlign: "center" }}>Loading...</div> : latency.length === 0 ? (
             <div style={{ textAlign: "center", padding: 40, color: C.muted }}>
               <Activity size={28} style={{ margin: "0 auto 8px", opacity: 0.4 }} />
-              <div style={{ fontSize: 13 }}>No operations in this window. Key operations, tokenization and FPE, and certificate and OCSP signing appear here as they run.</div>
+              <div className="vk-fold" tabIndex={0} style={{ fontSize: 13 }}>No operations in this window. Key operations, tokenization and FPE, and certificate and OCSP signing appear here as they run.</div>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

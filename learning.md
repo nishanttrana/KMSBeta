@@ -5,6 +5,34 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### "Every key has X" passed with no keys (11.2.0-beta)
+- **The second copy of the "ALL OK" fault below.** The recommendation engine
+  already reported a missing source as "not assessed", but an empty one
+  passed: five key rules, the PQC-path rule and the certificate-expiry rule
+  were green on a tenant with nothing to judge, and counted in "N of M
+  controls passing". How it slipped through: the test for the honesty
+  contract covered `undefined` sources, never `[]`. A rule of the form
+  "every X has Y" is assessed only when there is an X.
+  Gate: `recommendations.test.ts` ("does not pass key or certificate rules
+  on a tenant that has none"). **Open:** the posture-findings rule still
+  passes on `[]`; the snapshot can't tell "none found" from "never run".
+- **About 120 lines used palette keys that don't exist** (`C.textDim`, `C.textMuted`,
+  `C.line`, `C.fg`): borders, dividers and colours silently dropped in EKM,
+  Tokenize, KMIP and the Audit Log. How it slipped through: those files are
+  `@ts-nocheck`, so the misspelling compiles, and `border: 1px solid
+  undefined` fails without an error. Gate: "uses only palette keys that
+  exist".
+- **A fixed hex hue reaches text through props** (`color={C.blue}`, a
+  `tone` passed down), where no style check can follow it. The hues are now
+  mid-tones that read on both cards, with a contrast test, instead of
+  dark-theme tints.
+- **Folding text: warnings are not explanation.** The first pass folded a
+  red "joining replaces this node's master key" notice to one line. A
+  warning or confirmation carries `data-keep` and stays open; the gate
+  accepts either marker, so the choice is made for each new paragraph.
+- **Trap:** in zsh `path` is tied to `PATH`. `for path in ...` in a check
+  script emptied it and every later command was "not found".
+
 ### The console's own CSP refused its fonts and its theme script (11.1.0-beta)
 - **`index.css` imported Inter and JetBrains Mono from Google Fonts, and
   `index.html` set the theme with an inline script.** nginx sends

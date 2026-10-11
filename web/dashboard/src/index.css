@@ -253,6 +253,25 @@ code, pre, kbd { font-family: var(--font-mono); }
 
 .vecta-spin { animation: vecta-spin 1.1s linear infinite; }
 
+/* A paragraph of explanation shows its first line and opens on click or
+   focus. A warning or confirmation the reader must see stays open and is
+   marked data-keep (tests/unit/brandAndLegibility.test.ts). */
+.vk-fold {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+  cursor: pointer;
+}
+.vk-fold:focus {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  overflow: visible;
+  cursor: auto;
+}
+
 /* ===================================================================
    TABLES, NUMBERS, STAT CARD
    =================================================================== */

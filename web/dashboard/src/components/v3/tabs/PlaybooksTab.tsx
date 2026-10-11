@@ -433,7 +433,7 @@ export function PlaybooksTab({ session, onNavigate }: { session: any; onNavigate
           <Btn variant="ghost" small onClick={() => { load(); loadRuns(); }}><RefreshCcw size={12} /></Btn>
         </div>
       </div>
-      <div style={{ fontSize: 11, color: C.dim, marginBottom: 16, lineHeight: 1.5 }}>
+      <div className="vk-fold" tabIndex={0} style={{ fontSize: 11, color: C.dim, marginBottom: 16, lineHeight: 1.5 }}>
         A playbook responds to an audited event (or runs by hand): it can notify or raise a SIEM alert through sealed credentials, act on keys, certificates, users, alerts and incidents, and pause for a governance approval.
         Event streaming sends every matching audit event to a SIEM or webhook through the same credentials.
         Actions run as the compliance service on the authority of the person who last saved the playbook, re-checked with auth before every automatic run.
@@ -611,7 +611,7 @@ export function PlaybooksTab({ session, onNavigate }: { session: any; onNavigate
               <Inp label="Window (seconds)" type="number" value={form.trigger.window_seconds} onChange={(e: any) => setTrigger("window_seconds", e.target.value)} />
               <Inp label="Group by (field)" placeholder="actor_id" value={form.trigger.group_by} onChange={(e: any) => setTrigger("group_by", e.target.value)} />
             </div>
-            <div style={{ fontSize: 10, color: C.muted, marginTop: -6, marginBottom: 12 }}>With a threshold above 1 the playbook fires when that many matching events arrive within the window (per group). Counts are kept on the primary and restart from zero after a failover.</div>
+            <div className="vk-fold" tabIndex={0} style={{ fontSize: 10, color: C.muted, marginTop: -6, marginBottom: 12 }}>With a threshold above 1 the playbook fires when that many matching events arrive within the window (per group). Counts are kept on the primary and restart from zero after a failover.</div>
             <Chk label="Enabled (runs automatically when the trigger fires)" checked={form.enabled} onChange={(v: boolean) => setForm((p: any) => ({ ...p, enabled: v }))} />
             <div style={{ fontSize: 11, color: C.dim }}>{neededPerms.length ? <>Enabling it needs: <b>{neededPerms.join(", ")}</b>. It will run on your authority.</> : "These actions need no extra permission."}</div>
           </div>
