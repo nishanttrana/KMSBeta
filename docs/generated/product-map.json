@@ -4430,7 +4430,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.listConnections",
-      "line": 441,
+      "line": 444,
       "match_key": "compliance|GET|/compliance/playbooks/connections",
       "method": "GET",
       "normalized_path": "/compliance/playbooks/connections",
@@ -4445,7 +4445,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.createConnection",
-      "line": 442,
+      "line": 445,
       "match_key": "compliance|POST|/compliance/playbooks/connections",
       "method": "POST",
       "normalized_path": "/compliance/playbooks/connections",
@@ -4460,7 +4460,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.updateConnection",
-      "line": 443,
+      "line": 446,
       "match_key": "compliance|PUT|/compliance/playbooks/connections/{param}",
       "method": "PUT",
       "normalized_path": "/compliance/playbooks/connections/{param}",
@@ -4475,7 +4475,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.deleteConnection",
-      "line": 444,
+      "line": 447,
       "match_key": "compliance|DELETE|/compliance/playbooks/connections/{param}",
       "method": "DELETE",
       "normalized_path": "/compliance/playbooks/connections/{param}",
@@ -4490,7 +4490,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.testConnection",
-      "line": 445,
+      "line": 448,
       "match_key": "compliance|POST|/compliance/playbooks/connections/{param}/test",
       "method": "POST",
       "normalized_path": "/compliance/playbooks/connections/{param}/test",
@@ -4505,7 +4505,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/private_endpoints.go",
       "handler": "h.listPrivateEndpoints",
-      "line": 111,
+      "line": 114,
       "match_key": "compliance|GET|/compliance/private-endpoints",
       "method": "GET",
       "normalized_path": "/compliance/private-endpoints",
@@ -4520,7 +4520,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/private_endpoints.go",
       "handler": "h.addPrivateEndpoint",
-      "line": 112,
+      "line": 115,
       "match_key": "compliance|POST|/compliance/private-endpoints",
       "method": "POST",
       "normalized_path": "/compliance/private-endpoints",
@@ -4535,7 +4535,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/private_endpoints.go",
       "handler": "h.removePrivateEndpoint",
-      "line": 113,
+      "line": 116,
       "match_key": "compliance|DELETE|/compliance/private-endpoints/{param}",
       "method": "DELETE",
       "normalized_path": "/compliance/private-endpoints/{param}",
@@ -15142,7 +15142,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.createConnection",
-      "line": 442,
+      "line": 445,
       "match_key": "compliance|POST|/compliance/playbooks/connections",
       "method": "POST",
       "normalized_path": "/compliance/playbooks/connections",
@@ -15157,7 +15157,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.updateConnection",
-      "line": 443,
+      "line": 446,
       "match_key": "compliance|PUT|/compliance/playbooks/connections/{param}",
       "method": "PUT",
       "normalized_path": "/compliance/playbooks/connections/{param}",
@@ -15172,7 +15172,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.deleteConnection",
-      "line": 444,
+      "line": 447,
       "match_key": "compliance|DELETE|/compliance/playbooks/connections/{param}",
       "method": "DELETE",
       "normalized_path": "/compliance/playbooks/connections/{param}",
@@ -15187,7 +15187,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.testConnection",
-      "line": 445,
+      "line": 448,
       "match_key": "compliance|POST|/compliance/playbooks/connections/{param}/test",
       "method": "POST",
       "normalized_path": "/compliance/playbooks/connections/{param}/test",
@@ -23266,7 +23266,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PrivateEndpoints.tsx",
       "handler": "",
       "label": "void approve()} disabled= >",
-      "line": 80,
+      "line": 81,
       "tabs": [],
       "tag": "Btn"
     },
@@ -23274,7 +23274,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PrivateEndpoints.tsx",
       "handler": "",
       "label": "void withdraw(e)} style={ }>",
-      "line": 94,
+      "line": 95,
       "tabs": [],
       "tag": "button"
     },
@@ -24412,7 +24412,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
       "handler": "",
       "label": "setStatus(s)} style={ }>",
-      "line": 159,
+      "line": 161,
       "tabs": [],
       "tag": "button"
     },
@@ -24420,7 +24420,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
       "handler": "",
       "label": "void save()} disabled= >Save",
-      "line": 167,
+      "line": 169,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24428,14 +24428,14 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
       "handler": "",
       "label": "(confirmRemove ? void remove() : setConfirmRemove(true))} disabled= >",
-      "line": 174,
+      "line": 176,
       "tabs": [],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx",
       "handler": "",
-      "label": "setDeep((d) => !d)} title=\"Also read the first kilobyte of every object whose...",
+      "label": "setDeep((d) => !d)} title=\"Also read objects whose names say nothing: up to 2...",
       "line": 125,
       "tabs": [],
       "tag": "button"
@@ -29093,7 +29093,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 420,
+      "line": 421,
       "match_key": "discovery|GET|/discovery/buckets",
       "method": "GET",
       "normalized_path": "/discovery/buckets",
@@ -29106,7 +29106,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 432,
+      "line": 433,
       "match_key": "discovery|POST|/discovery/buckets",
       "method": "POST",
       "normalized_path": "/discovery/buckets",
@@ -29119,7 +29119,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 442,
+      "line": 443,
       "match_key": "discovery|DELETE|/discovery/buckets/{param}",
       "method": "DELETE",
       "normalized_path": "/discovery/buckets/{param}",
@@ -29132,7 +29132,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}/test?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 453,
+      "line": 454,
       "match_key": "discovery|POST|/discovery/buckets/{param}/test",
       "method": "POST",
       "normalized_path": "/discovery/buckets/{param}/test",
@@ -33055,7 +33055,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-11T03:57:41Z",
+  "generated_at": "2026-10-11T04:20:01Z",
   "navigation": [
     {
       "group": "Overview",
@@ -48554,6 +48554,7 @@
         "Error",
         "usable",
         "Open",
+        "privateCapable",
         "approvedRanges"
       ],
       "handler_internal_package_calls": [],
@@ -48598,7 +48599,7 @@
         "CreateConnection"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 144,
+      "handler_line": 142,
       "handler_name": "importConnection",
       "handler_receiver_calls": [
         "h.connVault.current"
@@ -51312,7 +51313,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 449,
+      "handler_line": 452,
       "handler_name": "listConnections",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -51323,7 +51324,7 @@
       "normalized_path": "/compliance/playbooks/connections",
       "path": "/compliance/playbooks/connections",
       "route_file": "services/compliance/playbook_connections.go",
-      "route_line": 441,
+      "route_line": 444,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -51347,7 +51348,7 @@
         "CreateConnection"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 458,
+      "handler_line": 461,
       "handler_name": "createConnection",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -51358,7 +51359,7 @@
       "normalized_path": "/compliance/playbooks/connections",
       "path": "/compliance/playbooks/connections",
       "route_file": "services/compliance/playbook_connections.go",
-      "route_line": 442,
+      "route_line": 445,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -51374,7 +51375,11 @@
         "errors.Is",
         "errors.As",
         "fmt.Errorf",
-        "strings.TrimSpace"
+        "fmt.Sprintf",
+        "strings.TrimSpace",
+        "strings.Join",
+        "time.NewTicker",
+        "time.After"
       ],
       "handler_file": "services/compliance/playbook_connections.go",
       "handler_helper_calls": [
@@ -51387,29 +51392,57 @@
         "UpdateConnection",
         "current",
         "validateConnection",
+        "privateCapable",
         "approvedAllow",
         "privateSourceAllowed",
         "connectionEndpoint",
-        "Seal"
+        "Seal",
+        "deleteConnection",
+        "usersOf",
+        "DeleteConnection",
+        "testConnection",
+        "contains",
+        "recordTest",
+        "hasInlineSecrets",
+        "redactInline",
+        "migrateInlineSecrets",
+        "ListAllPlaybooks",
+        "newID",
+        "CreateConnection",
+        "UpdatePlaybook",
+        "emit",
+        "playbook",
+        "migrateInlineSecretsLoop",
+        "firstNonEmpty",
+        "set",
+        "openConnectionKeyring",
+        "fail"
       ],
-      "handler_internal_package_calls": [],
-      "handler_line": 484,
+      "handler_internal_package_calls": [
+        "pkg/tenantcheck.InternalServiceTenant"
+      ],
+      "handler_line": 487,
       "handler_name": "updateConnection",
       "handler_receiver_calls": [
         "h.connVault.Open",
         "h.connVault.current",
-        "h.connVault.Seal"
+        "h.connVault.Seal",
+        "h.executor.testConnection"
       ],
       "handler_service_calls": [],
       "handler_store_calls": [
         "GetConnection",
-        "UpdateConnection"
+        "UpdateConnection",
+        "DeleteConnection",
+        "ListAllPlaybooks",
+        "CreateConnection",
+        "UpdatePlaybook"
       ],
       "method": "PUT",
       "normalized_path": "/compliance/playbooks/connections/{param}",
       "path": "/compliance/playbooks/connections/{id}",
       "route_file": "services/compliance/playbook_connections.go",
-      "route_line": 443,
+      "route_line": 446,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -51434,7 +51467,7 @@
         "current"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 599,
+      "handler_line": 614,
       "handler_name": "deleteConnection",
       "handler_receiver_calls": [
         "h.connVault.current"
@@ -51448,7 +51481,7 @@
       "normalized_path": "/compliance/playbooks/connections/{param}",
       "path": "/compliance/playbooks/connections/{id}",
       "route_file": "services/compliance/playbook_connections.go",
-      "route_line": 444,
+      "route_line": 447,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -51494,7 +51527,7 @@
       "handler_internal_package_calls": [
         "pkg/tenantcheck.InternalServiceTenant"
       ],
-      "handler_line": 639,
+      "handler_line": 654,
       "handler_name": "testConnection",
       "handler_receiver_calls": [
         "h.executor.testConnection"
@@ -51510,7 +51543,7 @@
       "normalized_path": "/compliance/playbooks/connections/{param}/test",
       "path": "/compliance/playbooks/connections/{id}/test",
       "route_file": "services/compliance/playbook_connections.go",
-      "route_line": 445,
+      "route_line": 448,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -51540,7 +51573,7 @@
         "pkg/tenantcheck.InternalServiceTenant",
         "pkg/tenantcheck.IsServicePrincipal"
       ],
-      "handler_line": 118,
+      "handler_line": 121,
       "handler_name": "listPrivateEndpoints",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -51551,7 +51584,7 @@
       "normalized_path": "/compliance/private-endpoints",
       "path": "/compliance/private-endpoints",
       "route_file": "services/compliance/private_endpoints.go",
-      "route_line": 111,
+      "route_line": 114,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -51586,7 +51619,7 @@
         "CreatePrivateEndpoint"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 131,
+      "handler_line": 134,
       "handler_name": "addPrivateEndpoint",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -51598,7 +51631,7 @@
       "normalized_path": "/compliance/private-endpoints",
       "path": "/compliance/private-endpoints",
       "route_file": "services/compliance/private_endpoints.go",
-      "route_line": 112,
+      "route_line": 115,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -51627,7 +51660,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 182,
+      "handler_line": 185,
       "handler_name": "removePrivateEndpoint",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -51638,7 +51671,7 @@
       "normalized_path": "/compliance/private-endpoints/{param}",
       "path": "/compliance/private-endpoints/{id}",
       "route_file": "services/compliance/private_endpoints.go",
-      "route_line": 113,
+      "route_line": 116,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -56941,7 +56974,7 @@
           "file": "services/discovery/storage.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 753,
+          "line": 895,
           "name": "ListBuckets",
           "receiver_calls": [],
           "store_calls": [
@@ -56968,7 +57001,7 @@
             "scanBucket"
           ],
           "internal_package_calls": [],
-          "line": 723,
+          "line": 865,
           "name": "AddBucket",
           "receiver_calls": [],
           "store_calls": [
@@ -57110,7 +57143,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 420,
+          "line": 421,
           "source": "serviceRequest"
         }
       ],
@@ -57144,7 +57177,7 @@
           "file": "services/discovery/storage.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 753,
+          "line": 895,
           "name": "ListBuckets",
           "receiver_calls": [],
           "store_calls": [
@@ -57162,7 +57195,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 432,
+          "line": 433,
           "source": "serviceRequest"
         }
       ],
@@ -57255,7 +57288,7 @@
             "scanBucket"
           ],
           "internal_package_calls": [],
-          "line": 723,
+          "line": 865,
           "name": "AddBucket",
           "receiver_calls": [],
           "store_calls": [
@@ -57274,7 +57307,7 @@
             "PruneBucketObjects"
           ],
           "internal_package_calls": [],
-          "line": 770,
+          "line": 912,
           "name": "RemoveBucket",
           "receiver_calls": [],
           "store_calls": [
@@ -57290,7 +57323,7 @@
             "scanBucket"
           ],
           "internal_package_calls": [],
-          "line": 804,
+          "line": 946,
           "name": "TestBucket",
           "receiver_calls": [],
           "store_calls": []
@@ -57347,7 +57380,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 442,
+          "line": 443,
           "source": "serviceRequest"
         }
       ],
@@ -57389,7 +57422,7 @@
             "PruneBucketObjects"
           ],
           "internal_package_calls": [],
-          "line": 770,
+          "line": 912,
           "name": "RemoveBucket",
           "receiver_calls": [],
           "store_calls": [
@@ -57409,7 +57442,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}/test?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 453,
+          "line": 454,
           "source": "serviceRequest"
         }
       ],
@@ -57452,7 +57485,7 @@
             "scanBucket"
           ],
           "internal_package_calls": [],
-          "line": 804,
+          "line": 946,
           "name": "TestBucket",
           "receiver_calls": [],
           "store_calls": []
@@ -62067,7 +62100,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 285,
+          "line": 294,
           "name": "TestWebhook",
           "receiver_calls": [],
           "store_calls": []
@@ -89662,7 +89695,7 @@
     "nav_items": 26,
     "request_flows": 888,
     "request_flows_with_frontend": 523,
-    "request_flows_with_internal_package_calls": 157,
+    "request_flows_with_internal_package_calls": 158,
     "request_flows_with_service_calls": 530,
     "request_flows_with_store_calls": 638,
     "subpane_groups": 8,
@@ -99586,7 +99619,7 @@
         "frontendSites": [],
         "handler": "importConnection",
         "handlerFile": "services/compliance/connections_service.go",
-        "handlerLine": 144,
+        "handlerLine": 142,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -101138,7 +101171,7 @@
         ],
         "handler": "listConnections",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 449,
+        "handlerLine": 452,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -101168,7 +101201,7 @@
         "frontendSites": [],
         "handler": "createConnection",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 458,
+        "handlerLine": 461,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -101188,26 +101221,33 @@
         ]
       },
       {
-        "complexity": 5,
+        "complexity": 11,
         "externalPackages": [
           "errors.Is",
           "errors.As",
           "fmt.Errorf",
-          "strings.TrimSpace"
+          "fmt.Sprintf",
+          "strings.TrimSpace",
+          "strings.Join",
+          "time.NewTicker",
+          "time.After"
         ],
         "frontendSites": [],
         "handler": "updateConnection",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 484,
+        "handlerLine": 487,
         "hasFrontend": false,
-        "internalPackages": [],
+        "internalPackages": [
+          "pkg/tenantcheck.InternalServiceTenant"
+        ],
         "method": "PUT",
         "normalizedPath": "/compliance/playbooks/connections/{param}",
         "path": "/compliance/playbooks/connections/{id}",
         "receiverCalls": [
           "h.connVault.Open",
           "h.connVault.current",
-          "h.connVault.Seal"
+          "h.connVault.Seal",
+          "h.executor.testConnection"
         ],
         "risk": "medium",
         "routeKey": "compliance|PUT|/compliance/playbooks/connections/{param}",
@@ -101216,7 +101256,11 @@
         "serviceCalls": [],
         "storeCalls": [
           "GetConnection",
-          "UpdateConnection"
+          "UpdateConnection",
+          "DeleteConnection",
+          "ListAllPlaybooks",
+          "CreateConnection",
+          "UpdatePlaybook"
         ],
         "uiLabels": [
           "API only"
@@ -101231,7 +101275,7 @@
         "frontendSites": [],
         "handler": "deleteConnection",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 599,
+        "handlerLine": 614,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "DELETE",
@@ -101265,7 +101309,7 @@
         "frontendSites": [],
         "handler": "testConnection",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 639,
+        "handlerLine": 654,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/tenantcheck.InternalServiceTenant"
@@ -101304,7 +101348,7 @@
         ],
         "handler": "listPrivateEndpoints",
         "handlerFile": "services/compliance/private_endpoints.go",
-        "handlerLine": 118,
+        "handlerLine": 121,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/route.Allowed",
@@ -101345,7 +101389,7 @@
         ],
         "handler": "addPrivateEndpoint",
         "handlerFile": "services/compliance/private_endpoints.go",
-        "handlerLine": 131,
+        "handlerLine": 134,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -101380,7 +101424,7 @@
         ],
         "handler": "removePrivateEndpoint",
         "handlerFile": "services/compliance/private_endpoints.go",
-        "handlerLine": 182,
+        "handlerLine": 185,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -104029,7 +104073,7 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 420,
+            "line": 421,
             "source": "serviceRequest"
           }
         ],
@@ -104072,7 +104116,7 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 432,
+            "line": 433,
             "source": "serviceRequest"
           }
         ],
@@ -104117,7 +104161,7 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 442,
+            "line": 443,
             "source": "serviceRequest"
           }
         ],
@@ -104154,7 +104198,7 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}/test?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 453,
+            "line": 454,
             "source": "serviceRequest"
           }
         ],
@@ -121443,7 +121487,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-11T03:57:41Z",
+    "generatedAt": "2026-10-11T04:20:01Z",
     "methods": [
       "DELETE",
       "GET",

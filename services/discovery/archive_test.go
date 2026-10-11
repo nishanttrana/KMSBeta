@@ -114,8 +114,8 @@ func TestKeyMaterialByContent(t *testing.T) {
 }
 
 // An archive is opened in memory and its members read like files beside
-// it: by name, or by content when the name says nothing. Dependencies and
-// archives inside it are left alone.
+// it: by name, or by content when the name says nothing. Dependencies are
+// left alone; an archive inside it is opened in its place.
 func TestArchivesAreScannedInMemory(t *testing.T) {
 	svc, _, _ := newDiscoveryService(t)
 	priv := testPrivatePEM(t)
@@ -134,6 +134,7 @@ func TestArchivesAreScannedInMemory(t *testing.T) {
 		"keystore||exposed|data/store",
 		"private_key_material|RSA-2048|exposed|data/blob.bin:1",
 		"private_key_material|RSA-2048|exposed|deploy/id_rsa:1",
+		"private_key_material|RSA-2048|exposed|nested/inner.zip!/id_rsa:1",
 	}
 	for name, raw := range map[string][]byte{"release.zip": zipOf(t, files), "app.jar": zipOf(t, files), "backup.tar.gz": tarGzOf(t, files), "renamed.dat": zipOf(t, files)} {
 		assets, err := svc.fileAssets("t1", "s", "upload", name, name, raw)
@@ -155,7 +156,7 @@ func TestArchivesAreScannedInMemory(t *testing.T) {
 	maxArchiveExpanded = 2500
 	assets, err := svc.fileAssets("t1", "s", "upload", "release.zip", "release.zip", zipOf(t, files))
 	maxArchiveExpanded = old
-	if !errors.Is(err, errArchiveTooLarge) || len(assets) == 0 || len(assets) >= 4 {
+	if !errors.Is(err, errArchiveTooLarge) || len(assets) == 0 || len(assets) >= 5 {
 		t.Fatalf("over the cap: %d assets, %v", len(assets), err)
 	}
 	// A member that claims a small size and holds a large one is not read.
@@ -167,14 +168,94 @@ func TestArchivesAreScannedInMemory(t *testing.T) {
 	if _, err := svc.fileAssets("t1", "s", "upload", "bad.zip", "bad.zip", damaged[:len(damaged)/2]); err == nil {
 		t.Fatal("a truncated zip read as complete")
 	}
-	// A gzip that is not a tar, and a keystore that happens to be zip-like,
-	// are files, not archives.
-	var gz bytes.Buffer
-	w := gzip.NewWriter(&gz)
-	_, _ = w.Write([]byte("plain text"))
-	_ = w.Close()
-	if assets, err := svc.fileAssets("t1", "s", "upload", "notes.gz", "notes.gz", gz.Bytes()); err != nil || len(assets) != 0 {
+	// A gzip of one file is read as that file: text holds nothing, a key is
+	// found under the name without ".gz".
+	gzOf := func(body string) []byte {
+		var gz bytes.Buffer
+		w := gzip.NewWriter(&gz)
+		_, _ = w.Write([]byte(body))
+		_ = w.Close()
+		return gz.Bytes()
+	}
+	if assets, err := svc.fileAssets("t1", "s", "upload", "notes.gz", "notes.gz", gzOf("plain text")); err != nil || len(assets) != 0 {
 		t.Fatalf("gzip of text: %d assets, %v", len(assets), err)
+	}
+	assets, err = svc.fileAssets("t1", "s", "upload", "backup/server.key.gz", "backup/server.key.gz", gzOf(priv))
+	if got := assetLines(assets, "backup/server.key.gz!"); err != nil || !reflect.DeepEqual(got, []string{"private_key_material|RSA-2048|exposed|server.key:1"}) {
+		t.Fatalf("gzipped key: %q %v", got, err)
+	}
+}
+
+// Archives inside archives are opened (8.1.0-beta), whatever mix of zip, tar
+// and gzip they are, down to maxArchiveDepth. One allowance of entries and
+// bytes covers the whole tree, so nesting can't multiply what is unpacked,
+// and an archive nested deeper is reported, not opened.
+func TestArchivesInsideArchives(t *testing.T) {
+	svc, _, _ := newDiscoveryService(t)
+	priv := testPrivatePEM(t)
+	level3 := tarGzOf(t, map[string]string{"etc/ssl/server.key": priv})
+	level2 := zipOf(t, map[string]string{"layers/base.tar.gz": string(level3), "conf/nginx.conf": "ssl_protocols TLSv1;\n"})
+	level1 := zipOf(t, map[string]string{"release/app.war": string(level2), "top.pem": priv})
+	assets, err := svc.fileAssets("t1", "s", "upload", "bundle.zip", "bundle.zip", level1)
+	want := []string{
+		"crypto_usage|TLS-1.0|weak|release/app.war!/conf/nginx.conf:1",
+		"private_key_material|RSA-2048|exposed|release/app.war!/layers/base.tar.gz!/etc/ssl/server.key:1",
+		"private_key_material|RSA-2048|exposed|top.pem:1",
+	}
+	if got := assetLines(assets, "bundle.zip!"); err != nil || !reflect.DeepEqual(got, want) {
+		t.Fatalf("nested archives: %v\n got %q\nwant %q", err, got, want)
+	}
+	for _, a := range assets {
+		if a.Metadata["archive"] != "bundle.zip" || a.Location != "bundle.zip!/"+a.Metadata["member"].(string)+":1" {
+			t.Fatalf("asset %s member %v", a.Location, a.Metadata["member"])
+		}
+	}
+
+	// Deeper than the limit: the archive at the limit is not opened, the
+	// scan says so, and everything above it is still read.
+	deep := zipOf(t, map[string]string{"id_rsa": priv})
+	for i := 0; i < maxArchiveDepth; i++ {
+		deep = zipOf(t, map[string]string{"inner.zip": string(deep), "level.pem": priv})
+	}
+	assets, err = svc.fileAssets("t1", "s", "upload", "deep.zip", "deep.zip", deep)
+	if !errors.Is(err, errArchiveTooDeep) || len(assets) != maxArchiveDepth {
+		t.Fatalf("too deep: %d assets, %v", len(assets), err)
+	}
+	for _, a := range assets {
+		if strings.HasSuffix(a.Location, "/id_rsa:1") {
+			t.Fatalf("the archive below the limit was opened: %s", a.Location)
+		}
+	}
+
+	// The byte allowance is the tree's: three levels that each fit alone
+	// do not fit together.
+	pad := strings.Repeat("# padding\n", 200) // 2000 bytes of a file the parser reads
+	c := zipOf(t, map[string]string{"c.conf": pad, "c.pem": priv})
+	b := zipOf(t, map[string]string{"b.conf": pad, "c.zip": string(c)})
+	a := zipOf(t, map[string]string{"a.conf": pad, "b.zip": string(b)})
+	old := maxArchiveExpanded
+	maxArchiveExpanded = int64(len(b)) + 2500 // the outer level alone fits
+	_, err = svc.fileAssets("t1", "s", "upload", "a.zip", "a.zip", a)
+	maxArchiveExpanded = old
+	if !errors.Is(err, errArchiveTooLarge) {
+		t.Fatalf("nested archives drew on separate allowances: %v", err)
+	}
+	if assets, err := svc.fileAssets("t1", "s", "upload", "a.zip", "a.zip", a); err != nil || len(assets) != 1 {
+		t.Fatalf("within the allowance: %d assets, %v", len(assets), err)
+	}
+	// So is the entry allowance.
+	many := map[string]string{}
+	for i := 0; i < 40; i++ {
+		many["f"+itoa(i)+".txt"] = "x"
+	}
+	inner := zipOf(t, many)
+	outer := zipOf(t, map[string]string{"one.zip": string(inner), "two.zip": string(inner)})
+	oldEntries := maxArchiveEntries
+	maxArchiveEntries = 60
+	_, err = svc.fileAssets("t1", "s", "upload", "outer.zip", "outer.zip", outer)
+	maxArchiveEntries = oldEntries
+	if !errors.Is(err, errArchiveTooLarge) {
+		t.Fatalf("entries were counted per archive: %v", err)
 	}
 }
 
@@ -206,7 +287,10 @@ func TestDeepScanReadsByContent(t *testing.T) {
 	objects := map[string]string{
 		"backups/store.dat":    string(jksBytes),
 		"backups/key.bak":      strings.Repeat("# comment line\n", 10) + priv,
-		"backups/late.bak":     strings.Repeat("x", sniffBytes+10) + priv, // nothing in its first kilobyte
+		"backups/late.bak":     strings.Repeat("x", sniffBytes+10) + "\n" + priv,    // nothing in its first kilobyte
+		"backups/firmware.img": strings.Repeat("\x00", 9000) + "\n" + priv,          // binary, a key further in
+		"backups/blob.img":     strings.Repeat("\x00\x01", 6000),                    // binary, nothing in it
+		"media/huge.dat":       strings.Repeat("x", maxUploadBytes+1) + "\n" + priv, // too large to read whole
 		"media/logo.png":       string(pngBytes) + strings.Repeat("\x00", 4096),
 		"media/renamed.dat":    string(zipOf(t, map[string]string{"id_rsa": priv})),
 		"node_modules/a/k.bak": priv,
@@ -227,7 +311,9 @@ func TestDeepScanReadsByContent(t *testing.T) {
 		if deep {
 			want = []string{
 				"keystore||exposed|backups/store.dat",
+				"private_key_material|RSA-2048|exposed|backups/firmware.img:2",
 				"private_key_material|RSA-2048|exposed|backups/key.bak:11",
+				"private_key_material|RSA-2048|exposed|backups/late.bak:2",
 				"private_key_material|RSA-2048|exposed|conf/id_rsa:1",
 				"private_key_material|RSA-2048|exposed|media/renamed.dat!/id_rsa:1",
 			}
@@ -242,19 +328,19 @@ func TestDeepScanReadsByContent(t *testing.T) {
 		wantRanged := []string(nil)
 		wantSniffed, wantFiles := 0, 1
 		if deep {
-			// The dependency folder is not looked into; everything else
-			// without a telling name is, by its first kilobyte only.
-			wantRanged = []string{
-				"/acme-artifacts/backups/key.bak bytes=0-1023", "/acme-artifacts/backups/late.bak bytes=0-1023",
-				"/acme-artifacts/backups/store.dat bytes=0-1023", "/acme-artifacts/media/logo.png bytes=0-1023", "/acme-artifacts/media/renamed.dat bytes=0-1023",
-			}
-			wantSniffed, wantFiles = 5, 4
+			// The dependency folder is not looked into. Everything else
+			// without a telling name is read whole when it is small (so a
+			// key anywhere in it is found), and by its first kilobyte only
+			// when it is an image or too large to hold.
+			wantRanged = []string{"/acme-artifacts/media/huge.dat bytes=0-1023", "/acme-artifacts/media/logo.png bytes=0-1023"}
+			// Parsed: all but the image, the large file and the empty binary.
+			wantSniffed, wantFiles = 8, 6
 		}
 		if !reflect.DeepEqual(ranged, wantRanged) || res.sniffed != wantSniffed || res.files != wantFiles {
 			t.Fatalf("deep %v: ranged %q, sniffed %d, files %d", deep, ranged, res.sniffed, res.files)
 		}
-		// The image and the file with nothing up front were asked for once
-		// (their first kilobyte) and never downloaded; the dependency never.
+		// Each object was asked for once: the image and the large file by
+		// their first kilobyte, never downloaded; the dependency never.
 		count := map[string]int{}
 		for _, r := range srv.requests() {
 			uri, _, _ := strings.Cut(r, " | ")
@@ -264,12 +350,12 @@ func TestDeepScanReadsByContent(t *testing.T) {
 		if deep {
 			once = 1
 		}
-		if count["/acme-artifacts/media/logo.png"] != once || count["/acme-artifacts/backups/late.bak"] != once || count["/acme-artifacts/node_modules/a/k.bak"] != 0 {
+		if count["/acme-artifacts/media/logo.png"] != once || count["/acme-artifacts/media/huge.dat"] != once || count["/acme-artifacts/backups/late.bak"] != once || count["/acme-artifacts/node_modules/a/k.bak"] != 0 {
 			t.Fatalf("deep %v: requests %v", deep, count)
 		}
-		// Key material found by its first bytes is then read in full.
-		if deep && count["/acme-artifacts/backups/key.bak"] != 2 {
-			t.Fatalf("key.bak requested %d times, want 2", count["/acme-artifacts/backups/key.bak"])
+		// A small object is one request, whatever it holds.
+		if deep && (count["/acme-artifacts/backups/key.bak"] != 1 || count["/acme-artifacts/backups/blob.img"] != 1) {
+			t.Fatalf("small objects: %v", count)
 		}
 	}
 }

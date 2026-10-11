@@ -4,8 +4,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"vecta-kms/pkg/cryptocatalog"
 )
 
 // Crypto usage in source and configuration files (7.36.0-beta). Key
@@ -22,7 +20,9 @@ import (
 // Detection is deterministic: a rule matches a call, import or directive,
 // not a word, and comment lines are skipped, so a README that says "MD5"
 // is not a finding. The line itself is never stored: the asset records the
-// file, line, algorithm and which call or directive named it.
+// file, line, algorithm and which call or directive named it. The rules are
+// applied to statements, with names the file assigns resolved
+// (usage_statements.go).
 
 // usageRule matches one way of naming an algorithm. algs turns a match into
 // the catalogue names it uses (none: not a finding).
@@ -304,7 +304,11 @@ var usageRules = []usageRule{
 		return one(cipherName(n))
 	}},
 	{"OpenSSL MD5", cExt, regexp.MustCompile(`\b(MD5|SHA1|MD4)_Init\(`), first},
-	{"RSA_generate_key", cExt, regexp.MustCompile(`RSA_generate_key(?:_ex)?\(\s*[^,]*?,?\s*(\d{3,5})\s*,`), rsaBits},
+	// The size is the first argument, or the second of the _ex form. One
+	// rule for both read the public exponent as the size when the size was
+	// a name: RSA_generate_key(bits, 65537, ...) was reported as RSA-65537.
+	{"RSA_generate_key", cExt, regexp.MustCompile(`RSA_generate_key\(\s*(\d{3,5})\s*,`), rsaBits},
+	{"RSA_generate_key_ex", cExt, regexp.MustCompile(`RSA_generate_key_ex\(\s*[^,()]+,\s*(\d{3,5})\s*,`), rsaBits},
 
 	// PHP, Ruby, Rust.
 	{"hash()", phpExt, regexp.MustCompile(`\bhash(?:_hmac)?\(\s*['"](md5|sha1|md4)['"]`), first},
@@ -367,35 +371,3 @@ func isComment(ext, line string) bool {
 
 // maxUsageLine skips minified or generated lines.
 const maxUsageLine = 2000
-
-// usageFindings applies the rules to one line of a file.
-func usageFindings(ext, line string, n int) []finding {
-	if len(line) > maxUsageLine || isComment(ext, line) {
-		return nil
-	}
-	var out []finding
-	seen := map[string]bool{}
-	for _, r := range usageRules {
-		if r.exts != nil && !r.exts[ext] {
-			continue
-		}
-		if r.exts == nil && !configExt[ext] && ext != "" && !scriptExt[ext] {
-			// Directive rules read configuration and scripts, not code.
-			continue
-		}
-		for _, m := range r.re.FindAllStringSubmatch(line, -1) {
-			for _, alg := range r.algs(m) {
-				// The catalogue's own spelling (TLSv1 -> TLS-1.0, 3DES -> 3TDEA).
-				if e, ok := cryptocatalog.Lookup(alg); ok {
-					alg = e.Algorithm
-				}
-				if alg == "" || seen[alg] {
-					continue
-				}
-				seen[alg] = true
-				out = append(out, finding{kind: "crypto_usage", algorithm: alg, name: alg + " · " + r.api, line: n, meta: map[string]interface{}{"api": r.api}})
-			}
-		}
-	}
-	return out
-}

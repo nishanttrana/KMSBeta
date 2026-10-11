@@ -23,9 +23,11 @@ const (
 	webhookChannelTeams = "teams"
 )
 
-var newWebhookHTTPClient = func(timeout time.Duration) *http.Client {
-	return &http.Client{Timeout: timeout}
-}
+// newWebhookHTTPClient is the client for approval notices: TLS 1.3, the
+// address checked when it is dialled, no redirects (a variable so a test can
+// point it at a local server). Until 8.1.0-beta it was a plain client that
+// checked the URL once and then followed redirects.
+var newWebhookHTTPClient = ssrfguard.NewHTTPSClient
 
 func normalizeApprovalDeliveryMode(raw string) string {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
@@ -235,8 +237,8 @@ func (s *Service) approvalNotificationText(req ApprovalRequest) string {
 	)
 }
 
-func (s *Service) postWebhookJSON(ctx context.Context, targetURL string, timeoutSeconds int, payload map[string]interface{}) error {
-	targetURL = strings.TrimSpace(targetURL)
+func (s *Service) postWebhookJSON(ctx context.Context, target notifyTarget, timeoutSeconds int, payload map[string]interface{}) error {
+	targetURL := strings.TrimSpace(target.url)
 	if targetURL == "" {
 		return errors.New("webhook URL is required")
 	}
@@ -247,8 +249,9 @@ func (s *Service) postWebhookJSON(ctx context.Context, targetURL string, timeout
 	if parsed.Scheme != "https" {
 		return errors.New("webhook URL must use https")
 	}
-	// SSRF protection: block requests to internal/private IPs and cloud metadata endpoints
-	if err := ssrfguard.ValidateWebhookURL(targetURL); err != nil {
+	// SSRF protection: internal, metadata and private addresses are refused,
+	// but for a private range approved for the connection's tenant.
+	if err := target.allow.ValidateURL(targetURL); err != nil {
 		return fmt.Errorf("webhook URL blocked: %w", err)
 	}
 	body, err := json.Marshal(payload)
@@ -264,6 +267,12 @@ func (s *Service) postWebhookJSON(ctx context.Context, targetURL string, timeout
 	}
 	req.Header.Set("Content-Type", "application/json")
 	client := newWebhookHTTPClient(timeout)
+	if len(target.allow) > 0 {
+		// This notice's own client: a shared one would let another
+		// tenant's notice ride a connection dialled under this approval.
+		client = target.allow.NewHTTPSClient(timeout)
+		defer client.CloseIdleConnections()
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return err

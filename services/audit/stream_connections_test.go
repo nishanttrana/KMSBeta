@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"vecta-kms/pkg/siem"
 )
 
 // The client calls compliance's resolve and import routes for the tenant
@@ -21,7 +23,7 @@ func TestComplianceConnectionsClient(t *testing.T) {
 		calls = append(calls, call{r.URL.Path, r.Header.Get("X-Tenant-ID"), string(b)})
 		switch r.URL.Path {
 		case "/compliance/connections/c1/resolve":
-			_, _ = w.Write([]byte(`{"data":{"id":"c1","type":"datadog","fields":{"url":"https://x","api_key":"k"}}}`))
+			_, _ = w.Write([]byte(`{"data":{"id":"c1","type":"datadog","fields":{"url":"https://x","api_key":"k"},"private_ranges":["10.20.0.0/16"]}}`))
 		case "/compliance/connections/import":
 			w.WriteHeader(http.StatusCreated)
 			_, _ = w.Write([]byte(`{"data":{"id":"pbconn_audit_wh1"}}`))
@@ -33,7 +35,7 @@ func TestComplianceConnectionsClient(t *testing.T) {
 	defer srv.Close()
 	c := complianceConnections{base: srv.URL, http: srv.Client()}
 	conn, err := c.Resolve(context.Background(), "t1", "c1")
-	if err != nil || conn.Type != "datadog" || conn.Fields["api_key"] != "k" {
+	if err != nil || conn.Type != "datadog" || conn.Fields["api_key"] != "k" || len(conn.PrivateRanges) != 1 {
 		t.Fatalf("resolve %+v %v", conn, err)
 	}
 	id, err := c.Import(context.Background(), "t1", connImport{SourceID: "wh1", Type: "webhook", Fields: map[string]string{"url": "https://x"}, Exposed: true})
@@ -84,5 +86,68 @@ func TestDeliveryErrorsDoNotQuoteURL(t *testing.T) {
 	_, _, err := d.Deliver(context.Background(), Webhook{ID: "w", URL: "https://127.0.0.1:1/services/T0/B0/sekret"}, "a", "e", []byte("{}"))
 	if err == nil || strings.Contains(err.Error(), "sekret") {
 		t.Fatalf("error %v", err)
+	}
+}
+
+// A stream's destination may sit on a private range approved for its tenant
+// (8.1.0-beta). Such a connection gets its own client, which reaches the
+// approved range and nothing else private; a connection with no range, or
+// with one that can't be approved, stays on the shared public-only client.
+func TestStreamOnAnApprovedPrivateRange(t *testing.T) {
+	src := &testConns{conns: map[string]streamConnection{}}
+	src.add("public", "webhook", map[string]string{"url": "https://a.example.com/hook"})
+	src.add("onprem", "webhook", map[string]string{"url": "https://10.20.3.4/hook"})
+	src.add("syslog", "syslog", map[string]string{"address": "10.21.0.1:6514"})
+	src.add("forged", "webhook", map[string]string{"url": "https://127.0.0.1/hook"})
+	ranges := func(id string, r ...string) {
+		c := src.conns[id]
+		c.PrivateRanges = r
+		src.conns[id] = c
+	}
+	ranges("onprem", "10.20.0.0/16")
+	ranges("syslog", "10.20.0.0/16")
+	ranges("forged", "127.0.0.0/8") // not private addressing: no approval can cover it
+	cache := newConnCache(src)
+	disp := NewWebhookDispatcher()
+	disp.retry.MaxAttempts = 1
+	ctx := context.Background()
+	open := func(id string) (streamConnection, siem.Destination) {
+		conn, dest, err := cache.get(ctx, "t1", id, disp.client)
+		if err != nil {
+			t.Fatalf("%s: %v", id, err)
+		}
+		return conn, dest
+	}
+	if conn, _ := open("public"); conn.client != nil || conn.allow != nil {
+		t.Fatal("a connection with no approved range got its own client")
+	}
+	if conn, _ := open("forged"); conn.client != nil {
+		t.Fatal("a range outside private addressing was honoured")
+	}
+	onprem, _ := open("onprem")
+	if onprem.client == nil || onprem.client == disp.client || len(onprem.allow) != 1 {
+		t.Fatalf("an approved connection shares the public client: %+v", onprem.allow)
+	}
+
+	hook := func(url string) Webhook { return Webhook{ID: "wh1", URL: url} }
+	// Without the approval the private address is refused before any dial.
+	if _, _, err := disp.Deliver(ctx, hook("https://10.20.3.4/hook"), "audit.key.rotate", "e1", []byte(`{}`)); err == nil || !strings.Contains(err.Error(), "blocked") {
+		t.Fatalf("public-only delivery to a private address: %v", err)
+	}
+	// With it, an address outside the range is still refused, and so is loopback.
+	for _, u := range []string{"https://10.21.0.1/hook", "https://127.0.0.1/hook", "http://10.20.3.4/hook"} {
+		if _, _, err := disp.deliverVia(ctx, onprem.allow, onprem.client, hook(u), "audit.key.rotate", "e1", []byte(`{}`)); err == nil {
+			t.Fatalf("%s delivered under the approval", u)
+		}
+	}
+	// The client itself refuses at the dial, whatever was validated.
+	if _, err := onprem.client.Get("https://10.21.0.1/hook"); err == nil || !strings.Contains(err.Error(), "blocked") {
+		t.Fatalf("the connection's client dialled outside its range: %v", err)
+	}
+	// TLS syslog dials through the same allowance.
+	if _, dest := open("syslog"); dest == nil {
+		t.Fatal("no syslog destination")
+	} else if _, err := dest.Send(ctx, []siem.Event{{ID: "e1"}}); err == nil || !strings.Contains(err.Error(), "blocked") {
+		t.Fatalf("syslog outside the approved range: %v", err)
 	}
 }

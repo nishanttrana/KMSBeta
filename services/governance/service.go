@@ -564,7 +564,7 @@ func (s *Service) UpdateSettings(ctx context.Context, settings GovernanceSetting
 		if s.conns == nil {
 			return GovernanceSettings{}, errors.New("connections are not wired")
 		}
-		typ, _, err := s.conns.Resolve(ctx, settings.TenantID, ch.id)
+		typ, _, _, err := s.conns.Resolve(ctx, settings.TenantID, ch.id)
 		if err != nil {
 			return GovernanceSettings{}, fmt.Errorf("%s_connection_id: %w", ch.name, err)
 		}

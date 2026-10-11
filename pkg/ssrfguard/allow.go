@@ -125,8 +125,8 @@ func (a Allow) ValidateURL(rawURL string) error {
 }
 
 // DialContext is DialContext with a's networks approved: it resolves addr,
-// refuses any address that is blocked and not approved, and dials the
-// address it checked.
+// refuses any address that is blocked and not approved, or that belongs to
+// the platform itself (platform.go), and dials the address it checked.
 func (a Allow) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -142,6 +142,10 @@ func (a Allow) DialContext(ctx context.Context, network, addr string) (net.Conn,
 	for _, ip := range ips {
 		if a.blocked(ip.IP) {
 			return nil, fmt.Errorf("%s resolves to blocked IP %s", host, ip.IP)
+		}
+		// An approved private address: never one of the platform's own.
+		if isBlockedIP(ip.IP) && platformAddr(ctx, ip.IP) {
+			return nil, fmt.Errorf("%s resolves to %s, which belongs to the KMS platform's internal services", host, ip.IP)
 		}
 	}
 	d := net.Dialer{Timeout: 10 * time.Second}

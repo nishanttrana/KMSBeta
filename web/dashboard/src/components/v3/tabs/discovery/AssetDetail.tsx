@@ -50,6 +50,8 @@ const FACTS: [string, string, ((v: unknown) => ReactNode)?][] = [
   ["archive", "Archive"],
   ["file", "File"],
   ["api", "Named by"],
+  ["via", "Through the name"],
+  ["assigned_line", "Assigned on line"],
   ["format", "Format"],
 ];
 

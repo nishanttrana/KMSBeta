@@ -7,6 +7,61 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-11 — Discovery: statements, nested archives, whole small objects and a last-modified stand-in; private ranges for notification and SIEM (8.1.0-beta)
+
+Owner asked for the limits left open after 7.36.0 to 8.0.0-beta to be
+fixed. Three of them were earlier rejections (below, 7.37.0 and 7.38.0);
+each is superseded here with the reason it was rejected answered.
+
+- **Usage rules read statements and resolve names assigned in the same
+  file.** A tokeniser tells strings and comments from code; a statement is
+  a line plus what continues it; adjacent literals are folded; a name
+  assigned a string or a key size is substituted where it is read.
+  *Rejected:* a parser per language (ten grammars to maintain for a
+  heuristic), and resolving across files (a change to one file would
+  change another's findings, which breaks skipping unchanged objects).
+  *Cost:* a name reused for different things in one file can be reported
+  where it is not used; the finding names the variable and the line it was
+  assigned on, and a name with more than four values is not resolved.
+  *Enforced by:* `TestCryptoUsageAcrossLinesAndVariables`,
+  `TestCryptoUsageDoesNotGuess`.
+- **Nested archives are opened, four deep, on one allowance.** Supersedes
+  "archives are opened one level". The objection was that unpacked size
+  multiplies per level. The entry and byte caps now belong to the
+  outermost archive and every level draws on them, so depth can't multiply
+  anything. *Enforced by:* `TestArchivesInsideArchives`.
+- **A deep scan reads objects of up to 2 MiB whole.** Supersedes "first
+  kilobyte only". The objection was cost without bound. It is bounded per
+  object (2 MiB, the size of any file the parser holds), per run (the byte
+  budget, after which the bucket continues next scan), and per version (an
+  unchanged object is not read again); formats that can't hold readable
+  key text keep the first-kilobyte check. Deep scan is still opt-in per
+  bucket. *Cost:* the first pass of a bucket of small objects downloads
+  them. *Enforced by:* `TestDeepScanReadsByContent`.
+- **Last-modified time and size stand in for a missing ETag.** Supersedes
+  its rejection ("two writes in one second with the same length would be
+  missed"). The time is used only once it is two minutes old by the
+  service's own clock, so a write after the scan read the object carries a
+  later time; and a stand-in is trusted for seven days, then the object is
+  read again. *Cost accepted:* a write that keeps the old time and the old
+  length (a time-preserving copy on a file-system gateway) is unseen for
+  up to seven days, on services that return no ETag only. *Enforced by:*
+  `TestStorageWithoutETags`.
+- **Notification, ticketing and SIEM destinations use the same approved
+  private ranges as sources and mail.** One approval per tenant, by a root
+  administrator. A client that may dial a private range is built for one
+  tenant from that tenant's ranges and never shared: connection reuse
+  would otherwise carry the approval to another tenant. Every such dial
+  also refuses the platform's own addresses. *Rejected:* a separate
+  approval per credential category (more to administer, no extra
+  protection: the range names a network the tenant owns). *Enforced by:*
+  `TestNotifyTicketingAndSIEMOnAnApprovedPrivateRange`,
+  `TestStreamOnAnApprovedPrivateRange`,
+  `TestApprovalNoticeOnAnApprovedPrivateRange`,
+  `TestAllowNeverReachesThePlatform`.
+
+---
+
 ## 2026-10-11 — One credential store for every external system; HSMs that hold keys are credentials (8.0.0-beta)
 
 **Owner directive (2026-10-10).** Credentials for anything external

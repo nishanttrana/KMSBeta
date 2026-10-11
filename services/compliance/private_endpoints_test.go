@@ -199,9 +199,10 @@ func TestSourceConnectionOnAnApprovedPrivateAddress(t *testing.T) {
 		"metadata":                       create(pbAdmin, "s3", s3("https://169.254.169.254")),
 		"a platform service":             create(pbAdmin, "s3", s3("https://keycore:8010")),
 		"not https":                      create(pbAdmin, "s3", s3("http://10.4.0.20")),
-		// Compliance dials these itself, through ssrfguard: never private.
-		"a webhook": create(pbAdmin, "webhook", map[string]string{"url": "https://10.4.0.20/hook"}),
-		"slack":     create(pbAdmin, "slack", map[string]string{"webhook_url": "https://10.4.0.20/x"}),
+		// Notification types follow the same approval
+		// (TestNotifyTicketingAndSIEMOnAnApprovedPrivateRange): outside it, refused.
+		"a webhook": create(pbAdmin, "webhook", map[string]string{"url": "https://10.4.1.20/hook"}),
+		"slack":     create(pbAdmin, "slack", map[string]string{"webhook_url": "https://10.9.9.9/x"}),
 	} {
 		if w.Code != http.StatusBadRequest {
 			t.Fatalf("%s: %d %s", name, w.Code, w.Body.String())

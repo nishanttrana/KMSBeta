@@ -41,12 +41,16 @@ func eventMatches(patterns []string, action string) bool {
 	return false
 }
 
-func validateWebhookURL(raw string) error {
+func validateWebhookURL(raw string) error { return validateWebhookURLAllowing(raw, nil) }
+
+// validateWebhookURLAllowing is validateWebhookURL for a tenant whose
+// approved private ranges are allow.
+func validateWebhookURLAllowing(raw string, allow ssrfguard.Allow) error {
 	u, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil || u.Scheme != "https" {
 		return errors.New("webhook URL must be https")
 	}
-	if err := ssrfguard.ValidateWebhookURL(raw); err != nil {
+	if err := allow.ValidateURL(raw); err != nil {
 		return fmt.Errorf("webhook URL blocked: %w", err)
 	}
 	return nil

@@ -663,15 +663,16 @@ func TestApprovalRequestSendsSlackWebhookNotification(t *testing.T) {
 // in services/compliance).
 type testNotifyConns struct {
 	conns   map[string][2]string // id -> type, webhook_url
+	ranges  []string             // private ranges approved for the tenant
 	imports []string
 }
 
-func (c *testNotifyConns) Resolve(_ context.Context, _, id string) (string, string, error) {
+func (c *testNotifyConns) Resolve(_ context.Context, _, id string) (string, string, []string, error) {
 	v, ok := c.conns[id]
 	if !ok {
-		return "", "", errors.New("compliance HTTP 404: connection not found")
+		return "", "", nil, errors.New("compliance HTTP 404: connection not found")
 	}
-	return v[0], v[1], nil
+	return v[0], v[1], c.ranges, nil
 }
 
 func (c *testNotifyConns) Import(_ context.Context, tenantID, sourceID, typ, url string) (string, error) {
@@ -783,4 +784,35 @@ func extractToken(t *testing.T, body string, action string) string {
 		t.Fatalf("failed to extract %s token from body: %s", action, body)
 	}
 	return m[1]
+}
+
+// An approval notice may go to a chat server on a private range approved
+// for the tenant (8.1.0-beta); every other private address stays refused,
+// when the URL is checked and again when it is dialled.
+func TestApprovalNoticeOnAnApprovedPrivateRange(t *testing.T) {
+	svc := NewService(newGovernanceStore(t), nil, &mockEmailSender{}, &mockCallbackExecutor{}, "http://localhost:8050")
+	conns := &testNotifyConns{conns: map[string][2]string{"pbconn_slack": {"slack", "https://10.21.0.1/hooks/x"}}}
+	svc.conns = conns
+	settings := GovernanceSettings{TenantID: "t1", SlackConnectionID: "pbconn_slack"}
+	ctx := context.Background()
+
+	target, err := svc.notifyURL(ctx, settings, webhookChannelSlack)
+	if err != nil || len(target.allow) != 0 {
+		t.Fatalf("no ranges approved: %+v %v", target.allow, err)
+	}
+	if err := svc.postWebhookJSON(ctx, target, 2, map[string]interface{}{"text": "x"}); err == nil || !strings.Contains(err.Error(), "blocked") {
+		t.Fatalf("a notice to an unapproved private address: %v", err)
+	}
+	conns.ranges = []string{"10.20.0.0/16"}
+	if target, err = svc.notifyURL(ctx, settings, webhookChannelSlack); err != nil || len(target.allow) != 1 {
+		t.Fatalf("ranges from the connection: %+v %v", target.allow, err)
+	}
+	if err := svc.postWebhookJSON(ctx, target, 2, map[string]interface{}{"text": "x"}); err == nil || !strings.Contains(err.Error(), "blocked") {
+		t.Fatalf("a notice outside the approved range: %v", err)
+	}
+	// Ranges that can't be approved are ignored, not trusted.
+	conns.ranges = []string{"127.0.0.0/8"}
+	if target, err = svc.notifyURL(ctx, settings, webhookChannelSlack); err != nil || len(target.allow) != 0 {
+		t.Fatalf("a loopback range was honoured: %+v %v", target.allow, err)
+	}
 }

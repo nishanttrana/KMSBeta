@@ -2,8 +2,11 @@ package ssrfguard
 
 import (
 	"context"
+	"errors"
+	"net"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Only private addressing can be approved: an approval for loopback,
@@ -46,5 +49,47 @@ func TestAllowReachesOnlyApprovedNetworks(t *testing.T) {
 	}
 	if _, err := allow.DialContext(context.Background(), "tcp", "10.21.0.1:9"); err == nil || !strings.Contains(err.Error(), "blocked") {
 		t.Fatalf("dial outside the approved network: %v", err)
+	}
+}
+
+// An approved range can contain the platform's own containers. A dial under
+// it still refuses them, and this host's own address.
+func TestAllowNeverReachesThePlatform(t *testing.T) {
+	platformMu.Lock()
+	platformSet = nil
+	platformMu.Unlock()
+	oldLookup, oldOwn := lookupPlatform, ownAddrs
+	t.Cleanup(func() {
+		lookupPlatform, ownAddrs = oldLookup, oldOwn
+		platformMu.Lock()
+		platformSet = nil
+		platformMu.Unlock()
+	})
+	lookupPlatform = func(_ context.Context, host string) ([]net.IPAddr, error) {
+		if host == "keycore" {
+			return []net.IPAddr{{IP: net.ParseIP("10.20.0.9")}}, nil
+		}
+		return nil, errors.New("no such host")
+	}
+	ownAddrs = func() ([]net.Addr, error) {
+		_, n, _ := net.ParseCIDR("10.20.0.7/16")
+		return []net.Addr{&net.IPNet{IP: net.ParseIP("10.20.0.7"), Mask: n.Mask}}, nil
+	}
+	allow, err := ParseAllow([]string{"10.20.0.0/16"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, addr := range []string{"10.20.0.9:443", "10.20.0.7:443"} {
+		if _, err := allow.DialContext(context.Background(), "tcp", addr); err == nil || !strings.Contains(err.Error(), "KMS platform") {
+			t.Fatalf("dial to the platform's %s: %v", addr, err)
+		}
+	}
+	// The client built from an allowance dials through the same guard.
+	client := allow.NewHTTPSClient(2 * time.Second)
+	if _, err := client.Get("https://10.20.0.9/hook"); err == nil || !strings.Contains(err.Error(), "KMS platform") {
+		t.Fatalf("client reached the platform: %v", err)
+	}
+	if _, err := client.Get("https://10.21.0.1/hook"); err == nil || !strings.Contains(err.Error(), "blocked") {
+		t.Fatalf("client reached an unapproved private address: %v", err)
 	}
 }

@@ -157,14 +157,29 @@ customer's own network:
   KMS platform's services, whatever is approved.
 - Withdrawing a range leaves the connections in place; from the next scan
   their credential is no longer sent there.
-- Notification, ticketing and SIEM connections are not covered: compliance
-  and the audit service dial those through `ssrfguard`, which refuses
-  every private address.
 
 **Mail relays (8.0.0-beta).** An `smtp` credential may name a host inside
 a range approved for its tenant, checked when it is saved; governance is
 given the ranges with the credential and its dial guard refuses any other
-private address. Notification, ticketing and SIEM types are unchanged.
+private address.
+
+**Notification, ticketing and SIEM (8.1.0-beta).** The same approval covers
+`webhook`, `slack`, `teams`, `jira`, `servicenow` and every SIEM type (an
+on-premises Splunk, Elastic or TLS syslog collector).
+- Saving one on a private address is accepted only inside a range approved
+  for the tenant; the audit event carries `private_endpoint: true`.
+- Each service that dials it builds its client from that tenant's ranges
+  (`ssrfguard.Allow`): compliance per delivery, audit per stream
+  connection, governance per notice. That client is never used for another
+  tenant, because a kept-alive connection is reused without a new dial.
+- The check is on the address dialled. Under any approval the dial still
+  refuses loopback, link-local and metadata addresses, and every address a
+  platform hostname resolves to (`pkg/ssrfguard/platform.go`).
+- A tenant with no approved range uses the shared public-only client, as
+  before. Withdrawing a range takes effect on the next delivery (within
+  60 seconds for an audit stream, whose opened connection is cached).
+- Cloud account credentials are not covered: they reach the provider's
+  public endpoints.
 
 ## Every call is TLS
 
@@ -247,12 +262,6 @@ It is deleted, not migrated.
 
 ## What is still open
 
-- A SIEM on a private network (an on-premises QRadar or Splunk) can't be a
-  destination: the outbound guard refuses private addresses for
-  notification, ticketing and SIEM connections. The approved private
-  endpoints of 7.40.0-beta cover source connections only; extending them to
-  what compliance and the audit service dial needs the same check in
-  `ssrfguard`'s dialer.
 - Streams deliver one event per request. Batching (every `pkg/siem`
   destination accepts a batch) would cut request volume for busy tenants.
 - Sentinel supports the public Azure cloud only (the Entra host is fixed).

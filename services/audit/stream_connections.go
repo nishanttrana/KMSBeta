@@ -15,6 +15,7 @@ import (
 
 	"vecta-kms/pkg/servicetoken"
 	"vecta-kms/pkg/siem"
+	"vecta-kms/pkg/ssrfguard"
 )
 
 // Event streams send through compliance connections, the platform's one
@@ -34,6 +35,12 @@ type streamConnection struct {
 	Type     string            `json:"type"`
 	Endpoint string            `json:"endpoint"`
 	Fields   map[string]string `json:"fields"`
+	// PrivateRanges are the private ranges approved for the tenant; allow
+	// and client are built from them when the connection is opened. client
+	// is nil when there are none (the shared public-only client is used).
+	PrivateRanges []string `json:"private_ranges"`
+	allow         ssrfguard.Allow
+	client        *http.Client
 }
 
 // connImport moves a legacy stream's credentials into a connection.
@@ -168,13 +175,25 @@ func (c *connCache) get(ctx context.Context, tenantID, id string, client *http.C
 	if err != nil {
 		return streamConnection{}, nil, err
 	}
+	// A tenant with approved private ranges gets a client of this
+	// connection alone: on the shared one, another tenant's delivery could
+	// ride a connection dialled under this tenant's approval. Ranges that
+	// can't be approved leave it on the public-only client (fail closed).
+	opt := siem.Options{Client: client}
+	if allow, perr := ssrfguard.ParseAllow(conn.PrivateRanges); perr == nil && len(allow) > 0 {
+		conn.allow, conn.client = allow, allow.NewHTTPSClient(client.Timeout)
+		opt = siem.Options{Client: conn.client, Dial: allow.DialContext}
+	}
 	var dest siem.Destination
 	if _, isSIEM := siem.SpecFor(conn.Type); isSIEM {
-		if dest, err = siem.New(conn.Type, conn.Fields, siem.Options{Client: client}); err != nil {
+		if dest, err = siem.New(conn.Type, conn.Fields, opt); err != nil {
 			return streamConnection{}, nil, err
 		}
 	}
 	c.mu.Lock()
+	if old := c.items[key].conn.client; old != nil {
+		old.CloseIdleConnections() // a withdrawn range stops being reachable
+	}
 	c.items[key] = cachedConn{at: time.Now(), conn: conn, dest: dest}
 	c.mu.Unlock()
 	return conn, dest, nil

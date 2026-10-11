@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -940,5 +941,111 @@ func TestLiveObjectStorage(t *testing.T) {
 		if _, err := svc.scanBucket(context.Background(), nil, c.b, "s", false); err == nil || !strings.Contains(err.Error(), "access denied") {
 			t.Errorf("%s with a wrong credential: %v", c.b.label(), err)
 		}
+	}
+}
+
+// A storage service that names no ETag (8.1.0-beta). Its objects were read
+// in full on every scan. Now a last-modified time that has settled, with
+// the size, stands in: an unchanged object is skipped, a young one is read
+// again (a later write could carry the same time), a rewritten one is read,
+// and no stand-in is trusted for longer than modifiedTrust.
+func TestStorageWithoutETags(t *testing.T) {
+	svc, store, _ := newDiscoveryService(t)
+	ctx := context.Background()
+	sameLength := func(want int) string {
+		for {
+			if k := testPrivatePEM(t); want == 0 || len(k) == want {
+				return k
+			}
+		}
+	}
+	type object struct {
+		body     string
+		modified string // as the listing gives it; "" for none
+	}
+	stamp := func(ago time.Duration) string { return time.Now().Add(-ago).UTC().Format("2006-01-02T15:04:05.000Z") }
+	var mu sync.Mutex
+	objects := map[string]object{
+		"keys/settled.pem": {sameLength(0), stamp(time.Hour)},
+		"keys/young.pem":   {testPrivatePEM(t), stamp(10 * time.Second)},
+		"keys/undated.pem": {testPrivatePEM(t), ""},
+	}
+	srv := newHostingServer(t, func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		_, key, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, "/"), "/")
+		if key != "" {
+			_, _ = w.Write([]byte(objects[key].body))
+			return
+		}
+		keys := make([]string, 0, len(objects))
+		for k := range objects {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		out := `<ListBucketResult><IsTruncated>false</IsTruncated>`
+		for _, k := range keys {
+			out += `<Contents><Key>` + k + `</Key><Size>` + strconv.Itoa(len(objects[k].body)) + `</Size>`
+			if objects[k].modified != "" {
+				out += `<LastModified>` + objects[k].modified + `</LastModified>`
+			}
+			out += `</Contents>`
+		}
+		writeXML(w, http.StatusOK, out+`</ListBucketResult>`)
+	})
+	trust(t, svc, srv)
+	clock := time.Now().UTC()
+	svc.now = func() time.Time { clock = clock.Add(time.Second); return clock }
+	_ = store.CreateBucket(ctx, Bucket{ID: "b1", TenantID: "t1", Provider: "s3", Endpoint: srv.URL, Name: "acme-artifacts", Region: "eu-west-1"})
+	run := func(wantRead, wantUnchanged int, what string) bucketScan {
+		t.Helper()
+		b, err := svc.bucket(ctx, "t1", "b1")
+		if err != nil {
+			t.Fatal(err)
+		}
+		res, err := svc.scanBucket(ctx, nil, b, "s", false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		svc.storeAssets(ctx, "t1", res.assets, map[string]bool{})
+		if res.files != wantRead || res.unchanged != wantUnchanged {
+			t.Fatalf("%s: read %d, unchanged %d; want %d and %d", what, res.files, res.unchanged, wantRead, wantUnchanged)
+		}
+		return res
+	}
+	set := func(key string, o object) {
+		mu.Lock()
+		objects[key] = o
+		mu.Unlock()
+	}
+	run(3, 0, "first scan")
+	// Only the object whose time has settled is taken as unchanged.
+	run(2, 1, "second scan")
+
+	// Rewritten with a new time: read again, though its size is the same.
+	old := objects["keys/settled.pem"]
+	set("keys/settled.pem", object{sameLength(len(old.body)), stamp(30 * time.Minute)})
+	if res := run(3, 0, "after a rewrite"); len(res.assets) != 3 {
+		t.Fatalf("assets after a rewrite: %d", len(res.assets))
+	}
+	run(2, 1, "after the rewrite was read")
+
+	// The worst case: new content under the old time and size. It is not
+	// seen at once, and is seen once the stand-in is older than its trust.
+	kept := objects["keys/settled.pem"]
+	set("keys/settled.pem", object{sameLength(len(kept.body)), kept.modified})
+	run(2, 1, "content replaced under the same time and size")
+	clock = clock.Add(modifiedTrust)
+	run(3, 0, "once the stand-in is too old to trust")
+
+	// An ETag, where there is one, is still what decides.
+	o := bucketObject{key: "k", size: 10, etag: "abc", modified: stamp(time.Hour), listed: time.Now()}
+	if !o.unchangedSince("abc", clock) || o.unchangedSince("abd", clock) || o.recorded(clock) != "abc" {
+		t.Fatal("an ETag was not used as it is")
+	}
+	// No Date on the listing: no stand-in, the object is read.
+	o = bucketObject{key: "k", size: 10, modified: stamp(time.Hour)}
+	if o.token() != "" {
+		t.Fatalf("a time was trusted without the service's clock: %q", o.token())
 	}
 }

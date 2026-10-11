@@ -5,6 +5,43 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### Discovery limits and private destinations (8.1.0-beta)
+- **A rule that matched "some number after the call" labelled the wrong
+  number.** `RSA_generate_key(?:_ex)?\(\s*[^,]*?,?\s*(\d{3,5})\s*,` was
+  written to cover both argument orders. When the size was a name it
+  skipped to the next number, the public exponent, and reported
+  `RSA-65537`. It surfaced only when variables started being resolved and
+  one line produced two sizes. **Rule:** one rule per signature; a pattern
+  loose enough to "find the number" will find a different one.
+- **A shared HTTP client is a shared permission.** Letting a tenant reach
+  an approved private range by passing the allowance per request would
+  have been wrong: a kept-alive connection is reused with no new dial, so
+  tenant B's delivery to the same host would ride a connection dialled
+  under tenant A's approval. The allowance lives in the client's dialer,
+  and a client with one is built for a single tenant (or connection) and
+  closed.
+- **An approved range can contain the platform.** The containers sit on a
+  private network, so "10.0.0.0/8 minus what is not approved" still
+  includes keycore's address if an administrator approves that subnet.
+  Discovery already refused platform addresses at the dial; `ssrfguard`
+  did not need to until it could dial private addresses at all. Now
+  `Allow.DialContext` does the same.
+- **A check made before the request is not a check on the request.**
+  Governance validated the notice URL, then sent it with a default client:
+  a redirect, or a name that resolved differently a moment later, went
+  unchecked. Found while moving it to the dial-guarded client. Validate at
+  the dial, and follow no redirect.
+- **"Rejected" in DECISIONS.md is an argument, not a wall.** Nested
+  archives were rejected because size multiplies per level, and the
+  last-modified fallback because two writes can share a timestamp. Both
+  objections are met by a narrower design (one allowance for the whole
+  tree; trust a time only once it has settled, and not for long). Read the
+  reason and answer it, and record the supersession.
+- **`pem.Decode` finds a block only at the start of a line.** A key
+  embedded in a binary with no line break before `-----BEGIN` is not
+  decoded, so a deep scan that reads the whole object still misses it.
+  Stated as a limit, not fixed.
+
 ### Credentials in one store (8.0.0-beta)
 - **Two services verified no token at all.** `cloud` and `autokey` wrapped
   their handlers in the request-audit middleware and nothing else. Every

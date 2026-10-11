@@ -80,9 +80,9 @@ func findMaterial(name string, raw []byte) []finding {
 			}
 		}
 		out = append(out, secrets...)
-		if usage {
-			out = append(out, usageFindings(ext, text, line)...)
-		}
+	}
+	if usage {
+		out = append(out, usageScan(ext, raw)...)
 	}
 	rest, sawPEM := raw, false
 	for {

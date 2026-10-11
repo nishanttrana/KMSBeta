@@ -63,11 +63,24 @@ func (d *WebhookDispatcher) OnEvent(cb func(target string, ok bool, latency time
 // secret and respecting per-target circuit-breaker state. Returns the
 // final HTTP status (0 on transport failure), the attempts made and any error.
 func (d *WebhookDispatcher) Deliver(ctx context.Context, wh Webhook, eventType, eventID string, payload []byte) (int, int, error) {
-	if err := d.validate(wh.URL); err != nil {
+	return d.deliverVia(ctx, nil, nil, wh, eventType, eventID, payload)
+}
+
+// deliverVia is Deliver for a connection whose tenant has approved private
+// ranges: the URL may be inside allow, and client (the connection's own)
+// dials only public addresses and those ranges. With neither it is Deliver.
+func (d *WebhookDispatcher) deliverVia(ctx context.Context, allow ssrfguard.Allow, client *http.Client, wh Webhook, eventType, eventID string, payload []byte) (int, int, error) {
+	validate := d.validate
+	if client == nil {
+		client = d.client
+	} else {
+		validate = func(raw string) error { return validateWebhookURLAllowing(raw, allow) }
+	}
+	if err := validate(wh.URL); err != nil {
 		return 0, 0, err
 	}
 	return d.Attempt(ctx, wh.ID, hostOf(wh.URL), func(ctx context.Context) (int, error) {
-		return d.doOnce(ctx, wh, eventType, eventID, payload)
+		return d.doOnce(ctx, client, wh, eventType, eventID, payload)
 	})
 }
 
@@ -107,7 +120,7 @@ func (d *WebhookDispatcher) Attempt(ctx context.Context, key, target string, sen
 	return status, attempt, lastErr
 }
 
-func (d *WebhookDispatcher) doOnce(ctx context.Context, wh Webhook, eventType, eventID string, payload []byte) (int, error) {
+func (d *WebhookDispatcher) doOnce(ctx context.Context, client *http.Client, wh Webhook, eventType, eventID string, payload []byte) (int, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, wh.URL, bytes.NewReader(payload))
 	if err != nil {
 		return 0, err
@@ -122,7 +135,7 @@ func (d *WebhookDispatcher) doOnce(ctx context.Context, wh Webhook, eventType, e
 	if wh.Secret != "" {
 		req.Header.Set("X-KMS-Signature", "sha256="+hex.EncodeToString(pkgcrypto.HMACSHA256([]byte(wh.Secret), payload)))
 	}
-	resp, err := d.client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		// *url.Error quotes the full URL; a Slack or Teams URL is itself a
 		// credential and would land in the delivery log and audit.

@@ -495,12 +495,12 @@ func (e *PlaybookExecutor) executeAction(ctx context.Context, typ string, p map[
 	case "send_slack":
 		return e.notifyVia(ctx, rc, p["connection_id"], "slack", func(conn Connection) (string, error) {
 			f := conn.Fields
-			return e.outboundCall(ctx, http.MethodPost, f["webhook_url"], map[string]any{"text": messageOr(p)}, nil)
+			return e.outboundVia(ctx, conn.allow, http.MethodPost, f["webhook_url"], map[string]any{"text": messageOr(p)}, nil)
 		})
 	case "send_teams":
 		return e.notifyVia(ctx, rc, p["connection_id"], "teams", func(conn Connection) (string, error) {
 			f := conn.Fields
-			return e.outboundCall(ctx, http.MethodPost, f["webhook_url"], teamsCard(messageOr(p)), nil)
+			return e.outboundVia(ctx, conn.allow, http.MethodPost, f["webhook_url"], teamsCard(messageOr(p)), nil)
 		})
 	case "send_webhook":
 		return e.notifyVia(ctx, rc, p["connection_id"], "webhook", func(conn Connection) (string, error) {
@@ -521,7 +521,7 @@ func (e *PlaybookExecutor) executeAction(ctx context.Context, typ string, p map[
 			if f["signing_secret"] != "" {
 				headers["X-KMS-Signature"] = signature(f["signing_secret"], body)
 			}
-			return e.outboundCall(ctx, firstNonEmpty(strings.ToUpper(strings.TrimSpace(p["method"])), http.MethodPost), f["url"], body, headers)
+			return e.outboundVia(ctx, conn.allow, firstNonEmpty(strings.ToUpper(strings.TrimSpace(p["method"])), http.MethodPost), f["url"], body, headers)
 		})
 	case "send_siem_alert":
 		return e.notifyVia(ctx, rc, p["connection_id"], categorySIEM, func(conn Connection) (string, error) {
@@ -530,7 +530,7 @@ func (e *PlaybookExecutor) executeAction(ctx context.Context, typ string, p map[
 	case "create_jira_ticket":
 		return e.notifyVia(ctx, rc, p["connection_id"], "jira", func(conn Connection) (string, error) {
 			f := conn.Fields
-			return e.outboundCall(ctx, http.MethodPost, strings.TrimRight(f["base_url"], "/")+"/rest/api/2/issue", map[string]any{"fields": map[string]any{
+			return e.outboundVia(ctx, conn.allow, http.MethodPost, strings.TrimRight(f["base_url"], "/")+"/rest/api/2/issue", map[string]any{"fields": map[string]any{
 				"project": map[string]string{"key": p["project"]}, "summary": p["summary"], "description": p["description"],
 				"issuetype": map[string]string{"name": firstNonEmpty(p["issuetype"], "Task")},
 			}}, bearerOrBasic("Basic ", f["api_token"]))
@@ -538,7 +538,7 @@ func (e *PlaybookExecutor) executeAction(ctx context.Context, typ string, p map[
 	case "create_servicenow_incident":
 		return e.notifyVia(ctx, rc, p["connection_id"], "servicenow", func(conn Connection) (string, error) {
 			f := conn.Fields
-			return e.outboundCall(ctx, http.MethodPost, strings.TrimRight(f["instance_url"], "/")+"/api/now/table/incident", map[string]any{
+			return e.outboundVia(ctx, conn.allow, http.MethodPost, strings.TrimRight(f["instance_url"], "/")+"/api/now/table/incident", map[string]any{
 				"short_description": p["short_description"], "description": p["description"],
 				"urgency": firstNonEmpty(p["urgency"], "2"), "impact": firstNonEmpty(p["impact"], "2"), "caller_id": p["caller_id"],
 			}, bearerOrBasic("Bearer ", f["auth_token"]))
@@ -647,18 +647,38 @@ func (e *PlaybookExecutor) notifyVia(ctx context.Context, rc RunContext, connID,
 	if err != nil {
 		return "", err
 	}
+	opened.allow = approvedAllow(ctx, e.store, conn.TenantID, conn.Type)
 	return send(opened)
 }
 
 // sendSIEM delivers events through an opened SIEM connection (pkg/siem),
-// over the outbound client: public HTTPS at TLS 1.3, or TLS syslog.
+// over the connection's outbound client: HTTPS at TLS 1.3, or TLS syslog.
 func (e *PlaybookExecutor) sendSIEM(ctx context.Context, conn Connection, events ...siem.Event) error {
-	d, err := siem.New(conn.Type, conn.Fields, siem.Options{Client: e.outbound, Dial: e.dial})
+	client, done := e.clientFor(conn.allow)
+	defer done()
+	dial := e.dial
+	if dial == nil && len(conn.allow) > 0 {
+		dial = conn.allow.DialContext
+	}
+	d, err := siem.New(conn.Type, conn.Fields, siem.Options{Client: client, Dial: dial})
 	if err != nil {
 		return err
 	}
 	_, err = d.Send(ctx, events)
 	return err
+}
+
+// clientFor is the client for one delivery. With no approved private range
+// it is the shared public-only client. Otherwise it is a client of this
+// delivery alone, which reaches the tenant's approved ranges as well: a
+// shared one would let another tenant's request ride a connection that was
+// dialled under this tenant's approval. done closes its connections.
+func (e *PlaybookExecutor) clientFor(allow ssrfguard.Allow) (*http.Client, func()) {
+	if len(allow) == 0 {
+		return e.outbound, func() {}
+	}
+	c := allow.NewHTTPSClient(30 * time.Second)
+	return c, c.CloseIdleConnections
 }
 
 // siemAlert is the event a send_siem_alert action raises: the playbook, the
@@ -690,15 +710,16 @@ func (e *PlaybookExecutor) testConnection(ctx context.Context, conn Connection) 
 	if err != nil {
 		return err
 	}
+	opened.allow = approvedAllow(ctx, e.store, conn.TenantID, conn.Type)
 	f := opened.Fields
 	msg := "Vecta KMS connection test (" + conn.Name + ")"
 	switch conn.Type {
 	case "smtp":
 		err = e.testSMTP(ctx, conn)
 	case "slack":
-		_, err = e.outboundCall(ctx, http.MethodPost, f["webhook_url"], map[string]any{"text": msg}, nil)
+		_, err = e.outboundVia(ctx, opened.allow, http.MethodPost, f["webhook_url"], map[string]any{"text": msg}, nil)
 	case "teams":
-		_, err = e.outboundCall(ctx, http.MethodPost, f["webhook_url"], teamsCard(msg), nil)
+		_, err = e.outboundVia(ctx, opened.allow, http.MethodPost, f["webhook_url"], teamsCard(msg), nil)
 	case "webhook":
 		headers := map[string]string{}
 		_ = json.Unmarshal([]byte(firstNonEmpty(f["headers"], "{}")), &headers)
@@ -706,11 +727,11 @@ func (e *PlaybookExecutor) testConnection(ctx context.Context, conn Connection) 
 		if f["signing_secret"] != "" {
 			headers["X-KMS-Signature"] = signature(f["signing_secret"], body)
 		}
-		_, err = e.outboundCall(ctx, http.MethodPost, f["url"], json.RawMessage(body), headers)
+		_, err = e.outboundVia(ctx, opened.allow, http.MethodPost, f["url"], json.RawMessage(body), headers)
 	case "jira":
-		_, err = e.outboundCall(ctx, http.MethodGet, strings.TrimRight(f["base_url"], "/")+"/rest/api/2/myself", nil, bearerOrBasic("Basic ", f["api_token"]))
+		_, err = e.outboundVia(ctx, opened.allow, http.MethodGet, strings.TrimRight(f["base_url"], "/")+"/rest/api/2/myself", nil, bearerOrBasic("Basic ", f["api_token"]))
 	case "servicenow":
-		_, err = e.outboundCall(ctx, http.MethodGet, strings.TrimRight(f["instance_url"], "/")+"/api/now/table/incident?sysparm_limit=1", nil, bearerOrBasic("Bearer ", f["auth_token"]))
+		_, err = e.outboundVia(ctx, opened.allow, http.MethodGet, strings.TrimRight(f["instance_url"], "/")+"/api/now/table/incident?sysparm_limit=1", nil, bearerOrBasic("Bearer ", f["auth_token"]))
 	default:
 		if connectionByType[conn.Type].Category == categorySIEM {
 			// A real event, labelled as a test, through the same path a
@@ -727,9 +748,15 @@ func (e *PlaybookExecutor) testConnection(ctx context.Context, conn Connection) 
 	return err
 }
 
-// outboundCall calls an external endpoint. Errors name the host only: a
-// webhook URL (Slack, Teams) is itself a credential.
+// outboundCall calls a public external endpoint.
 func (e *PlaybookExecutor) outboundCall(ctx context.Context, method, rawURL string, payload any, headers map[string]string) (string, error) {
+	return e.outboundVia(ctx, nil, method, rawURL, payload, headers)
+}
+
+// outboundVia calls an external endpoint, which may be inside allow (the
+// private ranges approved for the connection's tenant). Errors name the
+// host only: a webhook URL (Slack, Teams) is itself a credential.
+func (e *PlaybookExecutor) outboundVia(ctx context.Context, allow ssrfguard.Allow, method, rawURL string, payload any, headers map[string]string) (string, error) {
 	u, err := neturl.Parse(strings.TrimSpace(rawURL))
 	if err != nil || u.Scheme != "https" || u.Hostname() == "" {
 		return "", errors.New("endpoint must be an https URL")
@@ -755,7 +782,9 @@ func (e *PlaybookExecutor) outboundCall(ctx context.Context, method, rawURL stri
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
-	resp, err := e.outbound.Do(req)
+	client, done := e.clientFor(allow)
+	defer done()
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("%s: %v", u.Hostname(), unwrapURLError(err))
 	}

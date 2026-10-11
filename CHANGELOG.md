@@ -4,6 +4,58 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [8.1.0-beta] — 2026-10-11
+
+### Crypto Discovery and private networks: four open limits closed
+The limits listed as open after 7.36.0 to 8.0.0-beta.
+
+- **Changed: usage detection reads statements, not lines.** A call whose
+  argument is on the next line, an algorithm name built from pieces
+  (`"DES" + "/CBC/PKCS5Padding"`), and a name or key size held in a variable
+  or constant the same file assigns (`ALG = "DES"` ... `getInstance(ALG)`,
+  `rsa.GenerateKey(r, bits)`) are now found. A finding resolved through a
+  name records it (`metadata.via`, `metadata.assigned_line`), shown in the
+  asset's detail. Shell and configuration lines continued with a backslash
+  are read as one. Not resolved: a value from another file, a function's
+  result, a format string, or a name given more than four different values.
+- **Fixed: a C rule reported the RSA public exponent as the key size.**
+  `RSA_generate_key(bits, 65537, ...)` was inventoried as `RSA-65537`.
+- **Changed: archives inside archives are opened**, four levels deep, in
+  any mix of zip, tar and gzip, and a gzipped single file
+  (`server.key.gz`) is read as the file it holds. Members are named
+  `outer!/inner!/member`. The 20,000-entry and 256 MiB limits now cover the
+  whole tree, so nesting can't multiply what is unpacked; an archive nested
+  deeper is reported on the scan, not opened.
+- **Changed: a deep scan reads small objects whole.** An object of up to
+  2 MiB whose name says nothing is downloaded and parsed, so a key,
+  certificate or token anywhere in it is found, not only one that starts in
+  its first kilobyte. Larger objects, and images, audio, video, fonts,
+  columnar data and compressed files the scan can't open, are still judged
+  by their first kilobyte. **A deep scan now transfers more data**: it stays
+  one request per object, once per object version.
+- **Changed: buckets whose service returns no ETag are no longer re-read in
+  full every scan.** The listing's last-modified time and size stand in,
+  only once the time is two minutes old by the service's own clock, and for
+  at most seven days before the object is read again.
+- **Changed: notification, ticketing and SIEM credentials may be on your own
+  network.** A webhook, Slack or Teams URL, Jira, ServiceNow, Splunk,
+  Elastic or TLS syslog (QRadar) destination can name a host inside a
+  private range a root administrator approved for the tenant
+  (Playbooks → Credentials → Private endpoints). Playbook actions, audit
+  event streams and approval notices reach it; every other private address,
+  loopback, metadata addresses and the KMS's own services stay refused.
+- **Security: approval notices no longer follow redirects**, and the address
+  is checked when it is dialled. Governance checked the URL once and then
+  used a plain client.
+
+**Upgrade.** Every bucket object is read once more on the next scans (the
+parser changed), then skipped again while unchanged. Nothing to configure.
+
+Not verified against real services: a storage service that returns no ETag
+(tested against a local server that omits it), and a live on-premises SIEM
+or chat server (the address rules are tested; the delivery is the same
+code that reaches public destinations).
+
 ## [8.0.0-beta] — 2026-10-11
 
 ### Credentials: one place to add every external credential, before a feature can use it

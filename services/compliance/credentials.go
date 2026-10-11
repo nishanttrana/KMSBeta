@@ -299,12 +299,25 @@ func (e *PlaybookExecutor) testSMTP(ctx context.Context, conn Connection) error 
 		approvedAllow(ctx, e.store, conn.TenantID, conn.Type).DialContext)
 }
 
-// approvedAllow is the outbound allowance for a credential of type typ: for
-// a mail relay, the private ranges a root administrator approved for the
-// tenant (private_endpoints.go); for every other type compliance dials
-// itself, none. On a store error it is none too (fail closed).
+// privateCapable: a credential type whose host the customer names, so it may
+// sit on the customer's own network: scan sources, mail relays and, from
+// 8.1.0-beta, notification, ticketing and SIEM destinations. Cloud accounts
+// reach the provider's public endpoints and an HSM is not dialled from here.
+func privateCapable(typ string) bool {
+	switch connectionByType[typ].Category {
+	case categorySource, categoryMail, categoryNotify, categoryTicketing, categorySIEM:
+		return true
+	}
+	return false
+}
+
+// approvedAllow is the outbound allowance for a credential of type typ that
+// compliance, audit or governance dials: the private ranges a root
+// administrator approved for the tenant (private_endpoints.go). A scan
+// source has none here: discovery dials it, and its save has its own check
+// (privateSourceAllowed). On a store error it is none too (fail closed).
 func approvedAllow(ctx context.Context, store Store, tenantID, typ string) ssrfguard.Allow {
-	if connectionByType[typ].Category != categoryMail {
+	if !privateCapable(typ) || connectionByType[typ].Category == categorySource {
 		return nil
 	}
 	items, err := store.ListPrivateEndpoints(ctx, tenantID)

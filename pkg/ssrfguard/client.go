@@ -53,3 +53,13 @@ func NewHTTPSClient(timeout time.Duration) *http.Client {
 		CheckRedirect: func(*http.Request, []*http.Request) error { return errRedirect },
 	}
 }
+
+// NewHTTPSClient is NewHTTPSClient with a's networks approved. An approval
+// belongs to one tenant, and a kept-alive connection is reused without a
+// new dial, so the client must never serve another tenant's requests: build
+// it for the tenant (or the one credential) and drop it with CloseIdleConnections.
+func (a Allow) NewHTTPSClient(timeout time.Duration) *http.Client {
+	c := NewHTTPSClient(timeout)
+	c.Transport.(*http.Transport).DialContext = a.DialContext
+	return c
+}

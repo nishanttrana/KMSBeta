@@ -401,7 +401,8 @@ export type DiscoveryBucket = {
   prefix: string;
   region: string;
   connection_id: string;
-  // Also read the first kilobyte of objects whose names say nothing.
+  // Also read objects whose names say nothing: small ones whole, larger
+  // ones and media by their first kilobyte.
   deep: boolean;
   created_by: string;
   created_at: string;

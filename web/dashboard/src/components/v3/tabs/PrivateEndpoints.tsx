@@ -7,9 +7,10 @@ import { approvePrivateEndpoint, listPrivateEndpoints, withdrawPrivateEndpoint, 
 import type { AuthSession } from "../../../lib/auth";
 
 // Private address ranges a root administrator approved for a tenant's
-// source connections (git, object storage). A connection may name a host
-// inside one, and Crypto Discovery sends its credential to a private
-// address only inside one. A tenant sees its own ranges; the root tenant
+// credentials whose host the customer names (git, object storage, mail
+// relay, notification, ticketing, SIEM). A credential may name a host
+// inside one, and the service that uses it sends it to a private address
+// only inside one. A tenant sees its own ranges; the root tenant
 // sees every tenant's and is the only one that can approve or withdraw.
 const MONO = "'JetBrains Mono',monospace";
 
@@ -68,8 +69,8 @@ export function PrivateEndpoints({ session }: { session: AuthSession }) {
         <Network size={14} color={C.accentFg} />
         <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Private endpoints</span>
         <span style={{ fontSize: 11, color: C.muted }}>{items.length} approved</span>
-        <span style={{ marginLeft: "auto", fontSize: 10.5, color: C.muted }} title="A Git, storage or mail relay credential may name a host inside an approved range, and its credential is sent to a private address only inside one. Loopback, link-local, metadata and KMS platform addresses can never be approved.">
-          For Git, storage and mail relay credentials on your own network
+        <span style={{ marginLeft: "auto", fontSize: 10.5, color: C.muted }} title="A Git, storage, mail relay, notification, ticketing or SIEM credential may name a host inside an approved range, and is sent to a private address only inside one. Loopback, link-local, metadata and KMS platform addresses can never be reached.">
+          For Git, storage, mail, notification, ticketing and SIEM on your own network
         </span>
       </div>
       {canApprove && (

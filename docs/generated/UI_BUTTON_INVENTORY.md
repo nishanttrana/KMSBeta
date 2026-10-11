@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-11T03:57:41Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-11T04:20:01Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -475,8 +475,8 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1228 | posture | Btn | setSelectedFinding(null)}>Close |  |
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1319 | posture | Btn | executeAction(selectedAction)}> Execute |  |
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1321 | posture | Btn | setSelectedAction(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/PrivateEndpoints.tsx | 80 | - | Btn | void approve()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/PrivateEndpoints.tsx | 94 | - | button | void withdraw(e)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/PrivateEndpoints.tsx | 81 | - | Btn | void approve()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/PrivateEndpoints.tsx | 95 | - | button | void withdraw(e)} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 478 | restapi | Btn | (icon or dynamic label) | executeRequest} disabled={running |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 509 | restapi | Btn | void loadClientSecurity(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 517 | restapi | button | setSelectedClientID(String(item?.id\|\|""))} style={{ textAlign:"left", border:... |  |
@@ -606,10 +606,10 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 169 | - | button | { if (!window.confirm(`Roll back "$ "? The successor keys it created are deac... |  |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 72 | - | button | Cancel | onClose} style={{ background: "transparent", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 73 | - | button | (icon or dynamic label) | onSave |
-| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 159 | - | button | setStatus(s)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 167 | - | Btn | void save()} disabled= >Save |  |
-| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 174 | - | Btn | (confirmRemove ? void remove() : setConfirmRemove(true))} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 125 | - | button | setDeep((d) => !d)} title="Also read the first kilobyte of every object whose... |  |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 161 | - | button | setStatus(s)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 169 | - | Btn | void save()} disabled= >Save |  |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 176 | - | Btn | (confirmRemove ? void remove() : setConfirmRemove(true))} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 125 | - | button | setDeep((d) => !d)} title="Also read objects whose names say nothing: up to 2... |  |
 | web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 130 | - | Btn | void add()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 134 | - | button | onNavigate?.("playbooks")} style={ }>New storage connection |  |
 | web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 153 | - | Btn | void test(b)} disabled= > |  |

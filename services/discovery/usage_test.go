@@ -202,3 +202,141 @@ func fmtAny(v interface{}) string {
 	s, _ := v.(string)
 	return s
 }
+
+// A call written over several lines, a name built from pieces, and a name
+// held in a variable the same file assigns are found (8.1.0-beta), each on
+// the line of its call. Before, a rule saw one line and missed all three.
+func TestCryptoUsageAcrossLinesAndVariables(t *testing.T) {
+	cases := []struct {
+		name, body string
+		want       []string
+	}{
+		{"Multi.java", `class A {
+  private static final String ALG = "DES";
+  static final int BITS = 1024;
+  void f() throws Exception {
+    Cipher a = Cipher.getInstance(
+        "DESede/CBC/PKCS5Padding");
+    Cipher b = Cipher.getInstance("RC4" +
+        "/ECB/NoPadding");
+    Cipher c = Cipher.getInstance(ALG);
+    Cipher d = Cipher.getInstance(Constants.ALG);
+    String t = "AES"
+        + "/ECB/PKCS5Padding";
+    Cipher e = Cipher.getInstance(t);
+    MessageDigest m = MessageDigest.getInstance(
+        // the legacy digest
+        "MD5");
+    i++;
+    Mac h = Mac.getInstance("HmacSHA1");
+  }
+}`, []string{"3TDEA@5", "AES-ECB@13", "DES@10", "DES@9", "HMAC-SHA-1@18", "MD5@14", "RC4@7"}},
+		{"multi.py", `ALG = "md5"
+KEY_SIZE = 1024
+class K:
+    def __init__(self):
+        self.digest = 'sha1'
+    def run(self):
+        a = hashlib.new(
+            ALG)
+        b = hashlib.new(self.digest)
+        c = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=KEY_SIZE,
+        )
+        d = hashlib.new("sh" "a1")
+        e = hashlib.md5(x)  # hashlib.new("md4")
+`, []string{"MD5@15", "MD5@7", "RSA-1024@10", "SHA-1@14", "SHA-1@9"}},
+		{"multi.go", `package x
+const bits = 1024
+func f() {
+	size := 2048
+	k, _ := rsa.GenerateKey(rand.Reader, bits)
+	j, _ := rsa.GenerateKey(
+		rand.Reader, size)
+	h := md5.New()
+}`, []string{"MD5@8", "RSA-1024@5", "RSA-2048@6"}},
+		{"multi.js", `const algo = 'des-ede3-cbc'
+let digest = "md" + "5"
+const c = crypto.createCipheriv(
+  algo, key, iv)
+const h = crypto.createHash(digest)
+crypto.generateKeyPairSync('rsa', {
+  modulusLength: bits,
+})
+const bits = 1024
+`, []string{"3TDEA@3", "MD5@5", "RSA-1024@7"}},
+		{"multi.php", `<?php
+$alg = 'des-' . 'ede3-cbc';
+$x = openssl_encrypt($data,
+    $alg, $key);
+$h = hash($this->digest, $data);
+`, []string{"3TDEA@3"}},
+		{"multi.c", `#define DIGEST_BITS 1024
+RSA *r = RSA_generate_key(DIGEST_BITS, 65537, NULL, NULL);
+RSA_generate_key_ex(rsa, 2048, e, NULL);
+RSA_generate_key_ex(rsa, bits, e, NULL);
+`, []string{"RSA-1024@2", "RSA-2048@3"}},
+		{"deploy.sh", `openssl genrsa \
+  -out server.key \
+  1024
+ssh-keygen -t rsa -b 2048 -f k
+`, []string{"RSA-1024@1", "RSA-2048@4"}},
+	}
+	for _, c := range cases {
+		if got := usageOf(c.name, c.body); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("%s:\n got  %v\n want %v", c.name, got, c.want)
+		}
+	}
+
+	// A resolved finding names the variable and where it was assigned.
+	for _, f := range findMaterial("V.java", []byte("String ALG = \"DES\";\nCipher c = Cipher.getInstance(ALG);\n")) {
+		if f.kind == "crypto_usage" && (f.meta["via"] != "ALG" || f.meta["assigned_line"] != 1 || f.line != 2) {
+			t.Fatalf("resolved finding: line %d %+v", f.line, f.meta)
+		}
+	}
+}
+
+// What is not a constant is not resolved: a named argument, a name that is
+// called, another object's member, a name given many values, and a
+// comparison are left alone, so nothing is reported that the file does not
+// say.
+func TestCryptoUsageDoesNotGuess(t *testing.T) {
+	for name, body := range map[string]string{
+		"kwarg.py": `f(name="md5")
+hashlib.new(name)
+`,
+		"member.js": `const name = 'md5'
+crypto.createHash(user.name)
+crypto.createHash(name())
+`,
+		"compare.java": `if (alg == "DES") { }
+Cipher.getInstance(alg);
+`,
+		"many.py": `a = "md5"
+a = "sha1"
+a = "md4"
+a = "sha256"
+a = "sha512"
+hashlib.new(a)
+`,
+		"comment.go": `// bits := 1024
+k, _ := rsa.GenerateKey(rand.Reader, bits)
+`,
+		"string.java": `String s = "Cipher.getInstance(ALG)"; String ALG = "DES";
+`,
+		"readme.conf": `# ssl_protocols TLSv1 \
+note = "x"
+`,
+	} {
+		if got := usageOf(name, body); len(got) != 0 {
+			t.Errorf("%s: reported %v", name, got)
+		}
+	}
+	// A statement that never closes stops joining at its limit, and a rule
+	// never reaches across it.
+	open := "x = foo(\n" + strings.Repeat("  1,\n", maxStatementLines+5) + "h = hashlib.md5(y)\n"
+	if got := usageOf("open.py", open); !reflect.DeepEqual(got, []string{"MD5@" + itoa(maxStatementLines+7)}) {
+		t.Errorf("unclosed statement: %v", got)
+	}
+}

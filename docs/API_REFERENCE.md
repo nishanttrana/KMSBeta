@@ -1999,6 +1999,9 @@ New types: `aws`, `azure`, `gcp`, `oci`, `alibaba`, `salesforce` (cloud),
 and `password`. `resolve` additionally admits `kms-cloud` (cloud types and
 `servicenow`), `kms-ekm` (`azure`), `kms-hsm` (`pkcs11_hsm`) and
 `kms-governance` for `smtp`, and returns `private_ranges` for `smtp` too.
+From 8.1.0-beta `private_ranges` is returned for notification, ticketing
+and SIEM types as well, and those may be saved on a private address inside
+a range approved for the tenant.
 
 A connection now also carries `attributes` (the values of its type's
 public fields), `credentials_changed_at`, `expires_at`,
@@ -3343,7 +3346,11 @@ records only what it observed:
   `file:line`, `metadata.api` is what named it (`Cipher.getInstance`,
   `hashlib`, `ssl_protocols`, `sshd Ciphers`), and `classification` is the
   catalogue's class, `unknown` when the name states no parameter set. The
-  line is not stored. Rules read one line at a time and skip comment lines.
+  line is not stored. Rules read statements and skip comments (8.1.0-beta):
+  a call continued on the next lines, string literals joined by the
+  language's operator, and a name the same file assigns a string or key
+  size are resolved; such a finding carries `metadata.via` (the name) and
+  `metadata.assigned_line`. Values from other files are not resolved.
 - `asset_type: "api_token"` (`metadata.provider`: `github`, `gitlab`,
   `slack`, `stripe`, `google`, `jwt`) and `"cloud_secret_key"` (`aws`,
   `azure`), and a PEM private key inside a JSON string
@@ -3352,14 +3359,22 @@ records only what it observed:
 
 **Content, archives and deep scan (7.37.0-beta).** A keystore is recognised
 by its first bytes (`metadata.format`: `jks`, `jceks`, `p12`) whatever its
-name. A zip (jar, war, ear), tar or gzipped tar from any file source is
-opened in memory: at most 32 MiB, 20,000 entries and 256 MiB unpacked,
-members of at most 2 MiB, no archive inside an archive. A member's asset
-has `location` `archive!/member:line` and `metadata.archive` and
-`metadata.member`. A bucket added with `"deep": true` also has the first
-1024 bytes of every object without a telling name read (`Range:
-bytes=0-1023`), and those that hold key material downloaded;
-`stats.storage_sniffed` counts the objects looked into.
+name. A zip (jar, war, ear), tar, gzipped tar or gzipped file from any file
+source is opened in memory: at most 32 MiB, members of at most 2 MiB. An
+archive inside an archive is opened too, four levels deep (8.1.0-beta);
+20,000 entries and 256 MiB unpacked are the limits for the whole tree, and
+a deeper archive is reported in the scan's error, not opened. A member's
+asset has `location` `archive!/member:line` (`outer!/inner!/member:line`
+when nested) and `metadata.archive` and `metadata.member`. A bucket added
+with `"deep": true` also has every object without a telling name looked
+into (8.1.0-beta): one of up to 2 MiB is downloaded and parsed whole; a
+larger one, or an image, audio, video, font, columnar or compressed file,
+has its first 1024 bytes read (`Range: bytes=0-1023`) and is downloaded
+only if those are a keystore, an archive or a key.
+`stats.storage_sniffed` counts the objects looked into. An object is
+skipped while its ETag is unchanged; where a service returns no ETag, its
+last-modified time and size are used instead, once the time is two
+minutes old and for at most seven days (8.1.0-beta).
 
 **Uploads (7.18.0-beta).** `POST /discovery/upload` with body
 `{"name": "bundle.pem", "content": "<base64>"}` inventories one file of at

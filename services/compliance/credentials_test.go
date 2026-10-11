@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -264,12 +265,7 @@ func TestMailRelayOnAnApprovedPrivateRange(t *testing.T) {
 	if w := hs.do(t, http.MethodPost, "/compliance/playbooks/connections", other, relay); w.Code != http.StatusBadRequest {
 		t.Fatalf("another tenant used t1's approved range: %d", w.Code)
 	}
-	// A webhook is dialled by compliance itself and stays public-only.
-	hook := map[string]any{"name": "hook", "type": "webhook", "fields": map[string]string{"url": "https://10.20.3.4/hook"}}
-	if w := hs.do(t, http.MethodPost, "/compliance/playbooks/connections", pbAdmin, hook); w.Code != http.StatusBadRequest {
-		t.Fatalf("a webhook on a private address was accepted: %d", w.Code)
-	}
-	// Governance gets the ranges with the relay; a Slack notice gets none.
+	// Governance gets the ranges with the relay, and with a Slack notice.
 	w = hs.do(t, http.MethodPost, "/compliance/connections/"+created.Data.ID+"/resolve?tenant_id=t1", svcClaims("kms-governance"), map[string]any{})
 	var out struct {
 		Data resolvedConnection `json:"data"`
@@ -280,8 +276,98 @@ func TestMailRelayOnAnApprovedPrivateRange(t *testing.T) {
 	slack := hs.conn(t, "slack", map[string]string{"webhook_url": "https://1.1.1.1/x"})
 	w = hs.do(t, http.MethodPost, "/compliance/connections/"+slack+"/resolve?tenant_id=t1", svcClaims("kms-governance"), map[string]any{})
 	out.Data = resolvedConnection{}
-	if w.Code != http.StatusOK || json.Unmarshal(w.Body.Bytes(), &out) != nil || len(out.Data.PrivateRanges) != 0 {
-		t.Fatalf("a Slack notice was given private ranges: %d %s", w.Code, w.Body.String())
+	if w.Code != http.StatusOK || json.Unmarshal(w.Body.Bytes(), &out) != nil || len(out.Data.PrivateRanges) != 1 {
+		t.Fatalf("a Slack notice was not given the tenant's ranges: %d %s", w.Code, w.Body.String())
+	}
+}
+
+// Notification, ticketing and SIEM destinations may sit on a private range a
+// root administrator approved for the tenant (8.1.0-beta): refused before
+// the approval, outside it and for another tenant, and dialled through a
+// client that reaches nothing else private.
+func TestNotifyTicketingAndSIEMOnAnApprovedPrivateRange(t *testing.T) {
+	hs := newPlaybookHarness(t)
+	create := func(who *pkgauth.Claims, typ string, fields map[string]string) *httptest.ResponseRecorder {
+		return hs.do(t, http.MethodPost, "/compliance/playbooks/connections?tenant_id="+who.TenantID, who, map[string]any{"name": typ + " on-prem", "type": typ, "fields": fields})
+	}
+	inside := map[string]map[string]string{
+		"webhook":    {"url": "https://10.20.3.4/hook"},
+		"jira":       {"base_url": "https://10.20.3.5", "api_token": "user:token"},
+		"splunk_hec": {"url": "https://10.20.3.6:8088/services/collector", "token": "hec-token"},
+		"syslog":     {"address": "10.20.3.7:6514"},
+	}
+	for typ, fields := range inside {
+		w := create(pbAdmin, typ, fields)
+		if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), "root administrator can approve") {
+			t.Fatalf("%s on a private address before approval: %d %s", typ, w.Code, w.Body.String())
+		}
+		wantRefused(t, lastEvent(t, hs.rec, "connection_created"), reasonURLBlocked)
+	}
+	if err := hs.store.CreatePrivateEndpoint(context.Background(), PrivateEndpoint{ID: "pvt_1", TenantID: "t1", CIDR: "10.20.0.0/16", CreatedBy: "root-admin"}); err != nil {
+		t.Fatal(err)
+	}
+	ids := map[string]string{}
+	for typ, fields := range inside {
+		w := create(pbAdmin, typ, fields)
+		var out struct{ Data Connection }
+		_ = json.Unmarshal(w.Body.Bytes(), &out)
+		if w.Code != http.StatusCreated {
+			t.Fatalf("%s inside the approved range: %d %s", typ, w.Code, w.Body.String())
+		}
+		if ev := lastEvent(t, hs.rec, "connection_created"); ev.Event.Details["private_endpoint"] != true {
+			t.Fatalf("%s: the audit event does not say the endpoint is private: %+v", typ, ev.Event.Details)
+		}
+		ids[typ] = out.Data.ID
+	}
+	other := &pkgauth.Claims{UserID: "u2", TenantID: "t2", Role: "admin", Permissions: []string{"*"}}
+	for name, w := range map[string]*httptest.ResponseRecorder{
+		"outside the range":  create(pbAdmin, "webhook", map[string]string{"url": "https://10.21.0.1/hook"}),
+		"another tenant":     create(other, "webhook", inside["webhook"]),
+		"loopback":           create(pbAdmin, "webhook", map[string]string{"url": "https://127.0.0.1/hook"}),
+		"metadata":           create(pbAdmin, "splunk_hec", map[string]string{"url": "https://169.254.169.254/", "token": "t"}),
+		"a platform service": create(pbAdmin, "webhook", map[string]string{"url": "https://keycore:8010/keys"}),
+		"syslog outside":     create(pbAdmin, "syslog", map[string]string{"address": "10.21.0.1:6514"}),
+	} {
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("%s accepted: %d %s", name, w.Code, w.Body.String())
+		}
+	}
+	// A public address needs no approval and is not marked private.
+	if w := create(pbAdmin, "webhook", map[string]string{"url": "https://1.1.1.1/hook"}); w.Code != http.StatusCreated {
+		t.Fatalf("public webhook: %d %s", w.Code, w.Body.String())
+	} else if ev := lastEvent(t, hs.rec, "connection_created"); ev.Event.Details["private_endpoint"] == true {
+		t.Fatal("a public webhook was recorded as a private endpoint")
+	}
+
+	// The audit service is given the ranges with a stream's connection.
+	w := hs.do(t, http.MethodPost, "/compliance/connections/"+ids["splunk_hec"]+"/resolve?tenant_id=t1", svcClaims("kms-audit"), map[string]any{})
+	var out struct {
+		Data resolvedConnection `json:"data"`
+	}
+	if w.Code != http.StatusOK || json.Unmarshal(w.Body.Bytes(), &out) != nil || len(out.Data.PrivateRanges) != 1 || out.Data.PrivateRanges[0] != "10.20.0.0/16" {
+		t.Fatalf("resolve for audit: %d %s", w.Code, w.Body.String())
+	}
+
+	// A delivery: the shared client without an approval, its own with one,
+	// and that one still refuses every other private address at the dial.
+	allow := approvedAllow(context.Background(), hs.store, "t1", "webhook")
+	if c, _ := hs.exec.clientFor(nil); c != hs.exec.outbound {
+		t.Fatal("a tenant with no approved range did not get the shared public-only client")
+	}
+	c, done := hs.exec.clientFor(allow)
+	done()
+	if len(allow) != 1 || c == hs.exec.outbound {
+		t.Fatalf("a delivery under an approval shared the public client (allow %v)", allow)
+	}
+	ctx := context.Background()
+	if _, err := hs.exec.outboundVia(ctx, allow, http.MethodPost, "https://10.21.0.1/hook", map[string]string{}, nil); err == nil || !strings.Contains(err.Error(), "blocked") {
+		t.Fatalf("dial outside the approved range: %v", err)
+	}
+	if _, err := hs.exec.outboundVia(ctx, approvedAllow(ctx, hs.store, "t2", "webhook"), http.MethodPost, "https://10.20.3.4/hook", map[string]string{}, nil); err == nil {
+		t.Fatal("another tenant's delivery reached t1's approved range")
+	}
+	if a := approvedAllow(ctx, hs.store, "t1", "aws"); a != nil {
+		t.Fatalf("a cloud account was given a private allowance: %v", a)
 	}
 }
 

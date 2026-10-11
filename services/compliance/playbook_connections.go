@@ -150,6 +150,9 @@ type Connection struct {
 	UpdatedAt time.Time                     `json:"updated_at"`
 	Fields    map[string]string             `json:"-"`
 	Sealed    *pkgcrypto.EnvelopeCiphertext `json:"-"`
+	// allow: on a connection opened for a delivery, the private ranges
+	// approved for its tenant (approvedAllow).
+	allow ssrfguard.Allow
 
 	// Attributes are the values of the type's public fields.
 	Attributes map[string]string `json:"attributes"`
@@ -554,10 +557,22 @@ func sameTime(a, b *time.Time) bool {
 func (h *Handler) sealConnection(c *route.Call, conn *Connection) bool {
 	c.Detail("name", conn.Name)
 	c.Detail("type", conn.Type)
-	// A mail relay is checked against the tenant's approved private ranges
-	// by the validator itself; every other address must be public here.
-	err := validateConnection(*conn, approvedAllow(c.R.Context(), h.svc.store, conn.TenantID, conn.Type))
+	// Public addresses first. An address the guard refuses is then allowed
+	// only inside a private range a root administrator approved for this
+	// tenant (private_endpoints.go), and the audit event says so.
+	const approveHint = "a root administrator can approve a private range for this tenant (Playbooks, Credentials, Private endpoints)"
+	err := validateConnection(*conn, nil)
 	var blocked urlError
+	if errors.As(err, &blocked) && connectionByType[conn.Type].Category != categorySource && privateCapable(conn.Type) {
+		if allow := approvedAllow(c.R.Context(), h.svc.store, conn.TenantID, conn.Type); len(allow) > 0 {
+			err = validateConnection(*conn, allow)
+		}
+		if err == nil {
+			c.Detail("private_endpoint", true)
+		} else if errors.As(err, &blocked) {
+			err = urlError{fmt.Errorf("%v; %s", blocked.err, approveHint)}
+		}
+	}
 	if errors.As(err, &blocked) && connectionByType[conn.Type].Category == categorySource {
 		// A source connection may name a private address a root
 		// administrator approved for this tenant (private_endpoints.go).
@@ -569,7 +584,7 @@ func (h *Handler) sealConnection(c *route.Call, conn *Connection) bool {
 			err = nil
 			c.Detail("private_endpoint", true)
 		default:
-			err = urlError{fmt.Errorf("%v; a root administrator can approve a private range for this tenant (Playbooks, Credentials, Private endpoints)", blocked.err)}
+			err = urlError{fmt.Errorf("%v; %s", blocked.err, approveHint)}
 		}
 	}
 	if err != nil {

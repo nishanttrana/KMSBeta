@@ -20,18 +20,21 @@ import (
 // Approved private endpoints (7.40.0-beta). The outbound guard refuses
 // private addresses for every connection, so a credential could never be
 // used against a git server or object store on the customer's own network.
-// A root administrator can now approve a private address range for one
-// tenant. A source connection (git, s3, azure_blob, gcs) of that tenant may
-// then name a host inside it, and discovery sends that connection's
-// credential to a private address only if it is inside an approved range,
-// checked on the address actually dialled (after DNS resolution).
+// A root administrator can approve a private address range for one tenant.
+// A source connection (git, s3, azure_blob, gcs) of that tenant may then
+// name a host inside it, and discovery sends that connection's credential
+// to a private address only if it is inside an approved range, checked on
+// the address actually dialled (after DNS resolution).
+//
+// The same approval covers mail relays (8.0.0-beta) and notification,
+// ticketing and SIEM destinations (8.1.0-beta): an on-premises Splunk,
+// QRadar, Jira or chat server. Compliance, audit and governance dial those
+// with a client built for the one tenant from its ranges
+// (ssrfguard.Allow), never the shared public-only client.
 //
 // What an approval can never cover: loopback, link-local and metadata
-// addresses, multicast, and the KMS platform's own services, which
-// discovery's dial guard refuses whatever is approved. Notification,
-// ticketing and SIEM connections are not affected: compliance and the audit
-// service dial those through ssrfguard, which still refuses every private
-// address.
+// addresses, multicast, and the KMS platform's own services, which every
+// dial guard refuses whatever is approved.
 
 const (
 	permPrivateEndpoint          = "compliance.private_endpoint.approve"

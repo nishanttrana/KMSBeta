@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"vecta-kms/pkg/servicetoken"
+	"vecta-kms/pkg/ssrfguard"
 )
 
 // Approval notices go to Slack or Teams through compliance connections, the
@@ -25,8 +26,9 @@ import (
 
 // notifyConnections opens and imports connections.
 type notifyConnections interface {
-	// Resolve returns the connection's type and webhook URL.
-	Resolve(ctx context.Context, tenantID, id string) (string, string, error)
+	// Resolve returns the connection's type, its webhook URL and the
+	// private ranges approved for the tenant.
+	Resolve(ctx context.Context, tenantID, id string) (typ, url string, privateRanges []string, err error)
 	Import(ctx context.Context, tenantID, sourceID, typ, webhookURL string) (string, error)
 }
 
@@ -80,17 +82,18 @@ func (c complianceConnections) call(ctx context.Context, tenantID, path string, 
 	return json.Unmarshal(ans, out)
 }
 
-func (c complianceConnections) Resolve(ctx context.Context, tenantID, id string) (string, string, error) {
+func (c complianceConnections) Resolve(ctx context.Context, tenantID, id string) (string, string, []string, error) {
 	var out struct {
 		Data struct {
-			Type   string            `json:"type"`
-			Fields map[string]string `json:"fields"`
+			Type          string            `json:"type"`
+			Fields        map[string]string `json:"fields"`
+			PrivateRanges []string          `json:"private_ranges"`
 		} `json:"data"`
 	}
 	if err := c.call(ctx, tenantID, "/compliance/connections/"+neturl.PathEscape(id)+"/resolve", map[string]string{"tenant_id": tenantID}, &out); err != nil {
-		return "", "", err
+		return "", "", nil, err
 	}
-	return out.Data.Type, out.Data.Fields["webhook_url"], nil
+	return out.Data.Type, out.Data.Fields["webhook_url"], out.Data.PrivateRanges, nil
 }
 
 func (c complianceConnections) Import(ctx context.Context, tenantID, sourceID, typ, webhookURL string) (string, error) {
@@ -113,31 +116,40 @@ func (c complianceConnections) Import(ctx context.Context, tenantID, sourceID, t
 	return out.Data.ID, nil
 }
 
-// notifyURL opens the channel's connection and returns its webhook URL,
-// held in memory for this notice only. A setting an earlier release stored
-// as a plaintext URL is used until the migration moves it.
-func (s *Service) notifyURL(ctx context.Context, settings GovernanceSettings, channel string) (string, error) {
+// notifyTarget is where a notice goes: the webhook URL, held in memory for
+// this notice only, and the private ranges it may be inside.
+type notifyTarget struct {
+	url   string
+	allow ssrfguard.Allow
+}
+
+// notifyURL opens the channel's connection. A setting an earlier release
+// stored as a plaintext URL is used until the migration moves it. Ranges
+// that can't be approved are ignored: the notice then reaches public
+// addresses only (fail closed).
+func (s *Service) notifyURL(ctx context.Context, settings GovernanceSettings, channel string) (notifyTarget, error) {
 	connID, legacy := settings.SlackConnectionID, settings.SlackWebhookURL
 	if channel == webhookChannelTeams {
 		connID, legacy = settings.TeamsConnectionID, settings.TeamsWebhookURL
 	}
 	if connID == "" {
 		if legacy != "" {
-			return legacy, nil
+			return notifyTarget{url: legacy}, nil
 		}
-		return "", fmt.Errorf("no %s connection is configured", channel)
+		return notifyTarget{}, fmt.Errorf("no %s connection is configured", channel)
 	}
 	if s.conns == nil {
-		return "", errors.New("connections are not wired")
+		return notifyTarget{}, errors.New("connections are not wired")
 	}
-	typ, url, err := s.conns.Resolve(ctx, settings.TenantID, connID)
+	typ, url, ranges, err := s.conns.Resolve(ctx, settings.TenantID, connID)
 	if err != nil {
-		return "", fmt.Errorf("%s connection %s: %w", channel, connID, err)
+		return notifyTarget{}, fmt.Errorf("%s connection %s: %w", channel, connID, err)
 	}
 	if typ != channel || url == "" {
-		return "", fmt.Errorf("connection %s is %s, not %s", connID, typ, channel)
+		return notifyTarget{}, fmt.Errorf("connection %s is %s, not %s", connID, typ, channel)
 	}
-	return url, nil
+	allow, _ := ssrfguard.ParseAllow(ranges)
+	return notifyTarget{url: url, allow: allow}, nil
 }
 
 // migrateNotifyURLs moves plaintext Slack and Teams URLs into connections

@@ -163,7 +163,7 @@ func (f *webhookFanout) deliver(ctx context.Context, wh Webhook, ev AuditEvent) 
 	if err != nil {
 		return f.record(ctx, wh, ev, 0, 0, 0, err.Error())
 	}
-	status, attempts, derr := f.disp.Deliver(ctx, target, ev.Action, ev.ID, payload)
+	status, attempts, derr := f.disp.deliverVia(ctx, conn.allow, conn.client, target, ev.Action, ev.ID, payload)
 	return f.record(ctx, wh, ev, status, attempts, int(time.Since(start).Milliseconds()), errText(derr), payload...)
 }
 

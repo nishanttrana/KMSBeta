@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/hex"
@@ -40,8 +41,7 @@ import (
 // (targets.go).
 //
 // The scan reads the current version of each object. It does not read
-// object versions, archives inside the bucket, or objects in an archive
-// storage class.
+// object versions or objects in an archive storage class.
 
 const (
 	maxBucketsPerTenant = 100
@@ -286,9 +286,97 @@ func (s *Service) bucketGet(ctx context.Context, client *http.Client, b Bucket, 
 }
 
 type bucketObject struct {
-	key  string
-	size int64
-	etag string // "" when the service names none
+	key      string
+	size     int64
+	etag     string    // "" when the service names none
+	modified string    // the listing's last-modified time, as the service wrote it
+	listed   time.Time // the service's own clock when it listed the object
+}
+
+// A service that names no ETag (8.1.0-beta). Until now its objects were
+// read again in full on every scan. The listing's last-modified time and
+// size now stand in for the ETag, under two conditions that answer why that
+// was first rejected (two writes with one timestamp and one length, where
+// what is missed is a replaced key):
+//
+//   - The time is trusted only once it is modifiedSettle old by the
+//     service's own clock (the Date of the listing response). A write after
+//     the scan read the object then carries a later time. A younger object
+//     gets no token and is read again next scan.
+//   - A token is trusted for modifiedTrust from when the object was read.
+//     After that it is read again whatever the listing says, which bounds
+//     how long a write that kept the old time and length (a copy that
+//     preserves times, on a gateway over a file system) can go unseen.
+//
+// A listing with neither an ETag nor a time and a Date is read in full, as
+// before.
+const (
+	modifiedSettle = 2 * time.Minute
+	modifiedTrust  = 7 * 24 * time.Hour
+	modifiedMark   = "~lm~"
+)
+
+// token is what says the object has not changed: its ETag, or the
+// last-modified stand-in, or "" when nothing can be trusted.
+func (o bucketObject) token() string {
+	if o.etag != "" {
+		return o.etag
+	}
+	at := parseListingTime(o.modified)
+	if at.IsZero() || o.listed.IsZero() || o.listed.Sub(at) < modifiedSettle {
+		return ""
+	}
+	return fmt.Sprintf("%s%s~%d", modifiedMark, at.UTC().Format(time.RFC3339Nano), o.size)
+}
+
+// recorded is the token as stored when the object is read at now: a
+// stand-in also carries when it was read.
+func (o bucketObject) recorded(now time.Time) string {
+	t := o.token()
+	if strings.HasPrefix(t, modifiedMark) {
+		t += fmt.Sprintf("~%d", now.Unix())
+	}
+	return t
+}
+
+// unchangedSince reports whether stored (the token recorded at the last
+// read) says the object listed now is the one that was read.
+func (o bucketObject) unchangedSince(stored string, now time.Time) bool {
+	t := o.token()
+	if t == "" || stored == "" {
+		return false
+	}
+	if !strings.HasPrefix(t, modifiedMark) {
+		return stored == t
+	}
+	read, ok := strings.CutPrefix(stored, t+"~")
+	if !ok || atoi(read) <= 0 {
+		return false
+	}
+	at := time.Unix(int64(atoi(read)), 0)
+	return !now.Before(at) && now.Sub(at) < modifiedTrust
+}
+
+// parseListingTime reads a listing's time: RFC 3339 (S3, Google) or the
+// HTTP date Azure writes.
+func parseListingTime(v string) time.Time {
+	v = strings.TrimSpace(v)
+	if t, err := time.Parse(time.RFC3339Nano, v); err == nil {
+		return t
+	}
+	if t, err := http.ParseTime(v); err == nil {
+		return t
+	}
+	return time.Time{}
+}
+
+// listedAt is the service's clock on a listing response.
+func listedAt(resp *http.Response) time.Time {
+	t, err := http.ParseTime(resp.Header.Get("Date"))
+	if err != nil {
+		return time.Time{}
+	}
+	return t
 }
 
 // listPage reads one page of the bucket's listing from cursor ("" starts)
@@ -325,16 +413,18 @@ func (s *Service) listPage(ctx context.Context, client *http.Client, b Bucket, c
 	var page struct {
 		// S3 ListObjectsV2
 		Contents []struct {
-			Key  string `xml:"Key"`
-			Size int64  `xml:"Size"`
-			ETag string `xml:"ETag"`
+			Key      string `xml:"Key"`
+			Size     int64  `xml:"Size"`
+			ETag     string `xml:"ETag"`
+			Modified string `xml:"LastModified"`
 		} `xml:"Contents"`
 		IsTruncated bool `xml:"IsTruncated"`
 		// Azure List Blobs
 		Blobs []struct {
-			Name string `xml:"Name"`
-			Size int64  `xml:"Properties>Content-Length"`
-			ETag string `xml:"Properties>Etag"`
+			Name     string `xml:"Name"`
+			Size     int64  `xml:"Properties>Content-Length"`
+			ETag     string `xml:"Properties>Etag"`
+			Modified string `xml:"Properties>Last-Modified"`
 		} `xml:"Blobs>Blob"`
 		NextMarker string `xml:"NextMarker"`
 	}
@@ -342,11 +432,12 @@ func (s *Service) listPage(ctx context.Context, client *http.Client, b Bucket, c
 		return nil, "", errors.New("the storage service did not return a listing")
 	}
 	out := make([]bucketObject, 0, len(page.Contents)+len(page.Blobs))
+	at := listedAt(resp)
 	for _, o := range page.Contents {
-		out = append(out, bucketObject{o.Key, o.Size, strings.Trim(o.ETag, `"`)})
+		out = append(out, bucketObject{o.Key, o.Size, strings.Trim(o.ETag, `"`), o.Modified, at})
 	}
 	for _, o := range page.Blobs {
-		out = append(out, bucketObject{o.Name, o.Size, strings.Trim(o.ETag, `"`)})
+		out = append(out, bucketObject{o.Name, o.Size, strings.Trim(o.ETag, `"`), o.Modified, at})
 	}
 	if b.Provider == "azure" {
 		return out, page.NextMarker, nil
@@ -363,7 +454,7 @@ func (s *Service) listPage(ctx context.Context, client *http.Client, b Bucket, c
 // listGCS reads one page of a bucket's listing from Google's JSON API. Its
 // cursor is the service's page token.
 func (s *Service) listGCS(ctx context.Context, client *http.Client, b Bucket, cred bucketCredential, cursor string) ([]bucketObject, string, error) {
-	q := neturl.Values{"maxResults": {fmt.Sprint(bucketPageSize)}, "fields": {"items(name,size,etag),nextPageToken"}}
+	q := neturl.Values{"maxResults": {fmt.Sprint(bucketPageSize)}, "fields": {"items(name,size,etag,updated),nextPageToken"}}
 	if cursor != "" {
 		q.Set("pageToken", cursor)
 	}
@@ -377,9 +468,10 @@ func (s *Service) listGCS(ctx context.Context, client *http.Client, b Bucket, cr
 	defer resp.Body.Close() //nolint:errcheck
 	var page struct {
 		Items []struct {
-			Name string `json:"name"`
-			Size string `json:"size"`
-			ETag string `json:"etag"`
+			Name     string `json:"name"`
+			Size     string `json:"size"`
+			ETag     string `json:"etag"`
+			Modified string `json:"updated"`
 		} `json:"items"`
 		Next string `json:"nextPageToken"`
 	}
@@ -389,7 +481,7 @@ func (s *Service) listGCS(ctx context.Context, client *http.Client, b Bucket, cr
 	}
 	out := make([]bucketObject, 0, len(page.Items))
 	for _, o := range page.Items {
-		out = append(out, bucketObject{o.Name, int64(atoi(o.Size)), o.ETag})
+		out = append(out, bucketObject{o.Name, int64(atoi(o.Size)), o.ETag, o.Modified, listedAt(resp)})
 	}
 	return out, page.Next, nil
 }
@@ -443,15 +535,57 @@ func sniffable(o bucketObject) bool {
 	return o.size > 0 && o.size <= maxArchiveBytes && !strings.HasSuffix(o.key, "/") && !skippedPath(o.key)
 }
 
-// bucketJob is one object to read; sniff: only if its first bytes look like
-// key material.
+// headOnlyExt: formats that are compressed or encoded throughout, so key
+// text can't be read out of their middle: images, audio, video, fonts,
+// columnar data and compressed files the scan does not open. A deep scan
+// still reads their first kilobyte, which is where a keystore, an archive
+// or a key given one of these names shows itself.
+var headOnlyExt = exts(".jpg .jpeg .png .gif .webp .bmp .ico .tif .tiff .heic .mp3 .mp4 .m4a .mov .avi .mkv .webm .wav .flac .ogg " +
+	".woff .woff2 .ttf .otf .eot .parquet .orc .avro .bz2 .xz .zst .7z .rar")
+
+// readWhole: an object a deep scan reads in full (8.1.0-beta): up to the
+// size of any file the parser holds, and not a headOnlyExt format. Until
+// now a deep scan judged every object by its first kilobyte, so a key or
+// token further in (a certificate after its text dump, a key in the middle
+// of a notes or log file) was missed.
+func readWhole(o bucketObject) bool {
+	return o.size <= maxUploadBytes && !headOnlyExt[strings.ToLower(path.Ext(o.key))]
+}
+
+// sniffCost is what a deep scan reads of an object to decide.
+func sniffCost(o bucketObject) int64 {
+	if readWhole(o) {
+		return o.size
+	}
+	return sniffBytes
+}
+
+// worthParsing: content read whole by a deep scan that the parser should
+// see: text (it may hold a key, a token or a secret on any line), or
+// binary with a key marker anywhere in it.
+func worthParsing(raw []byte) bool {
+	if looksLikeKeyMaterial(raw[:min(len(raw), sniffBytes)]) || !bytes.Contains(raw[:min(len(raw), 8192)], []byte{0}) {
+		return true
+	}
+	for _, m := range keyMarkers {
+		if bytes.Contains(raw, m) {
+			return true
+		}
+	}
+	return false
+}
+
+// bucketJob is one object to read; sniff: a deep scan's object, kept only
+// if its content holds key material.
 type bucketJob struct {
 	bucketObject
 	sniff bool
 }
 
 // fetchObject reads the object a job names. A sniffed object that holds
-// nothing of interest returns nil.
+// nothing of interest returns nil. A deep scan reads a small object whole
+// and a larger one only if its first kilobyte is a keystore, an archive or
+// a key.
 func (s *Service) fetchObject(ctx context.Context, client *http.Client, b Bucket, cred bucketCredential, j bucketJob) ([]byte, error) {
 	limit := int64(maxUploadBytes)
 	if !j.sniff {
@@ -459,6 +593,13 @@ func (s *Service) fetchObject(ctx context.Context, client *http.Client, b Bucket
 			limit = maxArchiveBytes
 		}
 		return s.readObject(ctx, client, b, cred, j.key, limit, 0)
+	}
+	if readWhole(j.bucketObject) {
+		raw, err := s.readObject(ctx, client, b, cred, j.key, limit, 0)
+		if err != nil || !worthParsing(raw) {
+			return nil, err
+		}
+		return raw, nil
 	}
 	head, err := s.readObject(ctx, client, b, cred, j.key, 0, sniffBytes)
 	if err != nil || !looksLikeKeyMaterial(head) {
@@ -484,12 +625,13 @@ var bucketRunBudget = 6 * time.Minute
 
 // scanRules is recorded with each object read. Raise it when the parser
 // learns something new, so unchanged objects are read again.
-const scanRules = 2
+const scanRules = 3
 
 // scanBucket reads the bucket from where its last run stopped, through
 // guard (and, with a connection, only to addresses its credential may go): it lists the
-// objects, skips those whose ETag says they have not changed since they were
-// read (their assets are marked seen), and inventories the rest. A run stops
+// objects, skips those whose ETag (or, without one, last-modified time and
+// size) says they have not changed since they were read (their assets are
+// marked seen), and inventories the rest. A run stops
 // at its budget of objects, bytes or time and records where; the next
 // continues from there. With probe set it reads only the first page and at
 // most one object and records nothing, to prove the endpoint, the bucket
@@ -566,9 +708,9 @@ func (s *Service) scanBucket(ctx context.Context, guard dialControl, b Bucket, s
 				if !b.Deep || probe || !sniffable(o) {
 					continue
 				}
-				cost = sniffBytes
+				cost = sniffCost(o)
 			}
-			if old, ok := known[o.key]; ok && !probe && o.etag != "" && old.ETag == o.etag && old.Rules == scanRules {
+			if old, ok := known[o.key]; ok && !probe && old.Rules == scanRules && o.unchangedSince(old.ETag, s.now()) {
 				n, err := s.store.TouchAssets(ctx, b.TenantID, old.AssetIDs, scanID, s.now())
 				if err != nil {
 					return out, fmt.Errorf("mark unchanged assets seen: %w", err)
@@ -579,7 +721,7 @@ func (s *Service) scanBucket(ctx context.Context, guard dialControl, b Bucket, s
 				if n == len(old.AssetIDs) {
 					out.unchanged++
 					out.kept += n
-					rows = append(rows, BucketObject{TenantID: b.TenantID, BucketID: b.ID, Key: o.key, ETag: o.etag, Size: o.size, AssetIDs: old.AssetIDs, Rules: scanRules})
+					rows = append(rows, BucketObject{TenantID: b.TenantID, BucketID: b.ID, Key: o.key, ETag: old.ETag, Size: o.size, AssetIDs: old.AssetIDs, Rules: scanRules})
 					continue
 				}
 			}
@@ -622,7 +764,7 @@ func (s *Service) scanBucket(ctx context.Context, guard dialControl, b Bucket, s
 						for _, a := range found {
 							ids = append(ids, a.ID)
 						}
-						rows = append(rows, BucketObject{TenantID: b.TenantID, BucketID: b.ID, Key: o.key, ETag: o.etag, Size: o.size, AssetIDs: ids, Rules: scanRules})
+						rows = append(rows, BucketObject{TenantID: b.TenantID, BucketID: b.ID, Key: o.key, ETag: o.recorded(s.now()), Size: o.size, AssetIDs: ids, Rules: scanRules})
 					}
 					mu.Unlock()
 				}

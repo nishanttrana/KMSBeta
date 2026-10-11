@@ -123,7 +123,7 @@ export function BucketsModal({ open, onClose, session, buckets, error, onChanged
           {offered.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.endpoint}</option>)}
         </Sel>
         <button type="button" role="switch" aria-checked={deep} onClick={() => setDeep((d) => !d)}
-          title="Also read the first kilobyte of every object whose name says nothing, and scan those that hold keys. One small request per object."
+          title="Also read objects whose names say nothing: up to 2 MB whole, larger ones and media by their first kilobyte. One request per object, once per version."
           style={{ border: `1px solid ${deep ? C.accentFg : C.border}`, background: deep ? C.accentDim : "transparent", color: deep ? C.accentFg : C.muted, borderRadius: 7, padding: "7px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
           Deep scan
         </button>

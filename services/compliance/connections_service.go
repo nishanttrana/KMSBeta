@@ -78,9 +78,9 @@ type resolvedConnection struct {
 	Type     string            `json:"type"`
 	Endpoint string            `json:"endpoint"`
 	Fields   map[string]string `json:"fields"`
-	// PrivateRanges: for a source connection, the private ranges approved
-	// for the tenant. Discovery sends the credential to a private address
-	// only inside one of them (7.40.0-beta).
+	// PrivateRanges: the private ranges approved for the tenant, for a
+	// credential whose host the customer names (privateCapable). The caller
+	// sends the credential to a private address only inside one of them.
 	PrivateRanges []string `json:"private_ranges"`
 }
 
@@ -109,10 +109,8 @@ func (h *Handler) resolveConnection(c *route.Call) {
 		return
 	}
 	out := resolvedConnection{ID: conn.ID, Name: conn.Name, Type: conn.Type, Endpoint: conn.Endpoint, Fields: opened.Fields, PrivateRanges: []string{}}
-	// A mail relay may be on the customer's own network too: governance
-	// dials it only inside these ranges (8.0.0-beta).
-	if cat := connectionByType[conn.Type].Category; cat == categorySource || cat == categoryMail {
-		// Fail closed: without the list, discovery would have to treat
+	if privateCapable(conn.Type) {
+		// Fail closed: without the list, the caller would have to treat
 		// every private address as unapproved or as approved.
 		_, ranges, err := h.approvedRanges(c.R.Context(), c.Tenant)
 		if err != nil {

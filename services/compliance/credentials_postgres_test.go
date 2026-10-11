@@ -98,7 +98,10 @@ func TestCredentialStorePostgres(t *testing.T) {
 	if a := approvedAllow(ctx, store, tenant, "smtp"); len(a) != 1 || a.ValidateHost("10.20.1.1") != nil || a.ValidateHost("10.21.1.1") == nil {
 		t.Fatalf("mail allowance from the store: %v", a)
 	}
-	if a := approvedAllow(ctx, store, tenant, "webhook"); len(a) != 0 {
-		t.Fatalf("a webhook was given a private allowance: %v", a)
+	if a := approvedAllow(ctx, store, tenant, "webhook"); len(a) != 1 {
+		t.Fatalf("webhook allowance from the store: %v", a)
+	}
+	if a := approvedAllow(ctx, store, tenant, "aws"); len(a) != 0 {
+		t.Fatalf("a cloud account was given a private allowance: %v", a)
 	}
 }
