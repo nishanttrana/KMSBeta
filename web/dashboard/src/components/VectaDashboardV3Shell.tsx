@@ -818,7 +818,7 @@ export default function VectaDashboardV3Shell(props: Props) {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
         {/* ── Topbar ── */}
-        <div style={{
+        <div data-testid="topbar" style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -951,28 +951,26 @@ export default function VectaDashboardV3Shell(props: Props) {
               )}
             </div>
 
-            {/* Alert bell */}
+            {/* Alert bell: the unread count sits beside the icon, never over it. */}
             <button
               onClick={() => { selectTab("alerts"); markAlertsRead?.(); }}
               className="vk-icon-btn"
               style={{
-                display: "inline-flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer", position: "relative", color: C.dim,
-                width: 32, height: 32, borderRadius: 4,
+                display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+                cursor: "pointer", color: C.dim,
+                minWidth: 32, height: 32, padding: reportedUnread > 0 ? "0 7px" : 0, borderRadius: 4,
                 border: `1px solid ${C.border}`,
                 background: "transparent",
               }}
               title="Alert center"
+              aria-label={reportedUnread > 0 ? `Alert center, ${reportedUnread} unread` : "Alert center"}
             >
-              <Bell size={14} strokeWidth={2} />
+              <Bell size={14} strokeWidth={2} style={{ flexShrink: 0 }} />
               {reportedUnread > 0 && (
-                <span style={{
-                  position: "absolute", top: 4, right: 4,
+                <span data-testid="unread-count" className="vk-num" style={{
                   background: C.red, color: C.white,
-                  fontSize: 10, borderRadius: 4,
-                  padding: "1px 3px", fontWeight: 700,
-                  minWidth: 12, textAlign: "center",
-                  border: `1.5px solid ${C.surface}`,
+                  fontSize: 10.5, borderRadius: 3,
+                  padding: "1px 5px", fontWeight: 700,
                   lineHeight: 1.4,
                 }}>
                   {reportedUnread > 99 ? "99+" : reportedUnread}

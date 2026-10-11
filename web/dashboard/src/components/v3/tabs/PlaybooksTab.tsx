@@ -100,8 +100,8 @@ const Chk = ({ label, checked, onChange }: any) => (
     <span style={{ fontSize: 12, color: C.text }}>{label}</span>
   </div>
 );
-const StatCard = ({ icon, label, value, color = C.accent, tint, sublabel }: any) => (
-  <div style={{ flex: 1, minWidth: 150, background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 6, backgroundImage: tint ? `linear-gradient(135deg, ${tint}, transparent)` : undefined }}>
+const StatCard = ({ icon, label, value, color = C.accent, sublabel }: any) => (
+  <div style={{ flex: 1, minWidth: 150, background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 6 }}>
     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
       <span style={{ color }}>{icon}</span>
       <span style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, fontWeight: 600 }}>{label}</span>

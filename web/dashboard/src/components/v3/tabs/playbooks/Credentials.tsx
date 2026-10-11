@@ -130,7 +130,7 @@ export function Credentials({ session, exposed, exposureError, onToast, onNaviga
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 8, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 11, color: C.muted }}>Add a credential here first; cloud accounts, HSM keys, mail, playbooks, event streams and scans then pick it. Values are sealed and never shown again.</span>
+        <span className="vk-fold" tabIndex={0} style={{ fontSize: 11, color: C.muted }}>Add a credential here first; cloud accounts, HSM keys, mail, playbooks, event streams and scans then pick it. Values are sealed and never shown again.</span>
         <span style={{ display: "flex", gap: 8 }}>
           <Btn small onClick={() => void load()}><RefreshCcw size={11} /></Btn>
           <Btn small primary disabled={types.length === 0} onClick={() => setForm({})}><Plus size={11} /> Add credential</Btn>

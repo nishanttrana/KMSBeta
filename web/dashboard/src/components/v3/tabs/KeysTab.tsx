@@ -441,7 +441,6 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
   const [createTags,setCreateTags]=useState<string[]>([]);
   const [showCreateTagPicker,setShowCreateTagPicker]=useState(false);
   const [approvalReq,setApprovalReq]=useState(false);
-  const [rotationEnabled,setRotationEnabled]=useState(true);
   const [exportable,setExportable]=useState(false);
   // "Create in HSM" is offered only when the tenant turned HSM keys on (HSM tab).
   const [inHSM,setInHSM]=useState(false);
@@ -1770,10 +1769,10 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
 
   return <div>
     <div style={{display:"flex",gap:12,marginBottom:14}}>
-      <Stat l="Total Keys" v={String(keys.length)} s="customer key catalog" c="accent" i="??"/>
-      <Stat l="Active" v={String(keys.filter((k)=>String(k.state||"").toLowerCase()==="active").length)} s="live form entries" c="green" i="?"/>
-      <Stat l="PQC Keys" v={String(keys.filter(k=>String(k.algo).toLowerCase().includes("ml-")||String(k.algo).toLowerCase().includes("slh")).length)} s="from customer keys" c="purple" i="?"/>
-      <Stat l="Ops Today" v={String(keys.reduce((sum,k)=>sum+Number(k.ops||0),0))} s="based on current key set" c="blue" i="?"/>
+      <Stat l="Total Keys" v={String(keys.length)} s="customer key catalog" c="accent"/>
+      <Stat l="Active" v={String(keys.filter((k)=>String(k.state||"").toLowerCase()==="active").length)} s="live form entries" c="green"/>
+      <Stat l="PQC Keys" v={String(keys.filter(k=>String(k.algo).toLowerCase().includes("ml-")||String(k.algo).toLowerCase().includes("slh")).length)} s="from customer keys" c="purple"/>
+      <Stat l="Ops Today" v={String(keys.reduce((sum,k)=>sum+Number(k.ops||0),0))} s="based on current key set" c="blue"/>
     </div>
 
     <Section title="Key Inventory">
@@ -2132,10 +2131,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       {!inHSM&&hsmTenantKey&&<div style={{padding:"8px 10px",marginBottom:10,borderRadius:3,border:`1px solid ${C.accent}`,fontSize:11,color:C.text}}>
         The key's material will be encrypted by this tenant's key in the HSM{hsmName?` (${hsmName})`:""}.
       </div>}
-      <Row2>
-        <FG label="Key Name" required><Inp placeholder="Enter key name" value={createName} onChange={e=>setCreateName(e.target.value)}/></FG>
-        <FG label="Tenant" required><Sel><option>{session?.tenantId||"tenant"}</option></Sel></FG>
-      </Row2>
+      <FG label="Key Name" required><Inp placeholder="Enter key name" value={createName} onChange={e=>setCreateName(e.target.value)}/></FG>
       <FG label="Algorithm Family" required>
         <div style={{display:"flex",gap:8,marginBottom:8}}>
           {[["symmetric","Symmetric"],["asymmetric","Asymmetric"],["pqc","Post-Quantum"],["hmac","HMAC"]].map(([v,l])=>
@@ -2165,36 +2161,26 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
           <option value="all">All Operations</option>
         </Sel>
       </FG>
-      <FG label="Key Derivation" hint="Optional: derive sub-keys from this master key">
-        <Sel><option value="none">None</option><option value="hkdf-sha256">HKDF-SHA256</option><option value="hkdf-sha384">HKDF-SHA384</option><option value="kdf-counter">NIST SP 800-108 Counter Mode</option></Sel>
+      <FG label="Operation Limits" hint="0 = unlimited">
+        <Row2>
+          <Inp
+            placeholder="Max ops total (e.g., 1000000)"
+            type="number"
+            min={0}
+            value={opsLimitInput}
+            onChange={(e)=>setOpsLimitInput(e.target.value)}
+          />
+          <Sel w="100%" value={opsLimitWindow} onChange={(e)=>setOpsLimitWindow(e.target.value)}>
+            <option value="total">Per lifetime</option>
+            <option value="daily">Per day</option>
+            <option value="monthly">Per month</option>
+          </Sel>
+        </Row2>
       </FG>
-      <Row2>
-        <FG label="Auto-Rotation">
-          <Chk label="Enable automatic rotation" checked={rotationEnabled} onChange={()=>setRotationEnabled(!rotationEnabled)}/>
-          {rotationEnabled&&<Sel><option>Every 90 days</option><option>Every 30 days</option><option>Every 180 days</option><option>Every 365 days</option><option>Custom...</option></Sel>}
-        </FG>
-        <FG label="Operation Limits" hint="0 = unlimited">
-          <Row2>
-            <Inp
-              placeholder="Max ops total (e.g., 1000000)"
-              type="number"
-              min={0}
-              value={opsLimitInput}
-              onChange={(e)=>setOpsLimitInput(e.target.value)}
-            />
-            <Sel w="100%" value={opsLimitWindow} onChange={(e)=>setOpsLimitWindow(e.target.value)}>
-              <option value="total">Per lifetime</option>
-              <option value="daily">Per day</option>
-              <option value="monthly">Per month</option>
-            </Sel>
-          </Row2>
-        </FG>
-      </Row2>
       <Row2>
         <FG label="Security Options">
           <Chk label="Require governance approval for all operations" checked={approvalReq} onChange={()=>setApprovalReq(!approvalReq)}/>
           {!inHSM&&<Chk label="Allow key export (wrapped)" checked={exportable} onChange={()=>setExportable(!exportable)}/>}
-          <Chk label="FIPS-only algorithms enforced" checked={true}/>
         </FG>
         <FG label="Activation">
           <Sel value={createActivationMode} onChange={(e)=>setCreateActivationMode(e.target.value)}>
@@ -2255,7 +2241,6 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
           {!availableTags.length&&<div style={{fontSize:10,color:C.muted}}>No tags available. Add tags in Administration.</div>}
         </div>}
       </FG>
-      <FG label="Description"><Txt placeholder="Optional description for this key..." rows={2}/></FG>
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8,paddingTop:12,borderTop:`1px solid ${C.border}`}}>
         <Btn onClick={()=>setModal(null)}>Cancel</Btn>
         <Btn primary onClick={addCustomerKey} disabled={creating}>{creating?"Creating...":"Create Key"}</Btn>
@@ -2266,10 +2251,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
     <Modal open={modal==="form-key"} onClose={()=>setModal(null)} title="Form Key from Components" width={920}>
       <HSMTargetPicker session={session} material="imported" supported={/^AES-(128|192|256)/i.test(formAlgorithm)} unsupportedReason="Only AES-128/192/256 keys can be placed in an HSM."
         checked={matHSM.on} onChecked={(on)=>setMatHSM((p)=>({...p,on}))} connection={matHSM.conn} onConnection={(conn)=>setMatHSM((p)=>({...p,conn}))} onNavigate={onNavigate}/>
-      <Row2>
-        <FG label="Key Name" required><Inp placeholder="Enter key name" value={formName} onChange={(e)=>setFormName(e.target.value)}/></FG>
-        <FG label="Tenant" required><Sel><option>{session?.tenantId||"tenant"}</option></Sel></FG>
-      </Row2>
+      <FG label="Key Name" required><Inp placeholder="Enter key name" value={formName} onChange={(e)=>setFormName(e.target.value)}/></FG>
       <Row2>
         <FG label="Algorithm" required>
           <Sel value={formAlgorithm} onChange={(e)=>setFormAlgorithm(e.target.value)}>
@@ -2401,10 +2383,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
           ].map((item)=><Radio key={item.id} label={item.label} selected={importMethod===item.id} onSelect={()=>setImportMethod(item.id)}/>)}
         </div>
       </FG>
-      <Row2>
-        <FG label="Key Name" required><Inp placeholder="Enter key name" value={importName} onChange={(e)=>setImportName(e.target.value)}/></FG>
-        <FG label="Tenant" required><Sel><option>{session?.tenantId||"tenant"}</option></Sel></FG>
-      </Row2>
+      <FG label="Key Name" required><Inp placeholder="Enter key name" value={importName} onChange={(e)=>setImportName(e.target.value)}/></FG>
       <FG label="Key Material" required hint="Key material is envelope-encrypted immediately upon import. Plaintext never touches disk.">
         <Txt
           placeholder={
@@ -2710,7 +2689,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       </FG>
       <FG label="Change Algorithm (optional)">
         <Inp placeholder={`Keep ${selectedKey?.algo||selectedKey?.algorithm||"current"}, or e.g. AES-256, ML-DSA-65`} value={rotateTargetAlgorithm} onChange={(e)=>setRotateTargetAlgorithm(e.target.value)}/>
-        <div style={{fontSize:10,color:C.muted,marginTop:4}}>The key keeps its ID. Older versions still decrypt and verify what they protected (pass their version); rewrap moves ciphertext onto the new version. Keycore refuses a target that can't do what this key does.</div>
+        <div data-keep="" style={{fontSize:10,color:C.muted,marginTop:4}}>The key keeps its ID. Older versions still decrypt and verify what they protected (pass their version); rewrap moves ciphertext onto the new version. Keycore refuses a target that can't do what this key does.</div>
       </FG>
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary onClick={rotateSelectedKey} disabled={rotating}>{rotating?"Rotating...":"Rotate Key"}</Btn></div>
     </Modal>
@@ -2735,12 +2714,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         </Sel>
         {!wrappingKeyChoices.length&&<div style={{marginTop:6,fontSize:10,color:C.amberFg}}>No active wrap/unwrap key available.</div>}
       </FG>}
-      <FG label="Export Format">
-        {exportMode==="public-plaintext"
-          ?<Sel value="public-plaintext" disabled><option>Public key plaintext (base64)</option></Sel>
-          :<Sel value="wrapped" disabled><option>Raw wrapped (base64)</option></Sel>}
-      </FG>
-      <FG label="Justification" required><Txt placeholder="Reason for export (required for audit)..." rows={2}/></FG>
+      <FG label="Export Format"><div style={{fontSize:11,color:C.text}}>{exportMode==="public-plaintext"?"Public key, plaintext (base64)":"Raw, wrapped (base64)"}</div></FG>
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8}}>
         <Btn onClick={()=>setModal(null)}>Cancel</Btn>
         <Btn primary onClick={exportSelectedKey} disabled={exporting}>{exporting?"Exporting...":"Export Key"}</Btn>

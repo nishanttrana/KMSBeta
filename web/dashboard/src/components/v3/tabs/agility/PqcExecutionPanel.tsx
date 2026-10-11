@@ -136,7 +136,7 @@ export function PqcExecutionPanel({ session }: { session: any }) {
 
       <div style={S.divider} />
       <div style={S.sectionTitle}>Execution plans</div>
-      <div style={S.sectionHint}>Dry run shows what would change; execute changes keys in keycore; rollback deactivates the successor keys a plan created.</div>
+      <div className="vk-fold" tabIndex={0} style={S.sectionHint}>Dry run shows what would change; execute changes keys in keycore; rollback deactivates the successor keys a plan created.</div>
       {plans.length === 0 ? <div style={S.empty}>No execution plans yet.</div> : (
         <div style={S.panel}>
           {plans.map((p, i) => {

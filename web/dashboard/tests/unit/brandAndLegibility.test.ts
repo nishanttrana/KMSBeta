@@ -71,17 +71,47 @@ describe("dashboard legibility and brand", () => {
   });
 
   // Pages lead with numbers and charts (CLAUDE.md). A text-only element
-  // holding a paragraph (text, with or without inline code or links) folds to one line (.vk-fold) unless it is a warning
-  // or confirmation that must stay open (data-keep).
+  // holding a paragraph (text, with or without inline code, links or
+  // expressions) folds to one line (.vk-fold) unless it is a warning or
+  // confirmation that must stay open (data-keep). Prose with a semicolon, or
+  // with an expression longer than a name, used to slip past this gate.
   it("folds paragraphs of explanation", () => {
-    const inline = String.raw`<(code|b|strong|a|em|i|kbd|span|B)\b[^<>]*>[^<>{}]*<\/\4>`;
-    const para = new RegExp(String.raw`<(div|p|span)\b((?:(?!className=|data-keep)[^<>])*?)>((?:[^<>{}]|\{" "\}|\{[\w.?]+\}|<br\s*\/>|${inline})+)<\/\1>`, "g");
+    const expr = String.raw`\{[^{}<>]*\}`;
+    const inline = String.raw`<(code|b|strong|a|em|i|kbd|span|B)\b[^<>]*>(?:[^<>{}]|${expr})*<\/\4>`;
+    const para = new RegExp(String.raw`<(div|p|span)\b((?:(?!className=|data-keep)[^<>])*?)>((?:[^<>{}]|${expr}|<br\s*\/>|${inline})+)<\/\1>`, "g");
     const hits: string[] = [];
     for (const file of FILES) {
       const text = readFileSync(file, "utf8");
       for (const m of text.matchAll(para)) {
         const prose = m[3]!.replace(/<[^>]+>|\{[^}]*\}/g, "").replace(/\s+/g, " ").trim();
-        if (prose.length >= 120 && /^[A-Z]/.test(prose) && !/=>|;/.test(prose)) hits.push(`${file.slice(ROOT.length + 1)}:${text.slice(0, m.index).split("\n").length}`);
+        if (prose.length >= 120 && /^[A-Z]/.test(prose) && !/=>/.test(prose)) hits.push(`${file.slice(ROOT.length + 1)}:${text.slice(0, m.index).split("\n").length}`);
+      }
+    }
+    expect(hits).toEqual([]);
+  });
+
+  // One plane, flat fills: a card, tile, menu or button is a token, never a
+  // gradient (the certificate tiles were tinted green, red and amber). The
+  // sign-in backdrop is the one glow.
+  it("fills surfaces with flat tokens, not gradients", () => {
+    expect(offenders(/(linear|radial|conic)-gradient\(/).filter((hit) => !hit.startsWith("src/components/LoginScreen.tsx:"))).toEqual([]);
+  });
+
+  // A count reads the same on every page: the number is neutral, and hue
+  // marks only a state (a ternary), never a tile's identity.
+  it("keeps large numbers neutral unless they carry a status", () => {
+    const hue = "accent|teal|green|red|amber|orange|purple|blue|pink|cyan|yellow";
+    expect(offenders(new RegExp(String.raw`fontSize:\s*(?:[2-9]\d)\b[^}]*?(?<![?:]\s*)\bcolor:\s*C\.(${hue})(Fg)?\b`))).toEqual([]);
+  });
+
+  // White is for text on a filled hue (a badge). On a card it vanishes in the
+  // light theme.
+  it("uses white text only on a filled background", () => {
+    const hits: string[] = [];
+    for (const file of FILES) {
+      const text = readFileSync(file, "utf8");
+      for (const m of text.matchAll(/style=\{\{((?:(?!\}\})[\s\S])*?)\}\}/g)) {
+        if (/(?<!\w)color:\s*C\.white\b/.test(m[1]!) && !/background(Color)?:/.test(m[1]!)) hits.push(`${file.slice(ROOT.length + 1)}:${text.slice(0, m.index).split("\n").length}`);
       }
     }
     expect(hits).toEqual([]);

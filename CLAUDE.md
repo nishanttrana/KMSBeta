@@ -367,6 +367,12 @@ an approach, record it here or in the matching doc below.
   fills are their own theme tokens (`--cls-*` in `index.css`), checked for
   separation in the light and dark themes. Look at the rendered page in
   both themes before calling it done.
+  **A page shows state and controls; what they mean goes in the docs**
+  (owner directive, 2026-10-12, on Service mTLS: "too much text for no
+  reason", "very less text or no text", "can be added in documentation
+  later on what it means"). No paragraph explains a feature on its page:
+  the explanation is in the feature's document, or a `title` tooltip when
+  one line is enough. A warning appears with the choice it warns about.
 
 - **The console has its own look, one plane per theme** (owner directive,
   2026-10-11: a dark sidebar beside a white page "do not match"; wants an
@@ -382,6 +388,11 @@ an approach, record it here or in the matching doc below.
     text colour.
   - An explanatory paragraph folds to one line (`.vk-fold`); a warning or
     confirmation stays open (`data-keep`).
+  - **One palette** (owner directive, 2026-10-12: the tinted certificate
+    tiles "do not match with the colour of KMS, it should be uniform").
+    Every surface is a flat token, never a gradient. Counts use the shared
+    `Stat` tile. A count's number is neutral; hue marks only a state that
+    needs attention, never one tile from another.
   - `web/dashboard/tests/unit/brandAndLegibility.test.ts` enforces these
     (docs/DECISIONS.md).
 
@@ -430,6 +441,16 @@ changes code without touching CHANGELOG.md or learning.md.
     4xx. A dashboard call whose credential is in its body, not the session
     token, sets `keepSessionOn401`.
   - A dashboard client file with no importer is deleted, not kept.
+  - A control on a page has an effect (owner, 2026-10-12: in the key dialog
+    "the tenant name display is not required"). No selector with one
+    option, no field its request leaves out, no box that is always ticked;
+    a dialog acts in the tenant chosen in the top bar and doesn't show it
+    again. A control's value lives in state, never read from the DOM by
+    id. `tests/unit/controlsAreReal.test.ts` enforces this.
+  - A layout is rendered and tested in every state it has: collapsed and
+    open, empty and crowded (a count of 4,200, not 3). A badge sits beside
+    its icon, never over it. The smoke tests' `coveredControls` sweep fails
+    when one control is drawn over another.
 
 - `make conformance` passes. It enforces rules 1–3 and 5, that routes use
   the `pkg/route` kernel, that every shell script parses under macOS

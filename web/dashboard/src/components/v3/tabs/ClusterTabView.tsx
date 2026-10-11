@@ -140,13 +140,12 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
         {leaderNode ? <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Leader Node</div>
           <div style={{
-            background: `linear-gradient(135deg, ${C.card} 0%, ${C.accentTint} 100%)`,
-            border: `1px solid ${C.accent}`, borderRadius: 6, padding: 18,
-            boxShadow: `0 0 24px ${C.glow}`
+            background: C.card,
+            border: `1px solid ${C.accent}`, borderRadius: 6, padding: 18
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
-                <div style={{ fontSize: 18, color: C.white, fontWeight: 700 }}>{String(leaderNode.name || leaderNode.id)}</div>
+                <div style={{ fontSize: 18, color: C.text, fontWeight: 700 }}>{String(leaderNode.name || leaderNode.id)}</div>
                 <div style={{ fontSize: 10, color: C.muted, fontFamily: "var(--font-mono)", marginTop: 2 }}>{String(leaderNode.endpoint || "unknown")}</div>
               </div>
               {roleBadge("leader", String(leaderNode.status || "unknown"), statusMeta)}
@@ -154,12 +153,12 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 16, marginTop: 14 }}>
               <div>
                 <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>CPU</div>
-                <div style={{ fontSize: 18, color: C.white, fontWeight: 700, marginTop: 2 }}>{Number(leaderNode.cpu_percent || 0).toFixed(1)}%</div>
+                <div style={{ fontSize: 18, color: C.text, fontWeight: 700, marginTop: 2 }}>{Number(leaderNode.cpu_percent || 0).toFixed(1)}%</div>
                 <Bar pct={Number(leaderNode.cpu_percent || 0)} color={C.accent} />
               </div>
               <div>
                 <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>RAM</div>
-                <div style={{ fontSize: 18, color: C.white, fontWeight: 700, marginTop: 2 }}>{Number(leaderNode.ram_gb || 0).toFixed(1)} GB</div>
+                <div style={{ fontSize: 18, color: C.text, fontWeight: 700, marginTop: 2 }}>{Number(leaderNode.ram_gb || 0).toFixed(1)} GB</div>
                 <Bar pct={Math.min(Number(leaderNode.ram_gb || 0) / 32 * 100, 100)} color={C.green} />
               </div>
               <div>
@@ -201,7 +200,7 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                   <div>
-                    <div style={{ fontSize: 14, color: C.white, fontWeight: 700 }}>{String(node?.name || node?.id || "-")}</div>
+                    <div style={{ fontSize: 14, color: C.text, fontWeight: 700 }}>{String(node?.name || node?.id || "-")}</div>
                     <div style={{ fontSize: 10, color: C.muted, fontFamily: "var(--font-mono)", marginTop: 2 }}>{String(node?.endpoint || "unknown")}</div>
                   </div>
                   {roleBadge("follower", status, statusMeta)}

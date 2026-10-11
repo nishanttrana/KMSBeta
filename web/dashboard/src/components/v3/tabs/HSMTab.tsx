@@ -352,7 +352,7 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
       <Btn small onClick={()=>void loadProviderConfig()} disabled={configLoading}>{configLoading?"Loading...":"Load Saved Config"}</Btn>
     </div>}>
       <Card style={{padding:14}}>
-        <div style={{fontSize:10,color:C.muted,marginBottom:10}}>
+        <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.muted,marginBottom:10}}>
           Upload the vendor PKCS#11 shared library ({activeVendor?.libraryExamples?.join(" or ")||"libVendorPKCS11.so"}) via SCP/SFTP to the <code style={{color:C.accentFg}}>incoming/</code> directory, then the install script moves it to the provider directory and verifies the checksum.
         </div>
         <Row2>

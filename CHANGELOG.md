@@ -4,6 +4,57 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [11.6.0-beta] — 2026-10-12
+
+### Fixed
+- **The unread alert count no longer covers the bell.** It was drawn over
+  the icon and hid it once there were alerts. The count now sits beside the
+  bell, inside the same button.
+- **The enrollment wizards send the message type you choose.** SCEP and
+  CMPv2 always sent the first one (PKCSReq, IR): choosing a renewal, key
+  update or revocation request had no effect.
+- **Stat tiles show the icon they were given.** The shared tile ignored it
+  and drew a default; 62 tiles across the console are affected.
+- **Cluster node names are readable in the light theme** (they were white).
+
+### Changed
+- **Service mTLS shows state and controls, with no paragraphs.** The issuing
+  CA, FIPS mode and pending changes are badges; each edge listener lists
+  the groups it was measured to accept, with the missing ones outlined; the
+  identity list is filtered by chips that carry their counts (Applying, PQC
+  required, PQC preferred, Classical, Expiring ≤30d). The one warning,
+  about PQC required on the edge, appears when that is chosen. What each
+  control means is in
+  [docs/SECURITY/INTERNAL_TLS.md](docs/SECURITY/INTERNAL_TLS.md#reading-the-service-mtls-page).
+- **One palette.** Every card, tile, menu and button is a flat fill: the
+  tinted gradients are gone from the certificate tiles, the CA hierarchy,
+  the enrollment protocol cards, Cluster, Confidential Compute, Playbooks and
+  the legacy home tiles. Certificate counts use the console's stat tile. A
+  count's number is neutral everywhere; colour marks only a state that
+  needs attention.
+- **Fifteen more explanations fold to one line**, as the rest already did;
+  seven warnings stay open.
+
+### Removed
+- **The Tenant field in the create, form and import key dialogs.** A key is
+  created in the tenant chosen in the top bar; the field was a selector with
+  one option.
+- **Dialog controls that were never sent to the server**, so nothing is
+  lost: in Create Key, Key Derivation, Auto-Rotation with its schedule,
+  Description, and a "FIPS-only algorithms enforced" box that was always
+  ticked whatever the FIPS mode; in Export Key, the Justification box
+  (labelled "required for audit" but never recorded); in the ACME and EST
+  wizards, Challenge Type and Auth Method. Rotation schedules are set in
+  Rotation & Scheduling.
+
+Enforced by `web/dashboard/tests/unit/controlsAreReal.test.ts` (every
+selector, checkbox and field has a handler; no selector is read by id),
+`brandAndLegibility.test.ts` (no gradient fills, neutral numbers, white text
+only on a fill, and a paragraph gate that no longer lets prose with a
+semicolon or an expression through) and four smoke tests: the unread count
+beside the bell, the key dialog and the request it sends, Service mTLS
+against the certs service's response shape, and the certificate tiles.
+
 ## [11.5.0-beta] — 2026-10-11
 
 ### Removed

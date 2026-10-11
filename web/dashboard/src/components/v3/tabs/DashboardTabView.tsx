@@ -109,19 +109,18 @@ export const DashboardTabView = (props: any) => {
   };
 
   const Kpi = ({ label, value, icon: KIcon, color, dim, delta, deltaColor, deltaIcon: DIcon, barPct }: any) => (
-    <div className="vecta-stat-card" style={{ position: "relative", overflow: "hidden", background: `linear-gradient(160deg, ${C.card} 0%, ${C.surface} 100%)`, border: `1px solid ${C.border}`, borderRadius: "var(--radius-md)", padding: "16px 18px", boxShadow: "var(--shadow-sm)" }}>
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${color}, transparent 75%)`, opacity: 0.7 }} />
+    <div className="vecta-stat-card" style={{ position: "relative", overflow: "hidden", background: C.card, border: `1px solid ${C.border}`, borderRadius: "var(--radius-md)", padding: "16px 18px", boxShadow: "var(--shadow-sm)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ fontSize: 10, fontWeight: 600, color: C.muted, letterSpacing: 1.1, textTransform: "uppercase" }}>{label}</div>
         <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 4, background: dim, color }}><KIcon size={15} strokeWidth={2.2} /></span>
       </div>
-      <div className="vk-num" style={{ fontSize: 34, fontWeight: 800, color, lineHeight: 1.05, marginTop: 8 }}>{value}</div>
+      <div className="vk-num" style={{ fontSize: 34, fontWeight: 800, color: C.text, lineHeight: 1.05, marginTop: 8 }}>{value}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10.5, color: deltaColor, marginTop: 7, fontWeight: 500 }}>
         {DIcon && <DIcon size={11} strokeWidth={2.2} />}
         {delta}
       </div>
       {barPct != null && <div style={{ height: 3, borderRadius: 999, background: C.border, overflow: "hidden", marginTop: 10 }}>
-        <div style={{ height: "100%", width: `${barPct}%`, background: `linear-gradient(90deg, ${color}, color-mix(in oklab, ${color} 55%, transparent))`, borderRadius: 4, transition: "width .6s cubic-bezier(.4,0,.2,1)" }} />
+        <div style={{ height: "100%", width: `${barPct}%`, background: color, borderRadius: 4, transition: "width .6s cubic-bezier(.4,0,.2,1)" }} />
       </div>}
     </div>
   );
@@ -132,10 +131,9 @@ export const DashboardTabView = (props: any) => {
       <div style={{
         position: "relative", overflow: "hidden",
         borderRadius: "var(--radius-lg)", border: `1px solid ${C.border}`,
-        background: `linear-gradient(120deg, ${C.surface} 0%, ${C.card} 55%, ${C.surface} 100%)`,
+        background: C.card,
         padding: "20px 24px",
       }}>
-        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: `radial-gradient(900px 240px at 8% -40%, ${C.glowStrong || "rgba(20,147,168,.18)"}, transparent 60%), radial-gradient(700px 220px at 95% 140%, ${C.glow || "rgba(99,102,241,.14)"}, transparent 60%)` }} />
         <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div>
             <div style={{ fontSize: 20, fontWeight: 800, color: C.text, letterSpacing: -0.4, lineHeight: 1.2 }}>

@@ -26,13 +26,17 @@ import {
 // assumed). Changes and rotations restart the service (graceful or forced)
 // or, for Envoy, the dashboard and the daemons, rewrite the certificate they
 // reload. Root administrators only; every action is audited.
+//
+// The page shows state and controls only. What each control means is in
+// docs/SECURITY/INTERNAL_TLS.md ("Reading the Service mTLS page"); a hint
+// that fits in a tooltip goes in a title.
 
 type Props = { session: any; onToast?: (msg: string) => void };
 
 const PROFILE_LABEL: Record<string, string> = {
-  "pqc-required": "PQC required: hybrid ML-KEM only",
-  "pqc-preferred": "PQC preferred: hybrid ML-KEM, classical fallback",
-  classical: "Classical: no ML-KEM"
+  "pqc-required": "PQC required",
+  "pqc-preferred": "PQC preferred",
+  classical: "Classical"
 };
 
 const ago = (iso?: string) => {
@@ -45,6 +49,34 @@ const ago = (iso?: string) => {
 
 const day = (iso?: string) => (iso ? new Date(iso).toISOString().slice(0, 10) : "");
 
+const EXPIRING_DAYS = 30;
+const expiresSoon = (i: MTLSIdentity) => {
+  const until = (i.kind === "service" ? i.observed?.[0]?.not_after : i.served_file?.not_after) || i.certificates?.[0]?.not_after;
+  return Boolean(until) && new Date(until!).getTime() - Date.now() < EXPIRING_DAYS * 86_400_000;
+};
+
+// The views of the identity list. Each chip shows the number of rows it lists.
+const VIEWS: { id: string; label: string; has: (i: MTLSIdentity) => boolean }[] = [
+  { id: "all", label: "All", has: () => true },
+  { id: "applying", label: "Applying", has: (i) => !i.applied },
+  { id: "pqc-required", label: PROFILE_LABEL["pqc-required"]!, has: (i) => i.kind === "service" && i.policy.kx_profile === "pqc-required" },
+  { id: "pqc-preferred", label: PROFILE_LABEL["pqc-preferred"]!, has: (i) => i.kind === "service" && i.policy.kx_profile === "pqc-preferred" },
+  { id: "classical", label: PROFILE_LABEL.classical!, has: (i) => i.kind === "service" && i.policy.kx_profile === "classical" },
+  { id: "expiring", label: `Expiring ≤${EXPIRING_DAYS}d`, has: expiresSoon }
+];
+
+const HEAD = { fontSize: 12, fontWeight: 600, color: C.text } as const;
+const SUB = { fontSize: 10.5, color: C.dim, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } as const;
+const COLS = "1.1fr 1.7fr 1.5fr 1fr 1.3fr";
+
+const Groups = ({ list, missing = false }: { list: string[]; missing?: boolean }) => (
+  <span style={{ display: "inline-flex", gap: 4, flexWrap: "wrap" }}>
+    {list.map((g) => (
+      <span key={g} style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, padding: "1px 6px", borderRadius: 3, border: `1px ${missing ? "dashed" : "solid"} ${missing ? C.amberFg : C.border}`, color: missing ? C.amberFg : C.text }}>{g}</span>
+    ))}
+  </span>
+);
+
 export const ServiceMTLSPanel = ({ session, onToast }: Props) => {
   const [inv, setInv] = useState<MTLSInventory | null>(null);
   const [error, setError] = useState("");
@@ -55,6 +87,7 @@ export const ServiceMTLSPanel = ({ session, onToast }: Props) => {
   const [allMode, setAllMode] = useState<MTLSRestartMode>("graceful");
   const [allConfirm, setAllConfirm] = useState("");
   const [filter, setFilter] = useState("");
+  const [view, setView] = useState("all");
   const [edge, setEdge] = useState<EdgeTLS | null>(null);
   const [edgeError, setEdgeError] = useState("");
   const [edgeDraft, setEdgeDraft] = useState("");
@@ -106,9 +139,11 @@ export const ServiceMTLSPanel = ({ session, onToast }: Props) => {
   };
 
   if (error) return <Card style={{ padding: 12 }}><div style={{ fontSize: 11, color: C.redFg }}>Service mTLS unavailable: {error}</div></Card>;
-  if (!inv) return <Card style={{ padding: 12 }}><div style={{ fontSize: 11, color: C.dim }}>Loading internal mTLS inventory...</div></Card>;
+  if (!inv) return <Card style={{ padding: 12 }}><div style={{ fontSize: 11, color: C.dim }}>Loading...</div></Card>;
 
-  const items = inv.items.filter((i) => !filter || i.identity.includes(filter.toLowerCase()) || i.host.includes(filter.toLowerCase()));
+  const q = filter.trim().toLowerCase();
+  const shown = VIEWS.find((v) => v.id === view) || VIEWS[0]!;
+  const items = inv.items.filter((i) => shown.has(i) && (!q || i.identity.includes(q) || i.host.includes(q)));
 
   const row = (i: MTLSIdentity) => {
     const d = draft[i.identity] || { key_algorithm: i.policy.key_algorithm, kx_profile: i.policy.kx_profile };
@@ -118,51 +153,52 @@ export const ServiceMTLSPanel = ({ session, onToast }: Props) => {
     const cert = (i.certificates || [])[0];
     const set = (patch: Partial<typeof d>) => setDraft((prev) => ({ ...prev, [i.identity]: { ...d, ...patch } }));
     return (
-      <div key={i.identity} style={{ display: "grid", gridTemplateColumns: "1.3fr 1.5fr 1.6fr 1.2fr 1.6fr", gap: 8, padding: "8px 10px", borderTop: `1px solid ${C.border}`, alignItems: "center", fontSize: 11 }}>
+      <div key={i.identity} data-testid="mtls-identity" style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "8px 10px", borderTop: `1px solid ${C.border}`, alignItems: "center", fontSize: 11 }}>
         <div>
-          <div style={{ fontWeight: 700, color: C.text }}>{i.identity}</div>
-          <div style={{ color: C.dim, fontSize: 10 }}>{i.host} · {i.kind === "service" ? "service (enrols itself)" : "daemon (certs writes its files)"}</div>
+          <div style={{ fontWeight: 600, color: C.text }}>{i.identity}</div>
+          <div style={SUB}>{i.host} · {i.kind === "service" ? "service" : "daemon"}</div>
         </div>
-        <div>
-          <div style={{ color: C.text }}>{live?.key_algorithm || cert?.key_algorithm || "not reported"}</div>
-          <div style={{ color: C.dim, fontSize: 10 }}>
-            {live?.serial || cert?.serial ? `serial ${(live?.serial || cert?.serial || "").slice(0, 16)}` : "no active certificate"}
-            {(live?.not_after || cert?.not_after) ? ` · until ${day(live?.not_after || cert?.not_after)}` : ""}
+        <div style={{ minWidth: 0 }}>
+          <div style={SUB} title={live?.serial || cert?.serial}>
+            {[live?.key_algorithm || cert?.key_algorithm || "not reported", (live?.serial || cert?.serial || "").slice(0, 16) || "no certificate",
+              (live?.not_after || cert?.not_after) ? `until ${day(live?.not_after || cert?.not_after)}` : ""].filter(Boolean).join(" · ")}
           </div>
-          <Sel value={d.key_algorithm} onChange={(e: any) => set({ key_algorithm: String(e.target.value) })} style={{ marginTop: 4 }}>
+          <Sel aria-label={`${i.identity} certificate key`} value={d.key_algorithm} onChange={(e: any) => set({ key_algorithm: String(e.target.value) })} style={{ marginTop: 4 }}>
             {inv.meta.key_algorithms.map((a) => <option key={a} value={a}>{a}</option>)}
           </Sel>
         </div>
-        <div>
+        <div style={{ minWidth: 0 }} title={i.kind === "service" ? undefined : i.note}>
           {i.kind === "service" ? (
             <>
-              <div style={{ color: C.text }}>{PROFILE_LABEL[live?.kx_profile || ""] || live?.kx_profile || "not reported"}</div>
-              <div style={{ color: C.dim, fontSize: 10 }}>
-                {live?.last_handshake_group ? `last handshake ${live.last_handshake_group} ${ago(live.last_handshake_at)}` : "no handshake reported yet"}
+              <div style={SUB}>
+                {[PROFILE_LABEL[live?.kx_profile || ""] || live?.kx_profile || "not reported",
+                  live?.last_handshake_group ? `${live.last_handshake_group} · ${ago(live.last_handshake_at)}` : "no handshake yet"].join(" · ")}
               </div>
-              <Sel value={d.kx_profile} onChange={(e: any) => set({ kx_profile: String(e.target.value) })} style={{ marginTop: 4 }}>
+              <Sel aria-label={`${i.identity} key exchange`} value={d.kx_profile} onChange={(e: any) => set({ kx_profile: String(e.target.value) })} style={{ marginTop: 4 }}>
                 {(i.kx_profiles || inv.meta.kx_profiles).map((p) => <option key={p} value={p}>{PROFILE_LABEL[p] || p}</option>)}
               </Sel>
             </>
           ) : (
-            <div style={{ color: C.dim, fontSize: 10 }}>{i.note}</div>
+            <div style={SUB}>set by the daemon</div>
           )}
         </div>
         <div>
           {i.applied
-            ? <B c="green">{`generation ${i.policy.generation} · running`}</B>
-            : <B c="amber" pulse>{observed.length === 0 && i.kind === "service" ? "not reported yet" : `applying generation ${i.policy.generation}`}</B>}
-          {i.kind === "service" && observed.length > 1 && <div style={{ color: C.dim, fontSize: 10, marginTop: 2 }}>{observed.length} instances</div>}
-          {live?.started_at && i.kind === "service" && <div style={{ color: C.dim, fontSize: 10, marginTop: 2 }}>started {ago(live.started_at)}</div>}
+            ? <B c="green">{`gen ${i.policy.generation} · running`}</B>
+            : <B c="amber" pulse>{observed.length === 0 && i.kind === "service" ? "not reported" : `applying gen ${i.policy.generation}`}</B>}
+          {i.kind === "service" && (observed.length > 1 || live?.started_at) && (
+            <div style={{ ...SUB, marginTop: 2 }}>{[observed.length > 1 ? `${observed.length} instances` : "", live?.started_at ? `up ${ago(live.started_at).replace(" ago", "")}` : ""].filter(Boolean).join(" · ")}</div>
+          )}
         </div>
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
           <Btn small primary disabled={!changed || busy !== ""} onClick={() => void run(i.identity, () => setInternalMTLSPolicy(session, i.identity,
             i.kind === "service" ? { key_algorithm: d.key_algorithm, kx_profile: d.kx_profile, reason } : { key_algorithm: d.key_algorithm, reason }), `${i.identity}: policy saved; ${i.kind === "service" ? "the service restarts gracefully to apply it" : "certificate reissued, the daemon reloads it"}`)}>
             Apply
           </Btn>
-          <Btn small disabled={busy !== ""} onClick={() => void run(i.identity, () => rotateInternalMTLS(session, i.identity, "graceful", reason),
-            `${i.identity}: certificate revoked; ${i.kind === "service" ? "graceful restart with a fresh key" : "new certificate written"}`)}>
-            {i.kind === "service" ? "Rotate" : "Rotate (reload)"}
+          <Btn small disabled={busy !== ""} title={i.kind === "service" ? "Revoke the certificate, then a graceful restart with a new key" : "Revoke and reissue; the daemon reloads it"}
+            onClick={() => void run(i.identity, () => rotateInternalMTLS(session, i.identity, "graceful", reason),
+              `${i.identity}: certificate revoked; ${i.kind === "service" ? "graceful restart with a fresh key" : "new certificate written"}`)}>
+            Rotate
           </Btn>
           {i.restart_modes.includes("force") && (confirmForce === i.identity ? (
             <Btn small danger disabled={busy !== ""} onClick={() => { setConfirmForce(""); void run(i.identity, () => rotateInternalMTLS(session, i.identity, "force", reason),
@@ -170,175 +206,169 @@ export const ServiceMTLSPanel = ({ session, onToast }: Props) => {
               Confirm force
             </Btn>
           ) : (
-            <Btn small danger disabled={busy !== ""} onClick={() => setConfirmForce(i.identity)}>Force restart</Btn>
+            <Btn small danger disabled={busy !== ""} title="Revoke as key compromise and restart at once" onClick={() => setConfirmForce(i.identity)}>Force</Btn>
           ))}
         </div>
       </div>
     );
   };
 
+  const edgeChoice = edge ? edgeDraft || edge.policy.kx_profile : "";
+
   return (
-    <Section title="Service mTLS" actions={<B c={pending > 0 ? "amber" : "green"}>{pending > 0 ? `${pending} applying` : "all applied"}</B>}>
+    <div data-testid="service-mtls">
+    <Section title="Service mTLS" actions={<>
+      <span title="Issuing CA"><B c="accent">{inv.meta.sub_ca}</B></span>
+      <B c={inv.meta.fips_mode ? "green" : "blue"}>{inv.meta.fips_mode ? "FIPS on" : "FIPS off"}</B>
+      <B c={pending > 0 ? "amber" : "green"}>{pending > 0 ? `${pending} applying` : "all applied"}</B>
+    </>}>
       <Card style={{ padding: 12, marginBottom: 10 }}>
-        <div style={{ fontSize: 11, color: C.text }}>
-          Every internal connection is TLS 1.3 with mutual authentication. Certificates come from <b>{inv.meta.sub_ca}</b>.
-          {" "}FIPS mode is {inv.meta.fips_mode ? "on (X25519 alone is not offered)" : "off"}.
-        </div>
-        <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
-          A service with <b>PQC required</b> accepts only {(inv.meta.groups["pqc-required"] || []).join(", ")}. Every platform client offers all
-          groups, so no choice cuts a service off from its callers. {inv.meta.signature_note}
-        </div>
-        <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
-          Rotate revokes the current certificate. A service then restarts: gracefully (drains requests) or forced (at once, for a
-          suspected key compromise); the new process generates a fresh key. The state below is what each service reports it runs.
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8, marginTop: 8 }}>
-          <Inp placeholder="Reason (recorded in the audit log)" value={reason} onChange={(e: any) => setReason(String(e.target.value || ""))} />
-          <Inp placeholder="Filter identities" value={filter} onChange={(e: any) => setFilter(String(e.target.value || ""))} />
-        </div>
-        <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>Rotate all</div>
-          <Sel value={allMode} onChange={(e: any) => setAllMode(e.target.value as MTLSRestartMode)} w={150}>
-            <option value="graceful">graceful restarts</option>
-            <option value="force">forced restarts</option>
-          </Sel>
-          <Inp placeholder='Type "rotate-all" to confirm' value={allConfirm} onChange={(e: any) => setAllConfirm(String(e.target.value || ""))} w={200} />
-          <Btn small danger={allMode === "force"} primary={allMode === "graceful"} disabled={busy !== "" || allConfirm !== "rotate-all"}
-            onClick={() => void run("rotate-all", async () => {
-              const out = await rotateAllInternalMTLS(session, allMode, reason, allConfirm);
-              setAllConfirm("");
-              onToast?.(`Every internal certificate revoked; services restart one every ${inv.meta.rotate_all_step}s (about ${Math.round(out.restart_span_seconds / 60)} min, certs last).`);
-            }, "Rotation of every internal certificate started")}>
-            Rotate every certificate
-          </Btn>
-        </div>
-      </Card>
-      <Card style={{ padding: 12, marginBottom: 10 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>External edge key exchange</div>
+        <div style={HEAD}>Edge key exchange</div>
         {edgeError ? (
           <div style={{ fontSize: 11, color: C.redFg, marginTop: 4 }}>Edge key exchange unavailable: {edgeError}</div>
         ) : !edge ? (
-          <div style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>Loading...</div>
+          <div style={{ ...SUB, marginTop: 4 }}>Loading...</div>
         ) : (
           <>
-            <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
-              The TLS 1.3 groups the HTTPS edge (Envoy) and the KMIP listener accept from clients outside the platform. One
-              choice for this node; Envoy applies it by a hot restart (no connection refused), KMIP on the next handshake.
-              The groups below are measured by a handshake with each listener, one group at a time.
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: 8, marginTop: 8, fontSize: 11 }}>
-              {edge.listeners.map((l) => (
-                <div key={l.name} style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: 8 }}>
-                  <div><div style={{ fontWeight: 700, color: C.text }}>{l.name}</div><div style={{ color: C.dim, fontSize: 10 }}>{l.address}</div></div>
-                  <div>
-                    <div style={{ color: C.text }}>{l.observed ? `accepts ${(l.observed.server_groups || []).join(", ") || "no probed group"}` : "not measured yet"}</div>
-                    <div style={{ color: C.dim, fontSize: 10 }}>
-                      required: {l.expected_groups.join(", ")}
-                      {l.observed?.last_handshake_at ? ` · measured ${ago(l.observed.last_handshake_at)}` : ""}
-                    </div>
+            {edge.listeners.map((l) => {
+              const accepted = l.observed?.server_groups || [];
+              const missing = l.expected_groups.filter((g) => !accepted.includes(g));
+              return (
+                <div key={l.name} data-testid="edge-listener" style={{ display: "grid", gridTemplateColumns: "150px 1fr auto", gap: 10, alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.border}`, fontSize: 11 }}>
+                  <div><div style={{ fontWeight: 600, color: C.text }}>{l.name}</div><div style={SUB}>{l.address}</div></div>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                    {l.observed ? <Groups list={accepted} /> : <span style={SUB}>not measured</span>}
+                    {l.observed && !l.applied && <Groups list={missing} missing />}
                   </div>
-                  <div>{l.applied ? <B c="green">in force</B> : <B c="amber" pulse>{l.observed ? "differs from the choice" : "not measured"}</B>}</div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }} title={`Chosen: ${l.expected_groups.join(", ")}`}>
+                    {l.observed?.last_handshake_at && <span style={SUB}>{ago(l.observed.last_handshake_at)}</span>}
+                    {l.applied ? <B c="green">in force</B> : <B c="amber" pulse>{l.observed ? "differs" : "not measured"}</B>}
+                  </div>
                 </div>
-              ))}
-            </div>
-            <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
-              <Sel value={edgeDraft || edge.policy.kx_profile} onChange={(e: any) => setEdgeDraft(String(e.target.value))} w={320}>
+              );
+            })}
+            <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
+              <Sel aria-label="Edge key exchange" value={edgeChoice} onChange={(e: any) => setEdgeDraft(String(e.target.value))} w={200}>
                 {edge.kx_profiles.map((p) => <option key={p} value={p}>{PROFILE_LABEL[p] || p}</option>)}
               </Sel>
               <Btn small primary disabled={busy !== "" || !edgeDraft || edgeDraft === edge.policy.kx_profile}
                 onClick={() => void run("edge", async () => { await setEdgeTLS(session, edgeDraft, reason); setEdgeDraft(""); },
                   "Edge key exchange saved; Envoy and KMIP apply it within about 20 s")}>
-                Apply to the edge
+                Apply
               </Btn>
-              <div style={{ fontSize: 10, color: C.dim }}>
-                {PROFILE_LABEL[edgeDraft || edge.policy.kx_profile]}: {(edge.groups[edgeDraft || edge.policy.kx_profile] || []).join(", ")}.
-                {" "}PQC required refuses clients without ML-KEM support, including every TLS 1.2 KMIP client.
-              </div>
+              {edgeChoice !== edge.policy.kx_profile && <Groups list={edge.groups[edgeChoice] || []} />}
             </div>
+            {edgeChoice === "pqc-required" && edgeChoice !== edge.policy.kx_profile && (
+              <div data-keep="" style={{ fontSize: 11, color: C.amberFg, marginTop: 6 }}>Refuses clients without ML-KEM, including every TLS 1.2 KMIP client.</div>
+            )}
           </>
         )}
       </Card>
-      {edge && ([["https", "Edge certificate (HTTPS)", edge.certificate], ["kmip", "KMIP certificate", edge.kmip_certificate]] as const).map(([listener, title, cert]) => {
-        if (!cert) return null;
-        const d = certDraft[listener] || { source: cert.choice.source, ca_id: cert.choice.ca_id || "", key_algorithm: cert.choice.key_algorithm || "ECDSA-P256" };
-        const setD = (next: typeof d | null) => setCertDraftMap((p) => ({ ...p, [listener]: next }));
-        const f = csrForm[listener] || { cn: "", sans: "", csr: "", signed: "", chain: "" };
-        const setF = (patch: Partial<typeof f>) => setCsrForm((p) => ({ ...p, [listener]: { ...f, ...patch } }));
-        const changed = d.source !== cert.choice.source || (d.source === "ca" && (d.ca_id !== (cert.choice.ca_id || "") || d.key_algorithm !== (cert.choice.key_algorithm || "")));
-        const inst = cert.installed;
-        return (
-          <Card key={listener} style={{ padding: 12, marginBottom: 10 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>{title}</div>
-            <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
-              The certificate this listener serves on this node. vecta-runtime-root is the default; a CA from the PKI tab is
-              issued and renewed by certs; an external CA signs a CSR this node generates, and the key never leaves the node
-              (in a cluster, request and install on each node).
-              {listener === "kmip" ? " KMIP clients must trust the issuing CA; their own certificates still come from the KMIP client CA." : ""}
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8, marginTop: 8, fontSize: 11 }}>
-              <div>
-                {inst ? <>
-                  <div style={{ color: C.text }}>{inst.subject} · issued by {inst.issuer}</div>
-                  <div style={{ color: C.dim, fontSize: 10 }}>serial {inst.serial.slice(0, 16)} · {inst.key_algorithm} · until {day(inst.not_after)} · SANs {(inst.sans || []).join(", ") || "none"}</div>
-                </> : <div style={{ color: C.dim }}>no certificate installed</div>}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: 10, marginBottom: 10 }}>
+        {edge && ([["https", "HTTPS certificate", edge.certificate], ["kmip", "KMIP certificate", edge.kmip_certificate]] as const).map(([listener, title, cert]) => {
+          if (!cert) return null;
+          const d = certDraft[listener] || { source: cert.choice.source, ca_id: cert.choice.ca_id || "", key_algorithm: cert.choice.key_algorithm || "ECDSA-P256" };
+          const setD = (next: typeof d | null) => setCertDraftMap((p) => ({ ...p, [listener]: next }));
+          const f = csrForm[listener] || { cn: "", sans: "", csr: "", signed: "", chain: "" };
+          const setF = (patch: Partial<typeof f>) => setCsrForm((p) => ({ ...p, [listener]: { ...f, ...patch } }));
+          const changed = d.source !== cert.choice.source || (d.source === "ca" && (d.ca_id !== (cert.choice.ca_id || "") || d.key_algorithm !== (cert.choice.key_algorithm || "")));
+          const inst = cert.installed;
+          return (
+            <Card key={listener} style={{ padding: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <div style={HEAD}>{title}</div>
+                {inst && inst.from_choice && cert.served ? <B c="green">served</B>
+                  : inst && inst.from_choice ? <B c="amber" pulse>installed, not measured</B>
+                  : <B c="amber">{cert.choice.source === "external" ? "not installed on this node" : "being issued"}</B>}
               </div>
-              <div>
-                {inst && inst.from_choice && cert.served ? <B c="green">served, from the chosen source</B>
-                  : inst && inst.from_choice ? <B c="amber" pulse>installed; not measured as served yet</B>
-                  : <B c="amber">{cert.choice.source === "external" ? "external certificate not installed on this node" : "being issued"}</B>}
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
-              <Sel value={d.source} onChange={(e: any) => setD({ ...d, source: String(e.target.value) })} w={220}>
-                <option value="runtime">vecta-runtime-root (default)</option>
-                <option value="ca">A CA from the PKI tab</option>
-                <option value="external">An external CA (CSR)</option>
-              </Sel>
-              {d.source === "ca" && <>
-                <Sel value={d.ca_id} onChange={(e: any) => setD({ ...d, ca_id: String(e.target.value) })} w={220}>
-                  <option value="">Choose a CA</option>
-                  {cas.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {inst ? <>
+                <div style={{ fontSize: 11, color: C.text, marginTop: 6 }}>{inst.subject}</div>
+                <div style={SUB}>{inst.issuer}</div>
+                <div style={SUB}>{inst.serial.slice(0, 16)} · {inst.key_algorithm} · until {day(inst.not_after)} · {(inst.sans || []).join(", ") || "no SANs"}</div>
+              </> : <div style={{ ...SUB, marginTop: 6 }}>no certificate installed</div>}
+              <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
+                <Sel aria-label={`${title} source`} value={d.source} onChange={(e: any) => setD({ ...d, source: String(e.target.value) })} w={200}>
+                  <option value="runtime">vecta-runtime-root (default)</option>
+                  <option value="ca">PKI tab CA</option>
+                  <option value="external">External CA (CSR)</option>
                 </Sel>
-                <Sel value={d.key_algorithm} onChange={(e: any) => setD({ ...d, key_algorithm: String(e.target.value) })} w={140}>
-                  {(inv.meta.key_algorithms || []).map((a) => <option key={a} value={a}>{a}</option>)}
-                </Sel>
-              </>}
-              <Btn small primary disabled={busy !== "" || !changed || (d.source === "ca" && !d.ca_id)}
-                onClick={() => void run(`${listener}-cert`, async () => { await setEdgeCertificateSource(session, { listener, ...d, reason }); setD(null); },
-                  d.source === "external" ? "External source chosen; request a CSR on each node" : `${title}: issued; the listener reloads it`)}>
-                Apply
-              </Btn>
-            </div>
-            {cert.choice.source === "external" && (
-              <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: 6 }}>
-                  <Inp placeholder="Subject CN (e.g. kms.example.com)" value={f.cn} onChange={(e: any) => setF({ cn: String(e.target.value || "") })} />
-                  <Inp placeholder="SANs, comma separated" value={f.sans} onChange={(e: any) => setF({ sans: String(e.target.value || "") })} />
-                  <Btn small disabled={busy !== "" || (!f.cn && !f.sans)} onClick={() => void run(`${listener}-csr`, async () => {
-                    const out = await createEdgeCSR(session, { listener, subject_cn: f.cn, sans: f.sans.split(",").map((v) => v.trim()).filter(Boolean) });
-                    setF({ csr: out.csr_pem });
-                  }, "CSR created on this node; have your CA sign it")}>Create CSR</Btn>
-                </div>
-                {(f.csr || cert.pending_csr?.csr_pem) && <Txt rows={5} readOnly value={f.csr || cert.pending_csr?.csr_pem || ""} />}
-                {cert.pending_csr && <>
-                  <Txt rows={4} placeholder="Signed certificate (PEM)" value={f.signed} onChange={(e: any) => setF({ signed: String(e.target.value || "") })} />
-                  <Txt rows={4} placeholder="Issuing CA chain (PEM)" value={f.chain} onChange={(e: any) => setF({ chain: String(e.target.value || "") })} />
-                  <div><Btn small primary disabled={busy !== "" || !f.signed} onClick={() => void run(`${listener}-install`, async () => {
-                    await installEdgeCertificate(session, listener, f.signed, f.chain, reason);
-                    setF({ signed: "", chain: "", csr: "" });
-                  }, "Certificate installed on this node; the listener reloads it")}>Install on this node</Btn></div>
+                {d.source === "ca" && <>
+                  <Sel aria-label={`${title} CA`} value={d.ca_id} onChange={(e: any) => setD({ ...d, ca_id: String(e.target.value) })} w={200}>
+                    <option value="">Choose a CA</option>
+                    {cas.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </Sel>
+                  <Sel aria-label={`${title} key`} value={d.key_algorithm} onChange={(e: any) => setD({ ...d, key_algorithm: String(e.target.value) })} w={140}>
+                    {(inv.meta.key_algorithms || []).map((a) => <option key={a} value={a}>{a}</option>)}
+                  </Sel>
                 </>}
+                <Btn small primary disabled={busy !== "" || !changed || (d.source === "ca" && !d.ca_id)}
+                  onClick={() => void run(`${listener}-cert`, async () => { await setEdgeCertificateSource(session, { listener, ...d, reason }); setD(null); },
+                    d.source === "external" ? "External source chosen; request a CSR on each node" : `${title}: issued; the listener reloads it`)}>
+                  Apply
+                </Btn>
               </div>
-            )}
-          </Card>
-        );
-      })}
-      <Card style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1.5fr 1.6fr 1.2fr 1.6fr", gap: 8, padding: "8px 10px", fontSize: 10, fontWeight: 700, color: C.dim }}>
-          <div>Identity</div><div>Certificate key</div><div>Key exchange (server)</div><div>State</div><div>Actions</div>
+              {cert.choice.source === "external" && (
+                <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: 6 }}>
+                    <Inp placeholder="Subject CN (e.g. kms.example.com)" value={f.cn} onChange={(e: any) => setF({ cn: String(e.target.value || "") })} />
+                    <Inp placeholder="SANs, comma separated" value={f.sans} onChange={(e: any) => setF({ sans: String(e.target.value || "") })} />
+                    <Btn small disabled={busy !== "" || (!f.cn && !f.sans)} onClick={() => void run(`${listener}-csr`, async () => {
+                      const out = await createEdgeCSR(session, { listener, subject_cn: f.cn, sans: f.sans.split(",").map((v) => v.trim()).filter(Boolean) });
+                      setF({ csr: out.csr_pem });
+                    }, "CSR created on this node; have your CA sign it")}>Create CSR</Btn>
+                  </div>
+                  {(f.csr || cert.pending_csr?.csr_pem) && <Txt rows={5} readOnly value={f.csr || cert.pending_csr?.csr_pem || ""} />}
+                  {cert.pending_csr && <>
+                    <Txt rows={4} placeholder="Signed certificate (PEM)" value={f.signed} onChange={(e: any) => setF({ signed: String(e.target.value || "") })} />
+                    <Txt rows={4} placeholder="Issuing CA chain (PEM)" value={f.chain} onChange={(e: any) => setF({ chain: String(e.target.value || "") })} />
+                    <div><Btn small primary disabled={busy !== "" || !f.signed} onClick={() => void run(`${listener}-install`, async () => {
+                      await installEdgeCertificate(session, listener, f.signed, f.chain, reason);
+                      setF({ signed: "", chain: "", csr: "" });
+                    }, "Certificate installed on this node; the listener reloads it")}>Install on this node</Btn></div>
+                  </>}
+                </div>
+              )}
+            </Card>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+        {VIEWS.map((v) => {
+          const n = inv.items.filter(v.has).length;
+          const on = v.id === shown.id;
+          return (
+            <button key={v.id} aria-pressed={on} onClick={() => setView(v.id)} style={{ display: "inline-flex", gap: 6, alignItems: "center", height: 26, padding: "0 9px", borderRadius: 3, cursor: "pointer", fontSize: 11.5, border: `1px solid ${on ? C.accentFg : C.border}`, background: on ? C.accentDim : "transparent", color: on ? C.text : C.dim }}>
+              {v.label}<span className="vk-num" style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: C.text }}>{n}</span>
+            </button>
+          );
+        })}
+        <span style={{ flex: 1 }} />
+        <Inp aria-label="Filter identities" placeholder="Filter" value={filter} onChange={(e: any) => setFilter(String(e.target.value || ""))} w={160} />
+        <Inp aria-label="Reason, recorded in the audit log" placeholder="Reason (audited)" value={reason} onChange={(e: any) => setReason(String(e.target.value || ""))} w={220} />
+      </div>
+      <Card style={{ padding: 0, overflow: "hidden", marginBottom: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "8px 10px", fontSize: 10.5, fontWeight: 500, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.06em", color: C.muted }}>
+          <div>Identity</div><div>Certificate key</div><div title={inv.meta.signature_note}>Key exchange</div><div>State</div><div>Actions</div>
         </div>
         {items.map(row)}
+        {items.length === 0 && <div style={{ ...SUB, padding: "10px", borderTop: `1px solid ${C.border}` }}>No identity matches.</div>}
       </Card>
+      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+        <Sel aria-label="Restart mode" value={allMode} onChange={(e: any) => setAllMode(e.target.value as MTLSRestartMode)} w={150}>
+          <option value="graceful">Graceful restarts</option>
+          <option value="force">Forced restarts</option>
+        </Sel>
+        <Inp aria-label="Confirm rotating every certificate" placeholder='Type "rotate-all"' value={allConfirm} onChange={(e: any) => setAllConfirm(String(e.target.value || ""))} w={150} />
+        <Btn small danger={allMode === "force"} primary={allMode === "graceful"} disabled={busy !== "" || allConfirm !== "rotate-all"}
+          onClick={() => void run("rotate-all", async () => {
+            const out = await rotateAllInternalMTLS(session, allMode, reason, allConfirm);
+            setAllConfirm("");
+            onToast?.(`Every internal certificate revoked; services restart one every ${inv.meta.rotate_all_step}s (about ${Math.round(out.restart_span_seconds / 60)} min, certs last).`);
+          }, "Rotation of every internal certificate started")}>
+          Rotate every certificate
+        </Btn>
+      </div>
     </Section>
+    </div>
   );
 };

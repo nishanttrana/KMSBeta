@@ -177,6 +177,61 @@ Envoy configures a redirect or a port-80 listener.
    - `audit.certs.internal_mtls_applied` is emitted once every instance
      runs the new generation.
 
+## Reading the Service mTLS page
+
+The page (Certificates / PKI > Service mTLS) shows state and controls and
+explains nothing itself (11.6.0-beta). This is what each part means.
+
+**Header badges.** The internal-services Sub CA that issues every
+certificate on the page; FIPS mode (on drops X25519 alone from every
+profile); and how many changes are still being applied.
+
+**Edge key exchange.** One row per outside listener (Envoy on 443, KMIP on
+5696).
+- The chips are the TLS 1.3 groups the listener was *measured* to accept,
+  by a handshake per group. A dashed chip is a group the chosen profile
+  expects and the listener did not accept; hover the state for the full
+  expected list.
+- "in force" means the measurement matches the choice; "differs" or "not
+  measured" means it does not yet.
+- The choice is one per node. Envoy applies it by a hot restart (no
+  connection refused), KMIP on the next handshake, within about 20 s.
+- PQC required refuses any client without ML-KEM, including every TLS 1.2
+  KMIP client; the page says so when you select it.
+
+**HTTPS and KMIP certificate.** The certificate each listener serves on
+this node, and where it comes from: `vecta-runtime-root` (the default), a CA
+from the PKI tab (issued and renewed by certs), or an external CA, which
+signs a CSR this node generates so the key never leaves it. In a cluster,
+request and install an external certificate on each node. "served" is the
+probe's measurement. KMIP clients must trust the issuing CA; their own
+certificates still come from the KMIP client CA.
+
+**Chips above the list.** Each lists the identities it counts: all,
+applying (policy not yet running), by key-exchange profile (services only),
+and expiring within 30 days.
+
+**Identity rows.**
+- *Certificate key*: what the instance reports it runs (algorithm, serial,
+  expiry), then the choice. A service enrols itself; for a daemon
+  (Postgres, NATS, Valkey, Consul) certs writes the files and the daemon
+  reloads them within 30 s.
+- *Key exchange*: the profile the service runs and its last handshake
+  group, then the choice. A profile decides what the service's server
+  accepts; every platform client offers every group, so no choice cuts a
+  service off from its callers. A daemon's groups are its own
+  configuration. Certificate signatures are classical; post-quantum
+  protection is the key exchange (hover the column heading).
+- *State*: the policy generation and whether every instance runs it.
+- *Apply* saves the choice; a service restarts gracefully to take it.
+  *Rotate* revokes the certificate, then a graceful restart with a new key.
+  *Force* revokes it as a key compromise and restarts at once; it asks
+  for confirmation and is not offered for daemons.
+
+**Reason** is recorded in the audit event of whatever you do next.
+**Rotate every certificate** restarts services one every 20 s, certs last,
+and needs `rotate-all` typed.
+
 ## Status
 
 ### Done in slice 3 (1.16.0-beta)

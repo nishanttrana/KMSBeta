@@ -50,7 +50,7 @@ type ModalProps = {
 export const Modal = ({ open, onClose, title, wide = false, width, children }: ModalProps) => !open ? null : (
   <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
     <div style={{ position: "absolute", inset: 0, background: "var(--c-scrim)" }} />
-    <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", background: C.surface, border: `1px solid ${C.borderHi}`, borderRadius: "var(--radius-lg)", padding: 0, width: width || (wide ? 780 : 540), maxWidth: "calc(100vw - 32px)", maxHeight: "88vh", overflow: "auto", boxShadow: "var(--shadow-lg)" }}>
+    <div role="dialog" aria-modal="true" aria-label={typeof title === "string" ? title : undefined} onClick={(e) => e.stopPropagation()} style={{ position: "relative", background: C.surface, border: `1px solid ${C.borderHi}`, borderRadius: "var(--radius-lg)", padding: 0, width: width || (wide ? 780 : 540), maxWidth: "calc(100vw - 32px)", maxHeight: "88vh", overflow: "auto", boxShadow: "var(--shadow-lg)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: `1px solid ${C.border}`, position: "sticky", top: 0, background: C.surface, zIndex: 1, borderRadius: "var(--radius-lg) var(--radius-lg) 0 0" }}>
         <span style={{ fontSize: 15, fontWeight: 600, color: C.text, letterSpacing: -0.2 }}>{title}</span>
         <button onClick={onClose} aria-label="Close" style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", padding: 4, lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
@@ -466,7 +466,7 @@ export const Sel = ({ children, w, style, value, defaultValue, onChange, disable
       aria-labelledby={id}
       style={{
         ...menuStyle,
-        background: `linear-gradient(180deg, ${C.surface} 0%, ${C.card} 100%)`,
+        background: C.card,
         border: `1px solid ${C.borderHi}`,
         borderRadius: 6,
         boxShadow: `0 22px 48px rgba(0,0,0,.45), 0 0 0 1px ${C.glow}`,
@@ -553,7 +553,7 @@ export const Sel = ({ children, w, style, value, defaultValue, onChange, disable
           onMouseDown={onMouseDown as any}
           onKeyDown={handleTriggerKeyDown}
           style={{
-            background: open ? `linear-gradient(180deg, ${C.cardHover} 0%, ${C.card} 100%)` : C.card,
+            background: open ? C.cardHover : C.card,
             border: `1px solid ${open ? C.accentFg : C.border}`,
             borderRadius: 3,
             padding: "8px 34px 8px 10px",
@@ -701,11 +701,11 @@ type StatProps = {
   v: ReactNode;
   s?: ReactNode;
   c?: string;
-  i?: (...args: any[]) => any;
+  i?: typeof ShieldCheck;
 };
 
 export const Stat = ({ l, v, s, c = "accent", i }: StatProps) => {
-  const Icon = typeof i === "function" ? i : statIconForLabel(String(l ?? ""));
+  const Icon = i && typeof i !== "string" ? i : statIconForLabel(String(l ?? "")); // icons are forwardRef objects: a typeof "function" test dropped every one passed
   const palette = C as Record<string, string>;
   // Use *Fg for theme-reactive text/icon colors
   const accentColor = palette[`${c}Fg`] || palette[c] || C.accentFg;

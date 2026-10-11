@@ -18,7 +18,7 @@ function OneTimeKeyPanel({ issued, onDismiss }: { issued: OneTimeKey; onDismiss:
   const [copied, setCopied] = useState(false);
   return <div style={{ border: `1px solid ${C.amber}`, background: C.amberDim, borderRadius: 4, padding: "10px 12px", display: "grid", gap: 6 }}>
     <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>API key for {issued.clientID}: shown once</div>
-    <div style={{ fontSize: 10, color: C.dim }}>Store it in your CI secret store now. The KMS keeps only its hash; it can't be shown again. Exchange it at POST /svc/auth/auth/client-token (docs/CI_CD_AUTOMATION.md).</div>
+    <div data-keep="" style={{ fontSize: 10, color: C.dim }}>Store it in your CI secret store now. The KMS keeps only its hash; it can't be shown again. Exchange it at POST /svc/auth/auth/client-token (docs/CI_CD_AUTOMATION.md).</div>
     <Inp value={issued.key} readOnly mono onFocus={(e) => e.currentTarget.select()} />
     <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
       <Btn small onClick={() => { void navigator.clipboard.writeText(issued.key).then(() => setCopied(true)); }}>{copied ? "Copied" : "Copy"}</Btn>

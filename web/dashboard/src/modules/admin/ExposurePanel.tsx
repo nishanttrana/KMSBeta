@@ -64,7 +64,7 @@ export const ExposurePanel = ({ session, onToast }: Props) => {
         <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>Key exposure register</div>
         {sum.open > 0 ? <B c="red">{`${sum.open} open`}</B> : sum.servicesChecked > 0 ? <B c="green">none open</B> : <B c="amber">not assessed</B>}
       </div>
-      <div style={{ fontSize: 10, color: C.dim }}>
+      <div data-keep="" style={{ fontSize: 10, color: C.dim }}>
         These items were once stored where a database copy can reveal them: under a key published in the source code
         (before 1.2.0-beta) or in plaintext (before 2.5.0-beta). They are now under a keycore-held key, but a copy or
         backup made earlier still holds the old form. Each closes when its material is replaced; acknowledge only with

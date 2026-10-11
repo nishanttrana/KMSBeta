@@ -7,6 +7,55 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-12 — A page shows state and controls; meaning goes in the docs
+**Decision:** a dashboard page carries no paragraph that explains a feature.
+It shows state (badges, chips with counts, measured values) and controls.
+What a control means is in the feature's document, or a `title` tooltip
+when one line is enough. A warning appears with the choice it warns about.
+Service mTLS is the first page rebuilt this way (11.6.0-beta); elsewhere an
+explanation still folds to one line.
+**Why:** owner direction, 2026-10-12, on Service mTLS: "too much text for no
+reason", "practical and very less text or no text", "can be added in
+documentation later on what it means".
+**Rejected:** folding the five paragraphs (still five lines of prose above
+the controls); a help drawer in the console (a second copy of the docs).
+**Enforced by:** smoke test "Service mTLS shows state and controls without
+paragraphs" (no run of text over 60 characters) and the paragraph gate in
+`brandAndLegibility.test.ts`.
+
+## 2026-10-12 — One palette: flat fills, neutral numbers
+**Decision:** every surface is a flat token; no gradient fills (the sign-in
+backdrop is the one glow). Counts use the shared `Stat` tile. A count's
+number is `C.text`; hue appears on a tile only for a state that needs
+attention (amber, red), never to tell tiles apart.
+**Why:** owner direction, 2026-10-12, on the certificate tiles (green, red,
+blue and amber gradients): "the colour palette do not match with the colour
+of KMS, it should be uniform". 11.3.0-beta made cards flat by rule but
+nothing checked it.
+**Rejected:** a tint per tile kind (the look being removed); keeping
+green/red for added/removed in the SBOM diff (the labels say it).
+**Enforced by:** `brandAndLegibility.test.ts` (no gradient, neutral large
+numbers, white text only on a fill) and smoke test "certificate tiles are
+the console's flat stat tiles".
+
+## 2026-10-12 — A dialog offers only what its request sends
+**Decision:** a dialog has no control without an effect: no selector with
+one option, no field the request leaves out, no box that is always ticked.
+A dialog acts in the tenant chosen in the top bar and does not show it
+again. Fields that keycore has no parameter for were removed, not kept as
+placeholders (11.6.0-beta).
+**Why:** owner direction, 2026-10-12: in the key dialog "the tenant name
+display is not required"; and rule 8 (no UI-only feature).
+**Rejected:** building description, derivation and a rotation schedule into
+keycore's create request in this change (new stored fields and enforcement:
+their own change if wanted; rotation schedules already exist in Rotation &
+Scheduling); wiring the export Justification to the audit event (a keycore
+change; open, see below).
+**Open:** an export reason recorded in `audit.key.export` if the owner
+wants one.
+**Enforced by:** `controlsAreReal.test.ts` and smoke test "the key dialogs
+offer only what keycore is sent".
+
 ## 2026-10-11 — One module finder: the sidebar filter; no top-bar search or ⌘K palette
 **Decision:** the top bar has no search box and the console has no command
 palette or ⌘K / Ctrl+K shortcut (11.5.0-beta). Modules are found with

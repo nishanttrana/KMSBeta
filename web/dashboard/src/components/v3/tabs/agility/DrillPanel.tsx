@@ -67,7 +67,7 @@ export function DrillPanel({ session, suggestions }: { session: any; suggestions
 
       <div style={S.divider} />
       <div style={S.sectionTitle}>Drill history</div>
-      <div style={S.sectionHint}>Medians over the round trips run, measured on the keycore node that served the request. Each algorithm gets 20 seconds; slow ones may run fewer round trips than asked.</div>
+      <div className="vk-fold" tabIndex={0} style={S.sectionHint}>Medians over the round trips run, measured on the keycore node that served the request. Each algorithm gets 20 seconds; slow ones may run fewer round trips than asked.</div>
       {loading ? <div style={{ ...S.empty, display: "flex", gap: 8, justifyContent: "center" }}><RefreshCw size={14} /> Loading drills…</div>
       : error ? <div style={{ ...S.empty, color: C.redFg }}>Drill history unavailable: {error}</div>
       : drills.length === 0 ? <div style={S.empty}>No drills run yet.</div> : (

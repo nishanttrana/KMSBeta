@@ -512,15 +512,15 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
             <div style={{ background: C.surface, borderRadius: 4, padding: "10px 12px", border: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Users</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: C.blueFg, marginTop: 2 }}>{tenantUsers.length}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginTop: 2 }}>{tenantUsers.length}</div>
             </div>
             <div style={{ background: C.surface, borderRadius: 4, padding: "10px 12px", border: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Active Users</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: C.greenFg, marginTop: 2 }}>{tenantUsers.filter((u) => u.status === "active").length}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginTop: 2 }}>{tenantUsers.filter((u) => u.status === "active").length}</div>
             </div>
             <div style={{ background: C.surface, borderRadius: 4, padding: "10px 12px", border: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Admin Users</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: C.purpleFg, marginTop: 2 }}>{tenantUsers.filter((u) => u.role?.includes("admin")).length}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginTop: 2 }}>{tenantUsers.filter((u) => u.role?.includes("admin")).length}</div>
             </div>
           </div>
 
@@ -783,15 +783,15 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
         </div>
         <div style={{ background: C.card, borderRadius: 4, border: `1px solid ${C.border}`, padding: "12px 14px" }}>
           <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>UI Sessions</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: C.blueFg, marginTop: 4 }}>{Number(readiness.active_ui_session_count || 0)}</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginTop: 4 }}>{Number(readiness.active_ui_session_count || 0)}</div>
         </div>
         <div style={{ background: C.card, borderRadius: 4, border: `1px solid ${C.border}`, padding: "12px 14px" }}>
           <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Service Links</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: C.purpleFg, marginTop: 4 }}>{Number(readiness.active_service_link_count || 0)}</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginTop: 4 }}>{Number(readiness.active_service_link_count || 0)}</div>
         </div>
         <div style={{ background: C.card, borderRadius: 4, border: `1px solid ${C.border}`, padding: "12px 14px" }}>
           <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Blockers</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: blockerRows.length > 0 ? C.redFg : C.greenFg, marginTop: 4 }}>{blockerRows.length}</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: blockerRows.length > 0 ? C.redFg : C.text, marginTop: 4 }}>{blockerRows.length}</div>
         </div>
       </div>
 

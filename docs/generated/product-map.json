@@ -20022,7 +20022,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "toggleCA(caID)} style={ }> {open? : } :",
-      "line": 1464,
+      "line": 1465,
       "tabs": [
         "certs"
       ],
@@ -20032,16 +20032,6 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actCRL(ca)} disabled= >",
-      "line": 1478,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "void actDeleteCA(ca)} disabled= >",
       "line": 1479,
       "tabs": [
         "certs"
@@ -20051,8 +20041,18 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
+      "label": "void actDeleteCA(ca)} disabled= >",
+      "line": 1480,
+      "tabs": [
+        "certs"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "handler": "",
       "label": "toggleIssued(caID)} style={ }> {issuedOpen? : } Issued Certificates ( )",
-      "line": 1485,
+      "line": 1486,
       "tabs": [
         "certs"
       ],
@@ -20062,7 +20062,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "openProtocolModal(meta.name)}> Configure",
-      "line": 1708,
+      "line": 1628,
       "tabs": [
         "certs"
       ],
@@ -20072,7 +20072,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void runProtocolTest(meta.name)} >",
-      "line": 1709,
+      "line": 1629,
       "tabs": [
         "certs"
       ],
@@ -20082,7 +20082,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"acme-wizard\")}> ACME Wizard",
-      "line": 1717,
+      "line": 1637,
       "tabs": [
         "certs"
       ],
@@ -20092,7 +20092,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"acme-star\")}> STAR",
-      "line": 1718,
+      "line": 1638,
       "tabs": [
         "certs"
       ],
@@ -20102,7 +20102,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"est-wizard\")}> EST Enroll",
-      "line": 1719,
+      "line": 1639,
       "tabs": [
         "certs"
       ],
@@ -20112,7 +20112,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"scep-wizard\")}> SCEP Enroll",
-      "line": 1720,
+      "line": 1640,
       "tabs": [
         "certs"
       ],
@@ -20122,7 +20122,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"cmpv2-wizard\")}> CMPv2 Request",
-      "line": 1721,
+      "line": 1641,
       "tabs": [
         "certs"
       ],
@@ -20132,7 +20132,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCAStatusView(\"all\")} style={ }>{`All $ `}",
-      "line": 1737,
+      "line": 1657,
       "tabs": [
         "certs"
       ],
@@ -20142,7 +20142,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCAStatusView(\"active\")} style={ }>{`Active $ `}",
-      "line": 1738,
+      "line": 1658,
       "tabs": [
         "certs"
       ],
@@ -20152,7 +20152,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCAStatusView(\"revoked\")} style={ }>{`Revoked $ `}",
-      "line": 1739,
+      "line": 1659,
       "tabs": [
         "certs"
       ],
@@ -20162,7 +20162,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshCAs()} disabled= >",
-      "line": 1740,
+      "line": 1660,
       "tabs": [
         "certs"
       ],
@@ -20172,7 +20172,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"create-ca\")}> Create CA",
-      "line": 1741,
+      "line": 1661,
       "tabs": [
         "certs"
       ],
@@ -20182,7 +20182,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshRenewalIntel()} disabled= >",
-      "line": 1833,
+      "line": 1753,
       "tabs": [
         "certs"
       ],
@@ -20192,7 +20192,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshSTARIntel()} disabled= >",
-      "line": 1859,
+      "line": 1779,
       "tabs": [
         "certs"
       ],
@@ -20202,7 +20202,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"acme-star\")}>New",
-      "line": 1860,
+      "line": 1780,
       "tabs": [
         "certs"
       ],
@@ -20212,7 +20212,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actRefreshSTARSubscription(item,true)} disabled={rowActionBusy===`star-r...",
-      "line": 1888,
+      "line": 1808,
       "tabs": [
         "certs"
       ],
@@ -20222,7 +20222,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actDeleteSTARSubscription(item)} disabled={rowActionBusy===`star-delete-...",
-      "line": 1889,
+      "line": 1809,
       "tabs": [
         "certs"
       ],
@@ -20232,7 +20232,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"issue\")} style={ }> Issue Certificate",
-      "line": 1916,
+      "line": 1836,
       "tabs": [
         "certs"
       ],
@@ -20242,7 +20242,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"sign-csr\")} style={ }> Sign CSR",
-      "line": 1917,
+      "line": 1837,
       "tabs": [
         "certs"
       ],
@@ -20252,7 +20252,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"upload-3p\")} style={ }> Upload 3rd-Party",
-      "line": 1918,
+      "line": 1838,
       "tabs": [
         "certs"
       ],
@@ -20262,7 +20262,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"cert-alert-policy\")} style={ }> Alert Policy",
-      "line": 1919,
+      "line": 1839,
       "tabs": [
         "certs"
       ],
@@ -20272,7 +20272,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"cert-clm-policy\")} style={ }> CLM 47-Day",
-      "line": 1920,
+      "line": 1840,
       "tabs": [
         "certs"
       ],
@@ -20282,7 +20282,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertStatusView(\"all\")} style={ }> {`All ($ )`}",
-      "line": 1935,
+      "line": 1855,
       "tabs": [
         "certs"
       ],
@@ -20292,7 +20292,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertStatusView(\"active\")} style={ }> {`Active ($ )`}",
-      "line": 1938,
+      "line": 1858,
       "tabs": [
         "certs"
       ],
@@ -20302,7 +20302,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertStatusView(\"revoked\")} style={ }> {`Revoked ($ )`}",
-      "line": 1941,
+      "line": 1861,
       "tabs": [
         "certs"
       ],
@@ -20312,7 +20312,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshCerts()} disabled= >",
-      "line": 1945,
+      "line": 1865,
       "tabs": [
         "certs"
       ],
@@ -20322,7 +20322,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "openCertActionMenu(e,certID)} aria-label=\"Certificate actions\" style={{ backg...",
-      "line": 1976,
+      "line": 1896,
       "tabs": [
         "certs"
       ],
@@ -20332,7 +20332,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} onMouseEnter={(e)=> } onMouseLeave={(e)=> } style={ } > Download",
-      "line": 2008,
+      "line": 1928,
       "tabs": [
         "certs"
       ],
@@ -20342,7 +20342,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`renew-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } st...",
-      "line": 2022,
+      "line": 1942,
       "tabs": [
         "certs"
       ],
@@ -20352,7 +20352,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`revoke-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } s...",
-      "line": 2035,
+      "line": 1955,
       "tabs": [
         "certs"
       ],
@@ -20362,7 +20362,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`ocsp-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } sty...",
-      "line": 2048,
+      "line": 1968,
       "tabs": [
         "certs"
       ],
@@ -20372,7 +20372,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`delete-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } s...",
-      "line": 2063,
+      "line": 1983,
       "tabs": [
         "certs"
       ],
@@ -20382,7 +20382,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev",
-      "line": 2099,
+      "line": 2019,
       "tabs": [
         "certs"
       ],
@@ -20392,7 +20392,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertPageIndex((prev)=>Math.min(certTotalPages-1,prev+1))} disabled= >Next",
-      "line": 2101,
+      "line": 2021,
       "tabs": [
         "certs"
       ],
@@ -20402,7 +20402,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2146,
+      "line": 2066,
       "tabs": [
         "certs"
       ],
@@ -20412,7 +20412,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitCreateCA()} disabled= >",
-      "line": 2147,
+      "line": 2067,
       "tabs": [
         "certs"
       ],
@@ -20422,7 +20422,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2222,
+      "line": 2142,
       "tabs": [
         "certs"
       ],
@@ -20432,7 +20432,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitIssueCert()} disabled= >",
-      "line": 2223,
+      "line": 2143,
       "tabs": [
         "certs"
       ],
@@ -20442,7 +20442,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2283,
+      "line": 2203,
       "tabs": [
         "certs"
       ],
@@ -20452,7 +20452,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitSignCSR()} disabled= >",
-      "line": 2284,
+      "line": 2204,
       "tabs": [
         "certs"
       ],
@@ -20462,7 +20462,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2313,
+      "line": 2233,
       "tabs": [
         "certs"
       ],
@@ -20472,7 +20472,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitDownloadCert()} disabled= >",
-      "line": 2314,
+      "line": 2234,
       "tabs": [
         "certs"
       ],
@@ -20482,7 +20482,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2338,
+      "line": 2258,
       "tabs": [
         "certs"
       ],
@@ -20492,7 +20492,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitUpload()} disabled= >",
-      "line": 2339,
+      "line": 2259,
       "tabs": [
         "certs"
       ],
@@ -20502,7 +20502,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2358,
+      "line": 2278,
       "tabs": [
         "certs"
       ],
@@ -20512,7 +20512,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void saveAlertPolicy()} disabled= >",
-      "line": 2359,
+      "line": 2279,
       "tabs": [
         "certs"
       ],
@@ -20522,7 +20522,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2397,
+      "line": 2317,
       "tabs": [
         "certs"
       ],
@@ -20532,7 +20532,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void saveCLMPolicy()} disabled= >",
-      "line": 2398,
+      "line": 2318,
       "tabs": [
         "certs"
       ],
@@ -20542,7 +20542,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setProtocolConfigText(JSON.stringify(protocolDefaultConfigs[String(protocolNa...",
-      "line": 2424,
+      "line": 2344,
       "tabs": [
         "certs"
       ],
@@ -20552,7 +20552,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2426,
+      "line": 2346,
       "tabs": [
         "certs"
       ],
@@ -20562,7 +20562,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void saveProtocol()} disabled= >",
-      "line": 2427,
+      "line": 2347,
       "tabs": [
         "certs"
       ],
@@ -20572,7 +20572,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2501,
+      "line": 2421,
       "tabs": [
         "certs"
       ],
@@ -20582,7 +20582,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitCreateSTARSubscription()} disabled= >",
-      "line": 2502,
+      "line": 2422,
       "tabs": [
         "certs"
       ],
@@ -20592,7 +20592,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2545,
+      "line": 2458,
       "tabs": [
         "certs"
       ],
@@ -20602,7 +20602,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ if(!session||!activeCA)return; setSubmitting(true); try{ const email=String...",
-      "line": 2546,
+      "line": 2459,
       "tabs": [
         "certs"
       ],
@@ -20612,7 +20612,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2611,
+      "line": 2517,
       "tabs": [
         "certs"
       ],
@@ -20622,7 +20622,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ if(!session)return; try{ const attrs=await estCSRAttributes(session); onToa...",
-      "line": 2612,
+      "line": 2518,
       "tabs": [
         "certs"
       ],
@@ -20632,7 +20632,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ if(!session||!activeCA)return; setSubmitting(true); try{ const cn=String((d...",
-      "line": 2619,
+      "line": 2525,
       "tabs": [
         "certs"
       ],
@@ -20642,7 +20642,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2671,
+      "line": 2577,
       "tabs": [
         "certs"
       ],
@@ -20651,8 +20651,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
-      "label": "{ if(!session||!activeCA)return; setSubmitting(true); try{ const msgType=Stri...",
-      "line": 2672,
+      "label": "{ if(!session||!activeCA)return; setSubmitting(true); try{ const msgType=scep...",
+      "line": 2578,
       "tabs": [
         "certs"
       ],
@@ -20662,7 +20662,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2734,
+      "line": 2640,
       "tabs": [
         "certs"
       ],
@@ -20671,8 +20671,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
-      "label": "{ if(!session||!activeCA)return; setSubmitting(true); try{ const msgType=Stri...",
-      "line": 2735,
+      "label": "{ if(!session||!activeCA)return; setSubmitting(true); try{ const msgType=cmpM...",
+      "line": 2641,
       "tabs": [
         "certs"
       ],
@@ -20772,7 +20772,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "setAddNodeModalOpen(true)}>Add Instance",
-      "line": 272,
+      "line": 271,
       "tabs": [],
       "tag": "Btn"
     },
@@ -20780,7 +20780,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "void refresh(false)}>Refresh",
-      "line": 273,
+      "line": 272,
       "tabs": [],
       "tag": "Btn"
     },
@@ -20788,7 +20788,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "void updateNodeRoleAction(node)} >",
-      "line": 334,
+      "line": 333,
       "tabs": [],
       "tag": "Btn"
     },
@@ -20796,7 +20796,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "void removeNodeAction(node)}>",
-      "line": 339,
+      "line": 338,
       "tabs": [],
       "tag": "Btn"
     },
@@ -20804,7 +20804,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "setAddNodeModalOpen(true)}>Add First Instance",
-      "line": 350,
+      "line": 349,
       "tabs": [],
       "tag": "Btn"
     },
@@ -20812,7 +20812,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "void saveProfile()}>",
-      "line": 425,
+      "line": 424,
       "tabs": [],
       "tag": "Btn"
     },
@@ -20820,7 +20820,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "void removeProfile(profile)}>Delete",
-      "line": 443,
+      "line": 442,
       "tabs": [],
       "tag": "Btn"
     },
@@ -20828,7 +20828,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "void refreshSyncEvents()}>Refresh",
-      "line": 474,
+      "line": 473,
       "tabs": [],
       "tag": "Btn"
     },
@@ -20836,7 +20836,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "void refreshClusterLogs()}>Refresh",
-      "line": 564,
+      "line": 563,
       "tabs": [],
       "tag": "Btn"
     },
@@ -20844,7 +20844,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "void refreshClusterLogs()}>Apply",
-      "line": 577,
+      "line": 576,
       "tabs": [],
       "tag": "Btn"
     },
@@ -21349,7 +21349,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
       "label": "onNavigate?.(\"certs\")}>View Certificates \u2192",
-      "line": 223,
+      "line": 221,
       "tabs": [],
       "tag": "Btn"
     },
@@ -21357,7 +21357,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
       "label": "onUnpinTab?.(tabId)} title={`Unpin $ `} style={ } >",
-      "line": 250,
+      "line": 248,
       "tabs": [],
       "tag": "button"
     },
@@ -21365,7 +21365,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
       "label": "onNavigate?.(tabId)} style={{ display: \"inline-flex\", alignItems: \"center\", g...",
-      "line": 260,
+      "line": 258,
       "tabs": [],
       "tag": "button"
     },
@@ -21373,7 +21373,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
       "label": "void submitHomeApprovalVote(item, \"approved\")} disabled={approvalVoteBusy ===...",
-      "line": 389,
+      "line": 387,
       "tabs": [],
       "tag": "Btn"
     },
@@ -21381,7 +21381,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
       "label": "void submitHomeApprovalVote(item, \"denied\")} disabled={approvalVoteBusy === `...",
-      "line": 390,
+      "line": 388,
       "tabs": [],
       "tag": "Btn"
     },
@@ -22737,7 +22737,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "void refreshKeyInventory()} style={{height:40,padding:\"0 16px\",borderRadius:4...",
-      "line": 1808,
+      "line": 1807,
       "tabs": [
         "keys"
       ],
@@ -22747,7 +22747,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} primary style={ } > Create Key",
-      "line": 1811,
+      "line": 1810,
       "tabs": [
         "keys"
       ],
@@ -22757,7 +22757,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(\"form-key\")} style={{height:40,padding:\"0 20px\",borderRadius:4,fontS...",
-      "line": 1818,
+      "line": 1817,
       "tabs": [
         "keys"
       ],
@@ -22767,7 +22767,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} style={{height:40,padding:\"0 20px\",borderRadius:4,fontSize:12,fontWeight:70...",
-      "line": 1821,
+      "line": 1820,
       "tabs": [
         "keys"
       ],
@@ -22777,7 +22777,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(\"generate-pqc\")} style={{height:40,padding:\"0 20px\",borderRadius:4,f...",
-      "line": 1824,
+      "line": 1823,
       "tabs": [
         "keys"
       ],
@@ -22787,7 +22787,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(\"canary\")} style={{height:40,padding:\"0 20px\",borderRadius:4,fontSiz...",
-      "line": 1827,
+      "line": 1826,
       "tabs": [
         "keys"
       ],
@@ -22797,7 +22797,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "{ e.stopPropagation(); const next=!showColumnMenu; if(next) setShowColumnMenu...",
-      "line": 1837,
+      "line": 1836,
       "tabs": [
         "keys"
       ],
@@ -22807,7 +22807,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "{ e.stopPropagation(); const isOpen=openActionMenuId===k.id; if(isOpen) const...",
-      "line": 1965,
+      "line": 1964,
       "tabs": [
         "keys"
       ],
@@ -22817,7 +22817,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} style={ } > Edit Key Policy",
-      "line": 2007,
+      "line": 2006,
       "tabs": [
         "keys"
       ],
@@ -22827,7 +22827,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} style={ } > Rotate",
-      "line": 2016,
+      "line": 2015,
       "tabs": [
         "keys"
       ],
@@ -22837,7 +22837,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} style={ } > Verify Integrity",
-      "line": 2029,
+      "line": 2028,
       "tabs": [
         "keys"
       ],
@@ -22847,7 +22847,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} style={ } > Attest",
-      "line": 2035,
+      "line": 2034,
       "tabs": [
         "keys"
       ],
@@ -22857,7 +22857,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} disabled= style={ } > Deactivate",
-      "line": 2041,
+      "line": 2040,
       "tabs": [
         "keys"
       ],
@@ -22867,7 +22867,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} disabled= style={ } > Activate",
-      "line": 2051,
+      "line": 2050,
       "tabs": [
         "keys"
       ],
@@ -22877,7 +22877,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} disabled= style={ } > Disable",
-      "line": 2061,
+      "line": 2060,
       "tabs": [
         "keys"
       ],
@@ -22887,7 +22887,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} style={ } > Export",
-      "line": 2071,
+      "line": 2070,
       "tabs": [
         "keys"
       ],
@@ -22897,7 +22897,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} style={ } > Delete",
-      "line": 2084,
+      "line": 2083,
       "tabs": [
         "keys"
       ],
@@ -22907,7 +22907,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev",
-      "line": 2117,
+      "line": 2116,
       "tabs": [
         "keys"
       ],
@@ -22917,7 +22917,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setPageIndex((prev)=>Math.min(totalPages-1,prev+1))} disabled= >Next",
-      "line": 2119,
+      "line": 2118,
       "tabs": [
         "keys"
       ],
@@ -22927,7 +22927,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setCreateTags((prev)=>prev.filter((t)=>t!==tag))} style={ } >",
-      "line": 2232,
+      "line": 2218,
       "tabs": [
         "keys"
       ],
@@ -22937,7 +22937,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setShowCreateTagPicker(!showCreateTagPicker)}>Add More Tags",
-      "line": 2242,
+      "line": 2228,
       "tabs": [
         "keys"
       ],
@@ -22947,7 +22947,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2260,
+      "line": 2245,
       "tabs": [
         "keys"
       ],
@@ -22957,7 +22957,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "addCustomerKey} disabled={creating",
       "label": "(icon or dynamic label)",
-      "line": 2261,
+      "line": 2246,
       "tabs": [
         "keys"
       ],
@@ -22967,7 +22967,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2384,
+      "line": 2366,
       "tabs": [
         "keys"
       ],
@@ -22977,7 +22977,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "submitFormKey} disabled={forming",
       "label": "(icon or dynamic label)",
-      "line": 2385,
+      "line": 2367,
       "tabs": [
         "keys"
       ],
@@ -22987,7 +22987,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2493,
+      "line": 2472,
       "tabs": [
         "keys"
       ],
@@ -22997,7 +22997,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "submitImportKey} disabled={importing",
       "label": "(icon or dynamic label)",
-      "line": 2494,
+      "line": 2473,
       "tabs": [
         "keys"
       ],
@@ -23007,7 +23007,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(comp,\"deactivated\")} disabled= >",
-      "line": 2552,
+      "line": 2531,
       "tabs": [
         "keys"
       ],
@@ -23017,7 +23017,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(comp,\"active\")} disabled= >",
-      "line": 2553,
+      "line": 2532,
       "tabs": [
         "keys"
       ],
@@ -23027,7 +23027,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(comp,\"disabled\")} disabled= >",
-      "line": 2554,
+      "line": 2533,
       "tabs": [
         "keys"
       ],
@@ -23037,7 +23037,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "}> Rotate",
-      "line": 2576,
+      "line": 2555,
       "tabs": [
         "keys"
       ],
@@ -23047,7 +23047,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "}> Export",
-      "line": 2577,
+      "line": 2556,
       "tabs": [
         "keys"
       ],
@@ -23057,7 +23057,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "downloadSelectedPublicKey",
       "label": "Public key (PEM)",
-      "line": 2578,
+      "line": 2557,
       "tabs": [
         "keys"
       ],
@@ -23067,7 +23067,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "openPolicyEditor(selectedKey)}>Edit Key Policy",
-      "line": 2579,
+      "line": 2558,
       "tabs": [
         "keys"
       ],
@@ -23077,7 +23077,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(selectedKey,\"deactivated\")} disabled= >",
-      "line": 2580,
+      "line": 2559,
       "tabs": [
         "keys"
       ],
@@ -23087,7 +23087,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(selectedKey,\"active\")} disabled= >",
-      "line": 2581,
+      "line": 2560,
       "tabs": [
         "keys"
       ],
@@ -23097,7 +23097,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(selectedKey,\"disabled\")} disabled= >",
-      "line": 2582,
+      "line": 2561,
       "tabs": [
         "keys"
       ],
@@ -23107,7 +23107,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "}> Delete",
-      "line": 2583,
+      "line": 2562,
       "tabs": [
         "keys"
       ],
@@ -23117,7 +23117,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "addPolicyGrant",
       "label": "Add Assignment",
-      "line": 2649,
+      "line": 2628,
       "tabs": [
         "keys"
       ],
@@ -23127,7 +23127,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "removePolicyGrant(subjectType,subjectID)}>Remove",
-      "line": 2671,
+      "line": 2650,
       "tabs": [
         "keys"
       ],
@@ -23137,7 +23137,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2693,
+      "line": 2672,
       "tabs": [
         "keys"
       ],
@@ -23146,6 +23146,26 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "saveKeyPolicy} disabled={policySaving",
+      "label": "(icon or dynamic label)",
+      "line": 2673,
+      "tabs": [
+        "keys"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
+      "handler": "",
+      "label": "setModal(null)}>Cancel",
+      "line": 2694,
+      "tabs": [
+        "keys"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
+      "handler": "rotateSelectedKey} disabled={rotating",
       "label": "(icon or dynamic label)",
       "line": 2694,
       "tabs": [
@@ -23157,7 +23177,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2715,
+      "line": 2719,
       "tabs": [
         "keys"
       ],
@@ -23165,9 +23185,9 @@
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
-      "handler": "rotateSelectedKey} disabled={rotating",
+      "handler": "exportSelectedKey} disabled={exporting",
       "label": "(icon or dynamic label)",
-      "line": 2715,
+      "line": 2720,
       "tabs": [
         "keys"
       ],
@@ -23185,7 +23205,7 @@
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
-      "handler": "exportSelectedKey} disabled={exporting",
+      "handler": "destroySelectedKey} disabled={!destroyReady",
       "label": "(icon or dynamic label)",
       "line": 2746,
       "tabs": [
@@ -23197,27 +23217,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2771,
-      "tabs": [
-        "keys"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
-      "handler": "destroySelectedKey} disabled={!destroyReady",
-      "label": "(icon or dynamic label)",
-      "line": 2772,
-      "tabs": [
-        "keys"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
-      "handler": "",
-      "label": "setModal(null)}>Cancel",
-      "line": 2794,
+      "line": 2768,
       "tabs": [
         "keys"
       ],
@@ -23227,7 +23227,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "generatePQCKey} disabled={pqcGenerating",
       "label": "(icon or dynamic label)",
-      "line": 2794,
+      "line": 2768,
       "tabs": [
         "keys"
       ],
@@ -23237,7 +23237,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setAttestResult(null)}>Close",
-      "line": 2800,
+      "line": 2774,
       "tabs": [
         "keys"
       ],
@@ -23247,7 +23247,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "{const b=new Blob([JSON.stringify(attestResult,null,2)], );const a=document.c...",
-      "line": 2807,
+      "line": 2781,
       "tabs": [
         "keys"
       ],
@@ -23257,7 +23257,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "navigator.clipboard?.writeText(JSON.stringify(attestResult,null,2))}>Copy",
-      "line": 2808,
+      "line": 2782,
       "tabs": [
         "keys"
       ],
@@ -23917,7 +23917,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "void run(i.identity, () => setInternalMTLSPolicy(session, i.identity, i.kind...",
-      "line": 159,
+      "line": 194,
       "tabs": [],
       "tag": "Btn"
     },
@@ -23925,7 +23925,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "void run(i.identity, () => rotateInternalMTLS(session, i.identity, \"graceful\"...",
-      "line": 163,
+      "line": 198,
       "tabs": [],
       "tag": "Btn"
     },
@@ -23933,23 +23933,15 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "{ setConfirmForce(\"\"); void run(i.identity, () => rotateInternalMTLS(session,...",
-      "line": 168,
+      "line": 204,
       "tabs": [],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
-      "label": "setConfirmForce(i.identity)}>Force restart",
-      "line": 173,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
-      "handler": "",
-      "label": "void run(\"rotate-all\", async () => { const out = await rotateAllInternalMTLS(...",
-      "line": 206,
+      "label": "setConfirmForce(i.identity)}>Force",
+      "line": 209,
       "tabs": [],
       "tag": "Btn"
     },
@@ -23957,7 +23949,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "void run(\"edge\", async () => , \"Edge key exchange saved; Envoy and KMIP apply...",
-      "line": 248,
+      "line": 254,
       "tabs": [],
       "tag": "Btn"
     },
@@ -23965,7 +23957,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "void run(`$ -cert`, async () => { await setEdgeCertificateSource(session, );...",
-      "line": 306,
+      "line": 304,
       "tabs": [],
       "tag": "Btn"
     },
@@ -23973,7 +23965,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "void run(`$ -csr`, async () => { const out = await createEdgeCSR(session, );...",
-      "line": 317,
+      "line": 315,
       "tabs": [],
       "tag": "Btn"
     },
@@ -23981,7 +23973,23 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "void run(`$ -install`, async () => { await installEdgeCertificate(session, li...",
-      "line": 326,
+      "line": 324,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
+      "handler": "",
+      "label": "setView(v.id)} style={{ display: \"inline-flex\", gap: 6, alignItems: \"center\",...",
+      "line": 340,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
+      "handler": "",
+      "label": "void run(\"rotate-all\", async () => { const out = await rotateAllInternalMTLS(...",
+      "line": 362,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25253,7 +25261,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "inputRef.current?.click()} style={{ padding: \"8px 14px\", borderRadius: 4, box...",
-      "line": 242,
+      "line": 240,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25261,7 +25269,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{ onFileChange(null); if (inputRef.current) }} style={ } > Clear",
-      "line": 256,
+      "line": 254,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25269,7 +25277,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "toggleScope(section)} style={{fontSize:11,padding:\"4px 10px\",borderRadius:3,b...",
-      "line": 510,
+      "line": 508,
       "tabs": [],
       "tag": "button"
     },
@@ -25277,7 +25285,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadHealth()}>",
-      "line": 1253,
+      "line": 1251,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25285,7 +25293,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadSystemState()} disabled= >",
-      "line": 1336,
+      "line": 1334,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25293,7 +25301,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setFipsConfigModalOpen(true)}>Configure FIPS",
-      "line": 1337,
+      "line": 1335,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25301,7 +25309,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{setSystemState((p)=>( ));onFipsModeChange(\"enabled\");}}>Enable FIPS",
-      "line": 1349,
+      "line": 1347,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25309,7 +25317,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{setSystemState((p)=>( ));onFipsModeChange(\"disabled\");}}>Disable FIPS",
-      "line": 1350,
+      "line": 1348,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25317,7 +25325,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setFipsConfigModalOpen(false)}>Cancel",
-      "line": 1405,
+      "line": 1403,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25325,7 +25333,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveFipsConfig()} disabled= >",
-      "line": 1406,
+      "line": 1404,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25333,7 +25341,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadSystemState()} disabled= >",
-      "line": 1413,
+      "line": 1411,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25341,7 +25349,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void testSnmpSettings()} disabled= >",
-      "line": 1414,
+      "line": 1412,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25349,7 +25357,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSnmpSettings()} disabled= >",
-      "line": 1415,
+      "line": 1413,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25357,7 +25365,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadTags()}>Refresh",
-      "line": 1497,
+      "line": 1495,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25365,7 +25373,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void addTag()} disabled= >",
-      "line": 1502,
+      "line": 1500,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25373,7 +25381,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void removeTag(name,usageCount)} disabled= >Delete",
-      "line": 1517,
+      "line": 1515,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25381,7 +25389,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadPasswordPolicy()} disabled= >",
-      "line": 1527,
+      "line": 1525,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25389,7 +25397,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void savePasswordPolicy()} disabled= >",
-      "line": 1527,
+      "line": 1525,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25397,7 +25405,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSecurityPolicy()} disabled= >",
-      "line": 1552,
+      "line": 1550,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25405,7 +25413,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadAccessHardening()} disabled= >",
-      "line": 1571,
+      "line": 1569,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25413,7 +25421,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveAccessHardening()} disabled= >",
-      "line": 1572,
+      "line": 1570,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25421,7 +25429,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadSystemState()} disabled= >",
-      "line": 1602,
+      "line": 1600,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25429,7 +25437,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSystemState()} disabled= >",
-      "line": 1602,
+      "line": 1600,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25437,7 +25445,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>",
-      "line": 1675,
+      "line": 1673,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25445,7 +25453,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void openCli()} disabled= >",
-      "line": 1682,
+      "line": 1680,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25453,7 +25461,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{ if(!session?.token) return; setHsmSaving(true); try{ const payload= ; const...",
-      "line": 1695,
+      "line": 1693,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25461,7 +25469,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; const lib=String(hsm.library_path||\"\").trim(); i...",
-      "line": 1726,
+      "line": 1724,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25469,7 +25477,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setHsm((p)=>( ))}>Use",
-      "line": 1729,
+      "line": 1727,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25477,7 +25485,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; setGovSaving(true); try{await updateGovernanceSe...",
-      "line": 1736,
+      "line": 1734,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25485,7 +25493,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!String(smtpTo||\"\").trim()) setSmtpTesting(true); try ca...",
-      "line": 1741,
+      "line": 1739,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25493,7 +25501,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; setWebhookTesting((p)=>( )); try{await testGover...",
-      "line": 1749,
+      "line": 1747,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25501,7 +25509,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadJobs()}>",
-      "line": 1756,
+      "line": 1754,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25509,7 +25517,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{ if(!session?.token) return; if(backupScope===\"tenant\"&&!String(backupTenant...",
-      "line": 1770,
+      "line": 1768,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25517,7 +25525,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "dl(sh.file_name,sh.content_base64,sh.content_type)}>Download",
-      "line": 1794,
+      "line": 1792,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25525,7 +25533,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setBackupCreatedShares([])}>All shares handed out: close",
-      "line": 1797,
+      "line": 1795,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25533,7 +25541,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "backupShareInputRef.current?.click()}>",
-      "line": 1825,
+      "line": 1823,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25541,7 +25549,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Clear",
-      "line": 1826,
+      "line": 1824,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25549,7 +25557,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void verifyBackup()} disabled= >",
-      "line": 1831,
+      "line": 1829,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25557,7 +25565,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void restoreBackup()} disabled= >",
-      "line": 1832,
+      "line": 1830,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25565,7 +25573,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDownloading(`$ :artifact`); try ca...",
-      "line": 1846,
+      "line": 1844,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25573,7 +25581,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDownloading(`$ :key`); try catch(e...",
-      "line": 1846,
+      "line": 1844,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25581,7 +25589,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDeleting(id); try catch(error){if(...",
-      "line": 1846,
+      "line": 1844,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25589,7 +25597,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void refreshAlertRules()} disabled= >",
-      "line": 1852,
+      "line": 1850,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25597,7 +25605,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openRuleModal()}>Create Rule",
-      "line": 1852,
+      "line": 1850,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25605,7 +25613,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; try{await updateReportingRule(session,id, )...",
-      "line": 1869,
+      "line": 1867,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25613,7 +25621,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openRuleModal(rule)}>Edit",
-      "line": 1872,
+      "line": 1870,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25621,7 +25629,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; try catch(error){if(!sessionGuard(error)) o...",
-      "line": 1873,
+      "line": 1871,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25629,7 +25637,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void handleTestRule()} disabled= >",
-      "line": 1928,
+      "line": 1926,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25637,7 +25645,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setRuleModalOpen(false)}>Cancel",
-      "line": 1941,
+      "line": 1939,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25645,7 +25653,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void handleSaveRule()} disabled= >",
-      "line": 1942,
+      "line": 1940,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25653,7 +25661,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadGovPolicies()} disabled= >",
-      "line": 1949,
+      "line": 1947,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25661,7 +25669,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openGovPolicyModal()}>+ Create Policy",
-      "line": 1950,
+      "line": 1948,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25669,7 +25677,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openGovPolicyModal(policy)} style={{fontSize:10,padding:\"3px 8px\",borderRadiu...",
-      "line": 1986,
+      "line": 1984,
       "tabs": [],
       "tag": "button"
     },
@@ -25677,7 +25685,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; try{await updateGovernancePolicy(session,policy....",
-      "line": 1987,
+      "line": 1985,
       "tabs": [],
       "tag": "button"
     },
@@ -25685,7 +25693,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Select All",
-      "line": 2060,
+      "line": 2058,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25693,7 +25701,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setGpTriggers([])}>Clear All",
-      "line": 2061,
+      "line": 2059,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25701,7 +25709,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setGovPolicyModal(false)}>Cancel",
-      "line": 2104,
+      "line": 2102,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25709,7 +25717,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveGovPolicy()} disabled= >",
-      "line": 2105,
+      "line": 2103,
       "tabs": [],
       "tag": "Btn"
     },
@@ -33041,7 +33049,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-11T18:22:58Z",
+  "generated_at": "2026-10-11T18:51:29Z",
   "navigation": [
     {
       "group": "Overview",
@@ -90073,7 +90081,7 @@
   "summary": {
     "backend_routes": 900,
     "backend_services": 28,
-    "button_inventory": 761,
+    "button_inventory": 762,
     "frontend_call_sites": 537,
     "matched_frontend_call_sites": 515,
     "nav_items": 26,
@@ -121845,7 +121853,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-11T18:22:58Z",
+    "generatedAt": "2026-10-11T18:51:29Z",
     "methods": [
       "DELETE",
       "GET",

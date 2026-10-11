@@ -3,6 +3,52 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-10-12
+
+### Controls that did nothing, and four reports that were each a class (11.6.0-beta)
+- **A selector's choice was read from a button.** The SCEP and CMPv2
+  wizards read `document.getElementById("…").value` from the shared `Sel`,
+  which renders a `<button>` and a listbox: a button has no value, so the
+  code fell back to its default and every request was PKCSReq or IR. How
+  it slipped through: the wizards were written against a native `<select>`
+  and `Sel` replaced it later; the files are `@ts-nocheck`, and no test
+  chose a second option. **Rule: a control's value lives in state; nothing
+  reads a `Sel` by id** (`controlsAreReal.test.ts`).
+- **The owner reported one redundant field; the dialog had seven dead
+  ones.** The Tenant selector had one option. Beside it sat Key Derivation,
+  Auto-Rotation and its schedule, Description, an always-ticked "FIPS-only
+  algorithms enforced", and in Export a Justification "required for audit":
+  none had state, and keycore's `CreateKeyRequest` has no field for any of
+  them. They had sat there because each *rendered*; nothing compared the
+  form to the request. The check is mechanical: a `Sel`, `Chk`, `Inp` or
+  `Txt` with no handler is a fake. The smoke test also reads the POST body.
+- **`Stat` dropped every icon passed to it.** It tested
+  `typeof i === "function"`; lucide icons are `forwardRef` objects. Sixty-two
+  callers passed an icon and got the label-guessed default, so "Revoked"
+  showed a ticked shield. Seen only by looking at the rendered tile.
+  The first fix (`i || …`) crashed the Keys tab: four tiles there passed
+  `i="?"`, the remains of an emoji, which the old test had also hidden. The
+  full smoke run caught it; the one spec I had been re-running did not.
+  **Rule: after the last edit, the whole suite runs again, not the test of
+  the thing just touched.**
+- **The paragraph gate had two holes.** It skipped prose containing `;` (a
+  guard against matching code) and any expression longer than a name, so
+  four of the five Service mTLS paragraphs and 22 others passed. A guard
+  written to cut false positives is a hole: measure what it excludes.
+- **A badge positioned over its icon covers it at some count.** The bell's
+  count was `position: absolute` at the icon's corner; "99+" is wider than
+  the icon. Same shape as the collapsed sidebar toggle: two things given
+  one box. The top bar now runs through the same `coveredControls` sweep as
+  the sidebar.
+- **Each fix was tested against the old build.** A worktree at the previous
+  commit with only test hooks added: all four new smoke tests fail there.
+  The first bell test failed on a locator instead of the overlap, which
+  would have passed for the wrong reason on a different regression.
+- **Another session had uncommitted work in the checkout.** Checks,
+  generated docs and the commit were made in a clean worktree; a full
+  `deploy-local.sh` from the shared tree would have shipped that session's
+  unfinished service code.
+
 ## 2026-10-11
 
 ### A collapsed rail nobody rendered (11.5.0-beta)

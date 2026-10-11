@@ -229,9 +229,7 @@ const BackupRestoreFilePicker = ({
           padding: "12px 14px",
           borderRadius: 6,
           border: `1px solid ${hasFile ? C.accent : C.borderHi}`,
-          background: hasFile
-            ? `linear-gradient(135deg, ${C.accentDim}, ${C.blueDim})`
-            : `linear-gradient(180deg, ${C.surface}, ${C.bg})`,
+          background: hasFile ? C.accentDim : C.surface,
           boxShadow: hasFile
             ? `0 0 0 1px ${C.glow} inset, 0 12px 28px rgba(2,8,23,.35)`
             : `0 10px 22px rgba(2,8,23,.22)`,
@@ -1278,12 +1276,12 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           })}
           {!(health.services||[]).length?<div style={{fontSize:10,color:C.muted,paddingTop:8}}>No health data available.</div>:null}
         </div>
-        <div style={{fontSize:10,color:C.dim,marginTop:8}}>Each component is listed from service discovery or a successful connection to its port; one that is not deployed is not listed.</div>
+        <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim,marginTop:8}}>Each component is listed from service discovery or a successful connection to its port; one that is not deployed is not listed.</div>
       </Card>
     </Section>
     <Section title="Heartbeats & Watchdog">
       <Card style={{padding:10,borderRadius:4}}>
-        <div style={{fontSize:10,color:C.dim,marginBottom:8}}>Liveness each service reports over NATS every 30s. The watchdog marks a service unhealthy after 90s of silence or a degraded report, and raises an audited incident. It alerts; it does not remediate.</div>
+        <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim,marginBottom:8}}>Liveness each service reports over NATS every 30s. The watchdog marks a service unhealthy after 90s of silence or a degraded report, and raises an audited incident. It alerts; it does not remediate.</div>
         <HealthListBody list={heartbeats} empty="No service has published a heartbeat yet.">
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:6}}>
             {heartbeats.items.map((h)=>{
@@ -1378,7 +1376,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           <Inp value={String(systemState?.fips_mode||"disabled")} readOnly />
         </FG>
       </Row2>
-      <div style={{fontSize:10,color:C.dim,marginTop:6}}>TLS is 1.3 minimum on every platform listener; randomness is Go's crypto/rand (the certified module's CTR_DRBG in FIPS mode, otherwise the OS CSPRNG). Neither is a setting.</div>
+      <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim,marginTop:6}}>TLS is 1.3 minimum on every platform listener; randomness is Go's crypto/rand (the certified module's CTR_DRBG in FIPS mode, otherwise the OS CSPRNG). Neither is a setting.</div>
       <div style={{
         display:"grid",
         gap:4,
@@ -1658,7 +1656,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           <div style={{fontSize:10,color:C.muted,marginBottom:8}}>TLS / Interface Governance</div>
           <div style={{display:"grid",gap:8}}>
             <div style={{fontSize:11,color:C.text,fontWeight:700}}>{tlsPolicyLabel}</div>
-            <div style={{fontSize:10,color:C.dim}}>
+            <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim}}>
               Listeners, ports and bind addresses are set by the deployment. Certificates and key exchange: Certificates / PKI &gt; Service mTLS.
             </div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -1787,7 +1785,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         }} disabled={backupCreating}>{backupCreating?"Creating...":"Create Backup"}</Btn></div>
         {backupCreatedShares.length>0&&<div role="region" aria-label="Guardian key shares" style={{marginTop:10,padding:10,borderRadius:4,border:`1px solid ${C.amber}`,background:C.amberDim}}>
           <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:4}}>Guardian key shares: shown once</div>
-          <div style={{fontSize:10,color:C.dim,marginBottom:8}}>Give each file to its guardian only. Close this panel once every share is handed out; the platform can't produce them again.</div>
+          <div data-keep="" style={{fontSize:10,color:C.dim,marginBottom:8}}>Give each file to its guardian only. Close this panel once every share is handed out; the platform can't produce them again.</div>
           {backupCreatedShares.map((sh)=>(
             <div key={sh.file_name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,padding:"4px 0",borderTop:`1px solid ${C.border}`}}>
               <span style={{fontSize:11,color:C.text}}>{`Share ${sh.share_index} · ${sh.guardian}`}</span>
@@ -1838,7 +1836,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           <div>{`Scope ${backupVerifyResult.scope}${backupVerifyResult.target_tenant_id?` (${backupVerifyResult.target_tenant_id})`:""} · captured ${backupVerifyResult.backup_captured_at||"unknown"}`}</div>
           <div>{`${backupVerifyResult.table_count} tables · ${backupVerifyResult.row_count_total} rows · opened in ${backupVerifyResult.elapsed_ms} ms`}</div>
           <div>{backupVerifyResult.key_source==="guardian_shares"?`Key rebuilt from shares of: ${(backupVerifyResult.share_guardians||[]).join(", ")}`:"Key: key file"}</div>
-          <div style={{color:C.dim,marginTop:4}}>No data was changed. A restore also needs each service to re-wrap rows under retired master keys; it checks that before applying anything.</div>
+          <div data-keep="" style={{color:C.dim,marginTop:4}}>No data was changed. A restore also needs each service to re-wrap rows under retired master keys; it checks that before applying anything.</div>
         </div>}
       </Card>
       <Card style={{marginTop:8,padding:10,borderRadius:4}}>

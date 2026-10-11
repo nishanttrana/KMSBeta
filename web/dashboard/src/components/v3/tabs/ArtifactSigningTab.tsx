@@ -252,7 +252,7 @@ export const ArtifactSigningTab = ({ session, onToast }: any) => {
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
             <B c={settingsDraft?.enabled ? "green" : "amber"}>{settingsDraft?.enabled ? "Enabled" : "Disabled"}</B>
           </div>
-          <div style={{ fontSize: 11, color: C.dim, lineHeight: 1.6 }}>
+          <div className="vk-fold" tabIndex={0} style={{ fontSize: 11, color: C.dim, lineHeight: 1.6 }}>
             Use this service to sign blobs, Git commit manifests, or OCI references without handing private key material to build systems. Profiles bind identities, repositories, and KMS key IDs; the signer's identity is taken only from a verified OIDC ID token or the caller's workload token, and every signature is recorded in this tenant's signing log (a local, indexed record; not a public transparency log).
           </div>
           <div style={{ marginTop: 10, fontSize: 10, color: C.muted }}>

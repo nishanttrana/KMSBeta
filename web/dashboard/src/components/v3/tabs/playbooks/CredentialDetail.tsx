@@ -46,7 +46,7 @@ export function CredentialDetail({ session, credential: c, type, exposedSince, n
   return (
     <Modal open onClose={onClose} title={c.name} width={600}>
       {exposedSince ? (
-        <div style={{ padding: "8px 10px", marginBottom: 10, borderRadius: 3, border: `1px solid ${C.redFg}`, color: C.redFg, fontSize: 11 }}>
+        <div data-keep="" style={{ padding: "8px 10px", marginBottom: 10, borderRadius: 3, border: `1px solid ${C.redFg}`, color: C.redFg, fontSize: 11 }}>
           Stored in plaintext by an earlier release (exposed since {fmtDate(exposedSince)}). Rotate it where it was issued, then edit this credential and enter every new value.
         </div>
       ) : null}

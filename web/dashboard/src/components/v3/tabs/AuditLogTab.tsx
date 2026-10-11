@@ -729,7 +729,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
       {renderEventModal()}
 
       {/* audit integration note */}
-      <div style={{ marginTop: 16, padding: "8px 12px", borderRadius: 4, background: C.card, border: `1px solid ${C.border}`, fontSize: 10, color: C.muted }}>
+      <div className="vk-fold" tabIndex={0} style={{ marginTop: 16, padding: "8px 12px", borderRadius: 4, background: C.card, border: `1px solid ${C.border}`, fontSize: 10, color: C.muted }}>
         Every service publishes to the single audit stream. Events are hash-chained (SHA-256), HMAC-signed, covered
         by signed checkpoints (ECDSA-P384) and stored append-only; a fail-closed WAL covers outages. Charts are under Activity, where
         clicking a chart lists the events it counts; alerts raised from these events are triaged in the Alert Center.

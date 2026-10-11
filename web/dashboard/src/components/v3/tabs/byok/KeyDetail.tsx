@@ -115,7 +115,7 @@ export function BYOKKeyDetail({ session, id, listed, caps, onClose, onChanged, o
               </span>}
             </div>
           ) : (
-            <div style={{ fontSize: 11, color: C.muted }}>The cloud generated this key's material (created before 10.0.0-beta). It is listed for inventory; bring a KMS key to the cloud to manage material here.</div>
+            <div className="vk-fold" tabIndex={0} style={{ fontSize: 11, color: C.muted }}>The cloud generated this key's material (created before 10.0.0-beta). It is listed for inventory; bring a KMS key to the cloud to manage material here.</div>
           )}
 
           {lastRun && <div style={{ border: `1px solid ${C.border}`, borderRadius: 4, padding: 10 }}><RunSteps run={lastRun} /></div>}

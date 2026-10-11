@@ -509,7 +509,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
         {sbomRows.map((row) => <Card key={row.label} style={{ padding: "10px 14px", cursor: "pointer" }} onClick={() => openDependencyList(row)}>
           <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{row.label}</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: C.accentFg, marginTop: 2 }}>{row.count}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: C.text, marginTop: 2 }}>{row.count}</div>
         </Card>)}
       </div>
 
@@ -641,9 +641,9 @@ export const SBOMTab = ({ session, onToast }: any) => {
         Changes between the latest two CBOM snapshots for tenant {String(session?.tenantId || "-")}.
       </div>
       <Row3>
-        <Card><div style={{ fontSize: 10, color: C.muted }}>Added</div><div style={{ fontSize: 20, color: C.greenFg, fontWeight: 700 }}>{Number(diffData?.metrics?.added || 0)}</div></Card>
-        <Card><div style={{ fontSize: 10, color: C.muted }}>Removed</div><div style={{ fontSize: 20, color: C.redFg, fontWeight: 700 }}>{Number(diffData?.metrics?.removed || 0)}</div></Card>
-        <Card><div style={{ fontSize: 10, color: C.muted }}>Changed</div><div style={{ fontSize: 20, color: C.amberFg, fontWeight: 700 }}>{Number(diffData?.metrics?.changed || 0)}</div></Card>
+        <Card><div style={{ fontSize: 10, color: C.muted }}>Added</div><div style={{ fontSize: 20, color: C.text, fontWeight: 700 }}>{Number(diffData?.metrics?.added || 0)}</div></Card>
+        <Card><div style={{ fontSize: 10, color: C.muted }}>Removed</div><div style={{ fontSize: 20, color: C.text, fontWeight: 700 }}>{Number(diffData?.metrics?.removed || 0)}</div></Card>
+        <Card><div style={{ fontSize: 10, color: C.muted }}>Changed</div><div style={{ fontSize: 20, color: C.text, fontWeight: 700 }}>{Number(diffData?.metrics?.changed || 0)}</div></Card>
       </Row3>
       <div style={{ height: 8 }} />
       <Card style={{ maxHeight: 260, overflowY: "auto" }}>
@@ -665,9 +665,9 @@ export const SBOMTab = ({ session, onToast }: any) => {
         Changes between the latest two SBOM snapshots.
       </div>
       <Row3>
-        <Card><div style={{ fontSize: 10, color: C.muted }}>Added</div><div style={{ fontSize: 20, color: C.greenFg, fontWeight: 700 }}>{Number(sbomDiffData?.metrics?.added || 0)}</div></Card>
-        <Card><div style={{ fontSize: 10, color: C.muted }}>Removed</div><div style={{ fontSize: 20, color: C.redFg, fontWeight: 700 }}>{Number(sbomDiffData?.metrics?.removed || 0)}</div></Card>
-        <Card><div style={{ fontSize: 10, color: C.muted }}>Changed</div><div style={{ fontSize: 20, color: C.amberFg, fontWeight: 700 }}>{Number(sbomDiffData?.metrics?.changed || 0)}</div></Card>
+        <Card><div style={{ fontSize: 10, color: C.muted }}>Added</div><div style={{ fontSize: 20, color: C.text, fontWeight: 700 }}>{Number(sbomDiffData?.metrics?.added || 0)}</div></Card>
+        <Card><div style={{ fontSize: 10, color: C.muted }}>Removed</div><div style={{ fontSize: 20, color: C.text, fontWeight: 700 }}>{Number(sbomDiffData?.metrics?.removed || 0)}</div></Card>
+        <Card><div style={{ fontSize: 10, color: C.muted }}>Changed</div><div style={{ fontSize: 20, color: C.text, fontWeight: 700 }}>{Number(sbomDiffData?.metrics?.changed || 0)}</div></Card>
       </Row3>
       <div style={{ height: 8 }} />
       {Array.isArray(sbomDiffData?.added) && sbomDiffData.added.length > 0 && <Card style={{ maxHeight: 180, overflowY: "auto", marginBottom: 8 }}>

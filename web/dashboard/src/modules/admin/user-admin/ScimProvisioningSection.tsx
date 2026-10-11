@@ -234,7 +234,7 @@ export function ScimProvisioningSection({ session, onToast, tenantID }: Props) {
       {bearerToken ? (
         <Card>
           <div style={{ fontSize: 12, color: C.text, fontWeight: 700, marginBottom: 8 }}>One-Time SCIM Bearer Token</div>
-          <div style={{ fontSize: 11, color: C.dim, marginBottom: 8 }}>
+          <div data-keep="" style={{ fontSize: 11, color: C.dim, marginBottom: 8 }}>
             Copy this into Okta, Microsoft Entra ID, or another SCIM client now. The hash is stored server-side; the raw token is only shown after rotation.
           </div>
           <div

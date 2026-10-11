@@ -75,6 +75,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
   const [modal,setModal]=useState(null);
   const [loading,setLoading]=useState(false);
   const [submitting,setSubmitting]=useState(false);
+  const [scepMsgType,setScepMsgType]=useState("pkcsreq"),[cmpMsgType,setCmpMsgType]=useState("ir"); // enrollment wizards
   const [testingProtocol,setTestingProtocol]=useState("");
   const [cas,setCAs]=useState([]);
   const [certs,setCerts]=useState([]);
@@ -1458,7 +1459,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
     const status=String(ca.status||"unknown").toLowerCase();
     const crlBusy=String(rowActionBusy||"")===`crl-${caID}`;
     const deleteCABusy=String(rowActionBusy||"")===`delete-ca-${caID}`;
-    return <Card key={caID} style={{padding:10,marginLeft:depth*20,background:depth===0?`linear-gradient(135deg,${C.accentDim} 0%,${C.card} 100%)`:`linear-gradient(135deg,${C.dimTint} 0%,${C.card} 100%)`,borderColor:depth===0?C.accentDim:C.border}}>
+    return <Card key={caID} style={{padding:10,marginLeft:depth*20,borderColor:depth===0?C.accentDim:C.border}}>
       <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"flex-start"}}>
         <div style={{minWidth:0,flex:1}}>
           <button onClick={()=>toggleCA(caID)} style={{background:"transparent",border:"none",padding:0,margin:0,color:depth===0?C.accentFg:C.text,cursor:"pointer",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
@@ -1502,105 +1503,24 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
     {showHSMCerts&&<HSMPartitionTable session={session} kind="certificates" onToast={onToast}/>}
     {showServiceMTLSPane&&<ServiceMTLSPanel session={session} onToast={onToast}/>}
     {showOverviewPane&&<>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:14}}>
-        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${C.greenTint} 100%)`}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <ShieldCheck size={14} color={C.green}/>
-            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Active</span>
-          </div>
-          <div style={{fontSize:22,fontWeight:800,color:C.greenFg,lineHeight:1}}>{String(stats.active)}</div>
-          <div style={{fontSize: 10,color:C.muted,marginTop:4}}>{stats.total?`${Math.round((stats.active*100)/stats.total)}% of total`:"—"}</div>
-        </Card>
-        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${C.redTint} 100%)`}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <ShieldX size={14} color={C.red}/>
-            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Revoked</span>
-          </div>
-          <div style={{fontSize:22,fontWeight:800,color:C.redFg,lineHeight:1}}>{String(stats.revoked)}</div>
-        </Card>
-        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${C.accentTint} 100%)`}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <Shield size={14} color={C.accent}/>
-            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>CAs</span>
-          </div>
-          <div style={{fontSize:22,fontWeight:800,color:C.accentFg,lineHeight:1}}>{String(stats.cas)}</div>
-          <div style={{fontSize: 10,color:C.muted,marginTop:4}}>{roots.length} root</div>
-        </Card>
-        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${stats.expiring>0?C.amberTint:C.greenTint} 100%)`}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <Clock size={14} color={stats.expiring>0?C.amber:C.green}/>
-            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Expiring</span>
-          </div>
-          <div style={{fontSize:22,fontWeight:800,color:stats.expiring>0?C.amberFg:C.greenFg,lineHeight:1}}>{String(stats.expiring)}</div>
-          <div style={{fontSize: 10,color:C.muted,marginTop:4}}>within {alertPolicyDaysBefore}d</div>
-        </Card>
-        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${stats.missedWindows>0?C.redTint:C.blueTint} 100%)`}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <AlertTriangle size={14} color={stats.missedWindows>0?C.red:C.blue}/>
-            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Missed Windows</span>
-          </div>
-          <div style={{fontSize:22,fontWeight:800,color:stats.missedWindows>0?C.redFg:C.blueFg,lineHeight:1}}>{String(stats.missedWindows)}</div>
-          <div style={{fontSize: 10,color:C.muted,marginTop:4}}>RFC 9773 renewal windows</div>
-        </Card>
-        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${stats.emergencyRotations>0?C.redTint:C.accentTint} 100%)`}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <ShieldAlert size={14} color={stats.emergencyRotations>0?C.red:C.accent}/>
-            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Emergency Rotation</span>
-          </div>
-          <div style={{fontSize:22,fontWeight:800,color:stats.emergencyRotations>0?C.redFg:C.accentFg,lineHeight:1}}>{String(stats.emergencyRotations)}</div>
-          <div style={{fontSize: 10,color:C.muted,marginTop:4}}>{renewalSummary?.ari_enabled===false?"Local coordinated policy":"CA-directed schedule active"}</div>
-        </Card>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginBottom:14}}>
+        <Stat l="Active" v={String(stats.active)} s={stats.total?`${Math.round((stats.active*100)/stats.total)}% of total`:"—"} i={ShieldCheck}/>
+        <Stat l="Revoked" v={String(stats.revoked)} i={ShieldX}/>
+        <Stat l="CAs" v={String(stats.cas)} s={`${roots.length} root`} i={Shield}/>
+        <Stat l="Expiring" v={String(stats.expiring)} s={`within ${alertPolicyDaysBefore}d`} c={stats.expiring>0?"amber":"accent"} i={Clock}/>
+        <Stat l="Missed windows" v={String(stats.missedWindows)} s="renewal windows" c={stats.missedWindows>0?"red":"accent"} i={AlertTriangle}/>
+        <Stat l="Emergency" v={String(stats.emergencyRotations)} s={`rotations · ${renewalSummary?.ari_enabled===false?"local policy":"CA-directed"}`} c={stats.emergencyRotations>0?"red":"accent"} i={ShieldAlert}/>
       </div>
     </>}
 
     {showEnrollmentPane&&<>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:10,marginBottom:14}}>
-        <Card style={{padding:"12px 14px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <Server size={14} color={C.accent}/>
-            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Protocols</span>
-          </div>
-          <div style={{fontSize:22,fontWeight:800,color:C.accentFg,lineHeight:1}}>{protocolMeta.length}</div>
-          <div style={{fontSize: 10,color:C.muted,marginTop:4}}>configured</div>
-        </Card>
-        <Card style={{padding:"12px 14px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <CheckCircle2 size={14} color={C.green}/>
-            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Enabled</span>
-          </div>
-          <div style={{fontSize:22,fontWeight:800,color:C.greenFg,lineHeight:1}}>{protocolMeta.filter((m)=>{const cfg=protocolByName[m.name];return cfg?Boolean(cfg.enabled):true;}).length}</div>
-        </Card>
-        <Card style={{padding:"12px 14px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <XCircle size={14} color={C.red}/>
-            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Disabled</span>
-          </div>
-          <div style={{fontSize:22,fontWeight:800,color:C.redFg,lineHeight:1}}>{protocolMeta.filter((m)=>{const cfg=protocolByName[m.name];return cfg?!Boolean(cfg.enabled):false;}).length}</div>
-        </Card>
-        <Card style={{padding:"12px 14px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <Globe size={14} color={C.blue}/>
-            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>ACME</span>
-          </div>
-          <div style={{fontSize:11,fontWeight:700,color:protocolByName["acme"]?Boolean(protocolByName["acme"].enabled)?C.greenFg:C.redFg:C.greenFg,lineHeight:1.4}}>{protocolByName["acme"]?Boolean(protocolByName["acme"].enabled)?"Active":"Off":"Active"}</div>
-          <div style={{fontSize: 10,color:C.muted}}>RFC 8555</div>
-        </Card>
-        <Card style={{padding:"12px 14px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <Lock size={14} color={C.purple}/>
-            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>EST</span>
-          </div>
-          <div style={{fontSize:11,fontWeight:700,color:protocolByName["est"]?Boolean(protocolByName["est"].enabled)?C.greenFg:C.redFg:C.greenFg,lineHeight:1.4}}>{protocolByName["est"]?Boolean(protocolByName["est"].enabled)?"Active":"Off":"Active"}</div>
-          <div style={{fontSize: 10,color:C.muted}}>RFC 7030</div>
-        </Card>
-        <Card style={{padding:"12px 14px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <KeyRound size={14} color={C.amber}/>
-            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>SCEP</span>
-          </div>
-          <div style={{fontSize:11,fontWeight:700,color:protocolByName["scep"]?Boolean(protocolByName["scep"].enabled)?C.greenFg:C.redFg:C.greenFg,lineHeight:1.4}}>{protocolByName["scep"]?Boolean(protocolByName["scep"].enabled)?"Active":"Off":"Active"}</div>
-          <div style={{fontSize: 10,color:C.muted}}>RFC 8894</div>
-        </Card>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginBottom:14}}>
+        <Stat l="Protocols" v={String(protocolMeta.length)} s="configured" i={Server}/>
+        <Stat l="Enabled" v={String(protocolMeta.filter((m)=>{const cfg=protocolByName[m.name];return cfg?Boolean(cfg.enabled):true;}).length)} i={CheckCircle2}/>
+        <Stat l="Disabled" v={String(protocolMeta.filter((m)=>{const cfg=protocolByName[m.name];return cfg?!Boolean(cfg.enabled):false;}).length)} i={XCircle}/>
+        <Stat l="ACME" v={protocolByName["acme"]&&!protocolByName["acme"].enabled?"Off":"On"} i={Globe}/>
+        <Stat l="EST" v={protocolByName["est"]&&!protocolByName["est"].enabled?"Off":"On"} i={Lock}/>
+        <Stat l="SCEP" v={protocolByName["scep"]&&!protocolByName["scep"].enabled?"Off":"On"} i={KeyRound}/>
       </div>
       <Section title="Enrollment Protocols">
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
@@ -1675,7 +1595,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
               `Structured error responses`
             ]:[];
           const impl=meta.schema?.implementation;
-          return <Card key={meta.name} style={{padding:14,background:`linear-gradient(135deg,${C.card} 0%,${enabled?C.greenTint3:C.redTint3} 100%)`}}>
+          return <Card key={meta.name} style={{padding:14}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 <div style={{width:36,height:36,borderRadius:4,background:enabled?C.greenDim:C.redDim,display:"flex",alignItems:"center",justifyContent:"center"}}>{protocolIcon}</div>
@@ -1909,7 +1829,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
       </div>
     </div>}
 
-    {showOverviewPane&&<Card style={{padding:"10px 14px",marginBottom:12,background:`linear-gradient(135deg,${C.card} 0%,${C.accentTint3} 100%)`,borderColor:C.accentDim}}>
+    {showOverviewPane&&<Card style={{padding:"10px 14px",marginBottom:12,borderColor:C.accentDim}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{fontSize:11,fontWeight:700,color:C.text}}>Certificate Operations</div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -2390,7 +2310,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
         </FG>
       </Row2>
       <Chk label="Schedule-aware: always apply the stricter of this policy and the CA/B Forum schedule" checked={clmScheduleAware} onChange={()=>setClmScheduleAware((v)=>!v)}/>
-      <div style={{fontSize:10,color:C.muted,marginTop:8}}>
+      <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.muted,marginTop:8}}>
         Applies to TLS leaf certificates at issuance. Enforce mode clamps expiry to the cap; warn mode issues unchanged but emits audit.cert.clm_validity_warning for governance and reporting.
       </div>
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
@@ -2534,13 +2454,6 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
           <FG label="SANs (comma-separated)">
             <Inp placeholder="app.example.com, www.example.com" w="100%" id="acme-wiz-sans"/>
           </FG>
-          <FG label="Challenge Type">
-            <Sel id="acme-wiz-challenge" value="http-01" style={{width:"100%"}}>
-              <option value="http-01">HTTP-01 (file-based)</option>
-              <option value="dns-01">DNS-01 (TXT record)</option>
-              <option value="tls-alpn-01">TLS-ALPN-01</option>
-            </Sel>
-          </FG>
           <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
             <Btn onClick={()=>setModal(null)}>Cancel</Btn>
             <Btn primary disabled={!activeCA||submitting} onClick={async()=>{
@@ -2600,13 +2513,6 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
           <FG label="SANs (comma-separated)">
             <Inp placeholder="device-001.iot.local" w="100%" id="est-wiz-sans"/>
           </FG>
-          <FG label="Auth Method">
-            <Sel id="est-wiz-auth" style={{width:"100%"}}>
-              <option value="mtls">mTLS (default)</option>
-              <option value="bearer">Bearer Token</option>
-              <option value="basic">HTTP Basic</option>
-            </Sel>
-          </FG>
           <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
             <Btn onClick={()=>setModal(null)}>Cancel</Btn>
             <Btn small onClick={async()=>{
@@ -2655,7 +2561,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
           </div>
           {!activeCA?<div style={{fontSize:11,color:C.redFg,marginBottom:8}}>No active CA found.</div>:null}
           <FG label="Message Type">
-            <Sel id="scep-wiz-msgtype" style={{width:"100%"}}>
+            <Sel value={scepMsgType} onChange={(e)=>setScepMsgType(e.target.value)} style={{width:"100%"}}>
               <option value="pkcsreq">PKCSReq (Initial Enrollment)</option>
               <option value="renewalreq">RenewalReq (Renewal)</option>
               <option value="updatereq">UpdateReq (Key Update)</option>
@@ -2673,7 +2579,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
               if(!session||!activeCA)return;
               setSubmitting(true);
               try{
-                const msgType=String((document.getElementById("scep-wiz-msgtype") as any)?.value||"pkcsreq");
+                const msgType=scepMsgType;
                 const challenge=String((document.getElementById("scep-wiz-pass") as any)?.value||"").trim();
                 const txnId=String((document.getElementById("scep-wiz-txn") as any)?.value||"").trim()||`txn-${Date.now()}`;
                 const cert=await scepEnroll(session,{
@@ -2714,7 +2620,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
           </div>
           {!activeCA?<div style={{fontSize:11,color:C.redFg,marginBottom:8}}>No active CA found.</div>:null}
           <FG label="Message Type">
-            <Sel id="cmpv2-wiz-type" style={{width:"100%"}}>
+            <Sel value={cmpMsgType} onChange={(e)=>setCmpMsgType(e.target.value)} style={{width:"100%"}}>
               <option value="ir">IR -- Initial Registration (new cert)</option>
               <option value="cr">CR -- Certification Request (new cert)</option>
               <option value="kur">KUR -- Key Update Request (renewal)</option>
@@ -2736,7 +2642,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
               if(!session||!activeCA)return;
               setSubmitting(true);
               try{
-                const msgType=String((document.getElementById("cmpv2-wiz-type") as any)?.value||"ir") as "ir"|"cr"|"kur"|"rr";
+                const msgType=cmpMsgType as "ir"|"cr"|"kur"|"rr";
                 const cn=String((document.getElementById("cmpv2-wiz-cn") as any)?.value||"").trim()||`cmp-${Date.now()}.local`;
                 const certId=String((document.getElementById("cmpv2-wiz-certid") as any)?.value||"").trim();
                 const txnId=String((document.getElementById("cmpv2-wiz-txn") as any)?.value||"").trim()||`cmp-${Date.now()}`;

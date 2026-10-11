@@ -555,7 +555,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
       {/* DKE-specific metadata fields */}
       {cfgProtocol === "dke" && (<>
         <div style={{ fontSize: 11, color: C.text, fontWeight: 600, marginTop: 12, marginBottom: 6 }}>Microsoft DKE Configuration</div>
-        <div style={{ fontSize: 10, color: C.muted, marginBottom: 8 }}>
+        <div className="vk-fold" tabIndex={0} style={{ fontSize: 10, color: C.muted, marginBottom: 8 }}>
           Office fetches the public key without a token on the Key URI Hostname, and decrypts with an Entra ID token. An Entra token is accepted only when its issuer is listed below, its audience is one of the JWT Audiences, and the user's email or app role is authorized; without audiences and authorized users every Entra token is refused.
         </div>
         <Row2>

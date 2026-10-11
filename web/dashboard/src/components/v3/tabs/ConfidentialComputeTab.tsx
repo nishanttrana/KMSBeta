@@ -297,9 +297,9 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
             <Stat key={item.label} l={item.label} v={item.value} s={item.sub} c={item.color} />
           ))}
         </div>
-        <Card style={{ padding: 16, background: `linear-gradient(135deg, ${C.card} 0%, rgba(40,95,145,.12) 100%)`, marginBottom: 14 }}>
+        <Card style={{ padding: 16, marginBottom: 14 }}>
           <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 6 }}>Attested key release</div>
-          <div style={{ fontSize: 11, color: C.dim, lineHeight: 1.6 }}>
+          <div className="vk-fold" tabIndex={0} style={{ fontSize: 11, color: C.dim, lineHeight: 1.6 }}>
             Verifies enclave or TEE evidence (AWS Nitro, Azure MAA, GCP Confidential Space) against tenant policy and returns an allow, review or deny verdict.
             Evaluate returns the verdict only. A workload calls POST /confidential/release with its evidence and a recipient public key the evidence commits to
             (AWS Nitro public_key, or nonce = base64url(SHA-256(key)) for Azure and GCP); on allow, keycore releases the key sealed to that key (RSA-OAEP-256 + AES-256-GCM),
@@ -492,7 +492,7 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
                   <FG label="Provider Attestation Document" hint={providerDocumentHint(evaluationProvider)}>
                     <Txt rows={12} value={releaseInput.attestation_document || ""} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, attestation_document: e.target.value }))} />
                   </FG>
-                  <Card style={{ padding: 12, marginTop: 10, background: `linear-gradient(135deg, ${C.card} 0%, rgba(44,109,178,.10) 100%)` }}>
+                  <Card style={{ padding: 12, marginTop: 10 }}>
                     <div className="vk-fold" tabIndex={0} style={{ fontSize: 10, color: C.dim, lineHeight: 1.7 }}>
                       Workload identity, attester, image metadata, evidence timestamp, secure-boot posture, debug state, and measurements will be derived from the signed provider document.
                       This request only supplies the expected audience, expected nonce, key scope, cluster node, and operator context for the release decision.

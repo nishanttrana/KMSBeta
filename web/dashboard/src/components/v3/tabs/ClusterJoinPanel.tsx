@@ -61,7 +61,7 @@ export const ClusterJoinPanel = ({ session, profiles, onToast, onDone }: Props) 
               {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </Sel>
           </FG>
-          <div style={{ fontSize: 10, color: C.dim }}>Core features (auth, keycore, policy, governance) always replicate. Only the selected profile's features' data goes to the new node; node-local data (local admin/CLI logins, sessions, node settings) never does.</div>
+          <div className="vk-fold" tabIndex={0} style={{ fontSize: 10, color: C.dim }}>Core features (auth, keycore, policy, governance) always replicate. Only the selected profile's features' data goes to the new node; node-local data (local admin/CLI logins, sessions, node settings) never does.</div>
           <Btn primary disabled={busy || !nodeID.trim() || !profileID} onClick={() => void issue()}>{busy ? "Creating..." : "Create join bundle"}</Btn>
           {bundle && (
             <FG label="Join bundle (one-time, 30 minutes): paste it on the new node">

@@ -871,7 +871,7 @@ export const CryptoTab=({session,keyCatalog,onToast,fipsMode})=>{
               onClick={runOperation}
               disabled={busy || (keyRequired && !selectedKeyId) || fipsExecutionBlocked || (keyRequired && !opAllowedForKey)}
               style={{
-                background:`linear-gradient(180deg, ${C.glowStrong}, ${C.glow})`,
+                background:C.accentDim,
                 color:C.accentFg,
                 border:`1px solid ${C.accent}`,
                 borderRadius:4,

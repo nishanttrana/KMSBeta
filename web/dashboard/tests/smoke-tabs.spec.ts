@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const RENDER_ERROR_TEXT = "This tab failed to render.";
 
@@ -322,35 +322,47 @@ test("the top bar has no search box and no command palette", async ({ page }) =>
   await expect(page.getByRole("textbox")).toHaveCount(1);
 });
 
-// Collapsed, the rail is 60px: the toggle sat on top of the mark. Nothing in
-// the sidebar may cover another control, in either state.
-test("nothing in the sidebar covers the mark or another control, collapsed or open", async ({ page }) => {
-  const sidebar = page.getByTestId("sidebar");
-  const covered = () => sidebar.evaluate((root) => {
-    const rail = root.getBoundingClientRect();
+// Asks the browser what is drawn at the centre of every icon, button and input
+// under root. A fault is one that some other control covers, or that spills
+// out of root.
+function coveredControls(root: Locator): Promise<string[]> {
+  return root.evaluate((el) => {
+    const box = el.getBoundingClientRect();
     const faults: string[] = [];
-    for (const el of Array.from(root.querySelectorAll("svg, button, input"))) {
-      const r = el.getBoundingClientRect();
-      if (!r.width || !r.height) { faults.push(`${el.tagName} has no size`); continue; }
-      if (r.left < rail.left - 0.5 || r.right > rail.right + 0.5) faults.push(`${el.tagName} spills out of the rail`);
+    for (const node of Array.from(el.querySelectorAll("svg, button, input"))) {
+      const r = node.getBoundingClientRect();
+      const name = `${node.tagName} "${node.getAttribute("title") || node.getAttribute("aria-label") || node.getAttribute("class") || ""}"`;
+      if (!r.width || !r.height) { faults.push(`${name} has no size`); continue; }
+      if (r.left < box.left - 0.5 || r.right > box.right + 0.5) faults.push(`${name} spills out of its container`);
       const x = r.left + r.width / 2, y = r.top + r.height / 2;
-      // Scrolled out of the module list: not on screen, so nothing can cover it.
+      // Scrolled out of a list: not on screen, so nothing can cover it.
       let clipped = false;
-      for (let a = el.parentElement; a && a !== root.parentElement; a = a.parentElement) {
+      for (let a = node.parentElement; a && a !== el.parentElement; a = a.parentElement) {
         const c = a.getBoundingClientRect();
         if (getComputedStyle(a).overflowY !== "visible" && (y < c.top || y > c.bottom)) clipped = true;
       }
       if (clipped) continue;
       const hit = document.elementFromPoint(x, y);
-      if (!hit || !(el.contains(hit) || hit.contains(el))) faults.push(`${el.tagName} "${el.getAttribute("title") || el.getAttribute("class") || ""}" is covered by ${hit?.tagName}`);
+      if (!hit || !(node.contains(hit) || hit.contains(node))) faults.push(`${name} is covered by ${hit?.tagName}`);
     }
     return faults;
   });
-  const overlap = async () => {
-    const [a, b] = await Promise.all([page.getByTestId("sidebar-mark").boundingBox(), sidebar.getByRole("button", { name: /sidebar$/ }).boundingBox()]);
-    if (!a || !b) throw new Error("the mark or the toggle is not rendered");
-    return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
-  };
+}
+
+type Box = { x: number; y: number; width: number; height: number } | null;
+function intersects(a: Box, b: Box): boolean {
+  if (!a || !b) throw new Error("an element to compare is not rendered");
+  return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+}
+
+const json = (body: unknown) => ({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+
+// Collapsed, the rail is 60px: the toggle sat on top of the mark. Nothing in
+// the sidebar may cover another control, in either state.
+test("nothing in the sidebar covers the mark or another control, collapsed or open", async ({ page }) => {
+  const sidebar = page.getByTestId("sidebar");
+  const covered = () => coveredControls(sidebar);
+  const overlap = async () => intersects(await page.getByTestId("sidebar-mark").boundingBox(), await sidebar.getByRole("button", { name: /sidebar$/ }).boundingBox());
   const width = () => sidebar.evaluate((el) => el.getBoundingClientRect().width);
 
   await expect.poll(width).toBe(248);
@@ -366,4 +378,147 @@ test("nothing in the sidebar covers the mark or another control, collapsed or op
   await sidebar.getByRole("button", { name: "Expand sidebar" }).click();
   await expect.poll(width).toBe(248);
   await expect(page.getByLabel("Filter modules")).toBeVisible();
+});
+
+// The unread count was drawn over the bell (11.6.0-beta). It sits beside the
+// icon, so no count can cover it, and nothing in the top bar covers a control.
+test("the unread count sits beside the bell, however many alerts there are", async ({ page }) => {
+  const bar = page.getByTestId("topbar");
+  for (const total of [3, 4200]) {
+    await page.route(/\/svc\/reporting\/alerts\/unread(\?|$)/, (route) => route.fulfill(json({ counts: { critical: total } })));
+    await page.reload();
+    const count = bar.getByTestId("unread-count");
+    await expect(count).toHaveText(total > 99 ? "99+" : String(total));
+    const bell = bar.getByTitle("Alert center");
+    expect(intersects(await bell.locator("svg").boundingBox(), await count.boundingBox())).toBe(false);
+    expect(await coveredControls(bar)).toEqual([]);
+  }
+});
+
+// A dialog offers only what its request sends (11.6.0-beta). The create
+// dialog showed a one-option Tenant selector, and a derivation, a rotation
+// schedule, a description and a FIPS box that keycore never received.
+test("the key dialogs offer only what keycore is sent", async ({ page }) => {
+  await page.getByText("Key Management", { exact: true }).first().click();
+  await page.getByRole("button", { name: "Create Key" }).click();
+  const dialog = page.getByRole("dialog", { name: "Create New Key" });
+  await expect(dialog.getByPlaceholder("Enter key name")).toBeVisible();
+  await expect(dialog.getByText(/^Key Name( ?\*)?$/)).toHaveCount(1);
+  for (const gone of ["Tenant", "Key Derivation", "Auto-Rotation", "Description", "FIPS-only algorithms enforced"]) {
+    await expect(dialog.getByText(new RegExp(`^${gone}( ?\\*)?$`))).toHaveCount(0);
+  }
+  let sent: Record<string, unknown> | null = null;
+  await page.route(/\/svc\/keycore\/keys(\?|$)/, async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    sent = route.request().postDataJSON();
+    await route.fulfill(json({ key: { id: "key_1", name: "smoke-key" } }));
+  });
+  await dialog.getByPlaceholder("Enter key name").fill("smoke-key");
+  await dialog.getByRole("button", { name: "Create Key" }).click();
+  await expect.poll(() => sent).not.toBeNull();
+  expect(sent).toMatchObject({ tenant_id: "root", name: "smoke-key" });
+});
+
+// What the certs service answers (services/certs/internal_mtls.go, edge_tls.go),
+// with Go's zero time where a service has not reported.
+const ZERO = "0001-01-01T00:00:00Z";
+const inDays = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString();
+const PQC = ["X25519MLKEM768", "SecP256r1MLKEM768", "SecP384r1MLKEM1024"];
+const observed = (identity: string, kx: string, groups: string[], days: number, generation = 1) => ({
+  identity, instance: `${identity}-1`, serial: "395409a7655e011f00aa", not_after: inDays(days), key_algorithm: "ECDSA-P256", kx_profile: kx,
+  server_groups: groups, generation, last_handshake_group: groups[0], last_handshake_at: inDays(0), started_at: inDays(-1), updated_at: inDays(0)
+});
+const service = (identity: string, kx: string, days: number, applied = true) => ({
+  identity, host: identity, kind: "service", policy: { key_algorithm: "ECDSA-P256", kx_profile: kx, generation: applied ? 1 : 2 },
+  certificates: [{ id: `crt_${identity}`, serial: "395409a7655e011f00aa", key_algorithm: "ECDSA-P256", not_after: inDays(days), issuer: "vecta-internal-services" }],
+  observed: [observed(identity, kx, kx === "pqc-required" ? PQC : [...PQC, "CurveP256", "CurveP384"], days)], applied, restart_modes: ["graceful", "force"]
+});
+const MTLS = {
+  items: [
+    service("keycore", "pqc-required", 300),
+    service("auth", "pqc-preferred", 300),
+    service("audit", "pqc-preferred", 10, false),
+    { identity: "postgres", host: "postgres", kind: "file", policy: { key_algorithm: "ECDSA-P256", kx_profile: "pqc-preferred", generation: 1 }, certificates: null, observed: null,
+      served_file: { ...observed("postgres", "", [], 300), last_handshake_group: "", last_handshake_at: ZERO, started_at: ZERO }, applied: true, restart_modes: ["graceful"],
+      note: "certs writes this certificate; the daemon reloads it within 30 s (no restart). Its TLS groups are the daemon's own configuration." }
+  ],
+  meta: { key_algorithms: ["ECDSA-P256", "ECDSA-P384", "RSA-3072"], kx_profiles: ["pqc-required", "pqc-preferred", "classical"], fips_mode: true, sub_ca: "vecta-internal-services",
+    groups: { "pqc-required": PQC, "pqc-preferred": [...PQC, "CurveP256", "CurveP384"], classical: ["CurveP256", "CurveP384"] },
+    signature_note: "Certificate signatures are classical: Go's TLS can't present ML-DSA certificates. Post-quantum protection is the key exchange.", rotate_all_step: 20 }
+};
+const edgeCert = (listener: string) => ({ listener, choice: { source: "runtime" }, served: true,
+  installed: { serial: "395409a7655e011f00aa", subject: "CN=vecta-envoy", issuer: "CN=vecta-runtime-root,O=Vecta KMS Runtime", sans: ["localhost", "envoy", "127.0.0.1"], not_after: inDays(90), key_algorithm: "RSA-3072", from_choice: true } });
+const EDGE = {
+  certificate: edgeCert("https"), kmip_certificate: edgeCert("kmip"), policy: { kx_profile: "pqc-preferred", generation: 1 }, applied: false,
+  listeners: [
+    { name: "envoy", address: "envoy:443", expected_groups: ["X25519MLKEM768", "CurveP256", "CurveP384"], observed: observed("envoy", "pqc-preferred", ["X25519MLKEM768", "CurveP256", "CurveP384"], 90), applied: true },
+    { name: "kmip", address: "kmip:5696", expected_groups: [...PQC, "CurveP256", "CurveP384"], observed: observed("kmip", "pqc-preferred", ["CurveP256", "CurveP384"], 90), applied: false }
+  ],
+  kx_profiles: ["pqc-required", "pqc-preferred", "classical"], groups: MTLS.meta.groups
+};
+
+// Service mTLS was five paragraphs above its controls (11.6.0-beta). The page
+// shows state and controls; what they mean is in docs/SECURITY/INTERNAL_TLS.md.
+test("Service mTLS shows state and controls without paragraphs, and each chip lists what it counts", async ({ page }) => {
+  await page.route(/\/certs\/internal-mtls(\?|$)/, (route) => route.fulfill(json(MTLS)));
+  await page.route(/\/certs\/edge-tls(\?|$)/, (route) => route.fulfill(json({ edge: EDGE })));
+  await page.getByText("Certificates / PKI", { exact: true }).first().click();
+  await page.getByTestId("subnav-certs").getByRole("button", { name: "Service mTLS", exact: true }).click();
+  const panel = page.getByTestId("service-mtls");
+  const rows = panel.getByTestId("mtls-identity");
+  await expect(rows).toHaveCount(4);
+  await expect(panel.getByText("vecta-internal-services", { exact: true })).toBeVisible();
+  await expect(panel.getByText("2 applying", { exact: true })).toBeVisible();
+
+  for (const [label, n] of [["Applying", 1], ["PQC required", 1], ["PQC preferred", 2], ["Classical", 0], ["Expiring ≤30d", 1], ["All", 4]] as const) {
+    const chip = panel.getByRole("button", { name: `${label} ${n}`, exact: true });
+    await chip.click();
+    await expect(chip).toHaveAttribute("aria-pressed", "true");
+    await expect(rows).toHaveCount(n);
+  }
+  await panel.getByRole("button", { name: "Applying 1", exact: true }).click();
+  await expect(rows).toContainText(["audit"]);
+
+  // A listener that differs shows the groups it is missing; the daemon row
+  // shows no time for a handshake the service never reported.
+  const kmip = panel.getByTestId("edge-listener").filter({ hasText: "kmip:5696" });
+  await expect(kmip).toContainText("differs");
+  await expect(kmip).toContainText("X25519MLKEM768");
+  await expect(panel).not.toContainText("0001");
+  await expect(panel).not.toContainText("NaN");
+
+  // No paragraph: no run of text on the page is longer than a label.
+  const longest = await panel.evaluate((root) => {
+    let max = "";
+    const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      const text = (n.textContent || "").trim();
+      if (text.length > max.length) max = text;
+    }
+    return max;
+  });
+  expect(longest.length, longest).toBeLessThanOrEqual(60);
+
+  // The one warning appears with the choice it warns about.
+  await expect(panel.getByText(/Refuses clients without ML-KEM/)).toHaveCount(0);
+  await panel.getByRole("button", { name: "Edge key exchange" }).click();
+  await page.getByRole("option", { name: "PQC required" }).click();
+  await expect(panel.getByText(/Refuses clients without ML-KEM/)).toBeVisible();
+  expect(await coveredControls(panel)).toEqual([]);
+});
+
+// Counts read the same everywhere (11.6.0-beta): flat tiles, a neutral number,
+// hue only on the icon of a count that needs attention.
+test("certificate tiles are the console's flat stat tiles", async ({ page }) => {
+  await page.getByText("Certificates / PKI", { exact: true }).first().click();
+  const tiles = page.locator(".vecta-stat-card");
+  await expect(tiles).toHaveText([/^Active/i, /^Revoked/i, /^CAs/i, /^Expiring/i, /^Missed windows/i, /^Emergency/i]);
+  const looks = await tiles.evaluateAll((els) => els.map((el) => {
+    const num = el.querySelector(".vk-num")!;
+    return { image: getComputedStyle(el).backgroundImage, number: getComputedStyle(num).color };
+  }));
+  for (const look of looks) {
+    expect(look.image).toBe("none");
+    expect(look.number).toBe(looks[0]!.number);
+  }
 });
