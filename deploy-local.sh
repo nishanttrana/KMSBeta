@@ -192,12 +192,15 @@ sync_jwt_key() {
   fi
   return 0
 }
+jwt_rc=1
 if docker volume inspect "${AUTH_VOL}" >/dev/null 2>&1; then
-  sync_jwt_key || true
+  jwt_rc=0; sync_jwt_key || jwt_rc=$?
 fi
-# Fresh install: no signing key anywhere yet. Mint one into the auth volume so
-# JWT_PUBLIC_KEY_B64 (required by compose) is real from the first start.
-if [[ -z "$(env_get JWT_PUBLIC_KEY_B64)" ]]; then
+# No signing key in the auth volume: a fresh install, or the volumes were
+# removed while .env kept its old JWT_PUBLIC_KEY_B64. Mint one and derive the
+# public key from it, whatever .env says: left alone, auth generates its own
+# key at start and every service refuses every token ("401 invalid token").
+if [[ "${jwt_rc}" -eq 1 ]]; then
   say "generating the auth JWT signing key"
   # With Compose's labels, so `compose up` adopts the volume.
   docker volume create --label "com.docker.compose.project=${PROJECT}" --label "com.docker.compose.volume=auth-data" "${AUTH_VOL}" >/dev/null
@@ -205,8 +208,8 @@ if [[ -z "$(env_get JWT_PUBLIC_KEY_B64)" ]]; then
     | docker run --rm -i -v "${AUTH_VOL}:/a" vecta-local/alpine:3.24 \
         sh -c 'set -eu; umask 077; [ -s /a/jwt_private.pem ] || cat > /a/jwt_private.pem; chown 100:101 /a/jwt_private.pem' \
     || die "could not seed the auth JWT signing key"
-  sync_jwt_key || true
-  [[ -n "$(env_get JWT_PUBLIC_KEY_B64)" ]] || die "could not derive JWT_PUBLIC_KEY_B64 from the auth signing key"
+  jwt_rc=0; sync_jwt_key || jwt_rc=$?
+  [[ "${jwt_rc}" -ne 1 ]] || die "could not derive JWT_PUBLIC_KEY_B64 from the auth signing key"
 fi
 
 # ── 5. Start (volume prep, profiles, mesh bootstrap live in start-kms.sh) ─

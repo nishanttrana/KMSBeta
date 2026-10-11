@@ -5,6 +5,23 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### Every service 401s after the volumes are removed (9.4.0-beta)
+- **Symptom far from the cause.** `compose up` said only "container certs
+  is unhealthy". certs was waiting for its master key; keycore refused it
+  with `401 invalid token`; auth's own call was refused the same way. When
+  the issuer's own token is refused, compare the fingerprint of the
+  verification key in the services' environment with the public half of
+  auth's signing key before reading any handler.
+- **Two copies of one fact, reconciled only when one was empty.**
+  `deploy-local.sh` minted the signing key only if `.env` had no
+  `JWT_PUBLIC_KEY_B64`, and synced only if the auth volume existed. Volumes
+  removed, `.env` kept: neither branch ran, and auth quietly generated a
+  key nobody else knew. The key in the volume is the source; `.env` is
+  always derived from it, and a missing key is minted whatever `.env` says.
+- **Tell the keys apart without printing them.** Compare SHA-256
+  fingerprints of the public key (DER); the private key goes through a
+  pipe to `openssl pkey -pubout` and never reaches the terminal.
+
 ### "Fix what needs the owner's accounts" (9.3.0-beta)
 - **Asked to fix the unproven, with nothing to prove it against.** No
   settings file, no cloud CLI, no credential on the machine. The choices

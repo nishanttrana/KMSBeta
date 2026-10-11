@@ -4,6 +4,21 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [9.4.0-beta] — 2026-10-11
+
+### Local deploy: a stack whose volumes were removed starts again
+- **Fixed: `./deploy-local.sh` after the volumes were removed left every
+  service refusing every token.** The script minted the auth signing key
+  only when `.env` had no `JWT_PUBLIC_KEY_B64`. With the volumes gone and
+  the old value still in `.env`, auth generated a new key at start, the
+  other services kept verifying with the old public key, and keycore
+  answered `401 invalid token` to every service. No service could open its
+  master key, `certs` stayed unhealthy and `compose up` stopped with
+  "dependency failed to start". The script now mints the key whenever the
+  auth volume has none and always derives `JWT_PUBLIC_KEY_B64` from the key
+  in the volume. A stack already in this state is repaired by re-running
+  `./deploy-local.sh --no-build`.
+
 ## [9.3.0-beta] — 2026-10-11
 
 ### Storage credentials: checking against your cloud accounts is one click in CI
