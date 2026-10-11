@@ -2,6 +2,10 @@ package clusterstate
 
 import (
 	"context"
+	"database/sql"
+	"database/sql/driver"
+	"errors"
+	"sync/atomic"
 	"testing"
 )
 
@@ -53,5 +57,41 @@ func TestPendingReaderHoldsPrimaryJobs(t *testing.T) {
 	r.Attach(nil)
 	if !RunsPrimaryJobs(context.Background()) {
 		t.Fatal("once attached, a node without cluster state runs primary jobs")
+	}
+}
+
+// countingDriver fails every query and counts them.
+type countingDriver struct{ queries *atomic.Int64 }
+
+func (d countingDriver) Open(string) (driver.Conn, error) { return countingConn(d), nil }
+
+type countingConn countingDriver
+
+func (c countingConn) Prepare(string) (driver.Stmt, error) {
+	c.queries.Add(1)
+	return nil, errors.New(`relation "cluster_local_state" does not exist`)
+}
+func (countingConn) Close() error              { return nil }
+func (countingConn) Begin() (driver.Tx, error) { return nil, errors.New("no transactions") }
+
+// A node without the table (no cluster manager deployed) is standalone, and
+// the failed lookup is cached: every service asked Postgres on every call,
+// thousands of failed queries an hour on an idle node.
+func TestMissingTableIsCachedAsStandalone(t *testing.T) {
+	var queries atomic.Int64
+	sql.Register("clusterstate-missing-table", countingDriver{&queries})
+	db, err := sql.Open("clusterstate-missing-table", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close() //nolint:errcheck
+	r := NewReader(db)
+	for i := 0; i < 50; i++ {
+		if r.Get(context.Background()).IsMember() {
+			t.Fatal("a node without the table was treated as a member")
+		}
+	}
+	if n := queries.Load(); n != 1 {
+		t.Fatalf("%d queries for 50 lookups inside the TTL, want 1", n)
 	}
 }

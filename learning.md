@@ -5,6 +5,20 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### Why the owner was the one finding the bugs (10.3.0-beta)
+- **Nothing looked at the running product.** The HYOK sign-out and the
+  short health list both passed every gate: unit tests inject their own
+  parser and their own lists, conformance reads source, and the container
+  health checks are TCP probes. Both were visible in seconds on the live
+  stack. learning.md only records a fault after someone reports it; it does
+  not find one. The first run of a log sweep (`scripts/live-sweep.sh`) found
+  a third fault nobody had reported: `pkg/clusterstate` returned on a query
+  error without recording the attempt, so its cache never applied where the
+  table is missing.
+- **Fixes stopped at the reported instance.** The rule now: name the class,
+  search for its other copies, fix or list them, and add the test or gate
+  that fails if it comes back (CLAUDE.md, "Before calling a change done").
+
 ### A health list that drifted from what runs (10.2.0-beta)
 - **28 of 32.** `services/auth/system_health.go` builds System Health from
   three sources: the container runtime, Consul, and a hard-coded TCP probe

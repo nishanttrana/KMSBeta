@@ -389,6 +389,26 @@ changes code without touching CHANGELOG.md or learning.md.
 
 ## Before calling a change done
 
+- **Find faults before the owner does** (owner directive, 2026-10-11: "why
+  all these things are not part of learning and I have to keep giving
+  commands to fix it"). A reported bug is a class, not an instance:
+  - Fix the class. Search for every other copy of the fault, fix or list
+    them, and add the test or conformance check that fails if it returns. A
+    learning.md entry without that check is not a fix.
+  - After every deploy or rebuild, and before calling a fix done, run
+    `scripts/live-sweep.sh` against the running stack and fix what it
+    reports, asked or not. Then check the changed feature on the live stack,
+    not only in tests.
+  - A service refuses to start without something it needs to answer
+    requests (a verification key, a required URL); it never starts healthy
+    and refuses every call.
+  - A list of services, routes or features has one source (`pkg/svctls`,
+    `pkg/route`, `pkg/features`). A second copy needs a test tying it to the
+    source.
+  - The dashboard ends a session on 401, so a service returns 401 only for a
+    missing or unverifiable token; a refusal to a signed-in caller is 403 or
+    4xx.
+
 - `make conformance` passes. It enforces rules 1–3 and 5, that routes use
   the `pkg/route` kernel, that every shell script parses under macOS
   bash 3.2, and that every route a doc or OpenAPI spec names is registered

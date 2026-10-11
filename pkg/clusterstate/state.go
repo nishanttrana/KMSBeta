@@ -107,7 +107,11 @@ func (r *Reader) Get(ctx context.Context) State {
 SELECT node_id, role, primary_node_id, primary_url, primary_fingerprint, forward_credential
 FROM cluster_local_state WHERE id = 1`).Scan(&s.NodeID, &s.Role, &s.PrimaryNodeID, &s.PrimaryURL, &s.PrimaryFingerprint, &s.ForwardCredential)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return r.cur // keep the last known state on a transient error
+		// Keep the last known state, and ask again only after the TTL: where
+		// the table doesn't exist (no cluster manager deployed) every call
+		// would otherwise be a failed query.
+		r.loaded = time.Now()
+		return r.cur
 	}
 	r.cur, r.loaded = s, time.Now()
 	return s

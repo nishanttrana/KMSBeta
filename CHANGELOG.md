@@ -4,6 +4,21 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [10.3.0-beta] — 2026-10-11
+
+### Faults are looked for, not waited for
+- **New: `scripts/live-sweep.sh`** reads the running stack and reports every
+  container that is not healthy and every error line that repeats, with
+  identifiers and credentials stripped. It is now a required step after a
+  deploy or rebuild and before a fix is called done (CLAUDE.md).
+- **Fixed: every service queried a missing table on every call.** On a node
+  without the cluster manager, `cluster_local_state` does not exist; the
+  failed lookup in `pkg/clusterstate` was never cached, so each call asked
+  Postgres again (about 3,100 failed queries in 20 minutes on an idle node,
+  found by the first sweep). A failed lookup is now cached for the same 10
+  seconds as a successful one. Still open: one failed query per service per
+  10 seconds remains until the table exists on every deployment.
+
 ## [10.2.0-beta] — 2026-10-11
 
 ### System Health lists every running component
