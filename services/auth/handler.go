@@ -74,7 +74,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /auth/cluster/mint", h.handleClusterMint)
 	mux.HandleFunc("POST /auth/workload-token", h.handleIssueWorkloadToken)
 	mux.HandleFunc("GET /auth/system-health", h.withAuth(h.handleSystemHealth, "auth.self.read"))
-	mux.HandleFunc("POST /auth/system-health/restart", h.withAuth(h.handleRestartSystemService, "auth.service.restart"))
 	mux.HandleFunc("POST /auth/refresh", h.withAuth(h.handleRefresh, "auth.token.refresh"))
 	mux.HandleFunc("POST /auth/change-password", h.withAuth(h.handleChangePassword, ""))
 
@@ -2947,7 +2946,7 @@ func (h *Handler) execComposeServiceCommandEnv(ctx context.Context, composeServi
 	if h.healthChecker == nil {
 		return "", errors.New("system health checker not configured")
 	}
-	if h.healthChecker.restartHTTP == nil {
+	if h.healthChecker.runtimeHTTP == nil {
 		return "", errors.New("docker socket client not configured")
 	}
 	containerID, err := h.healthChecker.findComposeContainer(ctx, strings.TrimSpace(composeService))
@@ -2985,7 +2984,7 @@ func (h *Handler) execDockerContainerCommand(ctx context.Context, containerID st
 		return "", 0, fmt.Errorf("failed to build docker exec create request: %w", err)
 	}
 	createReq.Header.Set("Content-Type", "application/json")
-	createResp, err := h.healthChecker.restartHTTP.Do(createReq)
+	createResp, err := h.healthChecker.runtimeHTTP.Do(createReq)
 	if err != nil {
 		return "", 0, fmt.Errorf("failed to create docker exec session: %w", err)
 	}
@@ -3008,7 +3007,7 @@ func (h *Handler) execDockerContainerCommand(ctx context.Context, containerID st
 		return "", 0, fmt.Errorf("failed to build docker exec start request: %w", err)
 	}
 	startReq.Header.Set("Content-Type", "application/json")
-	startResp, err := h.healthChecker.restartHTTP.Do(startReq)
+	startResp, err := h.healthChecker.runtimeHTTP.Do(startReq)
 	if err != nil {
 		return "", 0, fmt.Errorf("failed to start docker exec session: %w", err)
 	}
@@ -3037,7 +3036,7 @@ func (h *Handler) inspectDockerExec(ctx context.Context, execID string) (dockerE
 		if err != nil {
 			return out, fmt.Errorf("failed to build docker exec inspect request: %w", err)
 		}
-		resp, err := h.healthChecker.restartHTTP.Do(req)
+		resp, err := h.healthChecker.runtimeHTTP.Do(req)
 		if err != nil {
 			return out, fmt.Errorf("docker exec inspect failed: %w", err)
 		}

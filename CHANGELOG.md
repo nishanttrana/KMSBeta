@@ -4,6 +4,28 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [11.0.0-beta] — 2026-10-11
+
+### System Administration no longer offers what it could not do
+- **Breaking: `POST /auth/system-health/restart` is removed**, with the
+  Restart and Restart All buttons on Administration → System Administration
+  → Health. Restarting a container needs control of the host's container
+  runtime; no service is given that, so the call could only answer
+  "unavailable". Restart a service on the host (`docker compose restart
+  <service>`). `SYSTEM_SERVICE_RESTART_ENABLED` and the
+  `audit.auth.service_restart` event go with it.
+- **Removed: the Interfaces panel** (published ports "as the container
+  runtime reports them"), which was always empty for the same reason, and
+  the `interfaces`, `restart_allowed` and `restart_block_reason` fields of
+  `GET /auth/system-health`.
+- Health now says what it is: each component is listed from service
+  discovery or a successful connection to its port.
+  [docs/ADMINISTRATION.md](docs/ADMINISTRATION.md) section 9 is rewritten to
+  the real response; it described fields, statuses and a restart call the
+  product never had.
+- Decision recorded in [docs/DECISIONS.md](docs/DECISIONS.md): the auth
+  service is not given the Docker socket.
+
 ## [10.4.0-beta] — 2026-10-11
 
 ### The open faults from 10.1.0–10.3.0 are closed

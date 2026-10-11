@@ -7,7 +7,6 @@ import {
   getAuthSystemHealth,
   listAuthCLIHSMPartitions,
   openAuthCLISession,
-  restartAuthSystemService,
   updateAuthPasswordPolicy,
   updateAuthSecurityPolicy,
   upsertAuthCLIHSMConfig,
@@ -124,50 +123,6 @@ function HealthListBody<T>({list,empty,children}:{list:HealthList<T>;empty:strin
   if(!list.items.length) return <div style={{fontSize:10,color:C.muted}}>{empty}</div>;
   return <>{children}</>;
 }
-
-const interfaceTone=(status:string):"green"|"amber"|"red"|"blue"=>{
-  const s=String(status||"").toLowerCase();
-  if(s==="listening"||s==="running") return "green";
-  if(s==="starting"||s==="restarting") return "amber";
-  if(s==="stopped"||s==="down"||s==="failed"||s==="disabled"||s==="not detected") return "red";
-  return "blue";
-};
-
-const RESTART_BLOCKED_TARGETS = new Set([
-  "audit",
-  "auth",
-  "cluster-manager",
-  "consul",
-  "dashboard",
-  "envoy",
-  "etcd",
-  "hsm-connector",
-  "keycore",
-  "nats",
-  "policy",
-  "postgres",
-  "valkey"
-]);
-
-const toRestartTarget=(serviceName:string):string=>{
-  const name=String(serviceName||"").trim().toLowerCase();
-  if(!name) return "";
-  if(name==="postgresql") return "postgres";
-  if(name==="nats jetstream") return "nats";
-  if(name==="valkey"||name==="consul"||name==="etcd"||name==="dashboard"||name==="envoy") return name;
-  if(name.startsWith("kms-")){
-    const raw=name.slice(4);
-    return raw==="hyok-proxy"?"hyok":raw;
-  }
-  return name;
-};
-
-const restartAllowedFor=(service:{name?:string;restart_allowed?:boolean}):boolean=>{
-  if(typeof service?.restart_allowed==="boolean") return service.restart_allowed;
-  const target=toRestartTarget(String(service?.name||""));
-  if(!target) return false;
-  return !RESTART_BLOCKED_TARGETS.has(target);
-};
 
 const INTERNAL_TLS_POLICY="TLS 1.3 · internal mTLS · key exchange per service (hybrid ML-KEM by default)";
 
@@ -377,7 +332,6 @@ type SystemAdminPanel =
   | "password"
   | "login"
   | "keyaccess"
-  | "interfaces"
   | "platform"
   | "cli"
   | "governance"
@@ -393,7 +347,6 @@ const SYSTEM_ADMIN_TABS: Array<{label:string;panel:SystemAdminPanel}> = [
   { label:"Password Policy", panel:"password" },
   { label:"Login Security", panel:"login" },
   { label:"Key Access Hardening", panel:"keyaccess" },
-  { label:"Interfaces", panel:"interfaces" },
   { label:"CLI / HSM", panel:"cli" },
   { label:"Governance", panel:"governance" },
   { label:"Backup", panel:"backup" },
@@ -476,9 +429,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const [heartbeats,setHeartbeats]=useState<HealthList<ServiceState>>(emptyHealthList);
   const [incidents,setIncidents]=useState<HealthList<Incident>>(emptyHealthList);
   const [reconcilers,setReconcilers]=useState<HealthList<ReconcilerStatus>>(emptyHealthList);
-  const [restartBusy,setRestartBusy]=useState("");
-  const [restartAllBusy,setRestartAllBusy]=useState(false);
-  const [serviceStatusOverride,setServiceStatusOverride]=useState<Record<string,string>>({});
 
   const [gov,setGov]=useState(GOV_DEFAULT);
   // Slack/Teams connections approval notices can go through (Playbooks → Connections).
@@ -781,28 +731,9 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     });
     try{
       setHealth(await getAuthSystemHealth(session));
-      setServiceStatusOverride({});
     }
     catch(error){if(!sessionGuard(error)) onToast(`System health load failed: ${errMsg(error)}`);} 
     finally{setHealthLoading(false);} 
-  },[onToast,session,sessionGuard]);
-
-  const restartSvc=useCallback(async(name:string)=>{
-    if(!session?.token||!name) return;
-    setRestartBusy(name);
-    setServiceStatusOverride((prev)=>({ ...prev, [name]: "restarting" }));
-    try{
-      await restartAuthSystemService(session,name);
-      onToast(`Restart requested: ${name}`);
-    }catch(error){
-      setServiceStatusOverride((prev)=>{
-        const next={...prev};
-        delete next[name];
-        return next;
-      });
-      if(!sessionGuard(error)) onToast(`Service restart failed: ${errMsg(error)}`);
-    } 
-    finally{setRestartBusy("");}
   },[onToast,session,sessionGuard]);
 
   const loadGov=useCallback(async()=>{
@@ -1228,19 +1159,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     }));
   },[fipsMode]);
 
-  const restartableServiceNames = useMemo(
-    ()=> (health.services||[])
-      .filter((svc)=>restartAllowedFor(svc))
-      .map((svc)=>String(svc?.name||"").trim())
-      .filter(Boolean),
-    [health.services]
-  );
-
-  const liveInterfaces = useMemo(
-    ()=> Array.isArray(health?.interfaces) ? health.interfaces : [],
-    [health?.interfaces]
-  );
-
   const saveFipsConfig = useCallback(async()=>{
     const nextMode = String(systemState?.fips_mode||"disabled")==="enabled" ? "enabled" : "disabled";
     onFipsModeChange(nextMode);
@@ -1249,57 +1167,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       setFipsConfigModalOpen(false);
     }
   },[onFipsModeChange,saveSystemState,systemState?.fips_mode]);
-
-  const restartAllAllowedServices = useCallback(async()=>{
-    if(!session?.token){
-      return;
-    }
-    if(!restartableServiceNames.length){
-      onToast("No restart-allowed services available.");
-      return;
-    }
-    const confirmText = `Restart ${restartableServiceNames.length} allowed services? Restricted services will be skipped.`;
-    const ok=await promptDialog.confirm({
-      title:"Restart Allowed Services",
-      message:confirmText,
-      confirmLabel:"Restart",
-      cancelLabel:"Cancel",
-      danger:true
-    });
-    if(!ok){
-      return;
-    }
-    setRestartAllBusy(true);
-    const failed:string[]=[];
-    try{
-      for(const name of restartableServiceNames){
-        setRestartBusy(name);
-        setServiceStatusOverride((prev)=>({ ...prev, [name]: "restarting" }));
-        try{
-          await restartAuthSystemService(session,name);
-        }catch(error){
-          failed.push(name);
-          setServiceStatusOverride((prev)=>{
-            const next={...prev};
-            delete next[name];
-            return next;
-          });
-          if(sessionGuard(error)){
-            break;
-          }
-        }finally{
-          setRestartBusy("");
-        }
-      }
-      if(failed.length){
-        onToast(`Restart completed with failures: ${failed.join(", ")}`);
-      }else{
-        onToast(`Restart requested for ${restartableServiceNames.length} services.`);
-      }
-    }finally{
-      setRestartAllBusy(false);
-    }
-  },[onToast,promptDialog,restartableServiceNames,session,sessionGuard]);
 
   const sortedJobs=useMemo(()=>[...jobs].sort((a,b)=>new Date(String(b.created_at||0)).getTime()-new Date(String(a.created_at||0)).getTime()),[jobs]);
   const totalServices=Number(health.summary?.total||health.services?.length||0);
@@ -1383,16 +1250,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     {panel==="health"&&<>
     <Section
       title="System Health"
-      actions={<div style={{display:"flex",gap:8}}>
-        <Btn
-          small
-          onClick={()=>void restartAllAllowedServices()}
-          disabled={restartAllBusy||!restartableServiceNames.length}
-        >
-          {restartAllBusy?"Restarting...":"Restart All"}
-        </Btn>
-        <Btn small onClick={()=>void loadHealth()}>{healthLoading?"Refreshing...":"Refresh Health"}</Btn>
-      </div>}
+      actions={<Btn small onClick={()=>void loadHealth()}>{healthLoading?"Refreshing...":"Refresh Health"}</Btn>}
     >
       <Card style={{padding:10,borderRadius:8}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
@@ -1406,10 +1264,8 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         <div style={{maxHeight:420,overflowY:"auto",paddingRight:2}}>
           {(health.services||[]).map((svc)=>{
             const name=String(svc?.name||"unknown");
-            const status=String(serviceStatusOverride[name]||svc?.status||"unknown");
-            const restartAllowed=restartAllowedFor(svc);
-            const restartBlockReason=String(svc?.restart_block_reason||"Restart is restricted for this service.");
-            return <div key={name} style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8,alignItems:"center",borderBottom:`1px solid ${C.border}`,padding:"7px 0"}}>
+            const status=String(svc?.status||"unknown");
+            return <div key={name} style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"center",borderBottom:`1px solid ${C.border}`,padding:"7px 0"}}>
               <div style={{minWidth:0}}>
                 <div style={{fontSize:11,color:C.text,fontWeight:700}}>{name}</div>
                 <div style={{fontSize:10,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={String(svc?.output||svc?.source||"-")}>{String(svc?.output||svc?.source||"-")}</div>
@@ -1418,18 +1274,11 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
                 <span className={`vecta-hb-dot ${heartbeatToneClass(status)}`} />
                 {status}
               </span>
-              <div style={{display:"flex",justifyContent:"flex-end"}}>
-                {restartAllowed ? (
-                  <Btn small onClick={()=>void restartSvc(name)} disabled={restartBusy===name||restartAllBusy}>{restartBusy===name?"...":"Restart"}</Btn>
-                ) : (
-                  <span style={{fontSize:9,color:C.muted}} title={restartBlockReason}>Restricted</span>
-                )}
-              </div>
             </div>;
           })}
           {!(health.services||[]).length?<div style={{fontSize:10,color:C.muted,paddingTop:8}}>No health data available.</div>:null}
         </div>
-        <div style={{fontSize:10,color:C.dim,marginTop:8}}>Live status from backend service discovery and health checks.</div>
+        <div style={{fontSize:10,color:C.dim,marginTop:8}}>Each component is listed from service discovery or a successful connection to its port; one that is not deployed is not listed.</div>
       </Card>
     </Section>
     <Section title="Heartbeats & Watchdog">
@@ -1749,39 +1598,8 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     </Section>
     </>}
 
-    {panel==="interfaces"&&<>
-    <Section title="Network Interfaces" actions={<Btn small onClick={()=>void loadHealth()} disabled={healthLoading}>{healthLoading?"Refreshing...":"Refresh"}</Btn>}>
-      <div style={{fontSize:11,color:C.dim,marginBottom:14}}>
-        The ports this deployment publishes, as the container runtime reports them. Listeners, ports and bind addresses are set by
-        the deployment (docker-compose / install.sh), not here. The key exchange the HTTPS edge and KMIP accept is chosen, and measured,
-        under Certificates / PKI &gt; Service mTLS &gt; External edge key exchange.
-      </div>
-      {String(health?.warning||"").trim()&&<div style={{fontSize:10,color:C.amber,marginBottom:12}}>{String(health.warning)}</div>}
-      <div style={{display:"grid",gap:8}}>
-        {liveInterfaces.map((iface:any)=>{
-          const statusTone = interfaceTone(String(iface?.status||""));
-          const statusColor = statusTone==="green"?C.green:statusTone==="amber"?C.amber:statusTone==="red"?C.red:C.dim;
-          return(
-            <Card key={String(iface?.id||`${iface?.service}-${iface?.port}`)} style={{padding:"10px 14px"}}>
-              <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1.5fr 1fr",gap:8,alignItems:"center"}}>
-                <div>
-                  <div style={{fontSize:13,fontWeight:700,color:C.text}}>{String(iface?.name||iface?.service||"")}</div>
-                  <div style={{fontSize:10,color:C.muted,marginTop:2}}>{String(iface?.service||"")}{iface?.description?` · ${String(iface.description)}`:""}</div>
-                </div>
-                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Protocol</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{String(iface?.protocol||"not reported")}</div></div>
-                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Published</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{`${String(iface?.bind_address||"0.0.0.0")}:${String(iface?.port||"")}`}{iface?.container_port?` → ${String(iface.container_port)}`:""}</div></div>
-                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Status</div><div style={{fontSize:10,color:statusColor,fontWeight:600,marginTop:2,textTransform:"capitalize"}}>{String(iface?.status||"not reported")}</div></div>
-              </div>
-            </Card>
-          );
-        })}
-        {!liveInterfaces.length&&<div style={{textAlign:"center",padding:24,color:C.muted,fontSize:11}}>{healthLoading?"Loading...":"The container runtime reported no published ports (unavailable)."}</div>}
-      </div>
-    </Section>
-    </>}
-
     {panel==="platform"&&<>
-    <Section title="Platform Hardening, Crypto and Interfaces" actions={<div style={{display:"flex",gap:6}}><Btn small onClick={()=>void loadSystemState()} disabled={systemStateLoading}>{systemStateLoading?"Refreshing...":"Refresh"}</Btn><Btn small primary onClick={()=>void saveSystemState()} disabled={systemStateLoading||systemStateSaving}>{systemStateSaving?"Saving...":"Save"}</Btn></div>}>
+    <Section title="Platform Hardening and Crypto" actions={<div style={{display:"flex",gap:6}}><Btn small onClick={()=>void loadSystemState()} disabled={systemStateLoading}>{systemStateLoading?"Refreshing...":"Refresh"}</Btn><Btn small primary onClick={()=>void saveSystemState()} disabled={systemStateLoading||systemStateSaving}>{systemStateSaving?"Saving...":"Save"}</Btn></div>}>
       <Row2>
         <Card style={{padding:10,borderRadius:8}}>
           <div style={{fontSize:10,color:C.muted,marginBottom:8}}>Hardening / Crypto Runtime</div>
@@ -1841,14 +1659,11 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           <div style={{display:"grid",gap:8}}>
             <div style={{fontSize:11,color:C.text,fontWeight:700}}>{tlsPolicyLabel}</div>
             <div style={{fontSize:10,color:C.dim}}>
-              User-facing listeners, HTTP versus HTTPS/TLS, mTLS, and certificate attachment stay on Interfaces.
+              Listeners, ports and bind addresses are set by the deployment. Certificates and key exchange: Certificates / PKI &gt; Service mTLS.
             </div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <B c="blue">{tlsPolicyLabel}</B>
                 </div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
-              <Btn small primary onClick={()=>setPanel("interfaces")}>Open Interfaces</Btn>
-            </div>
           </div>
         </Card>
 

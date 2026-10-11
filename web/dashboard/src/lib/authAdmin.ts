@@ -110,8 +110,6 @@ export type SystemServiceHealth = {
   port?: number;
   instances?: number;
   output?: string;
-  restart_allowed?: boolean;
-  restart_block_reason?: string;
 };
 
 export type SystemHealthSummary = {
@@ -123,26 +121,9 @@ export type SystemHealthSummary = {
   all_ok?: boolean;
 };
 
-export type SystemPublishedInterface = {
-  id: string;
-  name: string;
-  description?: string;
-  service: string;
-  protocol: string;
-  cert_type?: string;
-  auto_create_cert?: boolean;
-  bind_address: string;
-  port: number;
-  container_port?: number;
-  enabled?: boolean;
-  status?: string;
-  source?: string;
-};
-
 export type AuthSystemHealthSnapshot = {
   summary?: SystemHealthSummary;
   services?: SystemServiceHealth[];
-  interfaces?: SystemPublishedInterface[];
   collected_at?: string;
   warning?: string;
   request_id?: string;
@@ -408,11 +389,6 @@ type TenantDisableResponse = {
   tenant_id: string;
   readiness?: TenantDeleteReadiness;
 };
-type RestartServiceResponse = {
-  status?: string;
-  service?: string;
-  request_id?: string;
-};
 type AuthClientsResponse = { items?: AuthClientRegistration[] };
 type AuthClientResponse = { client?: AuthClientRegistration };
 type RESTClientSecuritySummaryResponse = { summary?: RESTClientSecuritySummary };
@@ -443,8 +419,7 @@ export async function getAuthSystemHealth(
   });
   return {
     ...out,
-    services: Array.isArray(out?.services) ? out.services : [],
-    interfaces: Array.isArray(out?.interfaces) ? out.interfaces : []
+    services: Array.isArray(out?.services) ? out.services : []
   };
 }
 
@@ -543,18 +518,6 @@ export async function revokeAuthClient(session: AuthSession, clientID: string): 
 export async function getAuthRESTClientSecuritySummary(session: AuthSession): Promise<RESTClientSecuritySummary> {
   const out = await serviceRequest<RESTClientSecuritySummaryResponse>(session, "auth", "/auth/rest-client-security/summary");
   return out?.summary as RESTClientSecuritySummary;
-}
-
-export async function restartAuthSystemService(
-  session: AuthSession,
-  serviceName: string
-): Promise<RestartServiceResponse> {
-  return serviceRequest<RestartServiceResponse>(session, "auth", "/auth/system-health/restart", {
-    method: "POST",
-    body: JSON.stringify({
-      service: String(serviceName || "").trim()
-    })
-  });
 }
 
 export async function updateAuthTenant(

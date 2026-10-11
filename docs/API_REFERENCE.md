@@ -4160,7 +4160,6 @@ from the code; do not edit by hand.
 - `POST /svc/auth/auth/sso/{provider}/callback`
 - `GET /svc/auth/auth/sso/{provider}/login`
 - `GET /svc/auth/auth/system-health`
-- `POST /svc/auth/auth/system-health/restart`
 - `GET /svc/auth/auth/users`
 - `POST /svc/auth/auth/users`
 - `POST /svc/auth/auth/users/{id}/reset-password`

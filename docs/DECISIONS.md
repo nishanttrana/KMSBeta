@@ -7,6 +7,22 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-11 — The auth service is not given the container runtime
+**Decision:** no service mounts the Docker socket. System Health lists a
+component from Consul or a successful connection to its port. The restart
+route, the Restart buttons and the Interfaces panel are removed (11.0.0-beta);
+a service is restarted on the host.
+**Why:** the socket is control of every container on the host, including
+Postgres and keycore, from the service that faces every sign-in. Compose
+never mounted it, so the features built on it never worked: restart always
+answered "unavailable" and Interfaces was always empty.
+**Rejected:** mounting the socket into auth; a socket proxy limited to
+listing and restarting (still a host-control path to certify, for a button an
+operator has on the host already).
+**Open:** auth's CLI/HSM functions (SSH password sync and the command runner
+for hsm-integration) use the same client and can't work without it.
+**Enforced by:** `TestNoContainerRestartRoute`; owner approval 2026-10-11.
+
 ## 2026-10-11 — Cloud BYOK: each cloud's own import, material wrapped by keycore or inside the HSM; no TSB (10.0.0-beta)
 
 **Context.** The owner asked for BYOK "exactly" like a reference console that

@@ -5,6 +5,25 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### Buttons for something the service could never do (11.0.0-beta)
+- **Restart and Network Interfaces needed the Docker socket; compose never
+  mounts it into auth.** The restart call always returned "unavailable" and
+  the Interfaces panel was always empty. Removed, with ~550 lines of
+  container-state code in `services/auth/system_health.go`.
+  How it slipped through: the tests handed the checker a fake Docker
+  transport, so the code path passed while the deployed service had no
+  socket. Nothing checked the deployment the feature assumed.
+- **A guide that documented an invented API.** docs/ADMINISTRATION.md
+  section 9 showed a response with `healthy`/`unavailable` statuses, an
+  `http_health_check` source and a `payment` service; none exist.
+  `check-doc-routes.py` checks that named routes are registered, not that
+  example payloads match.
+- **Still dependent on the socket:** auth's CLI/HSM functions
+  (`execComposeServiceCommandEnv`: the SSH password sync and lock for
+  hsm-integration, and the CLI command runner) look the container up through
+  the same client. Without the socket they fail with "container runtime
+  unavailable". Not changed here; owner decision.
+
 ### Closing the open faults (10.4.0-beta)
 - **Dead clients for routes that never existed.** Eight files in
   `web/dashboard/src/lib` called 15 keycore routes with no handler

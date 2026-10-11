@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-11T17:07:18Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-11T17:16:44Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -668,68 +668,64 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/modules/admin/ExposurePanel.tsx | 112 | - | Btn | void acknowledge()}> |  |
 | web/dashboard/src/modules/admin/FipsModePanel.tsx | 103 | - | Btn | void review(m)}> |  |
 | web/dashboard/src/modules/admin/FipsModePanel.tsx | 122 | - | Btn | void apply()}> {busy ? "Applying..." : `Switch to $ and restart services`} |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 287 | - | Btn | inputRef.current?.click()} style={{ padding: "8px 14px", borderRadius: 10, bo... |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 301 | - | Btn | { onFileChange(null); if (inputRef.current) }} style={ } > Clear |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 560 | - | button | toggleScope(section)} style={{fontSize:11,padding:"4px 10px",borderRadius:6,b... |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1387 | - | Btn | void restartAllAllowedServices()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1394 | - | Btn | void loadHealth()}> |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1423 | - | Btn | void restartSvc(name)} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1487 | - | Btn | void loadSystemState()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1488 | - | Btn | setFipsConfigModalOpen(true)}>Configure FIPS |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1500 | - | Btn | {setSystemState((p)=>( ));onFipsModeChange("enabled");}}>Enable FIPS |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1501 | - | Btn | {setSystemState((p)=>( ));onFipsModeChange("disabled");}}>Disable FIPS |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1556 | - | Btn | setFipsConfigModalOpen(false)}>Cancel |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1557 | - | Btn | void saveFipsConfig()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1564 | - | Btn | void loadSystemState()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1565 | - | Btn | void testSnmpSettings()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1566 | - | Btn | void saveSnmpSettings()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1648 | - | Btn | void loadTags()}>Refresh |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1653 | - | Btn | void addTag()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1668 | - | Btn | void removeTag(name,usageCount)} disabled= >Delete |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1678 | - | Btn | void loadPasswordPolicy()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1678 | - | Btn | void savePasswordPolicy()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1703 | - | Btn | void saveSecurityPolicy()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1722 | - | Btn | void loadAccessHardening()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1723 | - | Btn | void saveAccessHardening()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1753 | - | Btn | void loadHealth()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1784 | - | Btn | void loadSystemState()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1784 | - | Btn | void saveSystemState()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1850 | - | Btn | setPanel("interfaces")}>Open Interfaces |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1860 | - | Btn | }> |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1867 | - | Btn | void openCli()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1880 | - | Btn | { if(!session?.token) return; setHsmSaving(true); try{ const payload= ; const... |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1911 | - | Btn | {if(!session?.token) return; const lib=String(hsm.library_path\|\|"").trim(); i... |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1914 | - | Btn | setHsm((p)=>( ))}>Use |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1921 | - | Btn | {if(!session?.token) return; setGovSaving(true); try{await updateGovernanceSe... |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1926 | - | Btn | {if(!session?.token\|\|!String(smtpTo\|\|"").trim()) setSmtpTesting(true); try ca... |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1934 | - | Btn | {if(!session?.token) return; setWebhookTesting((p)=>( )); try{await testGover... |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1941 | - | Btn | void loadJobs()}> |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1955 | - | Btn | { if(!session?.token) return; if(backupScope==="tenant"&&!String(backupTenant... |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1979 | - | Btn | dl(sh.file_name,sh.content_base64,sh.content_type)}>Download |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1982 | - | Btn | setBackupCreatedShares([])}>All shares handed out: close |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2010 | - | Btn | backupShareInputRef.current?.click()}> |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2011 | - | Btn | }>Clear |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2016 | - | Btn | void verifyBackup()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2017 | - | Btn | void restoreBackup()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2031 | - | Btn | {if(!session?.token\|\|!id) return; setBackupDownloading(`$ :artifact`); try ca... |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2031 | - | Btn | {if(!session?.token\|\|!id) return; setBackupDownloading(`$ :key`); try catch(e... |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2031 | - | Btn | {if(!session?.token\|\|!id) return; setBackupDeleting(id); try catch(error){if(... |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2037 | - | Btn | void refreshAlertRules()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2037 | - | Btn | openRuleModal()}>Create Rule |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2054 | - | Btn | {if(!session?.token\|\|!id) return; try{await updateReportingRule(session,id, )... |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2057 | - | Btn | openRuleModal(rule)}>Edit |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2058 | - | Btn | {if(!session?.token\|\|!id) return; try catch(error){if(!sessionGuard(error)) o... |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2113 | - | Btn | void handleTestRule()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2126 | - | Btn | setRuleModalOpen(false)}>Cancel |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2127 | - | Btn | void handleSaveRule()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2134 | - | Btn | void loadGovPolicies()} disabled= > |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2135 | - | Btn | openGovPolicyModal()}>+ Create Policy |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2171 | - | button | openGovPolicyModal(policy)} style={{fontSize:10,padding:"3px 8px",borderRadiu... |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2172 | - | button | {if(!session?.token) return; try{await updateGovernancePolicy(session,policy.... |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2245 | - | Btn | }>Select All |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2246 | - | Btn | setGpTriggers([])}>Clear All |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2289 | - | Btn | setGovPolicyModal(false)}>Cancel |  |
-| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2290 | - | Btn | void saveGovPolicy()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 242 | - | Btn | inputRef.current?.click()} style={{ padding: "8px 14px", borderRadius: 10, bo... |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 256 | - | Btn | { onFileChange(null); if (inputRef.current) }} style={ } > Clear |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 510 | - | button | toggleScope(section)} style={{fontSize:11,padding:"4px 10px",borderRadius:6,b... |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1253 | - | Btn | void loadHealth()}> |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1336 | - | Btn | void loadSystemState()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1337 | - | Btn | setFipsConfigModalOpen(true)}>Configure FIPS |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1349 | - | Btn | {setSystemState((p)=>( ));onFipsModeChange("enabled");}}>Enable FIPS |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1350 | - | Btn | {setSystemState((p)=>( ));onFipsModeChange("disabled");}}>Disable FIPS |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1405 | - | Btn | setFipsConfigModalOpen(false)}>Cancel |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1406 | - | Btn | void saveFipsConfig()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1413 | - | Btn | void loadSystemState()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1414 | - | Btn | void testSnmpSettings()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1415 | - | Btn | void saveSnmpSettings()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1497 | - | Btn | void loadTags()}>Refresh |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1502 | - | Btn | void addTag()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1517 | - | Btn | void removeTag(name,usageCount)} disabled= >Delete |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1527 | - | Btn | void loadPasswordPolicy()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1527 | - | Btn | void savePasswordPolicy()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1552 | - | Btn | void saveSecurityPolicy()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1571 | - | Btn | void loadAccessHardening()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1572 | - | Btn | void saveAccessHardening()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1602 | - | Btn | void loadSystemState()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1602 | - | Btn | void saveSystemState()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1675 | - | Btn | }> |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1682 | - | Btn | void openCli()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1695 | - | Btn | { if(!session?.token) return; setHsmSaving(true); try{ const payload= ; const... |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1726 | - | Btn | {if(!session?.token) return; const lib=String(hsm.library_path\|\|"").trim(); i... |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1729 | - | Btn | setHsm((p)=>( ))}>Use |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1736 | - | Btn | {if(!session?.token) return; setGovSaving(true); try{await updateGovernanceSe... |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1741 | - | Btn | {if(!session?.token\|\|!String(smtpTo\|\|"").trim()) setSmtpTesting(true); try ca... |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1749 | - | Btn | {if(!session?.token) return; setWebhookTesting((p)=>( )); try{await testGover... |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1756 | - | Btn | void loadJobs()}> |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1770 | - | Btn | { if(!session?.token) return; if(backupScope==="tenant"&&!String(backupTenant... |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1794 | - | Btn | dl(sh.file_name,sh.content_base64,sh.content_type)}>Download |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1797 | - | Btn | setBackupCreatedShares([])}>All shares handed out: close |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1825 | - | Btn | backupShareInputRef.current?.click()}> |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1826 | - | Btn | }>Clear |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1831 | - | Btn | void verifyBackup()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1832 | - | Btn | void restoreBackup()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1846 | - | Btn | {if(!session?.token\|\|!id) return; setBackupDownloading(`$ :artifact`); try ca... |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1846 | - | Btn | {if(!session?.token\|\|!id) return; setBackupDownloading(`$ :key`); try catch(e... |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1846 | - | Btn | {if(!session?.token\|\|!id) return; setBackupDeleting(id); try catch(error){if(... |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1852 | - | Btn | void refreshAlertRules()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1852 | - | Btn | openRuleModal()}>Create Rule |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1869 | - | Btn | {if(!session?.token\|\|!id) return; try{await updateReportingRule(session,id, )... |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1872 | - | Btn | openRuleModal(rule)}>Edit |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1873 | - | Btn | {if(!session?.token\|\|!id) return; try catch(error){if(!sessionGuard(error)) o... |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1928 | - | Btn | void handleTestRule()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1941 | - | Btn | setRuleModalOpen(false)}>Cancel |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1942 | - | Btn | void handleSaveRule()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1949 | - | Btn | void loadGovPolicies()} disabled= > |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1950 | - | Btn | openGovPolicyModal()}>+ Create Policy |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1986 | - | button | openGovPolicyModal(policy)} style={{fontSize:10,padding:"3px 8px",borderRadiu... |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 1987 | - | button | {if(!session?.token) return; try{await updateGovernancePolicy(session,policy.... |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2060 | - | Btn | }>Select All |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2061 | - | Btn | setGpTriggers([])}>Clear All |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2104 | - | Btn | setGovPolicyModal(false)}>Cancel |  |
+| web/dashboard/src/modules/admin/SystemAdminTab.tsx | 2105 | - | Btn | void saveGovPolicy()} disabled= > |  |
 | web/dashboard/src/modules/admin/TenantAdminTab.tsx | 427 | - | button | setActiveTab(t)} style={{ background: activeTab === t ? C.accentDim : "transp... |  |
 | web/dashboard/src/modules/admin/TenantAdminTab.tsx | 457 | - | Btn | void loadTenants()} disabled= > |  |
 | web/dashboard/src/modules/admin/TenantAdminTab.tsx | 458 | - | Btn | setCreateOpen(true)}>+ Create Tenant |  |

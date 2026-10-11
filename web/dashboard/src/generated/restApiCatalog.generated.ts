@@ -13758,34 +13758,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "auth-post-auth-system-health-restart",
-    "group": "Identity & Access (auth)",
-    "title": "POST /auth/system-health/restart",
-    "service": "auth",
-    "method": "POST",
-    "pathTemplate": "/auth/system-health/restart?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Auth service.",
-    "requestExample": "POST /svc/auth/auth/system-health/restart?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "auth-post-auth-users",
     "group": "Identity & Access (auth)",
     "title": "POST /auth/users",

@@ -174,7 +174,7 @@ func TestCLISSHPasswordSyncKeepsThePasswordOffTheCommandLine(t *testing.T) {
 	pub := &payloadPublisher{}
 	h.events = pub
 	docker := &fakeDocker{}
-	h.healthChecker = &SystemHealthChecker{restartHTTP: &http.Client{Transport: docker}, composeProject: "vecta-kms"}
+	h.healthChecker = &SystemHealthChecker{runtimeHTTP: &http.Client{Transport: docker}, composeProject: "vecta-kms"}
 	const password = "Vk3xQ9mZt7Lw2pRbAa9!"
 	h.syncCLISSHPassword("t1", "admin-1", "cli-user", password)
 

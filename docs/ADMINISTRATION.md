@@ -1388,18 +1388,21 @@ The Client Security pane shows:
 
 The system health surface gives administrators real-time visibility into the operational status of every service in the platform.
 
-### 9.1 The SystemServiceHealth Model
+### 9.1 The service health record
 
 | Field | Type | Values / Notes |
 |---|---|---|
-| `name` | string | Service name (e.g., `keycore`, `auth`, `certs`) |
-| `status` | enum | `healthy` — service is running normally. `degraded` — service is running but with reduced capability. `unavailable` — service is not responding. |
-| `source` | string | How the health status was determined (e.g., `tcp_probe`, `http_health_check`, `process_check`). |
-| `address` | string | IP or hostname the service is bound to. |
-| `port` | integer | Port the service is listening on. |
-| `instances` | integer | Number of running instances (relevant for replicated services). |
-| `output` | string | Human-readable status output or error message from the last health check. |
-| `restart_allowed` | boolean | Whether the platform supports a forced restart of this service via the admin API. |
+| `name` | string | The component as service discovery names it (`kms-keycore`, `kms-auth`), or `PostgreSQL`, `Valkey`, `NATS JetStream`, `Envoy`, `dashboard`. |
+| `status` | enum | `running`, `degraded`, `down` or `unknown`. |
+| `source` | string | `consul` (its registered health checks), `consul+tcp` (checks not passing but its port answers) or `tcp` (a connection to its port). |
+| `address`, `port` | string, integer | Where it was reached. |
+| `instances`, `passing`, `warning`, `critical` | integer | Registered instances and their check results (Consul only). |
+| `output` | string | The failing check's output, when there is one. |
+
+A component is listed when Consul knows it or its port answers. One that is
+not deployed (an optional profile) is not listed. The auth service has no
+access to the container runtime, so it reports reachability, not container
+state.
 
 ### 9.2 Services Monitored
 
@@ -1441,88 +1444,39 @@ curl -sk https://localhost/svc/auth/auth/system-health \
 
 ```json
 {
+  "summary": { "total": 32, "running": 32, "degraded": 0, "down": 0, "unknown": 0, "all_ok": true },
   "services": [
-    {
-      "name": "keycore",
-      "status": "healthy",
-      "source": "http_health_check",
-      "address": "127.0.0.1",
-      "port": 8001,
-      "instances": 1,
-      "output": "OK",
-      "restart_allowed": true
-    },
-    {
-      "name": "certs",
-      "status": "degraded",
-      "source": "http_health_check",
-      "address": "127.0.0.1",
-      "port": 8003,
-      "instances": 1,
-      "output": "ACME renewal worker stalled — last renewal attempt failed. Retry scheduled in 5m.",
-      "restart_allowed": true
-    },
-    {
-      "name": "payment",
-      "status": "unavailable",
-      "source": "tcp_probe",
-      "address": "127.0.0.1",
-      "port": 8010,
-      "instances": 0,
-      "output": "Connection refused",
-      "restart_allowed": true
-    }
+    { "name": "kms-keycore", "status": "running", "source": "consul", "address": "<container>", "port": 18010, "instances": 1, "passing": 1 },
+    { "name": "Envoy", "status": "running", "source": "tcp", "address": "envoy", "port": 443 }
   ],
-  "overall": "degraded",
-  "checked_at": "2026-03-22T12:00:00Z"
+  "collected_at": "2026-10-11T17:00:00Z",
+  "warning": "present only when a source could not be read"
 }
 ```
 
-**Health status interpretation:**
-
-| Overall Status | Meaning | Action |
-|---|---|---|
-| `healthy` | All services responding normally | No action required |
-| `degraded` | One or more services degraded but core function intact | Investigate affected services; consider restart if `restart_allowed` |
-| `unavailable` | One or more critical services not responding | Immediate investigation; check logs; consider platform restart |
-
 ### 9.4 Restarting a Service
 
-When a service is `degraded` or `unavailable` and `restart_allowed` is `true`, an administrator can trigger a controlled restart.
-
-```
-POST /svc/auth/auth/system-health/restart?service=certs
-Authorization: Bearer <access_token>
-```
-
-**cURL example:**
+The KMS does not restart containers: that needs control of the host's
+container runtime, which no service is given (11.0.0-beta removed
+`POST /auth/system-health/restart`, which could never work for that reason).
+Restart a service on the host:
 
 ```bash
-curl -sk -X POST "https://localhost/svc/auth/auth/system-health/restart?service=certs" \
-  -H "Authorization: Bearer ${TOKEN}" | jq .
+docker compose restart certs
 ```
 
-> **Warning:** Restarting `keycore` will briefly interrupt all cryptographic operations. Restarting `auth` will invalidate in-flight authentication requests. Plan service restarts during low-traffic windows when possible, and always check the audit log for the restart event afterwards.
-
-**Restart decision matrix:**
-
-| Service | Risk of restart | Alternative |
-|---|---|---|
-| `keycore` | High — interrupts all crypto | Check for underlying HSM or storage issue first |
-| `auth` | Medium — interrupts login/token refresh | Wait for token expiry cycles to clear if possible |
-| `certs` | Low — ACME/renewal worker restarts cleanly | Safe to restart for stalled renewals |
-| `audit` | Medium — may lose in-flight events | Check disk space and DB connectivity first |
-| `payment` | Low if no active payment sessions | Verify TLS and port binding first |
+Restarting `keycore` briefly interrupts all cryptographic operations;
+restarting `auth` interrupts sign-in and token refresh. A FIPS mode change
+and a service certificate rotation restart the affected services themselves.
 
 ### 9.5 Dashboard: System Health
 
 **Navigation path:** Dashboard home → Health Summary widget, or `Admin → System Health`
 
 The health dashboard shows:
-- Color-coded status tiles for each service (green/amber/red)
-- Last-checked timestamp
-- Expandable detail view with `output` message
-- Restart button for eligible services
+- The total and the running, degraded, down and unknown counts
+- Each component with its status and the failing check's output
+- Service heartbeats, incidents and reconciler controllers
 
 The home dashboard widget polls for health status and updates the display automatically. The unread alert badge in the sidebar navigation increments when new health degradation events are detected.
 
