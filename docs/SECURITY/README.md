@@ -45,6 +45,9 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
 - [SECRET_ACCESS.md](SECRET_ACCESS.md): per-path access rules on secrets (one
   decision for every route, deny wins) and version operations: read a
   version, roll back, recoverable delete, destroy.
+- [STORAGE_LIVE_VERIFICATION.md](STORAGE_LIVE_VERIFICATION.md): which
+  object storage scans have been run against a real service, and
+  `scripts/verify-storage-live.sh` for running the rest with your accounts.
 - [CONNECTIONS.md](CONNECTIONS.md): every outbound URL and credential
   (Slack, Teams, webhooks, Jira, ServiceNow, SIEMs) lives only in sealed
   compliance connections; who can open one, TLS for every call, and the

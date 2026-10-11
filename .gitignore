@@ -104,3 +104,6 @@ services/workload/workload
 # Local tool state and session outputs
 .vexp/
 Claude outputs/
+
+# Settings for scripts/verify-storage-live.sh (real storage credentials)
+.storage-live.env

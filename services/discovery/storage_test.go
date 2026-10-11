@@ -864,6 +864,17 @@ func TestBucketLimit(t *testing.T) {
 // names a PEM file to trust for a private endpoint,
 // VECTA_TEST_STORAGE_MIN_ASSETS the least number of assets to expect, and
 // VECTA_TEST_STORAGE_DEEP=1 turns the deep scan on.
+//
+// The credential exchanges (9.1.0-beta), each a case of its own:
+//   - an assumed role: VECTA_TEST_S3_ROLE_ARN with the S3 settings above
+//     (and VECTA_TEST_S3_EXTERNAL_ID); VECTA_TEST_S3_STS_URL names the STS
+//     endpoint of a service other than AWS;
+//   - Entra ID: VECTA_TEST_AZURE_TENANT_ID, VECTA_TEST_AZURE_CLIENT_ID and
+//     VECTA_TEST_AZURE_CLIENT_SECRET with the Azure endpoint and container;
+//   - a Google service account: VECTA_TEST_GCS_SERVICE_ACCOUNT_FILE (the
+//     path of its JSON key file) with VECTA_TEST_GCS_BUCKET.
+//
+// scripts/verify-storage-live.sh runs it from a file of these settings.
 func TestLiveObjectStorage(t *testing.T) {
 	type live struct {
 		b    Bucket
@@ -878,8 +889,14 @@ func TestLiveObjectStorage(t *testing.T) {
 			b.ConnectionID = "live"
 		}
 		cases = append(cases, live{b, conn})
+		if arn := os.Getenv("VECTA_TEST_S3_ROLE_ARN"); arn != "" {
+			role := ResolvedConnection{Type: "s3", Endpoint: host(ep), Fields: map[string]string{"access_key_id": conn.Fields["access_key_id"], "secret_access_key": conn.Fields["secret_access_key"],
+				"role_arn": arn, "external_id": os.Getenv("VECTA_TEST_S3_EXTERNAL_ID")}}
+			b.ConnectionID = "live"
+			cases = append(cases, live{b, role})
+		}
 	}
-	if ep := os.Getenv("VECTA_TEST_AZURE_ENDPOINT"); ep != "" {
+	if ep := os.Getenv("VECTA_TEST_AZURE_ENDPOINT"); ep != "" && os.Getenv("VECTA_TEST_AZURE_SAS") != "" {
 		conn := ResolvedConnection{Type: "azure_blob", Endpoint: host(ep), Fields: map[string]string{"sas_token": os.Getenv("VECTA_TEST_AZURE_SAS")}}
 		cases = append(cases, live{Bucket{Provider: "azure", Endpoint: ep, Name: os.Getenv("VECTA_TEST_AZURE_CONTAINER"), ConnectionID: "live"}, conn})
 	}
@@ -888,10 +905,24 @@ func TestLiveObjectStorage(t *testing.T) {
 		conn := ResolvedConnection{Type: "azure_blob", Endpoint: host(ep), Fields: map[string]string{"account_key": key, "account_name": os.Getenv("VECTA_TEST_AZURE_ACCOUNT_NAME")}}
 		cases = append(cases, live{Bucket{Provider: "azure", Endpoint: ep, Name: os.Getenv("VECTA_TEST_AZURE_CONTAINER"), ConnectionID: "live"}, conn})
 	}
+	if ep, secret := os.Getenv("VECTA_TEST_AZURE_ENDPOINT"), os.Getenv("VECTA_TEST_AZURE_CLIENT_SECRET"); ep != "" && secret != "" {
+		conn := ResolvedConnection{Type: "azure_blob", Endpoint: host(ep), Fields: map[string]string{"azure_tenant_id": os.Getenv("VECTA_TEST_AZURE_TENANT_ID"), "client_id": os.Getenv("VECTA_TEST_AZURE_CLIENT_ID"), "client_secret": secret}}
+		cases = append(cases, live{Bucket{Provider: "azure", Endpoint: ep, Name: os.Getenv("VECTA_TEST_AZURE_CONTAINER"), ConnectionID: "live"}, conn})
+	}
 	// Google's JSON API: VECTA_TEST_GCS_BUCKET and VECTA_TEST_GCS_PREFIX (a
-	// public bucket, read with no credential).
+	// public bucket, read with no credential, unless a service account key
+	// file is named).
 	if name := os.Getenv("VECTA_TEST_GCS_BUCKET"); name != "" {
-		cases = append(cases, live{Bucket{Provider: "gcs", Endpoint: "https://storage.googleapis.com", Name: name, Prefix: os.Getenv("VECTA_TEST_GCS_PREFIX")}, ResolvedConnection{}})
+		b := Bucket{Provider: "gcs", Endpoint: "https://storage.googleapis.com", Name: name, Prefix: os.Getenv("VECTA_TEST_GCS_PREFIX")}
+		conn := ResolvedConnection{}
+		if file := os.Getenv("VECTA_TEST_GCS_SERVICE_ACCOUNT_FILE"); file != "" {
+			raw, err := os.ReadFile(file)
+			if err != nil {
+				t.Fatalf("service account key file: %v", err)
+			}
+			b.ConnectionID, conn = "live", ResolvedConnection{Type: "gcs", Endpoint: "storage.googleapis.com", Fields: map[string]string{"service_account_json": string(raw)}}
+		}
+		cases = append(cases, live{b, conn})
 	}
 	if len(cases) == 0 {
 		t.Skip("set VECTA_TEST_S3_ENDPOINT, VECTA_TEST_AZURE_ENDPOINT or VECTA_TEST_GCS_BUCKET to scan a real storage service")
@@ -907,13 +938,33 @@ func TestLiveObjectStorage(t *testing.T) {
 			t.Fatalf("%s holds no certificate", ca)
 		}
 	}
+	if sts := os.Getenv("VECTA_TEST_S3_STS_URL"); sts != "" {
+		svc.stsURL = sts
+	}
+	how := func(c live) string {
+		switch f := c.conn.Fields; {
+		case f["role_arn"] != "":
+			return "assumed role"
+		case f["client_secret"] != "":
+			return "Entra ID"
+		case f["service_account_json"] != "":
+			return "service account"
+		case f["account_key"] != "":
+			return "shared key"
+		case f["sas_token"] != "":
+			return "SAS token"
+		case f["access_key_id"] != "":
+			return "access key"
+		}
+		return "no credential"
+	}
 	least, _ := strconv.Atoi(os.Getenv("VECTA_TEST_STORAGE_MIN_ASSETS"))
 	for i, c := range cases {
 		// Each case keeps its own scan state.
 		c.b.ID, c.b.TenantID, c.b.Deep = fmt.Sprintf("live%d", i), fmt.Sprintf("t-live%d", i), os.Getenv("VECTA_TEST_STORAGE_DEEP") != ""
 		svc.conns = stubConnections{"live": c.conn}
 		res, err := svc.scanBucket(context.Background(), nil, c.b, "s", false)
-		t.Logf("%s %s: %d objects listed, %d read, %d sniffed, %d assets %q, err %v", c.b.Provider, c.b.label(), res.objects, res.files, res.sniffed, len(res.assets), assetLines(res.assets, c.b.label()), err)
+		t.Logf("%s %s (%s): %d objects listed, %d read, %d sniffed, %d assets %q, err %v", c.b.Provider, c.b.label(), how(c), res.objects, res.files, res.sniffed, len(res.assets), assetLines(res.assets, c.b.label()), err)
 		if err != nil || len(res.assets) < least {
 			t.Errorf("%s: %d assets (want at least %d), %v", c.b.label(), len(res.assets), least, err)
 		}
@@ -936,9 +987,14 @@ func TestLiveObjectStorage(t *testing.T) {
 				c.conn.Fields[k] = base64.StdEncoding.EncodeToString([]byte("not-the-account-key-0123456789ab"))
 			} else if k == "sas_token" {
 				c.conn.Fields[k] = strings.Replace(c.conn.Fields[k], "sig=", "sig=AAAA", 1)
+			} else if k == "client_secret" {
+				c.conn.Fields[k] = "not-the-client-secret"
 			}
 		}
-		if _, err := svc.scanBucket(context.Background(), nil, c.b, "s", false); err == nil || !strings.Contains(err.Error(), "access denied") {
+		if c.conn.Fields["service_account_json"] != "" {
+			continue // a wrong key here would be another account's real key
+		}
+		if _, err := svc.scanBucket(context.Background(), nil, c.b, "s", false); err == nil || !(strings.Contains(err.Error(), "access denied") || strings.Contains(err.Error(), "refused")) {
 			t.Errorf("%s with a wrong credential: %v", c.b.label(), err)
 		}
 	}

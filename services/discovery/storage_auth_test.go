@@ -9,8 +9,10 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"io"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -63,7 +65,12 @@ func TestS3AssumesItsRole(t *testing.T) {
 	refuse := false
 	var stsQuery url.Values
 	sts := newHostingServer(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authorization") != sdkSigned(t, r, base, "sts", "eu-west-1") {
+		// A form POST whose signed payload hash is the body's.
+		body, _ := io.ReadAll(r.Body)
+		sum := sha256.Sum256(body)
+		form, _ := url.ParseQuery(string(body))
+		if r.Method != http.MethodPost || !strings.HasPrefix(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") || r.URL.RawQuery != "" ||
+			r.Header.Get("X-Amz-Content-Sha256") != hex.EncodeToString(sum[:]) || r.Header.Get("Authorization") != sdkSigned(t, r, base, "sts", "eu-west-1") {
 			writeXML(w, http.StatusForbidden, `<ErrorResponse><Error><Code>SignatureDoesNotMatch</Code><Message>internal detail</Message></Error></ErrorResponse>`)
 			return
 		}
@@ -71,7 +78,7 @@ func TestS3AssumesItsRole(t *testing.T) {
 			writeXML(w, http.StatusForbidden, `<ErrorResponse><Error><Type>Sender</Type><Code>AccessDenied</Code><Message>User arn:aws:iam::1:user/x is not authorized to perform sts:AssumeRole (internal detail)</Message></Error></ErrorResponse>`)
 			return
 		}
-		stsQuery = r.URL.Query()
+		stsQuery = form
 		writeXML(w, http.StatusOK, `<AssumeRoleResponse><AssumeRoleResult><Credentials><AccessKeyId>`+testTempKey+`</AccessKeyId><SecretAccessKey>`+testTempSecret+`</SecretAccessKey><SessionToken>`+xmlText(testTempToken)+`</SessionToken></Credentials></AssumeRoleResult></AssumeRoleResponse>`)
 	})
 	inner := newS3Server(t, objects, false)

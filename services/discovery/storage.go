@@ -266,7 +266,7 @@ func (s *Service) bucketGet(ctx context.Context, client *http.Client, b Bucket, 
 	case cred.accountKey != nil:
 		signSharedKey(req, cred, s.now())
 	case b.Provider == "s3" && cred.accessKey != "":
-		signV4(req, cred, b.Region, "s3", s.now())
+		signV4(req, cred, b.Region, "s3", nil, s.now())
 	}
 	resp, err := client.Do(req)
 	if err != nil {

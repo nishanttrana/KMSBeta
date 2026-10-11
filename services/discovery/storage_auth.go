@@ -246,12 +246,17 @@ func (s *Service) assumeRole(ctx context.Context, client *http.Client, b Bucket,
 	if cred.externalID != "" {
 		q.Set("ExternalId", cred.externalID)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf(s.stsURL, b.Region)+"?"+canonicalQuery(q), nil)
+	// A signed form POST, as the AWS SDKs send it (9.1.0-beta; before, a
+	// GET with the parameters in the query, which AWS accepts and other
+	// implementations of STS do not).
+	form := canonicalQuery(q)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.ReplaceAll(s.stsURL, "%s", b.Region), strings.NewReader(form))
 	if err != nil {
 		return errors.New("the role request could not be built")
 	}
 	req.Header.Set("User-Agent", "VectaKMS-Discovery")
-	signV4(req, *cred, b.Region, "sts", s.now())
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+	signV4(req, *cred, b.Region, "sts", []byte(form), s.now())
 	resp, err := client.Do(req)
 	if err != nil {
 		var ue *neturl.Error
@@ -312,23 +317,32 @@ func firstReason(errs []struct {
 	return ""
 }
 
-// signV4 signs a bodyless GET with AWS Signature Version 4 for service
-// ("s3", "sts"). The request's path and query must already be in canonical
+// signV4 signs a request with AWS Signature Version 4 for service ("s3",
+// "sts"). body is what the request sends (nil for a GET); its hash is
+// signed. The request's path and query must already be in canonical
 // encoding. Temporary credentials add their session token as a signed
 // header.
-func signV4(req *http.Request, cred bucketCredential, region, service string, now time.Time) {
+func signV4(req *http.Request, cred bucketCredential, region, service string, body []byte, now time.Time) {
 	stamp := now.UTC().Format("20060102T150405Z")
 	date := stamp[:8]
+	payload := emptySHA256
+	if len(body) > 0 {
+		payload = hex.EncodeToString(pkgcrypto.SHA256(body))
+	}
 	req.Header.Set("X-Amz-Date", stamp)
-	req.Header.Set("X-Amz-Content-Sha256", emptySHA256)
+	req.Header.Set("X-Amz-Content-Sha256", payload)
 	signed := "host;x-amz-content-sha256;x-amz-date"
-	headers := "host:" + req.URL.Host + "\nx-amz-content-sha256:" + emptySHA256 + "\nx-amz-date:" + stamp + "\n"
+	headers := "host:" + req.URL.Host + "\nx-amz-content-sha256:" + payload + "\nx-amz-date:" + stamp + "\n"
 	if cred.sessionToken != "" {
 		req.Header.Set("X-Amz-Security-Token", cred.sessionToken)
 		signed += ";x-amz-security-token"
 		headers += "x-amz-security-token:" + cred.sessionToken + "\n"
 	}
-	canonical := strings.Join([]string{req.Method, req.URL.EscapedPath(), req.URL.RawQuery, headers, signed, emptySHA256}, "\n")
+	path := req.URL.EscapedPath()
+	if path == "" {
+		path = "/"
+	}
+	canonical := strings.Join([]string{req.Method, path, req.URL.RawQuery, headers, signed, payload}, "\n")
 	scope := date + "/" + region + "/" + service + "/aws4_request"
 	toSign := "AWS4-HMAC-SHA256\n" + stamp + "\n" + scope + "\n" + hex.EncodeToString(pkgcrypto.SHA256([]byte(canonical)))
 	key := []byte("AWS4" + cred.secretKey)

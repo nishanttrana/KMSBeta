@@ -5,6 +5,32 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### Verifying storage credentials for real (9.1.0-beta)
+- **"Not proven" is fixed by a run, not by more tests of the same kind.**
+  The stand-ins for STS checked the signature with the AWS SDK's signer and
+  passed a GET request. A real implementation (MinIO) only routes a form
+  POST, which is what every SDK sends. The stand-in was faithful to what I
+  wrote, not to what servers accept. Role assumption is now a signed POST
+  and is run against MinIO.
+- **MinIO community builds can be pulled again** from other registries
+  (`pgsty/minio`, `pgsty/mc`); the original image names are gone. Its admin
+  client reads a new user's keys from standard input, so they need not be
+  on a command line.
+- **Read-only is not list.** The scan needs `s3:ListBucket` and
+  `s3:GetObject`; a policy called `readonly` that lacks the first is
+  refused at the listing. The error already said "list and read".
+- **What can't be run here has to be made easy to run elsewhere.** Entra ID
+  and Google's token exchange have no emulator. The honest state is a
+  script the account's owner runs, and a table that says "not yet run".
+- **zsh still does not split `$var`.** `git diff -- $files` with four paths
+  in one variable matched nothing and wrote an empty patch; because the
+  commands were chained with `&&`, the restore that followed never ran.
+  List the paths, or use an array. Second time this month.
+- **Another session was editing the same package.** The build broke between
+  two of my runs on a symbol I had not touched. The work moved to a
+  worktree of the pushed commit, and only the four files I had changed
+  were restored in the shared tree.
+
 ### Identity provider secrets, the external token vault, HSM import (9.0.0-beta)
 - **"It takes a `password_ref` nothing resolves" was the small end of a
   fake.** The tokenization "External DB vault" stored a host, user and

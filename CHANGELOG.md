@@ -4,6 +4,34 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [9.1.0-beta] — 2026-10-11
+
+### Crypto Discovery: storage credentials checked against a real server; a one-command check for your own accounts
+- **Verified: role assumption and a private bucket against a real server.**
+  The bucket scan was run against MinIO, which checks request signatures:
+  a private bucket read by a user allowed only to list and read, and role
+  assumption end to end (a signed STS `AssumeRole`, then the bucket read
+  with the temporary credentials and their session token). Until now role
+  assumption had only been tested against a stand-in.
+- **Changed: the `AssumeRole` request is a signed form POST**, as the AWS
+  SDKs send it. It was a GET with the parameters in the query, which AWS
+  accepts and other implementations of STS do not.
+- **Added: `scripts/verify-storage-live.sh`** checks the scan against real
+  Amazon, Azure and Google accounts with credentials you put in a local
+  file (`.storage-live.env`, ignored by git, refused unless its mode is
+  600). For each service it scans, scans again (nothing may be downloaded
+  the second time) and tries a wrong credential, which must be refused. It
+  prints no credential and writes nothing to the bucket.
+- **Added: [what is verified against what](docs/SECURITY/STORAGE_LIVE_VERIFICATION.md)**,
+  with dates. Still not run against the real service, because each needs an
+  account only the customer or owner has: a private Amazon S3 bucket and
+  Amazon STS, Azure Blob on Azure itself, an Entra ID application, and a
+  Google service account. The page says what permission each needs.
+- **Learned from the real server:** a credential needs list as well as
+  read. MinIO's built-in `readonly` policy does not allow listing, and the
+  scan is refused with it (`access denied (AccessDenied)`), as it should
+  be.
+
 ## [9.0.0-beta] — 2026-10-11
 
 ### Identity provider secrets sealed; a fake token vault option removed; more key import into HSMs

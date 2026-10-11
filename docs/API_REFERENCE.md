@@ -3569,7 +3569,7 @@ dialled, after DNS resolution.
 **Credentials (7.39.0-beta).** What a bucket's connection holds decides
 how the scan authenticates. `s3`: `access_key_id` and `secret_access_key`
 sign each request (Signature V4); with `role_arn` (and `external_id`) the
-key signs `AssumeRole` at `https://sts.{region}.amazonaws.com/` and the
+key signs `AssumeRole` (a form POST, 9.1.0-beta) at `https://sts.{region}.amazonaws.com/` and the
 scan reads with the temporary credentials. `azure_blob`: exactly one of
 `sas_token`; `azure_tenant_id` + `client_id` + `client_secret` (an Entra ID
 token for `https://storage.azure.com/.default`); or `account_key` (Shared

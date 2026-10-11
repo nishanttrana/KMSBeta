@@ -268,12 +268,13 @@ It is deleted, not migrated.
 - Approving a private endpoint is a root administrator's decision alone,
   audited, with no second approver (7.40.0-beta). A governance approval
   step can be added if the owner wants one.
-- AWS role assumption, Entra ID and the Google service-account token
-  exchange are tested against protocol doubles that verify the signatures,
-  not against a real AWS account, Entra tenant or Google project
-  (7.39.0-beta). Entra ID supports the public Azure cloud only (the login
-  host is fixed), and role assumption the standard AWS partition's regional
-  STS endpoints.
+- Which storage credentials have been run against a real service, and how
+  to run the rest with your own accounts, is in
+  [STORAGE_LIVE_VERIFICATION.md](STORAGE_LIVE_VERIFICATION.md). Role
+  assumption is verified against MinIO (9.1.0-beta); Amazon STS itself,
+  Entra ID and the Google service-account exchange still need an account.
+  Entra ID supports the public Azure cloud only (the login host is fixed),
+  and role assumption the standard AWS partition's regional STS endpoints.
 - Identity provider secrets (LDAP and AD bind passwords, OIDC and Entra
   client secrets) are not in this store, by decision: auth can't depend on
   compliance to sign users in. They are sealed inside auth under its own
