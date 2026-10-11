@@ -246,6 +246,20 @@ an approach, record it here or in the matching doc below.
   create, form and import key dialogs and the CA dialog offer "Create in
   HSM" and list every HSM (single or HA group) with its live status. A key
   records its HSM and never moves.
+- **Cloud BYOK is a real import into every cloud, in KMS terms** (owner
+  directive, 2026-10-11: BYOK "exactly implemented on the KMS similar to
+  AWS but for every cloud but without TSB logic", material "via HSM (if
+  PKCS11 HSM is added) or via the entropy of the KMS", replacing the old
+  logic; [docs/SECURITY/CLOUD_BYOK.md](docs/SECURITY/CLOUD_BYOK.md)). Each
+  cloud is driven through its own import protocol, never by creating a
+  cloud-native key. Material leaves only through keycore
+  `POST /keys/{id}/cloud-wrap` (wrapped in keycore, or inside the HSM for a
+  key generated there with cloud import allowed); no TSB or vendor REST.
+  Every step is recorded with its CLI equivalent, custody per KMS version.
+  An operation a cloud lacks is refused and not offered. Tests drive each
+  cloud's wire protocol with a double that unwraps what it receives.
+  Owner scope for later slices: per-cloud key pages, a structured
+  allow-listed console (no shell), automation as playbook actions.
 - **Every external credential is added once, in Playbooks → Credentials**
   (owner directive, 2026-09-28: webhooks and SIEM "should not be separate
   tab, just part of" Playbooks; widened 2026-10-10: credentials for

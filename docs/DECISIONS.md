@@ -7,6 +7,45 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-11 — Cloud BYOK: each cloud's own import, material wrapped by keycore or inside the HSM; no TSB (10.0.0-beta)
+
+**Context.** The owner asked for BYOK "exactly" like a reference console that
+automates AWS KMS imports from a Securosys Primus HSM through its Transaction
+Security Broker, for every cloud, in KMS terms, with material from a PKCS#11
+HSM or the KMS's entropy, replacing the old logic. The old logic created
+cloud-native keys and imported nothing.
+
+**Decisions.**
+- **One wrap point, in keycore.** Material leaves for a cloud only through
+  `POST /keys/{id}/cloud-wrap`, callable by `kms-cloud` alone, deciding for
+  the user (delegated `cloud-import`) with every export check. The cloud
+  service never handles material; it fetches the cloud's wrapping key and
+  passes ciphertext. Rejected: wrapping in the cloud service (a second
+  holder of plaintext) and a general "export to any public key" route (any
+  exporter could send material anywhere).
+- **HSM keys are wrapped inside the HSM, and only if made for it.** A key
+  generated with cloud import allowed is sensitive and extractable; the HSM
+  wraps it with `C_WrapKey` to the cloud key loaded as a session object. RSA
+  AES key wrap is composed from `CKM_AES_KEY_WRAP_PAD` and
+  `CKM_RSA_PKCS_OAEP` (every HSM has both) rather than requiring
+  `CKM_RSA_AES_KEY_WRAP`. Rejected: `CKA_WRAP_WITH_TRUSTED` (needs a trusted
+  wrapping key only the SO can mark, and the cloud's key changes per import).
+- **No TSB, no vendor REST.** HSMs are reached only through PKCS#11
+  (`hsm-connector`), as every HSM in the KMS is.
+- **Each cloud's native protocol, offered only where it exists.** Revoke is
+  "delete material" where the cloud can (AWS, Alibaba, Google) and "disable"
+  where it can't (Azure, OCI); Alibaba refuses new material on a key, and
+  Salesforce has no API to verify or destroy. The engine refuses what a cloud
+  can't do; the UI doesn't offer it.
+- **No shell.** The reference runs the AWS CLI on the server. The owner chose
+  a structured, allow-listed per-cloud console (next slice); this slice
+  records each call's CLI equivalent instead, exportable as a script.
+- **No demo mode.** The reference ships simulators; here the protocol doubles
+  live in `_test` files only (CLAUDE.md rule 8).
+- **Old bindings are kept read-only** as `cloud-generated` (owner's choice).
+
+---
+
 ## 2026-10-11 — A module's views are sub-options in the sidebar, not a second column (9.6.0-beta)
 
 **Decision.** A module with several views (Cloud Key Control: BYOK, HYOK,

@@ -3531,6 +3531,118 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "cloud-get-cloud-byok-keys",
+    "group": "Cloud Key Control (cloud)",
+    "title": "GET /cloud/byok/keys",
+    "service": "cloud",
+    "method": "GET",
+    "pathTemplate": "/cloud/byok/keys?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Cloud service.",
+    "requestExample": "GET /svc/cloud/cloud/byok/keys?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cloud-get-cloud-byok-keys-id",
+    "group": "Cloud Key Control (cloud)",
+    "title": "GET /cloud/byok/keys/{id}",
+    "service": "cloud",
+    "method": "GET",
+    "pathTemplate": "/cloud/byok/keys/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Cloud service.",
+    "requestExample": "GET /svc/cloud/cloud/byok/keys/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cloud-get-cloud-byok-providers",
+    "group": "Cloud Key Control (cloud)",
+    "title": "GET /cloud/byok/providers",
+    "service": "cloud",
+    "method": "GET",
+    "pathTemplate": "/cloud/byok/providers?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Cloud service.",
+    "requestExample": "GET /svc/cloud/cloud/byok/providers?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cloud-get-cloud-byok-runs",
+    "group": "Cloud Key Control (cloud)",
+    "title": "GET /cloud/byok/runs",
+    "service": "cloud",
+    "method": "GET",
+    "pathTemplate": "/cloud/byok/runs?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Cloud service.",
+    "requestExample": "GET /svc/cloud/cloud/byok/runs?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "cloud-get-cloud-credential-usage",
     "group": "Cloud Key Control (cloud)",
     "title": "GET /cloud/credential-usage",
@@ -3671,15 +3783,183 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cloud-post-cloud-bindings-id-rotate",
+    "id": "cloud-post-cloud-byok-keys",
     "group": "Cloud Key Control (cloud)",
-    "title": "POST /cloud/bindings/{id}/rotate",
+    "title": "POST /cloud/byok/keys",
     "service": "cloud",
     "method": "POST",
-    "pathTemplate": "/cloud/bindings/{id}/rotate?tenant_id={{tenant_id}}",
+    "pathTemplate": "/cloud/byok/keys?tenant_id={{tenant_id}}",
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Cloud service.",
-    "requestExample": "POST /svc/cloud/cloud/bindings/{id}/rotate?tenant_id={{tenant_id}}",
+    "requestExample": "POST /svc/cloud/cloud/byok/keys?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cloud-post-cloud-byok-keys-id-reimport",
+    "group": "Cloud Key Control (cloud)",
+    "title": "POST /cloud/byok/keys/{id}/reimport",
+    "service": "cloud",
+    "method": "POST",
+    "pathTemplate": "/cloud/byok/keys/{id}/reimport?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Cloud service.",
+    "requestExample": "POST /svc/cloud/cloud/byok/keys/{id}/reimport?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cloud-post-cloud-byok-keys-id-restore",
+    "group": "Cloud Key Control (cloud)",
+    "title": "POST /cloud/byok/keys/{id}/restore",
+    "service": "cloud",
+    "method": "POST",
+    "pathTemplate": "/cloud/byok/keys/{id}/restore?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Cloud service.",
+    "requestExample": "POST /svc/cloud/cloud/byok/keys/{id}/restore?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cloud-post-cloud-byok-keys-id-revoke",
+    "group": "Cloud Key Control (cloud)",
+    "title": "POST /cloud/byok/keys/{id}/revoke",
+    "service": "cloud",
+    "method": "POST",
+    "pathTemplate": "/cloud/byok/keys/{id}/revoke?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Cloud service.",
+    "requestExample": "POST /svc/cloud/cloud/byok/keys/{id}/revoke?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cloud-post-cloud-byok-keys-id-rotate",
+    "group": "Cloud Key Control (cloud)",
+    "title": "POST /cloud/byok/keys/{id}/rotate",
+    "service": "cloud",
+    "method": "POST",
+    "pathTemplate": "/cloud/byok/keys/{id}/rotate?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Cloud service.",
+    "requestExample": "POST /svc/cloud/cloud/byok/keys/{id}/rotate?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cloud-post-cloud-byok-keys-id-sync",
+    "group": "Cloud Key Control (cloud)",
+    "title": "POST /cloud/byok/keys/{id}/sync",
+    "service": "cloud",
+    "method": "POST",
+    "pathTemplate": "/cloud/byok/keys/{id}/sync?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Cloud service.",
+    "requestExample": "POST /svc/cloud/cloud/byok/keys/{id}/sync?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cloud-post-cloud-byok-keys-id-verify",
+    "group": "Cloud Key Control (cloud)",
+    "title": "POST /cloud/byok/keys/{id}/verify",
+    "service": "cloud",
+    "method": "POST",
+    "pathTemplate": "/cloud/byok/keys/{id}/verify?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Cloud service.",
+    "requestExample": "POST /svc/cloud/cloud/byok/keys/{id}/verify?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -3708,34 +3988,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Cloud service.",
     "requestExample": "POST /svc/cloud/cloud/credentials/{id}/test?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "cloud-post-cloud-import",
-    "group": "Cloud Key Control (cloud)",
-    "title": "POST /cloud/import",
-    "service": "cloud",
-    "method": "POST",
-    "pathTemplate": "/cloud/import?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Cloud service.",
-    "requestExample": "POST /svc/cloud/cloud/import?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -17884,6 +18136,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "POST /svc/keycore/keys/{id}/attested-release?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-keys-id-cloud-wrap",
+    "group": "Key Management (keycore)",
+    "title": "POST /keys/{id}/cloud-wrap",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{id}/cloud-wrap?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/keys/{id}/cloud-wrap?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

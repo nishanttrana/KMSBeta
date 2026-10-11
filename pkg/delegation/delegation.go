@@ -39,6 +39,7 @@ var Usages = map[string]bool{
 	"encrypt": true, "decrypt": true, "wrap": true, "unwrap": true, // dataprotect
 	"fpe-encrypt": true, "fpe-decrypt": true, "tokenize": true, "detokenize": true, // dataprotect
 	"certificate-sign": true, "crl-sign": true, // certs
+	"cloud-import": true, // cloud BYOK (keycore /keys/{id}/cloud-wrap)
 }
 
 // Attach forwards ctx's verified user token and usage on req. It adds

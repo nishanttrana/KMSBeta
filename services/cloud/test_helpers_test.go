@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
-	"errors"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 
@@ -46,80 +48,7 @@ func (p *nopCloudPublisher) Count(subject string) int {
 	return total
 }
 
-type fakeCloudKeyCore struct {
-	mu       sync.Mutex
-	keys     map[string]map[string]interface{}
-	versions map[string]int
-}
-
-func newFakeCloudKeyCore() *fakeCloudKeyCore {
-	return &fakeCloudKeyCore{
-		keys:     map[string]map[string]interface{}{},
-		versions: map[string]int{},
-	}
-}
-
-func (f *fakeCloudKeyCore) Seed(tenantID string, keyID string, algorithm string) {
-	if algorithm == "" {
-		algorithm = "AES-256"
-	}
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	scope := tenantID + ":" + keyID
-	f.keys[scope] = map[string]interface{}{
-		"id":        keyID,
-		"tenant_id": tenantID,
-		"algorithm": algorithm,
-		"status":    "active",
-	}
-	if f.versions[scope] == 0 {
-		f.versions[scope] = 1
-	}
-}
-
-func (f *fakeCloudKeyCore) GetKey(_ context.Context, tenantID string, keyID string) (map[string]interface{}, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	scope := tenantID + ":" + keyID
-	k, ok := f.keys[scope]
-	if !ok {
-		return nil, errors.New("key not found")
-	}
-	out := map[string]interface{}{}
-	for kk, vv := range k {
-		out[kk] = vv
-	}
-	return out, nil
-}
-
-func (f *fakeCloudKeyCore) ExportKey(_ context.Context, tenantID string, keyID string) (map[string]interface{}, error) {
-	if _, err := f.GetKey(context.Background(), tenantID, keyID); err != nil {
-		return nil, err
-	}
-	return map[string]interface{}{
-		"key_id":           keyID,
-		"wrapped_material": "QUJDREVGR0g=",
-		"material_iv":      "SVYxMjM0NTY3ODk=",
-		"wrapped_dek":      "V1JBUFBFRA==",
-	}, nil
-}
-
-func (f *fakeCloudKeyCore) RotateKey(_ context.Context, tenantID string, keyID string, _ string) (map[string]interface{}, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	scope := tenantID + ":" + keyID
-	if _, ok := f.keys[scope]; !ok {
-		return nil, errors.New("key not found")
-	}
-	f.versions[scope]++
-	return map[string]interface{}{
-		"key_id":     keyID,
-		"version_id": "v" + itoa(f.versions[scope]),
-		"status":     "rotated",
-	}, nil
-}
-
-func newCloudService(t *testing.T) (*Service, *SQLStore, *fakeCloudKeyCore, *nopCloudPublisher) {
+func newCloudService(t *testing.T) (*Service, *SQLStore, *testKeycore, *nopCloudPublisher) {
 	t.Helper()
 	conn, err := pkgdb.Open(context.Background(), pkgdb.Config{
 		UseSQLite:  true,
@@ -135,12 +64,13 @@ func newCloudService(t *testing.T) (*Service, *SQLStore, *fakeCloudKeyCore, *nop
 		t.Fatalf("create schema: %v", err)
 	}
 	store := NewSQLStore(conn)
-	keycore := newFakeCloudKeyCore()
+	keycore := newTestKeycore()
 	publisher := &nopCloudPublisher{}
 	mek := []byte("0123456789ABCDEF0123456789ABCDEF")
-	svc := NewService(store, keycore, newMockProviderRegistry(), publisher, mek)
+	svc := NewService(store, newMockProviderRegistry(), publisher, mek)
 	svc.SetKeyAccess(pkgkeyaccess.NotDeployed())
 	svc.SetCredentials(newTestCredentials())
+	svc.SetBYOK(store, keycore, defaultBYOKProviders())
 	return svc, store, keycore, publisher
 }
 
@@ -224,7 +154,7 @@ func legacyAccount(t *testing.T, svc *Service, tenant, provider, name, credentia
 	return acc
 }
 
-func newCloudHandler(t *testing.T) (*Handler, *Service, *fakeCloudKeyCore, *nopCloudPublisher) {
+func newCloudHandler(t *testing.T) (*Handler, *Service, *testKeycore, *nopCloudPublisher) {
 	t.Helper()
 	svc, _, keycore, pub := newCloudService(t)
 	return NewHandler(svc), svc, keycore, pub
@@ -264,10 +194,29 @@ func createCloudSchemaForTest(conn *pkgdb.DB) error {
 			PRIMARY KEY (tenant_id, id)
 		);`,
 	}
+	byok, err := os.ReadFile(filepath.Join("migrations", "004_byok.sql"))
+	if err != nil {
+		return err
+	}
+	for _, stmt := range strings.Split(string(byok), ";") {
+		if strings.TrimSpace(stripSQLComments(stmt)) != "" {
+			stmts = append(stmts, stmt)
+		}
+	}
 	for _, stmt := range stmts {
 		if _, err := conn.SQL().Exec(stmt); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func stripSQLComments(stmt string) string {
+	out := []string{}
+	for _, line := range strings.Split(stmt, "\n") {
+		if !strings.HasPrefix(strings.TrimSpace(line), "--") {
+			out = append(out, line)
+		}
+	}
+	return strings.Join(out, "\n")
 }

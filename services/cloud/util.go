@@ -43,6 +43,8 @@ func normalizeProvider(v string) string {
 		return ProviderOCI
 	case ProviderSalesforce:
 		return ProviderSalesforce
+	case ProviderAlibaba:
+		return ProviderAlibaba
 	default:
 		return ""
 	}

@@ -20,7 +20,6 @@ type EventPublisher interface {
 
 type Service struct {
 	store     Store
-	keycore   KeyCoreClient
 	providers *ProviderRegistry
 	events    EventPublisher
 	mek       []byte
@@ -32,9 +31,13 @@ type Service struct {
 	// migrationReported: accounts whose migration refusal was audited, so
 	// the 15-minute retry does not repeat the event.
 	migrationReported map[string]bool
+	// The BYOK engine (byok_engine.go).
+	byokStore     BYOKStore
+	byokKeycore   BYOKKeycore
+	byokProviders map[string]BYOKProvider
 }
 
-func NewService(store Store, keycore KeyCoreClient, providers *ProviderRegistry, events EventPublisher, mek []byte) *Service {
+func NewService(store Store, providers *ProviderRegistry, events EventPublisher, mek []byte) *Service {
 	if providers == nil {
 		providers = defaultProviderRegistry()
 	}
@@ -44,7 +47,6 @@ func NewService(store Store, keycore KeyCoreClient, providers *ProviderRegistry,
 	}
 	return &Service{
 		store:     store,
-		keycore:   keycore,
 		providers: providers,
 		events:    events,
 		mek:       append([]byte{}, mek[:32]...),
@@ -217,313 +219,6 @@ func (s *Service) ListRegionMappings(ctx context.Context, tenantID string, provi
 		return nil, errors.New("tenant_id is required")
 	}
 	return s.store.ListRegionMappings(ctx, tenantID, provider)
-}
-
-func (s *Service) ImportKeyToCloud(ctx context.Context, req ImportKeyToCloudRequest) (CloudKeyBinding, error) {
-	req.TenantID = strings.TrimSpace(req.TenantID)
-	req.KeyID = strings.TrimSpace(req.KeyID)
-	rawProvider := strings.TrimSpace(req.Provider)
-	req.Provider = normalizeProvider(rawProvider)
-	req.AccountID = strings.TrimSpace(req.AccountID)
-	req.VectaRegion = strings.TrimSpace(req.VectaRegion)
-	req.CloudRegion = strings.TrimSpace(req.CloudRegion)
-	req.MetadataJSON = validJSONOr(req.MetadataJSON, "{}")
-	if rawProvider != "" && req.Provider == "" {
-		return CloudKeyBinding{}, errors.New("unsupported provider")
-	}
-	if req.TenantID == "" || req.KeyID == "" {
-		return CloudKeyBinding{}, errors.New("tenant_id and key_id are required")
-	}
-
-	account, provider, err := s.resolveAccountProvider(ctx, req.TenantID, req.Provider, req.AccountID)
-	if err != nil {
-		return CloudKeyBinding{}, err
-	}
-	creds, err := s.accountCredentials(ctx, account)
-	if err != nil {
-		return CloudKeyBinding{}, err
-	}
-	region, err := s.resolveRegion(ctx, req.TenantID, provider, account, req.VectaRegion, req.CloudRegion)
-	if err != nil {
-		return CloudKeyBinding{}, err
-	}
-	keyAccessResult, err := s.evaluateKeyAccess(ctx, pkgkeyaccess.EvaluateRequest{
-		TenantID:          req.TenantID,
-		Service:           "cloud",
-		Connector:         provider.Name(),
-		Operation:         "import",
-		KeyID:             req.KeyID,
-		ResourceID:        firstNonEmpty(account.ID, region),
-		TargetType:        "cloud_key_binding",
-		RequestID:         newID("cloudreq"),
-		RequesterID:       strings.TrimSpace(req.RequesterID),
-		RequesterEmail:    strings.TrimSpace(req.RequesterEmail),
-		RequesterIP:       strings.TrimSpace(req.RequesterIP),
-		JustificationCode: strings.TrimSpace(req.JustificationCode),
-		JustificationText: strings.TrimSpace(req.JustificationText),
-		Metadata: map[string]interface{}{
-			"provider":     provider.Name(),
-			"account_id":   account.ID,
-			"account_name": account.Name,
-			"region":       region,
-			"vecta_region": strings.TrimSpace(req.VectaRegion),
-			"cloud_region": strings.TrimSpace(req.CloudRegion),
-		},
-	})
-	if err != nil {
-		return CloudKeyBinding{}, err
-	}
-	if strings.EqualFold(keyAccessResult.Action, "deny") {
-		reason := firstNonEmpty(keyAccessResult.Reason, "blocked by key access justification policy")
-		_ = s.publishAudit(ctx, "audit.cloud.key_access_denied", req.TenantID, map[string]interface{}{
-			"provider":           provider.Name(),
-			"account_id":         account.ID,
-			"key_id":             req.KeyID,
-			"operation":          "import",
-			"justification_code": req.JustificationCode,
-			"reason":             reason,
-			"result":             "refused",
-		})
-		return CloudKeyBinding{}, newServiceError(http.StatusForbidden, "key_access_denied", reason)
-	}
-	if keyAccessResult.ApprovalRequired {
-		pending := CloudKeyBinding{
-			TenantID:          req.TenantID,
-			KeyID:             req.KeyID,
-			Provider:          provider.Name(),
-			AccountID:         account.ID,
-			Region:            region,
-			SyncStatus:        "pending_approval",
-			OperationStatus:   "pending_approval",
-			ApprovalRequestID: keyAccessResult.ApprovalRequestID,
-			MetadataJSON:      req.MetadataJSON,
-		}
-		_ = s.publishAudit(ctx, "audit.cloud.approval_required", req.TenantID, map[string]interface{}{
-			"provider":            provider.Name(),
-			"account_id":          account.ID,
-			"key_id":              req.KeyID,
-			"operation":           "import",
-			"approval_request_id": keyAccessResult.ApprovalRequestID,
-			"justification_code":  req.JustificationCode,
-		})
-		return pending, nil
-	}
-	keyMeta, err := s.keycore.GetKey(ctx, req.TenantID, req.KeyID)
-	if err != nil {
-		return CloudKeyBinding{}, err
-	}
-	exportData, err := s.keycore.ExportKey(ctx, req.TenantID, req.KeyID)
-	if err != nil {
-		return CloudKeyBinding{}, err
-	}
-	meta := map[string]interface{}{}
-	_ = json.Unmarshal([]byte(req.MetadataJSON), &meta)
-	result, err := provider.ImportKey(ctx, ImportInput{
-		TenantID:    req.TenantID,
-		KeyID:       req.KeyID,
-		Account:     account,
-		Region:      region,
-		Credentials: creds,
-		KeyMeta:     keyMeta,
-		Export:      exportData,
-		Metadata:    meta,
-	})
-	if err != nil {
-		return CloudKeyBinding{}, err
-	}
-	metaRaw, _ := json.Marshal(result.Metadata)
-	b := CloudKeyBinding{
-		ID:           newID("cbk"),
-		TenantID:     req.TenantID,
-		KeyID:        req.KeyID,
-		Provider:     provider.Name(),
-		AccountID:    account.ID,
-		CloudKeyID:   result.CloudKeyID,
-		CloudKeyRef:  result.CloudKeyRef,
-		Region:       region,
-		SyncStatus:   "synced",
-		LastSyncedAt: nowUTC(),
-		MetadataJSON: string(metaRaw),
-	}
-	if err := s.store.CreateBinding(ctx, b); err != nil {
-		return CloudKeyBinding{}, err
-	}
-	out, err := s.store.GetBinding(ctx, req.TenantID, b.ID)
-	if err != nil {
-		return CloudKeyBinding{}, err
-	}
-	_ = s.publishAudit(ctx, "audit.cloud.key_imported", req.TenantID, map[string]interface{}{
-		"binding_id":        out.ID,
-		"key_id":            out.KeyID,
-		"provider":          out.Provider,
-		"account_id":        out.AccountID,
-		"cloud_key_id":      out.CloudKeyID,
-		"cloud_key_ref":     out.CloudKeyRef,
-		"region":            out.Region,
-		"key_access_reason": keyAccessResult.Reason,
-	})
-	return out, nil
-}
-
-func (s *Service) RotateCloudKey(ctx context.Context, req RotateCloudKeyRequest) (CloudKeyBinding, string, error) {
-	req.TenantID = strings.TrimSpace(req.TenantID)
-	req.BindingID = strings.TrimSpace(req.BindingID)
-	req.Reason = strings.TrimSpace(req.Reason)
-	if req.TenantID == "" || req.BindingID == "" {
-		return CloudKeyBinding{}, "", errors.New("tenant_id and binding_id are required")
-	}
-	binding, err := s.store.GetBinding(ctx, req.TenantID, req.BindingID)
-	if err != nil {
-		return CloudKeyBinding{}, "", err
-	}
-	account, err := s.store.GetAccount(ctx, req.TenantID, binding.AccountID)
-	if err != nil {
-		return CloudKeyBinding{}, "", err
-	}
-	creds, err := s.accountCredentials(ctx, account)
-	if err != nil {
-		return CloudKeyBinding{}, "", err
-	}
-	provider, err := s.providers.Get(binding.Provider)
-	if err != nil {
-		return CloudKeyBinding{}, "", err
-	}
-	keyAccessResult, err := s.evaluateKeyAccess(ctx, pkgkeyaccess.EvaluateRequest{
-		TenantID:          req.TenantID,
-		Service:           "cloud",
-		Connector:         binding.Provider,
-		Operation:         "rotate",
-		KeyID:             binding.KeyID,
-		ResourceID:        binding.ID,
-		TargetType:        "cloud_key_binding",
-		RequestID:         newID("cloudreq"),
-		RequesterID:       strings.TrimSpace(req.RequesterID),
-		RequesterEmail:    strings.TrimSpace(req.RequesterEmail),
-		RequesterIP:       strings.TrimSpace(req.RequesterIP),
-		JustificationCode: strings.TrimSpace(req.JustificationCode),
-		JustificationText: strings.TrimSpace(req.JustificationText),
-		Metadata: map[string]interface{}{
-			"provider":      binding.Provider,
-			"account_id":    binding.AccountID,
-			"binding_id":    binding.ID,
-			"cloud_key_id":  binding.CloudKeyID,
-			"cloud_key_ref": binding.CloudKeyRef,
-			"region":        binding.Region,
-			"reason":        req.Reason,
-		},
-	})
-	if err != nil {
-		return CloudKeyBinding{}, "", err
-	}
-	if strings.EqualFold(keyAccessResult.Action, "deny") {
-		reason := firstNonEmpty(keyAccessResult.Reason, "blocked by key access justification policy")
-		_ = s.publishAudit(ctx, "audit.cloud.key_access_denied", req.TenantID, map[string]interface{}{
-			"binding_id":         binding.ID,
-			"provider":           binding.Provider,
-			"key_id":             binding.KeyID,
-			"operation":          "rotate",
-			"justification_code": req.JustificationCode,
-			"reason":             reason,
-			"result":             "refused",
-		})
-		return CloudKeyBinding{}, "", newServiceError(http.StatusForbidden, "key_access_denied", reason)
-	}
-	if keyAccessResult.ApprovalRequired {
-		binding.OperationStatus = "pending_approval"
-		binding.ApprovalRequestID = keyAccessResult.ApprovalRequestID
-		_ = s.publishAudit(ctx, "audit.cloud.approval_required", req.TenantID, map[string]interface{}{
-			"binding_id":          binding.ID,
-			"provider":            binding.Provider,
-			"key_id":              binding.KeyID,
-			"operation":           "rotate",
-			"approval_request_id": keyAccessResult.ApprovalRequestID,
-			"justification_code":  req.JustificationCode,
-		})
-		return binding, "", nil
-	}
-
-	_ = s.publishAudit(ctx, "audit.cloud.sync_started", req.TenantID, map[string]interface{}{
-		"binding_id": binding.ID,
-		"provider":   binding.Provider,
-		"reason":     defaultString(req.Reason, "manual"),
-		"mode":       "rotate",
-	})
-	rot, err := s.keycore.RotateKey(ctx, req.TenantID, binding.KeyID, defaultString(req.Reason, "byok-rotate"))
-	if err != nil {
-		_ = s.publishAudit(ctx, "audit.cloud.sync_failed", req.TenantID, map[string]interface{}{
-			"binding_id": binding.ID,
-			"provider":   binding.Provider,
-			"error":      err.Error(),
-			"mode":       "rotate",
-		})
-		return CloudKeyBinding{}, "", err
-	}
-	keyMeta, err := s.keycore.GetKey(ctx, req.TenantID, binding.KeyID)
-	if err != nil {
-		_ = s.publishAudit(ctx, "audit.cloud.sync_failed", req.TenantID, map[string]interface{}{
-			"binding_id": binding.ID,
-			"provider":   binding.Provider,
-			"error":      err.Error(),
-			"mode":       "rotate",
-		})
-		return CloudKeyBinding{}, "", err
-	}
-	exportData, err := s.keycore.ExportKey(ctx, req.TenantID, binding.KeyID)
-	if err != nil {
-		_ = s.publishAudit(ctx, "audit.cloud.sync_failed", req.TenantID, map[string]interface{}{
-			"binding_id": binding.ID,
-			"provider":   binding.Provider,
-			"error":      err.Error(),
-			"mode":       "rotate",
-		})
-		return CloudKeyBinding{}, "", err
-	}
-	result, err := provider.RotateKey(ctx, RotateInput{
-		TenantID:    req.TenantID,
-		Binding:     binding,
-		Account:     account,
-		Credentials: creds,
-		KeyMeta:     keyMeta,
-		Export:      exportData,
-		Reason:      req.Reason,
-	})
-	if err != nil {
-		_ = s.publishAudit(ctx, "audit.cloud.sync_failed", req.TenantID, map[string]interface{}{
-			"binding_id": binding.ID,
-			"provider":   binding.Provider,
-			"error":      err.Error(),
-			"mode":       "rotate",
-		})
-		return CloudKeyBinding{}, "", err
-	}
-	meta := mergeMetadata(binding.MetadataJSON, result.Metadata)
-	binding.CloudKeyID = defaultString(result.CloudKeyID, binding.CloudKeyID)
-	binding.CloudKeyRef = defaultString(result.CloudKeyRef, binding.CloudKeyRef)
-	binding.SyncStatus = "synced"
-	binding.LastSyncedAt = nowUTC()
-	binding.MetadataJSON = meta
-	if err := s.store.UpdateBinding(ctx, binding); err != nil {
-		return CloudKeyBinding{}, "", err
-	}
-	out, err := s.store.GetBinding(ctx, req.TenantID, binding.ID)
-	if err != nil {
-		return CloudKeyBinding{}, "", err
-	}
-	_ = s.publishAudit(ctx, "audit.cloud.sync_completed", req.TenantID, map[string]interface{}{
-		"binding_id": out.ID,
-		"provider":   out.Provider,
-		"mode":       "rotate",
-		"cloud_key":  out.CloudKeyID,
-	})
-	_ = s.publishAudit(ctx, "audit.cloud.key_rotated", req.TenantID, map[string]interface{}{
-		"binding_id":        out.ID,
-		"provider":          out.Provider,
-		"key_id":            out.KeyID,
-		"cloud_key":         out.CloudKeyID,
-		"key_access_reason": keyAccessResult.Reason,
-	})
-	versionID, _ := rot["version_id"].(string)
-	return out, strings.TrimSpace(versionID), nil
 }
 
 func (s *Service) SyncCloudKeys(ctx context.Context, req SyncCloudKeysRequest) (SyncJob, error) {

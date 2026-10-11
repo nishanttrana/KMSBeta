@@ -5,6 +5,41 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### Cloud "BYOK" that brought no key (10.0.0-beta)
+- **An import that called the cloud's `CreateKey`.** Every provider's
+  `ImportKey` created a native key in the cloud; the cloud generated the
+  material and the KMS key's ID only went into a tag. The step that fetched
+  the material (`ExportKey` without a wrapping key) failed in keycore, and its
+  result was passed to providers that ignored it, so nothing noticed. The UI
+  said "Import Key to Cloud", the audit said `key_imported`.
+  How it slipped through: the tests used a provider double that returned a
+  made-up cloud key ID, so no test ever looked at what material the cloud
+  held. The fix is the test shape: each cloud double now unwraps what it
+  receives with its own private key and the test compares it to the KMS
+  version's bytes.
+- **A rotate that rotated nothing.** AWS `RotateKey` called
+  `EnableKeyRotation` and `UpdateKeyDescription`, discarded both errors, and
+  reported success with `rotation_mode: native`. For an imported key AWS
+  refuses automatic rotation, so the call failed and was hidden.
+- **Providers no account could reach.** `normalizeProvider` didn't list
+  `alibaba` or `servicenow`, so registering either failed, while the UI
+  offered both. ServiceNow's "import" posted to `/api/now/encryption/key`,
+  which ServiceNow doesn't have; Salesforce's posted the KMS's own AES-GCM
+  envelope (useless to Salesforce) to operator-configured paths. A provider
+  listed in the UI needs a test that drives its real protocol.
+- **`common.PointerString` is not a dereference.** In the OCI SDK it is a
+  reflection pretty-printer, and on a `*string` it panics. The OCI double
+  caught it on the first run; use a plain deref.
+- **HSM keys can't be made to leave by policy.** Extractability is fixed
+  when the HSM generates the key, so cloud import is a property chosen at
+  creation (`export_allowed` with `hsm: true` → `CKA_EXTRACTABLE`, sensitive).
+  Turning export on later is refused by the HSM itself
+  (`TestCloudWrapHSMKey`).
+- **A route's own audit and the service's must not share a subject.** The
+  first keycore cloud wrap emitted `audit.key.cloud_wrapped` from the kernel
+  and again from the service. The kernel event carries the details now
+  (`c.Detail`); the service emits none.
+
 ### "I said last time to not have sub tab" (9.6.0-beta)
 - **An instruction that was acted on but never written down came back.**
   The owner had already asked for a module's views to be sub-options in the

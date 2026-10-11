@@ -551,6 +551,27 @@ The plaintext never leaves keycore. Body: `ciphertext`, `iv`, `aad`
 
 ---
 
+### POST /svc/keycore/keys/{id}/cloud-wrap
+
+`key.cloud_import` (10.0.0-beta). Wraps a key version to a cloud KMS's RSA
+import key for cloud BYOK ([docs/SECURITY/CLOUD_BYOK.md](SECURITY/CLOUD_BYOK.md)).
+Only the `kms-cloud` service identity may call it (`403 caller_not_allowed`),
+forwarding the user's token with the delegated usage `cloud-import`. Body:
+`wrapping_key_b64` (the cloud's key, DER or PEM, base64; RSA ≥ 2048 bits),
+`scheme` (`rsa-oaep-sha256`, `rsa-oaep-sha1`, `rsa-aes-kwp-sha256`,
+`rsa-aes-kwp-sha1`), `version` (0 = current), `digest` (also return SHA-256
+of the material, for Salesforce). Every export check applies, and the key's
+`export_allowed`. A KMS key is wrapped in keycore; an HSM key made with cloud
+import allowed is wrapped inside the HSM. Response `data`: `key_id`,
+`version`, `scheme`, `wrapped_b64`, `material_sha256_b64`, `kcv`, `source`
+(`kms` | `hsm`), `wrapping_key_sha256`, `material_format` (`raw` | `pkcs8`).
+Audited as `audit.key.cloud_wrapped`; refusals `result: refused` with
+`scheme_not_supported`, `bad_wrapping_key` (`400`), `export_not_allowed`,
+`access_denied`, `policy_denied`, `fips_mode_violation` (`403`),
+`key_not_extractable`, `version_destroyed`, `material_not_pkcs8` (`409`).
+
+---
+
 ### POST /svc/keycore/keys/{id}/sign
 
 Body: `data` (base64), `algorithm` (optional signature/hash choice for the
@@ -1738,7 +1759,7 @@ Audit:
 - `audit.confidential.key_released` (key sealed to the attested recipient key; `recipient_key_binding`, `key_version`, `seal_algorithm`), `audit.confidential.key_release_refused` (`reason`: no binding, verdict, keycore refusal), `audit.confidential.key_release` (kernel), `audit.key.attested_release` (keycore kernel, refusals included)
 - `audit.ekm.request_refused` (EKM `401`/`403`: no verified tenant token, cross-tenant, BitLocker agent token missing or wrong role)
 - `audit.ekm.tde_key_accessed` with `operation: public`: `result: success` with `key_version`, or `result: refused` with `reason: public_key_unavailable` (EKM `424`: keycore gave no public key; 6.12.0-beta) or keycore's own refusal reason (`not_found`, `delegation_refused`, ...; 6.18.0-beta)
-- `audit.ekm.key_access_denied` (TDE `wrap`, `unwrap`, `rotate` refused by key access: `reason` is the deny reason, or `key_access_unavailable` when the service is deployed but gives no decision; `result: refused`), `audit.cloud.key_access_denied` (BYOK `import`, `rotate`, `sync`, same reasons, `result: refused`)
+- `audit.ekm.key_access_denied` (TDE `wrap`, `unwrap`, `rotate` refused by key access: `reason` is the deny reason, or `key_access_unavailable` when the service is deployed but gives no decision; `result: refused`), `audit.cloud.key_access_denied` (BYOK `create`, `rotate`, `reimport`, `restore` and cloud `sync`, same reasons, `result: refused`)
 - then `audit.governance.fips_mode_applied` for each service start
 - and `audit.governance.fips_mode_rollout_completed` when all match
 
@@ -2044,7 +2065,13 @@ Internal lookups, callable only by `kms-compliance` (others:
 `403 caller_not_allowed`): `GET /cloud/credential-usage`,
 `POST /cloud/credentials/{id}/test`, `GET /ekm/credential-usage`,
 `GET /keys/hsm/credential-usage`. The HSM connector takes
-`?connection_id=` on every route and adds `POST /hsm/keys/import`
+`?connection_id=` on every route, takes `extractable: true` on
+`POST /hsm/keys` (keycore only: a key for cloud import, still sensitive),
+and adds `POST /hsm/keys/wrap-for-import` (10.0.0-beta, keycore only:
+`{tenant_id, label, wrapping_key_b64, scheme, digest}` → `wrapped_b64`,
+`material_sha256_b64` by `C_DigestKey`; `audit.hsm.key_wrapped_for_cloud`,
+refused `key_not_extractable` for any key not generated for it) and
+`POST /hsm/keys/import`
 (`audit.hsm.key_imported`). Its body is `{tenant_id, label, algorithm,
 material_b64, import_method}`: `material_b64` is AES material or a private
 key in DER; `import_method` (AES only) is `create_object` or `unwrap` to
@@ -2852,7 +2879,41 @@ Lists the managed handle catalog.
 
 ## Service 16: Cloud (`/svc/cloud/`)
 
-BYOK (Bring Your Own Key) for AWS KMS, Azure Key Vault, GCP KMS. Sync, rotation, revocation.
+Cloud accounts (each holds a credential from Playbooks → Credentials), key
+inventory, region mappings, and cloud BYOK (10.0.0-beta,
+[docs/SECURITY/CLOUD_BYOK.md](SECURITY/CLOUD_BYOK.md)) for AWS KMS, Google
+Cloud KMS, Azure Key Vault / Managed HSM, OCI Vault, Alibaba Cloud KMS and
+Salesforce Shield. Every BYOK route goes through the route kernel
+(`cloud.read` / `cloud.write`) and is audited as `audit.cloud.<action>`.
+
+| Route | Permission | Does |
+|---|---|---|
+| `GET /cloud/byok/providers` | `cloud.read` | each cloud's capabilities: `rotate`, `reimport`, `revoke`, `revoke_deletes`, `expiry`, `verify`, `specs` |
+| `GET /cloud/byok/keys` | `cloud.read` | BYOK keys, plus keys earlier releases created natively, as `origin: cloud-generated` (read-only) |
+| `GET /cloud/byok/keys/{id}` | `cloud.read` | `key`, `materials` (custody: `kms_version`, `kcv`, `cloud_material_id`, `state`, `scheme`, `source`, `wrapping_key_sha256`), `runs` |
+| `GET /cloud/byok/runs?byok_id=` | `cloud.read` | runs with their `steps` (`name`, `status`, `call`, `cli`, `detail`, `error`) |
+| `POST /cloud/byok/keys` | `cloud.write` | body `account_id`, `key_id` (an exportable KMS key, or an HSM key made with cloud import allowed), `region`, `alias`, `description`, `validity_days` (≤ 365, where the cloud has expiry), and for Salesforce `certificate_name`, `certificate_pem`, `secret_type`. Creates the cloud key and imports the current version. `201 {key, run}` |
+| `POST /cloud/byok/keys/{id}/rotate` | `cloud.write` | new KMS version, imported as new material and made current (`validity_days`, `reason`) |
+| `POST /cloud/byok/keys/{id}/reimport` | `cloud.write` | the same material again (renew expiry), or the first import into a key waiting for material |
+| `POST /cloud/byok/keys/{id}/revoke` | `cloud.write` | kill switch: delete the material (AWS, Alibaba, Google) or disable (Azure, OCI); `material_id` optional. Severity critical |
+| `POST /cloud/byok/keys/{id}/restore` | `cloud.write` | re-enable, or import the revoked version again from the KMS (`material_id` optional) |
+| `POST /cloud/byok/keys/{id}/verify` | `cloud.write` | a cryptographic round trip in the cloud |
+| `POST /cloud/byok/keys/{id}/sync` | `cloud.write` | read the cloud key's state |
+
+Refusals (`result: refused`, `reason`): `account_not_found` (`404`),
+`byok_not_supported`, `key_not_exportable`, `operation_not_supported`,
+`approval_required`, `no_current_material`, `no_material`,
+`no_revoked_material`, `cloud_generated` (`409`), `spec_not_supported`,
+`expiry_not_supported`, `bad_request` (`400`), `key_access_denied` (`403`),
+`key_access_unavailable` (`424`), and keycore's own (`export_not_allowed`,
+`access_denied`, `fips_mode_violation`, `key_not_extractable`). A cloud step
+that fails answers `502 byok_run_failed` with the `run` and its steps,
+audited as `result: failure`.
+
+Removed in 10.0.0-beta: `POST /cloud/import` and
+`POST /cloud/bindings/{id}/rotate` (they created cloud-native keys and turned
+on the cloud's own rotation; nothing was imported). The ServiceNow provider
+is removed.
 
 ---
 
@@ -3847,7 +3908,7 @@ Common prefixes:
 | Prefix | Domain |
 |--------|--------|
 | audit.auth.* | Authentication and identity |
-| audit.key.* | Key lifecycle and crypto operations |
+| audit.key.* | Key lifecycle and crypto operations; `audit.key.cloud_wrapped` for material wrapped to a cloud's import key (10.0.0-beta) |
 | audit.keycore.* | Canary trips and threat signals |
 | audit.cert.* | Certificate and CA operations |
 | audit.governance.* | Approvals, encrypted backup/restore, platform FIPS mode |
@@ -3866,7 +3927,7 @@ Common prefixes:
 | audit.confidential.* | Attestation verdicts and attested key release |
 | audit.keyaccess.* | Key access justification policy and decisions |
 | audit.ekm.* | EKM agents and TDE keys; `audit.ekm.key_access_denied` for a TDE operation refused by key access (deny, or `key_access_unavailable`) |
-| audit.cloud.* | Cloud BYOK accounts, bindings and sync; `audit.cloud.key_access_denied` for a refusal by key access |
+| audit.cloud.* | Cloud accounts, inventory and sync; BYOK `byok_created`, `byok_rotated`, `byok_reimported`, `byok_revoked`, `byok_restored`, `byok_verified`, `byok_synced`, `byok_keys_listed`, `byok_key_read`, `byok_runs_listed`, `byok_providers_read` (10.0.0-beta); `audit.cloud.key_access_denied` for a refusal by key access |
 | audit.hyok.* | HYOK proxy requests; `audit.hyok.request_denied` for policy and key access refusals |
 | audit.security.* | Audit-side detection signals (sustained risk) |
 | audit.secrets.* | Secret vault access |
@@ -4240,10 +4301,19 @@ from the code; do not edit by hand.
 - `POST /svc/cloud/cloud/accounts/{id}/test`
 - `GET /svc/cloud/cloud/bindings`
 - `GET /svc/cloud/cloud/bindings/{id}`
-- `POST /svc/cloud/cloud/bindings/{id}/rotate`
+- `GET /svc/cloud/cloud/byok/keys`
+- `POST /svc/cloud/cloud/byok/keys`
+- `GET /svc/cloud/cloud/byok/keys/{id}`
+- `POST /svc/cloud/cloud/byok/keys/{id}/reimport`
+- `POST /svc/cloud/cloud/byok/keys/{id}/restore`
+- `POST /svc/cloud/cloud/byok/keys/{id}/revoke`
+- `POST /svc/cloud/cloud/byok/keys/{id}/rotate`
+- `POST /svc/cloud/cloud/byok/keys/{id}/sync`
+- `POST /svc/cloud/cloud/byok/keys/{id}/verify`
+- `GET /svc/cloud/cloud/byok/providers`
+- `GET /svc/cloud/cloud/byok/runs`
 - `GET /svc/cloud/cloud/credential-usage`
 - `POST /svc/cloud/cloud/credentials/{id}/test`
-- `POST /svc/cloud/cloud/import`
 - `GET /svc/cloud/cloud/inventory`
 - `GET /svc/cloud/cloud/region-mappings`
 - `POST /svc/cloud/cloud/region-mappings`
@@ -4679,6 +4749,7 @@ from the code; do not edit by hand.
 - `PUT /svc/keycore/keys/{id}/approval`
 - `POST /svc/keycore/keys/{id}/attest`
 - `POST /svc/keycore/keys/{id}/attested-release`
+- `POST /svc/keycore/keys/{id}/cloud-wrap`
 - `GET /svc/keycore/keys/{id}/consumers`
 - `POST /svc/keycore/keys/{id}/deactivate`
 - `POST /svc/keycore/keys/{id}/decrypt`

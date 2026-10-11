@@ -40,6 +40,9 @@ var Replicated = map[string][]string{
 	},
 	"byok": {
 		"cloud_accounts",
+		"cloud_byok_keys",
+		"cloud_byok_materials",
+		"cloud_byok_runs",
 		"cloud_key_bindings",
 		"cloud_mek_exposure",
 		"cloud_mek_state",

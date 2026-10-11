@@ -18,7 +18,8 @@ import (
 // initialised once. Per slot, one session stays open after login: PKCS#11
 // logs a token out when its last session closes, and each request opens its
 // own short session on top of it. Every object the platform creates is a
-// token object, sensitive and never extractable.
+// token object, sensitive and never extractable, except a key generated for
+// a cloud import (byok.go): sensitive, it leaves the HSM only wrapped.
 
 var errExists = errors.New("an object with this label already exists in the HSM")
 
@@ -196,8 +197,22 @@ func privateTemplate(label string) []*pkcs11.Attribute {
 	)
 }
 
-// generate creates a key (or key pair) labelled label.
-func generate(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle, label, algorithm string) (hsm.GenerateResult, error) {
+// generatedTemplate is privateTemplate, extractable when asked.
+func generatedTemplate(label string, extractable bool) []*pkcs11.Attribute {
+	t := privateTemplate(label)
+	if extractable {
+		for i, a := range t {
+			if a.Type == pkcs11.CKA_EXTRACTABLE {
+				t[i] = pkcs11.NewAttribute(pkcs11.CKA_EXTRACTABLE, true)
+			}
+		}
+	}
+	return t
+}
+
+// generate creates a key (or key pair) labelled label. An extractable key
+// (cloud import, byok.go) is still sensitive: it can leave only wrapped.
+func generate(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle, label, algorithm string, extractable bool) (hsm.GenerateResult, error) {
 	if objs, err := find(ctx, sh, -1, label); err != nil {
 		return hsm.GenerateResult{}, err
 	} else if len(objs) > 0 {
@@ -208,7 +223,7 @@ func generate(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle, label, algorithm string)
 	switch kind {
 	case "AES":
 		bits, _ := strconv.Atoi(size)
-		tmpl := append(privateTemplate(label),
+		tmpl := append(generatedTemplate(label, extractable),
 			pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_SECRET_KEY),
 			pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_AES),
 			pkcs11.NewAttribute(pkcs11.CKA_VALUE_LEN, bits/8),
@@ -231,7 +246,7 @@ func generate(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle, label, algorithm string)
 			pkcs11.NewAttribute(pkcs11.CKA_MODULUS_BITS, bits),
 			pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, []byte{1, 0, 1}),
 		)
-		priv := append(privateTemplate(label),
+		priv := append(generatedTemplate(label, extractable),
 			pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
 			pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
 			pkcs11.NewAttribute(pkcs11.CKA_SIGN, true),
@@ -261,7 +276,7 @@ func generate(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle, label, algorithm string)
 			pkcs11.NewAttribute(pkcs11.CKA_VERIFY, true),
 			pkcs11.NewAttribute(pkcs11.CKA_EC_PARAMS, params),
 		)
-		priv := append(privateTemplate(label),
+		priv := append(generatedTemplate(label, extractable),
 			pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
 			pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_EC),
 			pkcs11.NewAttribute(pkcs11.CKA_SIGN, true),

@@ -61,6 +61,10 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
   key is returned once and never stored, optionally split M-of-N among
   guardians; an HSM-bound key is wrapped inside the tenant's HSM under its
   tenant key.
+- [CLOUD_BYOK.md](CLOUD_BYOK.md): bring your own key to AWS, Google Cloud,
+  Azure, OCI, Alibaba and Salesforce: material from the KMS or wrapped inside
+  a PKCS#11 HSM, each cloud's own import protocol, custody per KMS version,
+  and what is not yet verified against real accounts.
 - [HSM_INTEGRATION.md](HSM_INTEGRATION.md): customer HSMs through their own
   PKCS#11 library (hsm-connector); a per-tenant key in the HSM for new keys,
   and per-key HSM-resident keys. There is no Vecta HSM.

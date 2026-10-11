@@ -103,6 +103,7 @@ Adding a checkbox without its enforcement point is a fake capability
 |---|---|---|
 | Encrypt, Decrypt, Wrap, Unwrap, Sign, Verify, Generate MAC, Verify MAC, Derive, Key agreement | keycore | the decision, directly |
 | Export | keycore `/keys/{id}/export` | the decision, directly |
+| Cloud import (BYOK) | cloud, through keycore `/keys/{id}/cloud-wrap` | delegated (section 5), 10.0.0-beta; also the key's export policy ([CLOUD_BYOK.md](CLOUD_BYOK.md)) |
 | FPE encrypt / decrypt, tokenize / detokenize | dataprotect (FF1, vaults) | delegated (section 5), 6.0.0-beta |
 | Certificate sign, CRL sign | certs (CA keys held in keycore) | delegated, 6.0.0-beta |
 | Content commitment | not an operation: the X.509 non-repudiation bit | certs sets the bit on an issued certificate only if the CA key's mask has it |
@@ -158,6 +159,7 @@ operation (`fpe-encrypt` → encrypt); its key binding still applies.
 | dataprotect | `POST /keys/{id}/usage/meter`, made before every key operation and before `service-derive` | `fpe-encrypt`, `fpe-decrypt`, `tokenize`, `detokenize`, `encrypt`/`decrypt` (field, searchable, mask), `wrap`/`unwrap` (envelope) |
 | certs | `POST /keys/{id}/sign` (HSM CA keys and the `keycore` backend) | `certificate-sign` (issuance, sub-CA), `crl-sign` |
 | ekm | `GET /keys/{id}/public-key` (TDE public key, on every request and at key creation and rotation) | `read` (6.18.0-beta) |
+| cloud | `POST /keys/{id}/cloud-wrap` (only `kms-cloud` may call it; the material is wrapped to the cloud's import key, in keycore or inside the HSM) | `cloud-import` (base operation `export`, 10.0.0-beta) |
 
 `read` is the one usage that is not a key operation: it is a per-key read
 (section 8), decided by the user's view of the key, not by

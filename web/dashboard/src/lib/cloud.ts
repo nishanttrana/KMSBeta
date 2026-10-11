@@ -1,7 +1,7 @@
 import type { AuthSession } from "./auth";
 import { serviceRequest } from "./serviceApi";
 
-export type CloudProvider = "aws" | "azure" | "gcp" | "oci" | "salesforce";
+export type CloudProvider = "aws" | "azure" | "gcp" | "oci" | "salesforce" | "alibaba";
 
 export type CloudAccount = {
   id: string;
@@ -80,8 +80,6 @@ type ListAccountsResponse = { items?: CloudAccount[] };
 type CreateAccountResponse = { account: CloudAccount };
 type ListMappingsResponse = { items?: CloudRegionMapping[] };
 type MappingResponse = { mapping: CloudRegionMapping };
-type ImportResponse = { binding: CloudKeyBinding };
-type RotateResponse = { binding: CloudKeyBinding; version_id?: string };
 type SyncResponse = { job: CloudSyncJob };
 type InventoryResponse = { items?: CloudInventoryItem[] };
 type ListBindingsResponse = { items?: CloudKeyBinding[] };
@@ -102,15 +100,6 @@ export type SetCloudRegionMappingInput = {
   cloudRegion: string;
 };
 
-export type ImportKeyToCloudInput = {
-  keyId: string;
-  provider?: CloudProvider;
-  accountId?: string;
-  vectaRegion?: string;
-  cloudRegion?: string;
-  metadata?: Record<string, unknown>;
-};
-
 export type SyncCloudKeysInput = {
   provider?: CloudProvider;
   accountId?: string;
@@ -123,6 +112,7 @@ export function normalizeCloudProvider(value: string): CloudProvider {
   if (v === "azure") return "azure";
   if (v === "gcp") return "gcp";
   if (v === "salesforce") return "salesforce";
+  if (v === "alibaba") return "alibaba";
   return "oci";
 }
 
@@ -182,39 +172,6 @@ export async function setCloudRegionMapping(
     })
   });
   return payload.mapping;
-}
-
-export async function importKeyToCloud(session: AuthSession, input: ImportKeyToCloudInput): Promise<CloudKeyBinding> {
-  const payload = await serviceRequest<ImportResponse>(session, "cloud", "/cloud/import", {
-    method: "POST",
-    body: JSON.stringify({
-      tenant_id: session.tenantId,
-      key_id: String(input.keyId || "").trim(),
-      provider: input.provider ? normalizeCloudProvider(input.provider) : "",
-      account_id: String(input.accountId || "").trim(),
-      vecta_region: String(input.vectaRegion || "").trim(),
-      cloud_region: String(input.cloudRegion || "").trim(),
-      metadata_json: JSON.stringify(input.metadata || {})
-    })
-  });
-  return payload.binding;
-}
-
-export async function rotateCloudBinding(
-  session: AuthSession,
-  bindingId: string,
-  reason = "manual"
-): Promise<{ binding: CloudKeyBinding; versionId?: string | undefined }> {
-  const payload = await serviceRequest<RotateResponse>(session, "cloud", `/cloud/bindings/${encodeURIComponent(bindingId)}/rotate`, {
-    method: "POST",
-    body: JSON.stringify({
-      reason: String(reason || "").trim() || "manual"
-    })
-  });
-  return {
-    binding: payload.binding,
-    versionId: String(payload.version_id || "").trim() || undefined
-  };
 }
 
 export async function syncCloudKeys(session: AuthSession, input?: SyncCloudKeysInput): Promise<CloudSyncJob> {

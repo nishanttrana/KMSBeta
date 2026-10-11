@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-11T15:47:12Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-11T16:32:59Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `26`
 - Tab/component mappings: `33`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `890` across `28` services
-- Backend routes on the `pkg/route` kernel: `462` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `563`
-- Frontend call sites with exact backend route match: `517`
+- Backend HTTP routes discovered: `901` across `28` services
+- Backend routes on the `pkg/route` kernel: `475` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `565`
+- Frontend call sites with exact backend route match: `519`
 - Frontend call sites needing review or dynamic/runtime confirmation: `46`
-- Clickable controls with static `onClick` handlers: `764`
-- Backend request flows with handler/service/package summaries: `890`
+- Clickable controls with static `onClick` handlers: `767`
+- Backend request flows with handler/service/package summaries: `901`
 
 ## How To Use This For Launch
 
@@ -143,7 +143,7 @@ flowchart LR
   svc_autokey["autokey (15 routes)"]
   svc_backup["backup (11 routes)"]
   svc_certs["certs (69 routes)"]
-  svc_cloud["cloud (17 routes)"]
+  svc_cloud["cloud (26 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
   svc_compliance["compliance (61 routes)"]
   svc_confidential["confidential (7 routes)"]
@@ -152,7 +152,7 @@ flowchart LR
   svc_governance["governance (35 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (176 routes)"]
+  svc_keycore["keycore (177 routes)"]
   svc_posture["posture (13 routes)"]
   svc_pqc["pqc (14 routes)"]
   svc_reporting["reporting (34 routes)"]
@@ -195,7 +195,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Platform | Cluster | cluster | web/dashboard/src/components/v3/tabs/ClusterTab.tsx | auth-edge, cluster-manager | 15 |
 | Platform | Backup & Restore | backup | web/dashboard/src/components/v3/tabs/BackupTab.tsx | backup | 10 |
 | Platform | Administration | admin | web/dashboard/src/components/v3/tabs/AdminTab.tsx | - | 0 |
-| UNLISTED | byok | byok | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | cloud | 10 |
+| UNLISTED | byok | byok | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | cloud | 8 |
 | UNLISTED | crypto | crypto | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | keycore | 49 |
 | UNLISTED | dataenc | dataenc | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | UNLISTED | hyok | hyok | web/dashboard/src/components/v3/tabs/HYOKTab.tsx | hyok | 7 |
@@ -212,7 +212,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | autokey | 15 | 11 |
 | backup | 11 | 10 |
 | certs | 69 | 52 |
-| cloud | 17 | 10 |
+| cloud | 26 | 12 |
 | cluster-manager | 21 | 11 |
 | compliance | 61 | 28 |
 | confidential | 7 | 6 |
@@ -220,10 +220,10 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | discovery | 24 | 22 |
 | ekm | 65 | 44 |
 | governance | 35 | 23 |
-| hsm-connector | 13 | 0 |
+| hsm-connector | 14 | 0 |
 | hyok | 21 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 176 | 119 |
+| keycore | 177 | 119 |
 | kmip | 12 | 11 |
 | policy | 12 | 0 |
 | posture | 13 | 10 |
@@ -254,10 +254,10 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | auth | GET | /auth/identity/providers/{param}/users{param}` : ""} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 933 |
 | auth | GET | /auth/identity/providers/{param}/groups{param}` : ""} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 963 |
 | auth | GET | /auth/identity/providers/{param}/groups/{param}/members{param}` : ""} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 989 |
-| cloud | GET | /cloud/accounts{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 131 |
-| cloud | GET | /cloud/region-mappings{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 167 |
-| cloud | GET | /cloud/inventory{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 246 |
-| cloud | GET | /cloud/bindings{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 267 |
+| cloud | GET | /cloud/accounts{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 121 |
+| cloud | GET | /cloud/region-mappings{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 157 |
+| cloud | GET | /cloud/inventory{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 203 |
+| cloud | GET | /cloud/bindings{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 224 |
 | keycore | GET | /cost/metrics | trackedFetch | web/dashboard/src/lib/costOptimization.ts | 6 |
 | keycore | GET | /cost/suggestions | trackedFetch | web/dashboard/src/lib/costOptimization.ts | 12 |
 | keycore | POST | /cost/suggestions/{param}/apply | trackedFetch | web/dashboard/src/lib/costOptimization.ts | 18 |
@@ -370,14 +370,21 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | certs | POST | /est/.well-known/est/simplereenroll | h.handleESTSimpleReenroll |  | services/certs/handler.go | 92 |
 | certs | GET | /certs/edge-tls/measurement | s.handleEdgeMeasurement | authenticated | services/certs/internal_mtls_routes.go | 65 |
 | certs | POST | /v1/enroll | <inline func> | public | services/certs/internal_tls.go | 184 |
+| cloud | POST | /cloud/byok/keys | h.createBYOK | cloud.write | services/cloud/byok_routes.go | 26 |
+| cloud | POST | /cloud/byok/keys/{id}/rotate | op(OpRotate) | cloud.write | services/cloud/byok_routes.go | 28 |
+| cloud | POST | /cloud/byok/keys/{id}/reimport | op(OpReimport) | cloud.write | services/cloud/byok_routes.go | 29 |
+| cloud | POST | /cloud/byok/keys/{id}/restore | op(OpRestore) | cloud.write | services/cloud/byok_routes.go | 30 |
+| cloud | POST | /cloud/byok/keys/{id}/verify | op(OpVerify) | cloud.write | services/cloud/byok_routes.go | 31 |
+| cloud | POST | /cloud/byok/keys/{id}/sync | op(OpSync) | cloud.write | services/cloud/byok_routes.go | 32 |
+| cloud | POST | /cloud/byok/keys/{id}/revoke | op(OpRevoke) | cloud.write | services/cloud/byok_routes.go | 33 |
 | cloud | POST | /cloud/accounts/{id}/test | h.testAccount | cloud.write | services/cloud/credentials.go | 176 |
 | cloud | POST | /cloud/credentials/{id}/test | h.testCredential | authenticated | services/cloud/credentials.go | 177 |
 | cloud | GET | /cloud/credential-usage | h.credentialUsage | authenticated | services/cloud/credentials.go | 178 |
 | cloud | GET | /cloud/accounts | h.handleListAccounts |  | services/cloud/handler.go | 31 |
 | cloud | GET | /cloud/region-mappings | h.handleListRegionMappings |  | services/cloud/handler.go | 34 |
-| cloud | GET | /cloud/inventory | h.handleInventory |  | services/cloud/handler.go | 38 |
-| cloud | GET | /cloud/bindings | h.handleListBindings |  | services/cloud/handler.go | 39 |
-| cloud | GET | /cloud/bindings/{id} | h.handleGetBinding |  | services/cloud/handler.go | 40 |
+| cloud | GET | /cloud/inventory | h.handleInventory |  | services/cloud/handler.go | 36 |
+| cloud | GET | /cloud/bindings | h.handleListBindings |  | services/cloud/handler.go | 37 |
+| cloud | GET | /cloud/bindings/{id} | h.handleGetBinding |  | services/cloud/handler.go | 38 |
 | cluster-manager | GET | /healthz | h.handleHealth |  | services/cluster-manager/handler.go | 32 |
 | cluster-manager | GET | /cluster/members | h.handleMembers |  | services/cluster-manager/handler.go | 35 |
 | cluster-manager | GET | /cluster/nodes | h.handleNodes |  | services/cluster-manager/handler.go | 36 |
@@ -410,15 +417,8 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | POST | /compliance/playbooks | h.createPlaybook | compliance.playbook.write | services/compliance/handler_playbooks.go | 138 |
 | compliance | GET | /compliance/playbooks/{id} | h.getPlaybook | compliance.playbook.read | services/compliance/handler_playbooks.go | 139 |
 | compliance | PUT | /compliance/playbooks/{id} | h.updatePlaybook | compliance.playbook.write | services/compliance/handler_playbooks.go | 140 |
-| compliance | DELETE | /compliance/playbooks/{id} | h.deletePlaybook | compliance.playbook.delete | services/compliance/handler_playbooks.go | 141 |
-| compliance | POST | /compliance/playbooks/{id}/run | h.runPlaybook | compliance.playbook.run | services/compliance/handler_playbooks.go | 142 |
-| compliance | POST | /compliance/playbooks/{id}/dry-run | h.dryRunPlaybook | compliance.playbook.run | services/compliance/handler_playbooks.go | 143 |
-| compliance | GET | /compliance/playbooks/{id}/runs | h.listPlaybookRuns | compliance.playbook.read | services/compliance/handler_playbooks.go | 144 |
-| compliance | GET | /compliance/playbook-runs | h.searchRuns | compliance.playbook.read | services/compliance/handler_playbooks.go | 145 |
-| compliance | GET | /compliance/playbook-runs/{run_id} | h.getRun | compliance.playbook.read | services/compliance/handler_playbooks.go | 146 |
-| compliance | POST | /compliance/playbook-runs/{run_id}/cancel | h.cancelRun | compliance.playbook.run | services/compliance/handler_playbooks.go | 147 |
 
-Showing `120` of `366`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `375`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

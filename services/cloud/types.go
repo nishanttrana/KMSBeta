@@ -9,7 +9,6 @@ const (
 	ProviderOCI        = "oci"
 	ProviderSalesforce = "salesforce"
 	ProviderAlibaba    = "alibaba"
-	ProviderServiceNow = "servicenow"
 )
 
 type CloudAccount struct {
@@ -103,32 +102,6 @@ type SetRegionMappingRequest struct {
 	Provider    string `json:"provider"`
 	VectaRegion string `json:"vecta_region"`
 	CloudRegion string `json:"cloud_region"`
-}
-
-type ImportKeyToCloudRequest struct {
-	TenantID          string `json:"tenant_id"`
-	KeyID             string `json:"key_id"`
-	Provider          string `json:"provider"`
-	AccountID         string `json:"account_id"`
-	VectaRegion       string `json:"vecta_region"`
-	CloudRegion       string `json:"cloud_region"`
-	MetadataJSON      string `json:"metadata_json"`
-	RequesterID       string `json:"requester_id,omitempty"`
-	RequesterEmail    string `json:"requester_email,omitempty"`
-	RequesterIP       string `json:"requester_ip,omitempty"`
-	JustificationCode string `json:"justification_code,omitempty"`
-	JustificationText string `json:"justification_text,omitempty"`
-}
-
-type RotateCloudKeyRequest struct {
-	TenantID          string `json:"tenant_id"`
-	BindingID         string `json:"binding_id"`
-	Reason            string `json:"reason"`
-	RequesterID       string `json:"requester_id,omitempty"`
-	RequesterEmail    string `json:"requester_email,omitempty"`
-	RequesterIP       string `json:"requester_ip,omitempty"`
-	JustificationCode string `json:"justification_code,omitempty"`
-	JustificationText string `json:"justification_text,omitempty"`
 }
 
 type SyncCloudKeysRequest struct {

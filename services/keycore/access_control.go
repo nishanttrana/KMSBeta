@@ -195,7 +195,7 @@ func normalizeAccessOperation(raw string) (string, error) {
 	case "export":
 		return "export", nil
 	case "fpe-encrypt", "fpe-decrypt", "tokenize", "detokenize",
-		"certificate-sign", "crl-sign":
+		"certificate-sign", "crl-sign", "cloud-import":
 		// Delegated usages: performed by dataprotect or certs for a user
 		// (pkg/delegation, KEY_ACCESS_MODEL.md section 4).
 		return strings.ToLower(strings.TrimSpace(raw)), nil
@@ -232,6 +232,7 @@ var delegatedBaseOperation = map[string]string{
 	"fpe-encrypt": "encrypt", "fpe-decrypt": "decrypt",
 	"tokenize": "encrypt", "detokenize": "decrypt",
 	"certificate-sign": "sign", "crl-sign": "sign",
+	"cloud-import": "export",
 }
 
 func operationAllowed(operations []string, op string) bool {

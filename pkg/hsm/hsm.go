@@ -111,6 +111,8 @@ var (
 	ErrConnectionNotFound = errors.New("hsm: no such HSM credential for this tenant")
 	// ErrImportRefused: the HSM won't take key material from outside.
 	ErrImportRefused = errors.New("hsm: the HSM refused the key material")
+	// ErrNotExtractable: the key was not generated for a cloud import.
+	ErrNotExtractable = errors.New("hsm: the key was not generated for a cloud import; it never leaves the HSM")
 )
 
 // GenerateResult is a key generated in the HSM.
@@ -269,6 +271,8 @@ func (c *Client) call(ctx context.Context, method, path string, in, out interfac
 			return fmt.Errorf("%w: %s", ErrImportRefused, strings.TrimSpace(e.Error.Message))
 		case "foreign_label":
 			return ErrForeignLabel
+		case "key_not_extractable":
+			return ErrNotExtractable
 		case "not_found":
 			return ErrNotFound
 		}
@@ -324,6 +328,52 @@ func (c *Client) Generate(ctx context.Context, tenant, label, algorithm string) 
 		return GenerateResult{}, err
 	}
 	return res, nil
+}
+
+// GenerateForCloudImport creates a key that can leave the HSM only wrapped
+// for a cloud import (BYOK): sensitive, extractable. Every other key the
+// platform creates is never extractable.
+func (c *Client) GenerateForCloudImport(ctx context.Context, tenant, label, algorithm string) (GenerateResult, error) {
+	var out struct {
+		Label     string   `json:"label"`
+		PublicKey string   `json:"public_key_b64"`
+		KCV       string   `json:"kcv_b64"`
+		HSM       Identity `json:"hsm"`
+	}
+	err := c.call(ctx, http.MethodPost, "/hsm/keys", map[string]any{"tenant_id": tenant, "label": label, "algorithm": algorithm, "extractable": true}, &out)
+	if err != nil {
+		return GenerateResult{}, err
+	}
+	res := GenerateResult{Label: out.Label, HSM: out.HSM}
+	if res.PublicKey, err = unb64(out.PublicKey); err != nil {
+		return GenerateResult{}, err
+	}
+	if res.KCV, err = unb64(out.KCV); err != nil {
+		return GenerateResult{}, err
+	}
+	return res, nil
+}
+
+// WrapForCloudImport has the HSM wrap the key labelled label to a cloud's
+// RSA import key (DER) under scheme (pkg/crypto CloudWrap*). With digest it
+// also returns SHA-256 over the key's value, computed in the HSM.
+func (c *Client) WrapForCloudImport(ctx context.Context, tenant, label string, wrappingKey []byte, scheme string, digest bool) (wrapped, sha256 []byte, err error) {
+	var out struct {
+		Wrapped string `json:"wrapped_b64"`
+		SHA256  string `json:"material_sha256_b64"`
+	}
+	body := map[string]any{"tenant_id": tenant, "label": label, "wrapping_key_b64": b64(wrappingKey), "scheme": scheme}
+	if digest {
+		body["digest"] = "sha256"
+	}
+	if err := c.call(ctx, http.MethodPost, "/hsm/keys/wrap-for-import", body, &out); err != nil {
+		return nil, nil, err
+	}
+	if wrapped, err = unb64(out.Wrapped); err != nil {
+		return nil, nil, err
+	}
+	sha256, _ = unb64(out.SHA256)
+	return wrapped, sha256, nil
 }
 
 // EnsureTenantKey returns the label of tenant's key, generating it the first

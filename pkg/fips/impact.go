@@ -24,6 +24,7 @@ var strictOnlyUnavailable = []Impact{
 	{"dataprotect", "Legacy (v1) data protection keys", "keys not yet migrated to keycore-derived working keys; migrate them first (Data Protection > Working-Key Derivation)"},
 	{"certs", "OCSP requests with SHA-1 CertID", "clients must send SHA-256 CertIDs"},
 	{"cloud", "Alibaba Cloud integration", "API signing requires HMAC-SHA1"},
+	{"keycore", "Cloud BYOK of KMS keys to Azure and Salesforce, and of private keys", "the KMS can't wrap with RSA-OAEP SHA-1 (Azure Key Vault, Salesforce Shield) or AES key wrap with padding (private keys, RSA_AES_KEY_WRAP); keys generated in a PKCS#11 HSM with cloud import allowed are still wrapped inside the HSM, and AES-256 keys still go to AWS, Google Cloud and OCI with RSA-OAEP SHA-256"},
 }
 
 // TransitionImpact describes a mode change: what stops, what starts, and

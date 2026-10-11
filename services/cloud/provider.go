@@ -6,27 +6,6 @@ import (
 	"sync"
 )
 
-type ImportInput struct {
-	TenantID    string
-	KeyID       string
-	Account     CloudAccount
-	Region      string
-	Credentials map[string]interface{}
-	KeyMeta     map[string]interface{}
-	Export      map[string]interface{}
-	Metadata    map[string]interface{}
-}
-
-type RotateInput struct {
-	TenantID    string
-	Binding     CloudKeyBinding
-	Account     CloudAccount
-	Credentials map[string]interface{}
-	KeyMeta     map[string]interface{}
-	Export      map[string]interface{}
-	Reason      string
-}
-
 type SyncInput struct {
 	TenantID    string
 	Binding     CloudKeyBinding
@@ -50,8 +29,6 @@ type ImportResult struct {
 
 type CloudProvider interface {
 	Name() string
-	ImportKey(ctx context.Context, in ImportInput) (ImportResult, error)
-	RotateKey(ctx context.Context, in RotateInput) (ImportResult, error)
 	SyncBinding(ctx context.Context, in SyncInput) (ImportResult, error)
 	Inventory(ctx context.Context, in InventoryInput) ([]InventoryItem, error)
 	DefaultRegion() string

@@ -62,6 +62,7 @@ func NewHandler(configs ConfigSource, p11 *Provider, audit route.Emitter, logger
 	h := &Handler{router: route.New("hsm", audit, logger), configs: configs, p11: p11}
 	r := h.router
 	r.Handle("POST /hsm/keys", route.Spec{Action: "key_generated", Permission: "hsm.key.create", Resource: "hsm_key"}, h.generate)
+	r.Handle("POST /hsm/keys/wrap-for-import", route.Spec{Action: "key_wrapped_for_cloud", Permission: "hsm.key.use", Resource: "hsm_key", Severity: "warning"}, h.wrapForImport)
 	r.Handle("POST /hsm/keys/import", route.Spec{Action: "key_imported", Permission: "hsm.key.create", Resource: "hsm_key", Severity: "warning"}, h.importKey)
 	r.Handle("POST /hsm/tenant-key", route.Spec{Action: "tenant_key_ensured", Permission: "hsm.key.create", Resource: "hsm_key"}, h.tenantKey)
 	r.Handle("POST /hsm/encrypt", route.Spec{Action: "encrypt", Permission: "hsm.key.use", Resource: "hsm_key"}, h.encrypt)
@@ -113,6 +114,15 @@ type opRequest struct {
 	// ImportMethod: for AES material, create_object or unwrap to use only
 	// that way of placing it; empty tries the first, then the second.
 	ImportMethod string `json:"import_method"`
+	// Extractable: generate a key that can be wrapped for a cloud import
+	// (BYOK). It stays sensitive: its value can leave only wrapped.
+	Extractable bool `json:"extractable"`
+	// WrappingKeyB64 (a cloud's RSA import key, DER), Scheme (a pkg/crypto
+	// cloud wrapping scheme) and Digest ("sha256" or empty) are for
+	// wrap-for-import (byok.go).
+	WrappingKeyB64 string `json:"wrapping_key_b64"`
+	Scheme         string `json:"scheme"`
+	Digest         string `json:"digest"`
 }
 
 // begin decodes the request, checks the caller and label, and opens a
@@ -201,7 +211,8 @@ func (h *Handler) generate(c *route.Call) {
 		c.Refuse(http.StatusBadRequest, "algorithm_not_supported", "algorithm "+in.Algorithm+" can't be HSM-resident")
 		return
 	}
-	res, err := generate(ctx, sh, in.Label, alg)
+	c.Detail("extractable", in.Extractable)
+	res, err := generate(ctx, sh, in.Label, alg, in.Extractable)
 	if err != nil {
 		h.fail(c, err)
 		return
@@ -294,7 +305,7 @@ func (h *Handler) tenantKey(c *route.Call) {
 	c.Target(label)
 	created := false
 	if _, err := findOne(ctx, sh, pkcs11.CKO_SECRET_KEY, label); errors.Is(err, hsm.ErrNotFound) {
-		if _, err := generate(ctx, sh, label, "AES-256"); err != nil {
+		if _, err := generate(ctx, sh, label, "AES-256", false); err != nil {
 			h.fail(c, err)
 			return
 		}

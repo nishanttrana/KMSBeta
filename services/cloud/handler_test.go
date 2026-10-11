@@ -9,8 +9,7 @@ import (
 )
 
 func TestHandlerCloudFlow(t *testing.T) {
-	h, _, keycore, _ := newCloudHandler(t)
-	keycore.Seed("tenant-1", "key-1", "AES-256")
+	h, svc, _, _ := newCloudHandler(t)
 
 	accountReq := map[string]interface{}{
 		"tenant_id":        "tenant-1",
@@ -36,32 +35,18 @@ func TestHandlerCloudFlow(t *testing.T) {
 		t.Fatalf("missing account id in response: %s", accountRR.Body.String())
 	}
 
-	importReq := map[string]interface{}{
-		"tenant_id":  "tenant-1",
-		"key_id":     "key-1",
-		"provider":   ProviderAWS,
-		"account_id": accountResp.Account.ID,
+	// A key an earlier release created natively in the cloud (read-only).
+	legacy := CloudKeyBinding{ID: "cbk_legacy", TenantID: "tenant-1", KeyID: "key-1", Provider: ProviderAWS, AccountID: accountResp.Account.ID,
+		CloudKeyID: "1234abcd-legacy", Region: "us-east-1", SyncStatus: "synced", MetadataJSON: "{}"}
+	if err := svc.store.CreateBinding(createAccount.Context(), legacy); err != nil {
+		t.Fatal(err)
 	}
-	importBody, _ := json.Marshal(importReq)
-	importHTTP := httptest.NewRequest(http.MethodPost, "/cloud/import", bytes.NewReader(importBody))
-	importRR := httptest.NewRecorder()
-	h.ServeHTTP(importRR, importHTTP)
-	if importRR.Code != http.StatusCreated {
-		t.Fatalf("import status=%d body=%s", importRR.Code, importRR.Body.String())
-	}
-	var importResp struct {
-		Binding CloudKeyBinding `json:"binding"`
-	}
-	_ = json.Unmarshal(importRR.Body.Bytes(), &importResp)
-	if importResp.Binding.ID == "" {
-		t.Fatalf("missing binding id in response: %s", importRR.Body.String())
-	}
-
-	rotateHTTP := httptest.NewRequest(http.MethodPost, "/cloud/bindings/"+importResp.Binding.ID+"/rotate?tenant_id=tenant-1", bytes.NewReader([]byte(`{"reason":"manual"}`)))
-	rotateRR := httptest.NewRecorder()
-	h.ServeHTTP(rotateRR, rotateHTTP)
-	if rotateRR.Code != http.StatusOK {
-		t.Fatalf("rotate status=%d body=%s", rotateRR.Code, rotateRR.Body.String())
+	for _, retired := range []string{"/cloud/import", "/cloud/bindings/cbk_legacy/rotate"} {
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, retired+"?tenant_id=tenant-1", bytes.NewReader([]byte(`{}`))))
+		if rr.Code != http.StatusNotFound && rr.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("%s still answers: %d", retired, rr.Code)
+		}
 	}
 
 	listHTTP := httptest.NewRequest(http.MethodGet, "/cloud/bindings?tenant_id=tenant-1", nil)
@@ -71,7 +56,7 @@ func TestHandlerCloudFlow(t *testing.T) {
 		t.Fatalf("list status=%d body=%s", listRR.Code, listRR.Body.String())
 	}
 
-	getHTTP := httptest.NewRequest(http.MethodGet, "/cloud/bindings/"+importResp.Binding.ID+"?tenant_id=tenant-1", nil)
+	getHTTP := httptest.NewRequest(http.MethodGet, "/cloud/bindings/"+legacy.ID+"?tenant_id=tenant-1", nil)
 	getRR := httptest.NewRecorder()
 	h.ServeHTTP(getRR, getHTTP)
 	if getRR.Code != http.StatusOK {

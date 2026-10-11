@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-11T15:47:12Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-11T16:32:59Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -73,30 +73,24 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 615 | - | Btn | setPolicyDraft( )}>Edit |  |
 | web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 621 | - | Btn | removePolicy(String(item?.service_name \|\| ""))}>Delete |  |
 | web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 662 | - | Btn | Submit Request | submitRequest} disabled={busy |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 471 | byok | Btn | setConnectorView("cards")} title="Card view"> |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 472 | byok | Btn | setConnectorView("list")} title="List view"> |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 473 | byok | Btn | void refresh()} disabled= > Refresh |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 474 | byok | Btn | }> Region Mappings |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 475 | byok | Btn | setModal("add")}>+ Add Connector |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 501 | byok | button | setExpandedProvider(isExpanded ? null : card.provider)} style={ }> {isExpande... |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 519 | byok | Btn | } disabled= > |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 525 | byok | Btn | { const activeAccount = card.accounts[0]; if (activeAccount) }} disabled= >Im... |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 534 | byok | Btn | } disabled= > Inventory |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 537 | byok | Btn | void deleteConnector(card.provider, card.accounts[0])} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 560 | byok | button | setConnectorMenu(menuOpen ? "" : String(card.provider))} style={{ border: `1p... |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 564 | byok | button | } disabled= style={ }>Sync Now |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 565 | byok | button | } disabled= style={ }>Import Keys |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 566 | byok | button | } disabled= style={ }>Browse Inventory |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 567 | byok | button | } disabled= style={ }>Delete Connector |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 617 | byok | button | copyToClipboard(binding.cloud_key_ref \|\| binding.cloud_key_id)} style={ } tit... |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 625 | byok | Btn | void rotateBindingAction(binding)} disabled= > {rotatingBinding === binding.i... |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 685 | byok | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 686 | byok | Btn | void submitAddConnector()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 728 | byok | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 729 | byok | Btn | void submitImport()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 780 | byok | Btn | setModal(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 781 | byok | Btn | void submitRegionMapping()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 816 | byok | Btn | setModal(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 317 | byok | Btn | setConnectorView("cards")} title="Card view"> |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 318 | byok | Btn | setConnectorView("list")} title="List view"> |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 319 | byok | Btn | void refresh()} disabled= > Refresh |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 320 | byok | Btn | }> Region Mappings |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 321 | byok | Btn | setModal("add")}>+ Add Connector |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 347 | byok | button | setExpandedProvider(isExpanded ? null : card.provider)} style={ }> {isExpande... |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 365 | byok | Btn | } disabled= > |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 371 | byok | Btn | } disabled= > Inventory |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 374 | byok | Btn | void deleteConnector(card.provider, card.accounts[0])} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 397 | byok | button | setConnectorMenu(menuOpen ? "" : String(card.provider))} style={{ border: `1p... |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 401 | byok | button | } disabled= style={ }>Sync Now |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 402 | byok | button | } disabled= style={ }>Browse Inventory |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 403 | byok | button | } disabled= style={ }>Delete Connector |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 462 | byok | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 463 | byok | Btn | void submitAddConnector()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 513 | byok | Btn | setModal(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 514 | byok | Btn | void submitRegionMapping()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 549 | byok | Btn | setModal(null)}>Close |  |
 | web/dashboard/src/components/v3/tabs/BackupTab.tsx | 127 | backup | button | Refresh | load} style={{ background: "transparent", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/BackupTab.tsx | 131 | backup | button | setShowCreate(true)} style={ }> New Policy |  |
 | web/dashboard/src/components/v3/tabs/BackupTab.tsx | 149 | backup | button | setSection(s.id as any)} style={{ padding: "8px 16px", border: "none", backgr... |  |
@@ -606,6 +600,15 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 169 | - | button | { if (!window.confirm(`Roll back "$ "? The successor keys it created are deac... |  |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 72 | - | button | Cancel | onClose} style={{ background: "transparent", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 73 | - | button | (icon or dynamic label) | onSave |
+| web/dashboard/src/components/v3/tabs/byok/Console.tsx | 84 | - | Btn | void load()}>Refresh |  |
+| web/dashboard/src/components/v3/tabs/byok/Console.tsx | 85 | - | Btn | setCreating(true)}> Bring your own key |  |
+| web/dashboard/src/components/v3/tabs/byok/Console.tsx | 126 | - | Btn | download("vecta-byok-cloud-calls.sh", runsToScript(runs))}> Export as script |  |
+| web/dashboard/src/components/v3/tabs/byok/Console.tsx | 133 | - | button | setOpenRun(openRun === r.id ? "" : r.id)} style={ }> · {k ? `$ $ ` : r.byok_i... |  |
+| web/dashboard/src/components/v3/tabs/byok/CreateWizard.tsx | 156 | - | Btn | (icon or dynamic label) | onClose |
+| web/dashboard/src/components/v3/tabs/byok/CreateWizard.tsx | 157 | - | Btn | void submit()}> |  |
+| web/dashboard/src/components/v3/tabs/byok/KeyDetail.tsx | 87 | - | Btn | void act(op)}>{busy === op ? `$ …` : label} |  |
+| web/dashboard/src/components/v3/tabs/byok/KeyDetail.tsx | 147 | - | button | setOpen(open === r.id ? "" : r.id)} style={ }> · steps · |  |
+| web/dashboard/src/components/v3/tabs/byok/RunSteps.tsx | 37 | - | button | copy(s.cli \|\| "")} title="Copy the CLI equivalent" style={ }> |  |
 | web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 162 | - | button | setStatus(s)} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 170 | - | Btn | void save()} disabled= >Save |  |
 | web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 177 | - | Btn | (confirmRemove ? void remove() : setConfirmRemove(true))} disabled= > |  |

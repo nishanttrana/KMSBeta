@@ -105,7 +105,6 @@ func main() {
 	go keyring.Watch(ctx, 15*time.Minute)
 	svc := NewService(
 		NewSQLStore(dbConn),
-		NewHTTPKeyCoreClient(keycoreURL, 3*time.Second),
 		defaultProviderRegistry(),
 		publisher,
 		keyring.Current(),
@@ -124,6 +123,10 @@ func main() {
 	kernel := route.New("cloud", audit, logger)
 	keyring.Routes(kernel, "cloud")
 	handler.credentialRoutes(kernel)
+	// Cloud BYOK: material wrapped by keycore (or the HSM) for each cloud's
+	// own import protocol (byok_engine.go).
+	svc.SetBYOK(NewSQLStore(dbConn), NewHTTPKeyCoreClient(keycoreURL, 60*time.Second), defaultBYOKProviders())
+	handler.byokRoutes(kernel)
 	kernel.MountOn(handler.mux)
 
 	httpPort := envOr("HTTP_PORT", "8080")

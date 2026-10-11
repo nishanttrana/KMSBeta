@@ -294,15 +294,18 @@ What it does:
 
 Use cases:
 
-- import local keys into cloud KMS wrappers
-- rotate a cloud binding under central control
-- audit which tenant key is bound to which cloud account and region
+- bring a KMS key (material from the KMS or wrapped inside a PKCS#11 HSM)
+  into AWS, Google Cloud, Azure, OCI, Alibaba or Salesforce by the cloud's
+  own import protocol
+- rotate, renew, revoke (kill switch) and restore that material
+- audit which KMS key version is behind which cloud material (custody)
 
 Common APIs:
 
 - `POST /svc/cloud/cloud/accounts`
 - `GET /svc/cloud/cloud/accounts`
-- `POST /svc/cloud/cloud/import`
+- `POST /svc/cloud/cloud/byok/keys`
+- `POST /svc/cloud/cloud/byok/keys/{id}/rotate`
 - `POST /svc/cloud/cloud/sync`
 
 ### EKM

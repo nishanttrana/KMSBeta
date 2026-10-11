@@ -3151,6 +3151,171 @@
       "service": "certs"
     },
     {
+      "action": "byok_providers_read",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "<inline func>",
+      "line": 20,
+      "match_key": "cloud|GET|/cloud/byok/providers",
+      "method": "GET",
+      "normalized_path": "/cloud/byok/providers",
+      "path": "/cloud/byok/providers",
+      "permission": "cloud.read",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
+      "action": "byok_keys_listed",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "h.listBYOK",
+      "line": 23,
+      "match_key": "cloud|GET|/cloud/byok/keys",
+      "method": "GET",
+      "normalized_path": "/cloud/byok/keys",
+      "path": "/cloud/byok/keys",
+      "permission": "cloud.read",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
+      "action": "byok_runs_listed",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "h.listBYOKRuns",
+      "line": 24,
+      "match_key": "cloud|GET|/cloud/byok/runs",
+      "method": "GET",
+      "normalized_path": "/cloud/byok/runs",
+      "path": "/cloud/byok/runs",
+      "permission": "cloud.read",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
+      "action": "byok_key_read",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "h.getBYOK",
+      "line": 25,
+      "match_key": "cloud|GET|/cloud/byok/keys/{param}",
+      "method": "GET",
+      "normalized_path": "/cloud/byok/keys/{param}",
+      "path": "/cloud/byok/keys/{id}",
+      "permission": "cloud.read",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
+      "action": "byok_created",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "h.createBYOK",
+      "line": 26,
+      "match_key": "cloud|POST|/cloud/byok/keys",
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys",
+      "path": "/cloud/byok/keys",
+      "permission": "cloud.write",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
+      "action": "byok_rotated",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "op(OpRotate)",
+      "line": 28,
+      "match_key": "cloud|POST|/cloud/byok/keys/{param}/rotate",
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/rotate",
+      "path": "/cloud/byok/keys/{id}/rotate",
+      "permission": "cloud.write",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
+      "action": "byok_reimported",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "op(OpReimport)",
+      "line": 29,
+      "match_key": "cloud|POST|/cloud/byok/keys/{param}/reimport",
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/reimport",
+      "path": "/cloud/byok/keys/{id}/reimport",
+      "permission": "cloud.write",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
+      "action": "byok_restored",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "op(OpRestore)",
+      "line": 30,
+      "match_key": "cloud|POST|/cloud/byok/keys/{param}/restore",
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/restore",
+      "path": "/cloud/byok/keys/{id}/restore",
+      "permission": "cloud.write",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
+      "action": "byok_verified",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "op(OpVerify)",
+      "line": 31,
+      "match_key": "cloud|POST|/cloud/byok/keys/{param}/verify",
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/verify",
+      "path": "/cloud/byok/keys/{id}/verify",
+      "permission": "cloud.write",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
+      "action": "byok_synced",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "op(OpSync)",
+      "line": 32,
+      "match_key": "cloud|POST|/cloud/byok/keys/{param}/sync",
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/sync",
+      "path": "/cloud/byok/keys/{id}/sync",
+      "permission": "cloud.write",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
+      "action": "byok_revoked",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "op(OpRevoke)",
+      "line": 33,
+      "match_key": "cloud|POST|/cloud/byok/keys/{param}/revoke",
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/revoke",
+      "path": "/cloud/byok/keys/{id}/revoke",
+      "permission": "cloud.write",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
       "action": "account_test_requested",
       "code_scope": "cloud",
       "file": "services/cloud/credentials.go",
@@ -3274,38 +3439,8 @@
       "action": "",
       "code_scope": "cloud",
       "file": "services/cloud/handler.go",
-      "handler": "h.handleImportKey",
-      "line": 35,
-      "match_key": "cloud|POST|/cloud/import",
-      "method": "POST",
-      "normalized_path": "/cloud/import",
-      "path": "/cloud/import",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "cloud"
-    },
-    {
-      "action": "",
-      "code_scope": "cloud",
-      "file": "services/cloud/handler.go",
-      "handler": "h.handleRotateBinding",
-      "line": 36,
-      "match_key": "cloud|POST|/cloud/bindings/{param}/rotate",
-      "method": "POST",
-      "normalized_path": "/cloud/bindings/{param}/rotate",
-      "path": "/cloud/bindings/{id}/rotate",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "cloud"
-    },
-    {
-      "action": "",
-      "code_scope": "cloud",
-      "file": "services/cloud/handler.go",
       "handler": "h.handleSync",
-      "line": 37,
+      "line": 35,
       "match_key": "cloud|POST|/cloud/sync",
       "method": "POST",
       "normalized_path": "/cloud/sync",
@@ -3320,7 +3455,7 @@
       "code_scope": "cloud",
       "file": "services/cloud/handler.go",
       "handler": "h.handleInventory",
-      "line": 38,
+      "line": 36,
       "match_key": "cloud|GET|/cloud/inventory",
       "method": "GET",
       "normalized_path": "/cloud/inventory",
@@ -3335,7 +3470,7 @@
       "code_scope": "cloud",
       "file": "services/cloud/handler.go",
       "handler": "h.handleListBindings",
-      "line": 39,
+      "line": 37,
       "match_key": "cloud|GET|/cloud/bindings",
       "method": "GET",
       "normalized_path": "/cloud/bindings",
@@ -3350,7 +3485,7 @@
       "code_scope": "cloud",
       "file": "services/cloud/handler.go",
       "handler": "h.handleGetBinding",
-      "line": 40,
+      "line": 38,
       "match_key": "cloud|GET|/cloud/bindings/{param}",
       "method": "GET",
       "normalized_path": "/cloud/bindings/{param}",
@@ -7666,6 +7801,21 @@
       "service": "keycore"
     },
     {
+      "action": "cloud_wrapped",
+      "code_scope": "keycore",
+      "file": "services/keycore/cloud_wrap.go",
+      "handler": "h.cloudWrap",
+      "line": 210,
+      "match_key": "keycore|POST|/keys/{param}/cloud-wrap",
+      "method": "POST",
+      "normalized_path": "/keys/{param}/cloud-wrap",
+      "path": "/keys/{id}/cloud-wrap",
+      "permission": "key.cloud_import",
+      "registration": "kernel",
+      "resource": "key",
+      "service": "keycore"
+    },
+    {
       "action": "data_key_generated",
       "code_scope": "keycore",
       "file": "services/keycore/data_key.go",
@@ -8000,7 +8150,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterJoinKey",
-      "line": 234,
+      "line": 235,
       "match_key": "keycore|POST|/cluster/mek/join-key",
       "method": "POST",
       "normalized_path": "/cluster/mek/join-key",
@@ -8015,7 +8165,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterMEKExport",
-      "line": 235,
+      "line": 236,
       "match_key": "keycore|POST|/cluster/mek/export",
       "method": "POST",
       "normalized_path": "/cluster/mek/export",
@@ -8030,7 +8180,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterMEKImport",
-      "line": 236,
+      "line": 237,
       "match_key": "keycore|POST|/cluster/mek/import",
       "method": "POST",
       "normalized_path": "/cluster/mek/import",
@@ -8045,7 +8195,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleKEMEncapsulate",
-      "line": 237,
+      "line": 238,
       "match_key": "keycore|POST|/keys/{param}/kem/encapsulate",
       "method": "POST",
       "normalized_path": "/keys/{param}/kem/encapsulate",
@@ -8060,7 +8210,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleKEMDecapsulate",
-      "line": 238,
+      "line": 239,
       "match_key": "keycore|POST|/keys/{param}/kem/decapsulate",
       "method": "POST",
       "normalized_path": "/keys/{param}/kem/decapsulate",
@@ -8075,7 +8225,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleHash",
-      "line": 239,
+      "line": 240,
       "match_key": "keycore|POST|/crypto/hash",
       "method": "POST",
       "normalized_path": "/crypto/hash",
@@ -8090,7 +8240,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleRandom",
-      "line": 240,
+      "line": 241,
       "match_key": "keycore|POST|/crypto/random",
       "method": "POST",
       "normalized_path": "/crypto/random",
@@ -8105,7 +8255,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleListKeyRotationMetrics)",
-      "line": 251,
+      "line": 252,
       "match_key": "keycore|GET|/keys/{param}/rotation-metrics",
       "method": "GET",
       "normalized_path": "/keys/{param}/rotation-metrics",
@@ -8120,7 +8270,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetKeyHealth)",
-      "line": 254,
+      "line": 255,
       "match_key": "keycore|GET|/keys/{param}/health",
       "method": "GET",
       "normalized_path": "/keys/{param}/health",
@@ -8135,7 +8285,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleGetAlgorithmBenchmarks",
-      "line": 255,
+      "line": 256,
       "match_key": "keycore|GET|/analytics/algorithms",
       "method": "GET",
       "normalized_path": "/analytics/algorithms",
@@ -8150,7 +8300,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleAttestationPublicKey",
-      "line": 258,
+      "line": 259,
       "match_key": "keycore|GET|/attestation/public-key",
       "method": "GET",
       "normalized_path": "/attestation/public-key",
@@ -8165,7 +8315,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleRNGHealth",
-      "line": 264,
+      "line": 265,
       "match_key": "keycore|GET|/fips/rng-health",
       "method": "GET",
       "normalized_path": "/fips/rng-health",
@@ -8180,7 +8330,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "internalauth.RequireToken(h.handleDueForLifecycle)",
-      "line": 270,
+      "line": 271,
       "match_key": "keycore|GET|/keys/due-for-lifecycle",
       "method": "GET",
       "normalized_path": "/keys/due-for-lifecycle",
@@ -9905,7 +10055,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/hsm.go",
       "handler": "h.getHSM",
-      "line": 548,
+      "line": 572,
       "match_key": "keycore|GET|/hsm/settings",
       "method": "GET",
       "normalized_path": "/hsm/settings",
@@ -9920,7 +10070,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/hsm.go",
       "handler": "h.putHSM",
-      "line": 549,
+      "line": 573,
       "match_key": "keycore|PUT|/hsm/settings",
       "method": "PUT",
       "normalized_path": "/hsm/settings",
@@ -9935,7 +10085,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/hsm.go",
       "handler": "h.listHSMTargets",
-      "line": 550,
+      "line": 574,
       "match_key": "keycore|GET|/hsm/targets",
       "method": "GET",
       "normalized_path": "/hsm/targets",
@@ -9950,7 +10100,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/hsm.go",
       "handler": "h.hsmCredentialUsage",
-      "line": 551,
+      "line": 575,
       "match_key": "keycore|GET|/keys/hsm/credential-usage",
       "method": "GET",
       "normalized_path": "/keys/hsm/credential-usage",
@@ -9965,7 +10115,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/hsm.go",
       "handler": "h.listHSMObjects",
-      "line": 552,
+      "line": 576,
       "match_key": "keycore|GET|/hsm/objects",
       "method": "GET",
       "normalized_path": "/hsm/objects",
@@ -9980,7 +10130,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/hsm.go",
       "handler": "h.inspectHSMKey",
-      "line": 553,
+      "line": 577,
       "match_key": "keycore|GET|/keys/{param}/hsm",
       "method": "GET",
       "normalized_path": "/keys/{param}/hsm",
@@ -12811,11 +12961,26 @@
       "service": "hsm-connector"
     },
     {
+      "action": "key_wrapped_for_cloud",
+      "code_scope": "pkg/hsmconnector",
+      "file": "pkg/hsmconnector/handler.go",
+      "handler": "h.wrapForImport",
+      "line": 65,
+      "match_key": "hsm-connector|POST|/hsm/keys/wrap-for-import",
+      "method": "POST",
+      "normalized_path": "/hsm/keys/wrap-for-import",
+      "path": "/hsm/keys/wrap-for-import",
+      "permission": "hsm.key.use",
+      "registration": "kernel",
+      "resource": "hsm_key",
+      "service": "hsm-connector"
+    },
+    {
       "action": "key_imported",
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.importKey",
-      "line": 65,
+      "line": 66,
       "match_key": "hsm-connector|POST|/hsm/keys/import",
       "method": "POST",
       "normalized_path": "/hsm/keys/import",
@@ -12830,7 +12995,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.tenantKey",
-      "line": 66,
+      "line": 67,
       "match_key": "hsm-connector|POST|/hsm/tenant-key",
       "method": "POST",
       "normalized_path": "/hsm/tenant-key",
@@ -12845,7 +13010,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.encrypt",
-      "line": 67,
+      "line": 68,
       "match_key": "hsm-connector|POST|/hsm/encrypt",
       "method": "POST",
       "normalized_path": "/hsm/encrypt",
@@ -12860,7 +13025,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.decrypt",
-      "line": 68,
+      "line": 69,
       "match_key": "hsm-connector|POST|/hsm/decrypt",
       "method": "POST",
       "normalized_path": "/hsm/decrypt",
@@ -12875,7 +13040,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.sign",
-      "line": 69,
+      "line": 70,
       "match_key": "hsm-connector|POST|/hsm/sign",
       "method": "POST",
       "normalized_path": "/hsm/sign",
@@ -12890,7 +13055,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.verify",
-      "line": 70,
+      "line": 71,
       "match_key": "hsm-connector|POST|/hsm/verify",
       "method": "POST",
       "normalized_path": "/hsm/verify",
@@ -12905,7 +13070,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.random",
-      "line": 71,
+      "line": 72,
       "match_key": "hsm-connector|POST|/hsm/random",
       "method": "POST",
       "normalized_path": "/hsm/random",
@@ -12920,7 +13085,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.destroy",
-      "line": 72,
+      "line": 73,
       "match_key": "hsm-connector|POST|/hsm/keys/destroy",
       "method": "POST",
       "normalized_path": "/hsm/keys/destroy",
@@ -12935,7 +13100,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.inspect",
-      "line": 73,
+      "line": 74,
       "match_key": "hsm-connector|POST|/hsm/keys/inspect",
       "method": "POST",
       "normalized_path": "/hsm/keys/inspect",
@@ -12950,7 +13115,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.objects",
-      "line": 74,
+      "line": 75,
       "match_key": "hsm-connector|GET|/hsm/objects",
       "method": "GET",
       "normalized_path": "/hsm/objects",
@@ -12965,7 +13130,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.status",
-      "line": 75,
+      "line": 76,
       "match_key": "hsm-connector|GET|/hsm/status",
       "method": "GET",
       "normalized_path": "/hsm/status",
@@ -12980,7 +13145,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "<inline func>",
-      "line": 76,
+      "line": 77,
       "match_key": "hsm-connector|GET|/healthz",
       "method": "GET",
       "normalized_path": "/healthz",
@@ -14448,6 +14613,111 @@
       "service": "certs"
     },
     {
+      "action": "byok_created",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "h.createBYOK",
+      "line": 26,
+      "match_key": "cloud|POST|/cloud/byok/keys",
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys",
+      "path": "/cloud/byok/keys",
+      "permission": "cloud.write",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
+      "action": "byok_rotated",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "op(OpRotate)",
+      "line": 28,
+      "match_key": "cloud|POST|/cloud/byok/keys/{param}/rotate",
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/rotate",
+      "path": "/cloud/byok/keys/{id}/rotate",
+      "permission": "cloud.write",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
+      "action": "byok_reimported",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "op(OpReimport)",
+      "line": 29,
+      "match_key": "cloud|POST|/cloud/byok/keys/{param}/reimport",
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/reimport",
+      "path": "/cloud/byok/keys/{id}/reimport",
+      "permission": "cloud.write",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
+      "action": "byok_restored",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "op(OpRestore)",
+      "line": 30,
+      "match_key": "cloud|POST|/cloud/byok/keys/{param}/restore",
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/restore",
+      "path": "/cloud/byok/keys/{id}/restore",
+      "permission": "cloud.write",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
+      "action": "byok_verified",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "op(OpVerify)",
+      "line": 31,
+      "match_key": "cloud|POST|/cloud/byok/keys/{param}/verify",
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/verify",
+      "path": "/cloud/byok/keys/{id}/verify",
+      "permission": "cloud.write",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
+      "action": "byok_synced",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "op(OpSync)",
+      "line": 32,
+      "match_key": "cloud|POST|/cloud/byok/keys/{param}/sync",
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/sync",
+      "path": "/cloud/byok/keys/{id}/sync",
+      "permission": "cloud.write",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
+      "action": "byok_revoked",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "op(OpRevoke)",
+      "line": 33,
+      "match_key": "cloud|POST|/cloud/byok/keys/{param}/revoke",
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/revoke",
+      "path": "/cloud/byok/keys/{id}/revoke",
+      "permission": "cloud.write",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
       "action": "account_test_requested",
       "code_scope": "cloud",
       "file": "services/cloud/credentials.go",
@@ -14527,7 +14797,7 @@
       "code_scope": "cloud",
       "file": "services/cloud/handler.go",
       "handler": "h.handleInventory",
-      "line": 38,
+      "line": 36,
       "match_key": "cloud|GET|/cloud/inventory",
       "method": "GET",
       "normalized_path": "/cloud/inventory",
@@ -14542,7 +14812,7 @@
       "code_scope": "cloud",
       "file": "services/cloud/handler.go",
       "handler": "h.handleListBindings",
-      "line": 39,
+      "line": 37,
       "match_key": "cloud|GET|/cloud/bindings",
       "method": "GET",
       "normalized_path": "/cloud/bindings",
@@ -14557,7 +14827,7 @@
       "code_scope": "cloud",
       "file": "services/cloud/handler.go",
       "handler": "h.handleGetBinding",
-      "line": 40,
+      "line": 38,
       "match_key": "cloud|GET|/cloud/bindings/{param}",
       "method": "GET",
       "normalized_path": "/cloud/bindings/{param}",
@@ -16338,6 +16608,21 @@
       "service": "keycore"
     },
     {
+      "action": "cloud_wrapped",
+      "code_scope": "keycore",
+      "file": "services/keycore/cloud_wrap.go",
+      "handler": "h.cloudWrap",
+      "line": 210,
+      "match_key": "keycore|POST|/keys/{param}/cloud-wrap",
+      "method": "POST",
+      "normalized_path": "/keys/{param}/cloud-wrap",
+      "path": "/keys/{id}/cloud-wrap",
+      "permission": "key.cloud_import",
+      "registration": "kernel",
+      "resource": "key",
+      "service": "keycore"
+    },
+    {
       "action": "",
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
@@ -16522,7 +16807,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterJoinKey",
-      "line": 234,
+      "line": 235,
       "match_key": "keycore|POST|/cluster/mek/join-key",
       "method": "POST",
       "normalized_path": "/cluster/mek/join-key",
@@ -16537,7 +16822,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterMEKExport",
-      "line": 235,
+      "line": 236,
       "match_key": "keycore|POST|/cluster/mek/export",
       "method": "POST",
       "normalized_path": "/cluster/mek/export",
@@ -16552,7 +16837,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterMEKImport",
-      "line": 236,
+      "line": 237,
       "match_key": "keycore|POST|/cluster/mek/import",
       "method": "POST",
       "normalized_path": "/cluster/mek/import",
@@ -16567,7 +16852,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleListKeyRotationMetrics)",
-      "line": 251,
+      "line": 252,
       "match_key": "keycore|GET|/keys/{param}/rotation-metrics",
       "method": "GET",
       "normalized_path": "/keys/{param}/rotation-metrics",
@@ -16582,7 +16867,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetKeyHealth)",
-      "line": 254,
+      "line": 255,
       "match_key": "keycore|GET|/keys/{param}/health",
       "method": "GET",
       "normalized_path": "/keys/{param}/health",
@@ -16597,7 +16882,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleGetAlgorithmBenchmarks",
-      "line": 255,
+      "line": 256,
       "match_key": "keycore|GET|/analytics/algorithms",
       "method": "GET",
       "normalized_path": "/analytics/algorithms",
@@ -16612,7 +16897,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleAttestationPublicKey",
-      "line": 258,
+      "line": 259,
       "match_key": "keycore|GET|/attestation/public-key",
       "method": "GET",
       "normalized_path": "/attestation/public-key",
@@ -16627,7 +16912,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleRNGHealth",
-      "line": 264,
+      "line": 265,
       "match_key": "keycore|GET|/fips/rng-health",
       "method": "GET",
       "normalized_path": "/fips/rng-health",
@@ -16642,7 +16927,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "internalauth.RequireToken(h.handleDueForLifecycle)",
-      "line": 270,
+      "line": 271,
       "match_key": "keycore|GET|/keys/due-for-lifecycle",
       "method": "GET",
       "normalized_path": "/keys/due-for-lifecycle",
@@ -17407,7 +17692,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/hsm.go",
       "handler": "h.hsmCredentialUsage",
-      "line": 551,
+      "line": 575,
       "match_key": "keycore|GET|/keys/hsm/credential-usage",
       "method": "GET",
       "normalized_path": "/keys/hsm/credential-usage",
@@ -18543,11 +18828,26 @@
       "service": "hsm-connector"
     },
     {
+      "action": "key_wrapped_for_cloud",
+      "code_scope": "pkg/hsmconnector",
+      "file": "pkg/hsmconnector/handler.go",
+      "handler": "h.wrapForImport",
+      "line": 65,
+      "match_key": "hsm-connector|POST|/hsm/keys/wrap-for-import",
+      "method": "POST",
+      "normalized_path": "/hsm/keys/wrap-for-import",
+      "path": "/hsm/keys/wrap-for-import",
+      "permission": "hsm.key.use",
+      "registration": "kernel",
+      "resource": "hsm_key",
+      "service": "hsm-connector"
+    },
+    {
       "action": "key_imported",
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.importKey",
-      "line": 65,
+      "line": 66,
       "match_key": "hsm-connector|POST|/hsm/keys/import",
       "method": "POST",
       "normalized_path": "/hsm/keys/import",
@@ -18562,7 +18862,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.tenantKey",
-      "line": 66,
+      "line": 67,
       "match_key": "hsm-connector|POST|/hsm/tenant-key",
       "method": "POST",
       "normalized_path": "/hsm/tenant-key",
@@ -18577,7 +18877,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.encrypt",
-      "line": 67,
+      "line": 68,
       "match_key": "hsm-connector|POST|/hsm/encrypt",
       "method": "POST",
       "normalized_path": "/hsm/encrypt",
@@ -18592,7 +18892,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.decrypt",
-      "line": 68,
+      "line": 69,
       "match_key": "hsm-connector|POST|/hsm/decrypt",
       "method": "POST",
       "normalized_path": "/hsm/decrypt",
@@ -18607,7 +18907,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.sign",
-      "line": 69,
+      "line": 70,
       "match_key": "hsm-connector|POST|/hsm/sign",
       "method": "POST",
       "normalized_path": "/hsm/sign",
@@ -18622,7 +18922,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.verify",
-      "line": 70,
+      "line": 71,
       "match_key": "hsm-connector|POST|/hsm/verify",
       "method": "POST",
       "normalized_path": "/hsm/verify",
@@ -18637,7 +18937,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.random",
-      "line": 71,
+      "line": 72,
       "match_key": "hsm-connector|POST|/hsm/random",
       "method": "POST",
       "normalized_path": "/hsm/random",
@@ -18652,7 +18952,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.destroy",
-      "line": 72,
+      "line": 73,
       "match_key": "hsm-connector|POST|/hsm/keys/destroy",
       "method": "POST",
       "normalized_path": "/hsm/keys/destroy",
@@ -18667,7 +18967,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.inspect",
-      "line": 73,
+      "line": 74,
       "match_key": "hsm-connector|POST|/hsm/keys/inspect",
       "method": "POST",
       "normalized_path": "/hsm/keys/inspect",
@@ -18682,7 +18982,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.objects",
-      "line": 74,
+      "line": 75,
       "match_key": "hsm-connector|GET|/hsm/objects",
       "method": "GET",
       "normalized_path": "/hsm/objects",
@@ -18697,7 +18997,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "h.status",
-      "line": 75,
+      "line": 76,
       "match_key": "hsm-connector|GET|/hsm/status",
       "method": "GET",
       "normalized_path": "/hsm/status",
@@ -18712,7 +19012,7 @@
       "code_scope": "pkg/hsmconnector",
       "file": "pkg/hsmconnector/handler.go",
       "handler": "<inline func>",
-      "line": 76,
+      "line": 77,
       "match_key": "hsm-connector|GET|/healthz",
       "method": "GET",
       "normalized_path": "/healthz",
@@ -19416,7 +19716,7 @@
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "setConnectorView(\"cards\")} title=\"Card view\">",
-      "line": 471,
+      "line": 317,
       "tabs": [
         "byok"
       ],
@@ -19426,7 +19726,7 @@
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "setConnectorView(\"list\")} title=\"List view\">",
-      "line": 472,
+      "line": 318,
       "tabs": [
         "byok"
       ],
@@ -19436,7 +19736,7 @@
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "void refresh()} disabled= > Refresh",
-      "line": 473,
+      "line": 319,
       "tabs": [
         "byok"
       ],
@@ -19446,7 +19746,7 @@
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "}> Region Mappings",
-      "line": 474,
+      "line": 320,
       "tabs": [
         "byok"
       ],
@@ -19456,7 +19756,7 @@
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "setModal(\"add\")}>+ Add Connector",
-      "line": 475,
+      "line": 321,
       "tabs": [
         "byok"
       ],
@@ -19466,7 +19766,7 @@
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "setExpandedProvider(isExpanded ? null : card.provider)} style={ }> {isExpande...",
-      "line": 501,
+      "line": 347,
       "tabs": [
         "byok"
       ],
@@ -19476,17 +19776,7 @@
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "} disabled= >",
-      "line": 519,
-      "tabs": [
-        "byok"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
-      "handler": "",
-      "label": "{ const activeAccount = card.accounts[0]; if (activeAccount) }} disabled= >Im...",
-      "line": 525,
+      "line": 365,
       "tabs": [
         "byok"
       ],
@@ -19496,7 +19786,7 @@
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "} disabled= > Inventory",
-      "line": 534,
+      "line": 371,
       "tabs": [
         "byok"
       ],
@@ -19506,7 +19796,7 @@
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "void deleteConnector(card.provider, card.accounts[0])} disabled= >",
-      "line": 537,
+      "line": 374,
       "tabs": [
         "byok"
       ],
@@ -19516,7 +19806,7 @@
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "setConnectorMenu(menuOpen ? \"\" : String(card.provider))} style={{ border: `1p...",
-      "line": 560,
+      "line": 397,
       "tabs": [
         "byok"
       ],
@@ -19526,17 +19816,7 @@
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "} disabled= style={ }>Sync Now",
-      "line": 564,
-      "tabs": [
-        "byok"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
-      "handler": "",
-      "label": "} disabled= style={ }>Import Keys",
-      "line": 565,
+      "line": 401,
       "tabs": [
         "byok"
       ],
@@ -19546,7 +19826,7 @@
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "} disabled= style={ }>Browse Inventory",
-      "line": 566,
+      "line": 402,
       "tabs": [
         "byok"
       ],
@@ -19556,37 +19836,17 @@
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "} disabled= style={ }>Delete Connector",
-      "line": 567,
+      "line": 403,
       "tabs": [
         "byok"
       ],
       "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
-      "handler": "",
-      "label": "copyToClipboard(binding.cloud_key_ref || binding.cloud_key_id)} style={ } tit...",
-      "line": 617,
-      "tabs": [
-        "byok"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
-      "handler": "",
-      "label": "void rotateBindingAction(binding)} disabled= > {rotatingBinding === binding.i...",
-      "line": 625,
-      "tabs": [
-        "byok"
-      ],
-      "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 685,
+      "line": 462,
       "tabs": [
         "byok"
       ],
@@ -19596,27 +19856,7 @@
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "void submitAddConnector()} disabled= >",
-      "line": 686,
-      "tabs": [
-        "byok"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
-      "handler": "",
-      "label": "setModal(null)} disabled= >Cancel",
-      "line": 728,
-      "tabs": [
-        "byok"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
-      "handler": "",
-      "label": "void submitImport()} disabled= >",
-      "line": 729,
+      "line": 463,
       "tabs": [
         "byok"
       ],
@@ -19626,7 +19866,7 @@
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Close",
-      "line": 780,
+      "line": 513,
       "tabs": [
         "byok"
       ],
@@ -19636,7 +19876,7 @@
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "void submitRegionMapping()} disabled= >",
-      "line": 781,
+      "line": 514,
       "tabs": [
         "byok"
       ],
@@ -19646,7 +19886,7 @@
       "file": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Close",
-      "line": 816,
+      "line": 549,
       "tabs": [
         "byok"
       ],
@@ -24454,6 +24694,78 @@
       "tag": "button"
     },
     {
+      "file": "web/dashboard/src/components/v3/tabs/byok/Console.tsx",
+      "handler": "",
+      "label": "void load()}>Refresh",
+      "line": 84,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/byok/Console.tsx",
+      "handler": "",
+      "label": "setCreating(true)}> Bring your own key",
+      "line": 85,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/byok/Console.tsx",
+      "handler": "",
+      "label": "download(\"vecta-byok-cloud-calls.sh\", runsToScript(runs))}> Export as script",
+      "line": 126,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/byok/Console.tsx",
+      "handler": "",
+      "label": "setOpenRun(openRun === r.id ? \"\" : r.id)} style={ }> \u00b7 {k ? `$ $ ` : r.byok_i...",
+      "line": 133,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/byok/CreateWizard.tsx",
+      "handler": "onClose",
+      "label": "(icon or dynamic label)",
+      "line": 156,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/byok/CreateWizard.tsx",
+      "handler": "",
+      "label": "void submit()}>",
+      "line": 157,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/byok/KeyDetail.tsx",
+      "handler": "",
+      "label": "void act(op)}>{busy === op ? `$ \u2026` : label}",
+      "line": 87,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/byok/KeyDetail.tsx",
+      "handler": "",
+      "label": "setOpen(open === r.id ? \"\" : r.id)} style={ }> \u00b7 steps \u00b7",
+      "line": 147,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/byok/RunSteps.tsx",
+      "handler": "",
+      "label": "copy(s.cli || \"\")} title=\"Copy the CLI equivalent\" style={ }>",
+      "line": 37,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
       "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
       "handler": "",
       "label": "setStatus(s)} style={ }>",
@@ -26900,6 +27212,58 @@
     },
     {
       "dynamic": false,
+      "expression": "serviceRequest(\"cloud\", \"/cloud/byok/providers\")",
+      "file": "web/dashboard/src/lib/byok.ts",
+      "line": 120,
+      "match_key": "cloud|GET|/cloud/byok/providers",
+      "method": "GET",
+      "normalized_path": "/cloud/byok/providers",
+      "path": "/cloud/byok/providers",
+      "service": "cloud",
+      "service_key": "cloud",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": false,
+      "expression": "serviceRequest(\"cloud\", \"/cloud/byok/keys\")",
+      "file": "web/dashboard/src/lib/byok.ts",
+      "line": 125,
+      "match_key": "cloud|GET|/cloud/byok/keys",
+      "method": "GET",
+      "normalized_path": "/cloud/byok/keys",
+      "path": "/cloud/byok/keys",
+      "service": "cloud",
+      "service_key": "cloud",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"cloud\", `/cloud/byok/keys/${encodeURIComponent(id)}`)",
+      "file": "web/dashboard/src/lib/byok.ts",
+      "line": 130,
+      "match_key": "cloud|GET|/cloud/byok/keys/{param}",
+      "method": "GET",
+      "normalized_path": "/cloud/byok/keys/{param}",
+      "path": "/cloud/byok/keys/{param}",
+      "service": "cloud",
+      "service_key": "cloud",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": false,
+      "expression": "serviceRequest(\"cloud\", \"/cloud/byok/runs\")",
+      "file": "web/dashboard/src/lib/byok.ts",
+      "line": 134,
+      "match_key": "cloud|GET|/cloud/byok/runs",
+      "method": "GET",
+      "normalized_path": "/cloud/byok/runs",
+      "path": "/cloud/byok/runs",
+      "service": "cloud",
+      "service_key": "cloud",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": false,
       "expression": "serviceRequest(\"keycore\", \"/ceremony/guardians\")",
       "file": "web/dashboard/src/lib/ceremony.ts",
       "line": 48,
@@ -27695,7 +28059,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"cloud\", `/cloud/accounts${query}`)",
       "file": "web/dashboard/src/lib/cloud.ts",
-      "line": 131,
+      "line": 121,
       "match_key": "cloud|GET|/cloud/accounts{param}",
       "method": "GET",
       "normalized_path": "/cloud/accounts{param}",
@@ -27708,7 +28072,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"cloud\", \"/cloud/accounts\")",
       "file": "web/dashboard/src/lib/cloud.ts",
-      "line": 139,
+      "line": 129,
       "match_key": "cloud|POST|/cloud/accounts",
       "method": "POST",
       "normalized_path": "/cloud/accounts",
@@ -27721,7 +28085,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"cloud\", `/cloud/accounts/${encodeURIComponent(String(accountId || \"\").trim())}`)",
       "file": "web/dashboard/src/lib/cloud.ts",
-      "line": 156,
+      "line": 146,
       "match_key": "cloud|DELETE|/cloud/accounts/{param}",
       "method": "DELETE",
       "normalized_path": "/cloud/accounts/{param}",
@@ -27734,7 +28098,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"cloud\", `/cloud/region-mappings${query}`)",
       "file": "web/dashboard/src/lib/cloud.ts",
-      "line": 167,
+      "line": 157,
       "match_key": "cloud|GET|/cloud/region-mappings{param}",
       "method": "GET",
       "normalized_path": "/cloud/region-mappings{param}",
@@ -27747,7 +28111,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"cloud\", \"/cloud/region-mappings\")",
       "file": "web/dashboard/src/lib/cloud.ts",
-      "line": 175,
+      "line": 165,
       "match_key": "cloud|POST|/cloud/region-mappings",
       "method": "POST",
       "normalized_path": "/cloud/region-mappings",
@@ -27758,35 +28122,9 @@
     },
     {
       "dynamic": false,
-      "expression": "serviceRequest(\"cloud\", \"/cloud/import\")",
-      "file": "web/dashboard/src/lib/cloud.ts",
-      "line": 188,
-      "match_key": "cloud|POST|/cloud/import",
-      "method": "POST",
-      "normalized_path": "/cloud/import",
-      "path": "/cloud/import",
-      "service": "cloud",
-      "service_key": "cloud",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"cloud\", `/cloud/bindings/${encodeURIComponent(bindingId)}/rotate`)",
-      "file": "web/dashboard/src/lib/cloud.ts",
-      "line": 208,
-      "match_key": "cloud|POST|/cloud/bindings/{param}/rotate",
-      "method": "POST",
-      "normalized_path": "/cloud/bindings/{param}/rotate",
-      "path": "/cloud/bindings/{param}/rotate",
-      "service": "cloud",
-      "service_key": "cloud",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": false,
       "expression": "serviceRequest(\"cloud\", \"/cloud/sync\")",
       "file": "web/dashboard/src/lib/cloud.ts",
-      "line": 221,
+      "line": 178,
       "match_key": "cloud|POST|/cloud/sync",
       "method": "POST",
       "normalized_path": "/cloud/sync",
@@ -27799,7 +28137,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"cloud\", `/cloud/inventory${suffix}`)",
       "file": "web/dashboard/src/lib/cloud.ts",
-      "line": 246,
+      "line": 203,
       "match_key": "cloud|GET|/cloud/inventory{param}",
       "method": "GET",
       "normalized_path": "/cloud/inventory{param}",
@@ -27812,7 +28150,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"cloud\", `/cloud/bindings${suffix}`)",
       "file": "web/dashboard/src/lib/cloud.ts",
-      "line": 267,
+      "line": 224,
       "match_key": "cloud|GET|/cloud/bindings{param}",
       "method": "GET",
       "normalized_path": "/cloud/bindings{param}",
@@ -33087,7 +33425,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-11T15:47:12Z",
+  "generated_at": "2026-10-11T16:32:59Z",
   "navigation": [
     {
       "group": "Overview",
@@ -45783,6 +46121,487 @@
       "service_store_calls": []
     },
     {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"cloud\", \"/cloud/byok/providers\")",
+          "file": "web/dashboard/src/lib/byok.ts",
+          "line": 120,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "<inline func>",
+      "handler_external_package_calls": [],
+      "handler_file": "",
+      "handler_helper_calls": [],
+      "handler_internal_package_calls": [],
+      "handler_line": "",
+      "handler_name": "<inline func>",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/cloud/byok/providers",
+      "path": "/cloud/byok/providers",
+      "route_file": "services/cloud/byok_routes.go",
+      "route_line": 20,
+      "service": "cloud",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"cloud\", \"/cloud/byok/keys\")",
+          "file": "web/dashboard/src/lib/byok.ts",
+          "line": 125,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.listBYOK",
+      "handler_external_package_calls": [],
+      "handler_file": "services/cloud/byok_routes.go",
+      "handler_helper_calls": [
+        "ListBYOK",
+        "byokFail"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 65,
+      "handler_name": "listBYOK",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "ListBYOK"
+      ],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/cloud/byok/keys",
+      "path": "/cloud/byok/keys",
+      "route_file": "services/cloud/byok_routes.go",
+      "route_line": 23,
+      "service": "cloud",
+      "service_external_package_calls": [],
+      "service_helper_calls": [
+        "byokReady",
+        "ListBYOKKeys",
+        "ListBindings"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [],
+          "file": "services/cloud/byok_engine.go",
+          "helper_calls": [
+            "byokReady",
+            "ListBYOKKeys",
+            "ListBindings"
+          ],
+          "internal_package_calls": [],
+          "line": 573,
+          "name": "ListBYOK",
+          "receiver_calls": [
+            "s.byokStore.ListBYOKKeys"
+          ],
+          "store_calls": [
+            "ListBindings"
+          ]
+        }
+      ],
+      "service_receiver_calls": [
+        "s.byokStore.ListBYOKKeys"
+      ],
+      "service_store_calls": [
+        "ListBindings"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"cloud\", \"/cloud/byok/runs\")",
+          "file": "web/dashboard/src/lib/byok.ts",
+          "line": 134,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.listBYOKRuns",
+      "handler_external_package_calls": [],
+      "handler_file": "services/cloud/byok_routes.go",
+      "handler_helper_calls": [
+        "byokReady",
+        "byokFail",
+        "ListBYOKRuns",
+        "Get"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 74,
+      "handler_name": "listBYOKRuns",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "byokReady"
+      ],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/cloud/byok/runs",
+      "path": "/cloud/byok/runs",
+      "route_file": "services/cloud/byok_routes.go",
+      "route_line": 24,
+      "service": "cloud",
+      "service_external_package_calls": [],
+      "service_helper_calls": [
+        "refuseBYOK"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [],
+          "file": "services/cloud/byok_engine.go",
+          "helper_calls": [
+            "refuseBYOK"
+          ],
+          "internal_package_calls": [],
+          "line": 103,
+          "name": "byokReady",
+          "receiver_calls": [],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"cloud\", `/cloud/byok/keys/${encodeURIComponent(id)}`)",
+          "file": "web/dashboard/src/lib/byok.ts",
+          "line": 130,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.getBYOK",
+      "handler_external_package_calls": [],
+      "handler_file": "services/cloud/byok_routes.go",
+      "handler_helper_calls": [
+        "GetBYOK",
+        "byokFail"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 87,
+      "handler_name": "getBYOK",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "GetBYOK"
+      ],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/cloud/byok/keys/{param}",
+      "path": "/cloud/byok/keys/{id}",
+      "route_file": "services/cloud/byok_routes.go",
+      "route_line": 25,
+      "service": "cloud",
+      "service_external_package_calls": [
+        "errors.Is"
+      ],
+      "service_helper_calls": [
+        "byokReady",
+        "GetBYOKKey",
+        "refuseBYOK",
+        "ListBYOKMaterials",
+        "ListBYOKRuns"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "errors.Is"
+          ],
+          "file": "services/cloud/byok_engine.go",
+          "helper_calls": [
+            "byokReady",
+            "GetBYOKKey",
+            "refuseBYOK",
+            "ListBYOKMaterials",
+            "ListBYOKRuns"
+          ],
+          "internal_package_calls": [],
+          "line": 602,
+          "name": "GetBYOK",
+          "receiver_calls": [
+            "s.byokStore.GetBYOKKey",
+            "s.byokStore.ListBYOKMaterials",
+            "s.byokStore.ListBYOKRuns"
+          ],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [
+        "s.byokStore.GetBYOKKey",
+        "s.byokStore.ListBYOKMaterials",
+        "s.byokStore.ListBYOKRuns"
+      ],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.createBYOK",
+      "handler_external_package_calls": [],
+      "handler_file": "services/cloud/byok_routes.go",
+      "handler_helper_calls": [
+        "CreateBYOK",
+        "byokFail"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 96,
+      "handler_name": "createBYOK",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "CreateBYOK"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys",
+      "path": "/cloud/byok/keys",
+      "route_file": "services/cloud/byok_routes.go",
+      "route_line": 26,
+      "service": "cloud",
+      "service_external_package_calls": [
+        "fmt.Sprintf",
+        "strings.TrimSpace",
+        "strings.Join",
+        "strings.EqualFold",
+        "time.Now"
+      ],
+      "service_helper_calls": [
+        "byokReady",
+        "refuseBYOK",
+        "byokCall",
+        "KeyInfo",
+        "boolValue",
+        "specFromKMS",
+        "anyToString",
+        "Capabilities",
+        "containsString",
+        "expiryFrom",
+        "gateMaterial",
+        "newID",
+        "usageFromKey",
+        "step",
+        "CreateKey",
+        "finish",
+        "CreateBYOKKey",
+        "importMaterial",
+        "UpdateBYOKKey",
+        "Describe",
+        "PutBYOKMaterial",
+        "verifyStep"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "fmt.Sprintf",
+            "strings.TrimSpace",
+            "strings.Join",
+            "strings.EqualFold",
+            "time.Now"
+          ],
+          "file": "services/cloud/byok_engine.go",
+          "helper_calls": [
+            "byokReady",
+            "refuseBYOK",
+            "byokCall",
+            "KeyInfo",
+            "boolValue",
+            "specFromKMS",
+            "anyToString",
+            "Capabilities",
+            "containsString",
+            "expiryFrom",
+            "gateMaterial",
+            "newID",
+            "usageFromKey",
+            "step",
+            "CreateKey",
+            "finish",
+            "CreateBYOKKey",
+            "importMaterial",
+            "UpdateBYOKKey",
+            "Describe",
+            "PutBYOKMaterial",
+            "verifyStep"
+          ],
+          "internal_package_calls": [],
+          "line": 262,
+          "name": "CreateBYOK",
+          "receiver_calls": [
+            "s.byokKeycore.KeyInfo",
+            "s.byokStore.CreateBYOKKey",
+            "s.byokStore.UpdateBYOKKey",
+            "s.byokStore.PutBYOKMaterial"
+          ],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [
+        "s.byokKeycore.KeyInfo",
+        "s.byokStore.CreateBYOKKey",
+        "s.byokStore.UpdateBYOKKey",
+        "s.byokStore.PutBYOKMaterial"
+      ],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "op(OpRotate)",
+      "handler_external_package_calls": [],
+      "handler_file": "",
+      "handler_helper_calls": [],
+      "handler_internal_package_calls": [],
+      "handler_line": "",
+      "handler_name": "op(OpRotate)",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/rotate",
+      "path": "/cloud/byok/keys/{id}/rotate",
+      "route_file": "services/cloud/byok_routes.go",
+      "route_line": 28,
+      "service": "cloud",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "op(OpReimport)",
+      "handler_external_package_calls": [],
+      "handler_file": "",
+      "handler_helper_calls": [],
+      "handler_internal_package_calls": [],
+      "handler_line": "",
+      "handler_name": "op(OpReimport)",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/reimport",
+      "path": "/cloud/byok/keys/{id}/reimport",
+      "route_file": "services/cloud/byok_routes.go",
+      "route_line": 29,
+      "service": "cloud",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "op(OpRestore)",
+      "handler_external_package_calls": [],
+      "handler_file": "",
+      "handler_helper_calls": [],
+      "handler_internal_package_calls": [],
+      "handler_line": "",
+      "handler_name": "op(OpRestore)",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/restore",
+      "path": "/cloud/byok/keys/{id}/restore",
+      "route_file": "services/cloud/byok_routes.go",
+      "route_line": 30,
+      "service": "cloud",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "op(OpVerify)",
+      "handler_external_package_calls": [],
+      "handler_file": "",
+      "handler_helper_calls": [],
+      "handler_internal_package_calls": [],
+      "handler_line": "",
+      "handler_name": "op(OpVerify)",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/verify",
+      "path": "/cloud/byok/keys/{id}/verify",
+      "route_file": "services/cloud/byok_routes.go",
+      "route_line": 31,
+      "service": "cloud",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "op(OpSync)",
+      "handler_external_package_calls": [],
+      "handler_file": "",
+      "handler_helper_calls": [],
+      "handler_internal_package_calls": [],
+      "handler_line": "",
+      "handler_name": "op(OpSync)",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/sync",
+      "path": "/cloud/byok/keys/{id}/sync",
+      "route_file": "services/cloud/byok_routes.go",
+      "route_line": 32,
+      "service": "cloud",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "op(OpRevoke)",
+      "handler_external_package_calls": [],
+      "handler_file": "",
+      "handler_helper_calls": [],
+      "handler_internal_package_calls": [],
+      "handler_line": "",
+      "handler_name": "op(OpRevoke)",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/cloud/byok/keys/{param}/revoke",
+      "path": "/cloud/byok/keys/{id}/revoke",
+      "route_file": "services/cloud/byok_routes.go",
+      "route_line": 33,
+      "service": "cloud",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
       "frontend_call_sites": [],
       "handler": "h.testAccount",
       "handler_external_package_calls": [
@@ -45933,7 +46752,7 @@
         {
           "expression": "serviceRequest(\"cloud\", \"/cloud/accounts\")",
           "file": "web/dashboard/src/lib/cloud.ts",
-          "line": 139,
+          "line": 129,
           "source": "serviceRequest"
         }
       ],
@@ -45951,7 +46770,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 44,
+      "handler_line": 42,
       "handler_name": "handleRegisterAccount",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46001,7 +46820,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 66,
+          "line": 68,
           "name": "RegisterAccount",
           "receiver_calls": [],
           "store_calls": [
@@ -46030,7 +46849,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 62,
+      "handler_line": 60,
       "handler_name": "handleListAccounts",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46062,7 +46881,7 @@
             "normalizeProvider"
           ],
           "internal_package_calls": [],
-          "line": 140,
+          "line": 142,
           "name": "ListAccounts",
           "receiver_calls": [],
           "store_calls": [
@@ -46080,7 +46899,7 @@
         {
           "expression": "serviceRequest(\"cloud\", `/cloud/accounts/${encodeURIComponent(String(accountId || \"\").trim())}`)",
           "file": "web/dashboard/src/lib/cloud.ts",
-          "line": 156,
+          "line": 146,
           "source": "serviceRequest"
         }
       ],
@@ -46098,7 +46917,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 76,
+      "handler_line": 74,
       "handler_name": "handleDeleteAccount",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46132,7 +46951,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 153,
+          "line": 155,
           "name": "DeleteAccount",
           "receiver_calls": [
             "s.exposure.Retire"
@@ -46154,7 +46973,7 @@
         {
           "expression": "serviceRequest(\"cloud\", \"/cloud/region-mappings\")",
           "file": "web/dashboard/src/lib/cloud.ts",
-          "line": 175,
+          "line": 165,
           "source": "serviceRequest"
         }
       ],
@@ -46172,7 +46991,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 95,
+      "handler_line": 93,
       "handler_name": "handleSetRegionMapping",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46208,7 +47027,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 175,
+          "line": 177,
           "name": "SetRegionMapping",
           "receiver_calls": [],
           "store_calls": [
@@ -46237,7 +47056,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 113,
+      "handler_line": 111,
       "handler_name": "handleListRegionMappings",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46269,7 +47088,7 @@
             "normalizeProvider"
           ],
           "internal_package_calls": [],
-          "line": 209,
+          "line": 211,
           "name": "ListRegionMappings",
           "receiver_calls": [],
           "store_calls": [
@@ -46285,245 +47104,9 @@
     {
       "frontend_call_sites": [
         {
-          "expression": "serviceRequest(\"cloud\", \"/cloud/import\")",
-          "file": "web/dashboard/src/lib/cloud.ts",
-          "line": 188,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleImportKey",
-      "handler_external_package_calls": [
-        "strings.TrimSpace",
-        "strings.EqualFold"
-      ],
-      "handler_file": "services/cloud/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeErr",
-        "Error",
-        "bodyTenantAllowed",
-        "requestIP",
-        "ImportKeyToCloud",
-        "writeServiceError",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 127,
-      "handler_name": "handleImportKey",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "ImportKeyToCloud"
-      ],
-      "handler_store_calls": [],
-      "method": "POST",
-      "normalized_path": "/cloud/import",
-      "path": "/cloud/import",
-      "route_file": "services/cloud/handler.go",
-      "route_line": 35,
-      "service": "cloud",
-      "service_external_package_calls": [
-        "encoding/json.Unmarshal",
-        "encoding/json.Marshal",
-        "errors.New",
-        "strings.TrimSpace",
-        "strings.EqualFold"
-      ],
-      "service_helper_calls": [
-        "normalizeProvider",
-        "validJSONOr",
-        "resolveAccountProvider",
-        "accountCredentials",
-        "resolveRegion",
-        "evaluateKeyAccess",
-        "Name",
-        "firstNonEmpty",
-        "newID",
-        "publishAudit",
-        "newServiceError",
-        "GetKey",
-        "ExportKey",
-        "ImportKey",
-        "nowUTC",
-        "CreateBinding",
-        "GetBinding"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [
-            "encoding/json.Unmarshal",
-            "encoding/json.Marshal",
-            "errors.New",
-            "strings.TrimSpace",
-            "strings.EqualFold"
-          ],
-          "file": "services/cloud/service.go",
-          "helper_calls": [
-            "normalizeProvider",
-            "validJSONOr",
-            "resolveAccountProvider",
-            "accountCredentials",
-            "resolveRegion",
-            "evaluateKeyAccess",
-            "Name",
-            "firstNonEmpty",
-            "newID",
-            "publishAudit",
-            "newServiceError",
-            "GetKey",
-            "ExportKey",
-            "ImportKey",
-            "nowUTC",
-            "CreateBinding",
-            "GetBinding"
-          ],
-          "internal_package_calls": [],
-          "line": 222,
-          "name": "ImportKeyToCloud",
-          "receiver_calls": [
-            "s.keycore.GetKey",
-            "s.keycore.ExportKey"
-          ],
-          "store_calls": [
-            "CreateBinding",
-            "GetBinding"
-          ]
-        }
-      ],
-      "service_receiver_calls": [
-        "s.keycore.GetKey",
-        "s.keycore.ExportKey"
-      ],
-      "service_store_calls": [
-        "CreateBinding",
-        "GetBinding"
-      ]
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"cloud\", `/cloud/bindings/${encodeURIComponent(bindingId)}/rotate`)",
-          "file": "web/dashboard/src/lib/cloud.ts",
-          "line": 208,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleRotateBinding",
-      "handler_external_package_calls": [
-        "strings.TrimSpace",
-        "strings.EqualFold"
-      ],
-      "handler_file": "services/cloud/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "decodeJSON",
-        "requestIP",
-        "RotateCloudKey",
-        "writeServiceError",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 152,
-      "handler_name": "handleRotateBinding",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "RotateCloudKey"
-      ],
-      "handler_store_calls": [],
-      "method": "POST",
-      "normalized_path": "/cloud/bindings/{param}/rotate",
-      "path": "/cloud/bindings/{id}/rotate",
-      "route_file": "services/cloud/handler.go",
-      "route_line": 36,
-      "service": "cloud",
-      "service_external_package_calls": [
-        "errors.New",
-        "strings.TrimSpace",
-        "strings.EqualFold"
-      ],
-      "service_helper_calls": [
-        "GetBinding",
-        "GetAccount",
-        "accountCredentials",
-        "Get",
-        "evaluateKeyAccess",
-        "newID",
-        "firstNonEmpty",
-        "publishAudit",
-        "newServiceError",
-        "defaultString",
-        "RotateKey",
-        "Error",
-        "GetKey",
-        "ExportKey",
-        "mergeMetadata",
-        "nowUTC",
-        "UpdateBinding"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [
-            "errors.New",
-            "strings.TrimSpace",
-            "strings.EqualFold"
-          ],
-          "file": "services/cloud/service.go",
-          "helper_calls": [
-            "GetBinding",
-            "GetAccount",
-            "accountCredentials",
-            "Get",
-            "evaluateKeyAccess",
-            "newID",
-            "firstNonEmpty",
-            "publishAudit",
-            "newServiceError",
-            "defaultString",
-            "RotateKey",
-            "Error",
-            "GetKey",
-            "ExportKey",
-            "mergeMetadata",
-            "nowUTC",
-            "UpdateBinding"
-          ],
-          "internal_package_calls": [],
-          "line": 368,
-          "name": "RotateCloudKey",
-          "receiver_calls": [
-            "s.providers.Get",
-            "s.keycore.RotateKey",
-            "s.keycore.GetKey",
-            "s.keycore.ExportKey"
-          ],
-          "store_calls": [
-            "GetBinding",
-            "GetAccount",
-            "UpdateBinding"
-          ]
-        }
-      ],
-      "service_receiver_calls": [
-        "s.providers.Get",
-        "s.keycore.RotateKey",
-        "s.keycore.GetKey",
-        "s.keycore.ExportKey"
-      ],
-      "service_store_calls": [
-        "GetBinding",
-        "GetAccount",
-        "UpdateBinding"
-      ]
-    },
-    {
-      "frontend_call_sites": [
-        {
           "expression": "serviceRequest(\"cloud\", \"/cloud/sync\")",
           "file": "web/dashboard/src/lib/cloud.ts",
-          "line": 221,
+          "line": 178,
           "source": "serviceRequest"
         }
       ],
@@ -46545,7 +47128,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 195,
+      "handler_line": 125,
       "handler_name": "handleSync",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46556,7 +47139,7 @@
       "normalized_path": "/cloud/sync",
       "path": "/cloud/sync",
       "route_file": "services/cloud/handler.go",
-      "route_line": 37,
+      "route_line": 35,
       "service": "cloud",
       "service_external_package_calls": [
         "encoding/json.Marshal",
@@ -46623,7 +47206,7 @@
             "GetSyncJob"
           ],
           "internal_package_calls": [],
-          "line": 529,
+          "line": 224,
           "name": "SyncCloudKeys",
           "receiver_calls": [
             "s.providers.Get"
@@ -46664,7 +47247,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 220,
+      "handler_line": 150,
       "handler_name": "handleInventory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46675,7 +47258,7 @@
       "normalized_path": "/cloud/inventory",
       "path": "/cloud/inventory",
       "route_file": "services/cloud/handler.go",
-      "route_line": 38,
+      "route_line": 36,
       "service": "cloud",
       "service_external_package_calls": [
         "errors.New",
@@ -46712,7 +47295,7 @@
             "Name"
           ],
           "internal_package_calls": [],
-          "line": 711,
+          "line": 406,
           "name": "DiscoverInventory",
           "receiver_calls": [],
           "store_calls": [
@@ -46744,7 +47327,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 239,
+      "handler_line": 169,
       "handler_name": "handleListBindings",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46755,7 +47338,7 @@
       "normalized_path": "/cloud/bindings",
       "path": "/cloud/bindings",
       "route_file": "services/cloud/handler.go",
-      "route_line": 39,
+      "route_line": 37,
       "service": "cloud",
       "service_external_package_calls": [
         "errors.New",
@@ -46776,7 +47359,7 @@
             "normalizeProvider"
           ],
           "internal_package_calls": [],
-          "line": 759,
+          "line": 454,
           "name": "ListBindings",
           "receiver_calls": [],
           "store_calls": [
@@ -46802,7 +47385,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 255,
+      "handler_line": 185,
       "handler_name": "handleGetBinding",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46813,7 +47396,7 @@
       "normalized_path": "/cloud/bindings/{param}",
       "path": "/cloud/bindings/{id}",
       "route_file": "services/cloud/handler.go",
-      "route_line": 40,
+      "route_line": 38,
       "service": "cloud",
       "service_external_package_calls": [
         "errors.New",
@@ -46830,7 +47413,7 @@
           "file": "services/cloud/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 774,
+          "line": 469,
           "name": "GetBinding",
           "receiver_calls": [],
           "store_calls": [
@@ -67313,6 +67896,113 @@
       "service_store_calls": []
     },
     {
+      "frontend_call_sites": [],
+      "handler": "h.cloudWrap",
+      "handler_external_package_calls": [
+        "errors.As",
+        "errors.Is",
+        "strings.TrimSpace",
+        "strings.Contains"
+      ],
+      "handler_file": "services/keycore/cloud_wrap.go",
+      "handler_helper_calls": [
+        "CloudWrap",
+        "As",
+        "Error"
+      ],
+      "handler_internal_package_calls": [
+        "pkg/tenantcheck.IsServicePrincipal"
+      ],
+      "handler_line": 214,
+      "handler_name": "cloudWrap",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "CloudWrap"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/keys/{param}/cloud-wrap",
+      "path": "/keys/{id}/cloud-wrap",
+      "route_file": "services/keycore/cloud_wrap.go",
+      "route_line": 210,
+      "service": "keycore",
+      "service_external_package_calls": [
+        "crypto/x509.MarshalPKIXPublicKey",
+        "crypto/x509.ParsePKCS8PrivateKey",
+        "encoding/hex.EncodeToString",
+        "errors.Is",
+        "strings.Join",
+        "strings.TrimSpace",
+        "strings.ToUpper"
+      ],
+      "service_helper_calls": [
+        "refuse",
+        "Error",
+        "GetKey",
+        "gateExport",
+        "GetVersion",
+        "isDeletedLike",
+        "isPublicKeyType",
+        "inferKeyTypeFromAlgorithm",
+        "hsmOf",
+        "hsmFailure",
+        "enforceFIPSKeyAlgorithm",
+        "decryptMaterial",
+        "details"
+      ],
+      "service_internal_package_calls": [
+        "pkg/crypto.ParseCloudWrappingKey",
+        "pkg/crypto.FingerprintPublicKey",
+        "pkg/crypto.CloudWrapNeedsModuleOutside",
+        "pkg/crypto.Zeroize",
+        "pkg/crypto.WrapForCloudImport",
+        "pkg/crypto.SHA256"
+      ],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "crypto/x509.MarshalPKIXPublicKey",
+            "crypto/x509.ParsePKCS8PrivateKey",
+            "encoding/hex.EncodeToString",
+            "errors.Is",
+            "strings.Join",
+            "strings.TrimSpace",
+            "strings.ToUpper"
+          ],
+          "file": "services/keycore/cloud_wrap.go",
+          "helper_calls": [
+            "refuse",
+            "Error",
+            "GetKey",
+            "gateExport",
+            "GetVersion",
+            "isDeletedLike",
+            "isPublicKeyType",
+            "inferKeyTypeFromAlgorithm",
+            "hsmOf",
+            "hsmFailure",
+            "enforceFIPSKeyAlgorithm",
+            "decryptMaterial",
+            "details"
+          ],
+          "internal_package_calls": [
+            "pkg/crypto.ParseCloudWrappingKey",
+            "pkg/crypto.FingerprintPublicKey",
+            "pkg/crypto.CloudWrapNeedsModuleOutside",
+            "pkg/crypto.Zeroize",
+            "pkg/crypto.WrapForCloudImport",
+            "pkg/crypto.SHA256"
+          ],
+          "line": 108,
+          "name": "CloudWrap",
+          "receiver_calls": [],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
       "frontend_call_sites": [
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/generate-data-key`)",
@@ -67519,7 +68209,7 @@
       "handler_internal_package_calls": [
         "pkg/tenantcheck.Enforce"
       ],
-      "handler_line": 508,
+      "handler_line": 509,
       "handler_name": "handleListKeys",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -67667,7 +68357,7 @@
         "renderKey"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 565,
+      "handler_line": 566,
       "handler_name": "handleGetKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -67764,7 +68454,7 @@
         "writeHSMError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 851,
+      "handler_line": 852,
       "handler_name": "handleExportKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68198,7 +68888,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 930,
+      "handler_line": 931,
       "handler_name": "handleListVersions",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68251,7 +68941,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 948,
+      "handler_line": 949,
       "handler_name": "handleGetVersion",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68307,7 +68997,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1004,
+      "handler_line": 1005,
       "handler_name": "handleGetKCV",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68388,7 +69078,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1018,
+      "handler_line": 1019,
       "handler_name": "handleGetUsage",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68437,7 +69127,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1193,
+      "handler_line": 1194,
       "handler_name": "handleGetApproval",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68489,7 +69179,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1309,
+      "handler_line": 1310,
       "handler_name": "handleGetIVLog",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68523,7 +69213,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1335,
+      "handler_line": 1336,
       "handler_name": "handleGetIVByRef",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68564,7 +69254,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1228,
+      "handler_line": 1229,
       "handler_name": "handleListTags",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68631,7 +69321,7 @@
         "handleEncryptWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1393,
+      "handler_line": 1394,
       "handler_name": "handleEncrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68665,7 +69355,7 @@
         "handleDecryptWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1432,
+      "handler_line": 1433,
       "handler_name": "handleDecrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68699,7 +69389,7 @@
         "handleSignWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1471,
+      "handler_line": 1472,
       "handler_name": "handleSign",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68742,7 +69432,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1475,
+      "handler_line": 1476,
       "handler_name": "handleVerify",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68834,7 +69524,7 @@
         "handleEncryptWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1507,
+      "handler_line": 1508,
       "handler_name": "handleWrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68861,7 +69551,7 @@
         "handleDecryptWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1511,
+      "handler_line": 1512,
       "handler_name": "handleUnwrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68888,7 +69578,7 @@
         "handleSignWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1515,
+      "handler_line": 1516,
       "handler_name": "handleMAC",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68932,7 +69622,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1519,
+      "handler_line": 1520,
       "handler_name": "handleDerive",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69032,7 +69722,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1562,
+      "handler_line": 1563,
       "handler_name": "handleServiceDerive",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69091,7 +69781,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 2333,
+      "handler_line": 2334,
       "handler_name": "handleClusterJoinKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69102,7 +69792,7 @@
       "normalized_path": "/cluster/mek/join-key",
       "path": "/cluster/mek/join-key",
       "route_file": "services/keycore/handler.go",
-      "route_line": 234,
+      "route_line": 235,
       "service": "keycore",
       "service_external_package_calls": [
         "time.Now"
@@ -69153,7 +69843,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 2343,
+      "handler_line": 2344,
       "handler_name": "handleClusterMEKExport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69164,7 +69854,7 @@
       "normalized_path": "/cluster/mek/export",
       "path": "/cluster/mek/export",
       "route_file": "services/keycore/handler.go",
-      "route_line": 235,
+      "route_line": 236,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -69217,7 +69907,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 2362,
+      "handler_line": 2363,
       "handler_name": "handleClusterMEKImport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69228,7 +69918,7 @@
       "normalized_path": "/cluster/mek/import",
       "path": "/cluster/mek/import",
       "route_file": "services/keycore/handler.go",
-      "route_line": 236,
+      "route_line": 237,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -69311,7 +70001,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1592,
+      "handler_line": 1593,
       "handler_name": "handleKEMEncapsulate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69322,7 +70012,7 @@
       "normalized_path": "/keys/{param}/kem/encapsulate",
       "path": "/keys/{id}/kem/encapsulate",
       "route_file": "services/keycore/handler.go",
-      "route_line": 237,
+      "route_line": 238,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -69409,7 +70099,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1632,
+      "handler_line": 1633,
       "handler_name": "handleKEMDecapsulate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69420,7 +70110,7 @@
       "normalized_path": "/keys/{param}/kem/decapsulate",
       "path": "/keys/{id}/kem/decapsulate",
       "route_file": "services/keycore/handler.go",
-      "route_line": 238,
+      "route_line": 239,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -69506,7 +70196,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1671,
+      "handler_line": 1672,
       "handler_name": "handleHash",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69517,7 +70207,7 @@
       "normalized_path": "/crypto/hash",
       "path": "/crypto/hash",
       "route_file": "services/keycore/handler.go",
-      "route_line": 239,
+      "route_line": 240,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -69577,7 +70267,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1699,
+      "handler_line": 1700,
       "handler_name": "handleRandom",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69588,7 +70278,7 @@
       "normalized_path": "/crypto/random",
       "path": "/crypto/random",
       "route_file": "services/keycore/handler.go",
-      "route_line": 240,
+      "route_line": 241,
       "service": "keycore",
       "service_external_package_calls": [
         "crypto/rand.Read",
@@ -69669,7 +70359,7 @@
       "normalized_path": "/keys/{param}/rotation-metrics",
       "path": "/keys/{id}/rotation-metrics",
       "route_file": "services/keycore/handler.go",
-      "route_line": 251,
+      "route_line": 252,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -69711,7 +70401,7 @@
       "normalized_path": "/keys/{param}/health",
       "path": "/keys/{id}/health",
       "route_file": "services/keycore/handler.go",
-      "route_line": 254,
+      "route_line": 255,
       "service": "keycore",
       "service_external_package_calls": [
         "time.Now"
@@ -69795,7 +70485,7 @@
       "normalized_path": "/analytics/algorithms",
       "path": "/analytics/algorithms",
       "route_file": "services/keycore/handler.go",
-      "route_line": 255,
+      "route_line": 256,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -69829,7 +70519,7 @@
       "normalized_path": "/attestation/public-key",
       "path": "/attestation/public-key",
       "route_file": "services/keycore/handler.go",
-      "route_line": 258,
+      "route_line": 259,
       "service": "keycore",
       "service_external_package_calls": [
         "crypto/sha256.Sum256",
@@ -69885,7 +70575,7 @@
       "normalized_path": "/fips/rng-health",
       "path": "/fips/rng-health",
       "route_file": "services/keycore/handler.go",
-      "route_line": 264,
+      "route_line": 265,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -69921,7 +70611,7 @@
       "normalized_path": "/keys/due-for-lifecycle",
       "path": "/keys/due-for-lifecycle",
       "route_file": "services/keycore/handler.go",
-      "route_line": 270,
+      "route_line": 271,
       "service": "keycore",
       "service_external_package_calls": [
         "time.Now"
@@ -70003,7 +70693,7 @@
             "ListKeyAccessGrants"
           ],
           "internal_package_calls": [],
-          "line": 469,
+          "line": 470,
           "name": "GetKeyAccessPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -70095,7 +70785,7 @@
             "ReplaceKeyAccessGrants"
           ],
           "internal_package_calls": [],
-          "line": 484,
+          "line": 485,
           "name": "ReplaceKeyAccessPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -70155,7 +70845,7 @@
           "file": "services/keycore/access_control.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 585,
+          "line": 586,
           "name": "ListAccessGroups",
           "receiver_calls": [],
           "store_calls": [
@@ -70218,7 +70908,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 592,
+          "line": 593,
           "name": "CreateAccessGroup",
           "receiver_calls": [],
           "store_calls": [
@@ -70276,7 +70966,7 @@
           "file": "services/keycore/access_control.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 615,
+          "line": 616,
           "name": "DeleteAccessGroup",
           "receiver_calls": [],
           "store_calls": [
@@ -70338,7 +71028,7 @@
             "ReplaceAccessGroupMembers"
           ],
           "internal_package_calls": [],
-          "line": 627,
+          "line": 628,
           "name": "SetAccessGroupMembers",
           "receiver_calls": [],
           "store_calls": [
@@ -71695,7 +72385,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 275,
+      "handler_line": 276,
       "handler_name": "handleCreateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -71782,7 +72472,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 316,
+      "handler_line": 317,
       "handler_name": "handleImportKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -71861,7 +72551,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 350,
+      "handler_line": 351,
       "handler_name": "handleFormKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -71949,7 +72639,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 385,
+      "handler_line": 386,
       "handler_name": "handleBulkImport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72017,7 +72707,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 412,
+      "handler_line": 413,
       "handler_name": "handleBulkRotate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72067,7 +72757,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 447,
+      "handler_line": 448,
       "handler_name": "handleBulkDelete",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72159,7 +72849,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 585,
+      "handler_line": 586,
       "handler_name": "handleUpdateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72523,7 +73213,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 603,
+      "handler_line": 604,
       "handler_name": "handleRotateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72653,7 +73343,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 646,
+      "handler_line": 647,
       "handler_name": "handleActivateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72736,7 +73426,7 @@
         "keyStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 688,
+      "handler_line": 689,
       "handler_name": "handleDeactivateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -72770,7 +73460,7 @@
         "keyStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 691,
+      "handler_line": 692,
       "handler_name": "handleDisableKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -72822,7 +73512,7 @@
         "DestroyKeyImmediately"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 694,
+      "handler_line": 695,
       "handler_name": "handleDestroyKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73004,7 +73694,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1111,
+      "handler_line": 1112,
       "handler_name": "handleSetExportPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73076,7 +73766,7 @@
         "versionStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 963,
+      "handler_line": 964,
       "handler_name": "handleActivateVersion",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -73103,7 +73793,7 @@
         "versionStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 966,
+      "handler_line": 967,
       "handler_name": "handleDeactivateVersion",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -73139,7 +73829,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 985,
+      "handler_line": 986,
       "handler_name": "handleDeleteVersion",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73214,7 +73904,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1039,
+      "handler_line": 1040,
       "handler_name": "handleSetUsageLimit",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73273,7 +73963,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1149,
+      "handler_line": 1150,
       "handler_name": "handleResetUsage",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73336,7 +74026,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1162,
+      "handler_line": 1163,
       "handler_name": "handleSetApproval",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73408,7 +74098,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1207,
+      "handler_line": 1208,
       "handler_name": "handleSetIVMode",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73483,7 +74173,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1253,
+      "handler_line": 1254,
       "handler_name": "handleUpsertTag",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73565,7 +74255,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1289,
+      "handler_line": 1290,
       "handler_name": "handleDeleteTag",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -74034,7 +74724,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1060,
+      "handler_line": 1061,
       "handler_name": "handleMeterUsage",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76502,7 +77192,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 557,
+      "handler_line": 581,
       "handler_name": "getHSM",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76513,7 +77203,7 @@
       "normalized_path": "/hsm/settings",
       "path": "/hsm/settings",
       "route_file": "services/keycore/hsm.go",
-      "route_line": 548,
+      "route_line": 572,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -76571,7 +77261,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 566,
+      "handler_line": 590,
       "handler_name": "putHSM",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76582,7 +77272,7 @@
       "normalized_path": "/hsm/settings",
       "path": "/hsm/settings",
       "route_file": "services/keycore/hsm.go",
-      "route_line": 549,
+      "route_line": 573,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -76660,7 +77350,7 @@
       "normalized_path": "/hsm/targets",
       "path": "/hsm/targets",
       "route_file": "services/keycore/hsm.go",
-      "route_line": 550,
+      "route_line": 574,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.Is"
@@ -76728,7 +77418,7 @@
       "normalized_path": "/keys/hsm/credential-usage",
       "path": "/keys/hsm/credential-usage",
       "route_file": "services/keycore/hsm.go",
-      "route_line": 551,
+      "route_line": 575,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -76759,7 +77449,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 592,
+      "handler_line": 616,
       "handler_name": "listHSMObjects",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76770,7 +77460,7 @@
       "normalized_path": "/hsm/objects",
       "path": "/hsm/objects",
       "route_file": "services/keycore/hsm.go",
-      "route_line": 552,
+      "route_line": 576,
       "service": "keycore",
       "service_external_package_calls": [
         "fmt.Sscanf",
@@ -76805,7 +77495,7 @@
             "pkg/hsm.TenantPrefix",
             "pkg/hsm.TenantKeyLabel"
           ],
-          "line": 512,
+          "line": 536,
           "name": "ListHSMObjects",
           "receiver_calls": [],
           "store_calls": []
@@ -76836,7 +77526,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 613,
+      "handler_line": 637,
       "handler_name": "inspectHSMKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76847,7 +77537,7 @@
       "normalized_path": "/keys/{param}/hsm",
       "path": "/keys/{id}/hsm",
       "route_file": "services/keycore/hsm.go",
-      "route_line": 553,
+      "route_line": 577,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.As",
@@ -76924,7 +77614,7 @@
             "pkg/hsm.TenantKeyLabel",
             "pkg/route.New"
           ],
-          "line": 461,
+          "line": 485,
           "name": "InspectHSMKey",
           "receiver_calls": [],
           "store_calls": [
@@ -88322,7 +89012,7 @@
       "handler_internal_package_calls": [
         "pkg/hsm.NormalizeAlgorithm"
       ],
-      "handler_line": 192,
+      "handler_line": 202,
       "handler_name": "generate",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -88332,6 +89022,43 @@
       "path": "/hsm/keys",
       "route_file": "pkg/hsmconnector/handler.go",
       "route_line": 64,
+      "service": "hsm-connector",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.wrapForImport",
+      "handler_external_package_calls": [
+        "errors.Is"
+      ],
+      "handler_file": "pkg/hsmconnector/byok.go",
+      "handler_helper_calls": [
+        "begin",
+        "decode",
+        "wrapForCloud",
+        "fail",
+        "digestKey",
+        "identity"
+      ],
+      "handler_internal_package_calls": [
+        "pkg/crypto.ParseCloudWrappingKey",
+        "pkg/crypto.FingerprintPublicKey"
+      ],
+      "handler_line": 147,
+      "handler_name": "wrapForImport",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/hsm/keys/wrap-for-import",
+      "path": "/hsm/keys/wrap-for-import",
+      "route_file": "pkg/hsmconnector/handler.go",
+      "route_line": 65,
       "service": "hsm-connector",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -88361,7 +89088,7 @@
         "pkg/crypto.HSMPrivateKeyFromDER",
         "pkg/hsm.NormalizeAlgorithm"
       ],
-      "handler_line": 222,
+      "handler_line": 233,
       "handler_name": "importKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -88370,7 +89097,7 @@
       "normalized_path": "/hsm/keys/import",
       "path": "/hsm/keys/import",
       "route_file": "pkg/hsmconnector/handler.go",
-      "route_line": 65,
+      "route_line": 66,
       "service": "hsm-connector",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -88395,7 +89122,7 @@
       "handler_internal_package_calls": [
         "pkg/hsm.TenantKeyLabel"
       ],
-      "handler_line": 281,
+      "handler_line": 292,
       "handler_name": "tenantKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -88404,7 +89131,7 @@
       "normalized_path": "/hsm/tenant-key",
       "path": "/hsm/tenant-key",
       "route_file": "pkg/hsmconnector/handler.go",
-      "route_line": 66,
+      "route_line": 67,
       "service": "hsm-connector",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -88424,7 +89151,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 310,
+      "handler_line": 321,
       "handler_name": "encrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -88433,7 +89160,7 @@
       "normalized_path": "/hsm/encrypt",
       "path": "/hsm/encrypt",
       "route_file": "pkg/hsmconnector/handler.go",
-      "route_line": 67,
+      "route_line": 68,
       "service": "hsm-connector",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -88453,7 +89180,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 332,
+      "handler_line": 343,
       "handler_name": "decrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -88462,7 +89189,7 @@
       "normalized_path": "/hsm/decrypt",
       "path": "/hsm/decrypt",
       "route_file": "pkg/hsmconnector/handler.go",
-      "route_line": 68,
+      "route_line": 69,
       "service": "hsm-connector",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -88482,7 +89209,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 353,
+      "handler_line": 364,
       "handler_name": "sign",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -88491,7 +89218,7 @@
       "normalized_path": "/hsm/sign",
       "path": "/hsm/sign",
       "route_file": "pkg/hsmconnector/handler.go",
-      "route_line": 69,
+      "route_line": 70,
       "service": "hsm-connector",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -88511,7 +89238,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 372,
+      "handler_line": 383,
       "handler_name": "verify",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -88520,7 +89247,7 @@
       "normalized_path": "/hsm/verify",
       "path": "/hsm/verify",
       "route_file": "pkg/hsmconnector/handler.go",
-      "route_line": 70,
+      "route_line": 71,
       "service": "hsm-connector",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -88542,7 +89269,7 @@
         "identity"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 469,
+      "handler_line": 480,
       "handler_name": "random",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -88551,7 +89278,7 @@
       "normalized_path": "/hsm/random",
       "path": "/hsm/random",
       "route_file": "pkg/hsmconnector/handler.go",
-      "route_line": 71,
+      "route_line": 72,
       "service": "hsm-connector",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -88572,7 +89299,7 @@
       "handler_internal_package_calls": [
         "pkg/hsm.TenantKeyLabel"
       ],
-      "handler_line": 392,
+      "handler_line": 403,
       "handler_name": "destroy",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -88581,7 +89308,7 @@
       "normalized_path": "/hsm/keys/destroy",
       "path": "/hsm/keys/destroy",
       "route_file": "pkg/hsmconnector/handler.go",
-      "route_line": 72,
+      "route_line": 73,
       "service": "hsm-connector",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -88601,7 +89328,7 @@
         "identity"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 424,
+      "handler_line": 435,
       "handler_name": "inspect",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -88610,7 +89337,7 @@
       "normalized_path": "/hsm/keys/inspect",
       "path": "/hsm/keys/inspect",
       "route_file": "pkg/hsmconnector/handler.go",
-      "route_line": 73,
+      "route_line": 74,
       "service": "hsm-connector",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -88632,7 +89359,7 @@
         "identity"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 440,
+      "handler_line": 451,
       "handler_name": "objects",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -88641,7 +89368,7 @@
       "normalized_path": "/hsm/objects",
       "path": "/hsm/objects",
       "route_file": "pkg/hsmconnector/handler.go",
-      "route_line": 74,
+      "route_line": 75,
       "service": "hsm-connector",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -88661,7 +89388,7 @@
         "config"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 490,
+      "handler_line": 501,
       "handler_name": "status",
       "handler_receiver_calls": [
         "h.p11.status"
@@ -88672,7 +89399,7 @@
       "normalized_path": "/hsm/status",
       "path": "/hsm/status",
       "route_file": "pkg/hsmconnector/handler.go",
-      "route_line": 75,
+      "route_line": 76,
       "service": "hsm-connector",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -88697,7 +89424,7 @@
       "normalized_path": "/healthz",
       "path": "/healthz",
       "route_file": "pkg/hsmconnector/handler.go",
-      "route_line": 76,
+      "route_line": 77,
       "service": "hsm-connector",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -89538,7 +90265,7 @@
       "autokey": 15,
       "backup": 11,
       "certs": 69,
-      "cloud": 17,
+      "cloud": 26,
       "cluster-manager": 21,
       "compliance": 61,
       "confidential": 7,
@@ -89546,10 +90273,10 @@
       "discovery": 24,
       "ekm": 65,
       "governance": 35,
-      "hsm-connector": 13,
+      "hsm-connector": 14,
       "hyok": 21,
       "keyaccess": 9,
-      "keycore": 176,
+      "keycore": 177,
       "kmip": 12,
       "policy": 12,
       "posture": 13,
@@ -89570,7 +90297,7 @@
       "autokey": 11,
       "backup": 10,
       "certs": 52,
-      "cloud": 10,
+      "cloud": 12,
       "cluster-manager": 11,
       "compliance": 28,
       "confidential": 6,
@@ -89771,17 +90498,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 890,
+    "backend_routes": 901,
     "backend_services": 28,
-    "button_inventory": 764,
-    "frontend_call_sites": 563,
-    "matched_frontend_call_sites": 517,
+    "button_inventory": 767,
+    "frontend_call_sites": 565,
+    "matched_frontend_call_sites": 519,
     "nav_items": 26,
-    "request_flows": 890,
-    "request_flows_with_frontend": 524,
-    "request_flows_with_internal_package_calls": 159,
-    "request_flows_with_service_calls": 529,
-    "request_flows_with_store_calls": 638,
+    "request_flows": 901,
+    "request_flows_with_frontend": 526,
+    "request_flows_with_internal_package_calls": 161,
+    "request_flows_with_service_calls": 532,
+    "request_flows_with_store_calls": 637,
     "subpane_groups": 8,
     "tab_components": 33,
     "unmatched_frontend_call_sites": 46
@@ -90169,7 +90896,7 @@
       ]
     },
     {
-      "call_count": 10,
+      "call_count": 8,
       "component": "web/dashboard/src/components/v3/tabs/BYOKTab.tsx",
       "group": "UNLISTED",
       "id": "byok",
@@ -90422,7 +91149,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"cloud\", `/cloud/accounts${query}`)",
       "file": "web/dashboard/src/lib/cloud.ts",
-      "line": 131,
+      "line": 121,
       "match_key": "cloud|GET|/cloud/accounts{param}",
       "method": "GET",
       "normalized_path": "/cloud/accounts{param}",
@@ -90435,7 +91162,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"cloud\", `/cloud/region-mappings${query}`)",
       "file": "web/dashboard/src/lib/cloud.ts",
-      "line": 167,
+      "line": 157,
       "match_key": "cloud|GET|/cloud/region-mappings{param}",
       "method": "GET",
       "normalized_path": "/cloud/region-mappings{param}",
@@ -90448,7 +91175,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"cloud\", `/cloud/inventory${suffix}`)",
       "file": "web/dashboard/src/lib/cloud.ts",
-      "line": 246,
+      "line": 203,
       "match_key": "cloud|GET|/cloud/inventory{param}",
       "method": "GET",
       "normalized_path": "/cloud/inventory{param}",
@@ -90461,7 +91188,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"cloud\", `/cloud/bindings${suffix}`)",
       "file": "web/dashboard/src/lib/cloud.ts",
-      "line": 267,
+      "line": 224,
       "match_key": "cloud|GET|/cloud/bindings{param}",
       "method": "GET",
       "normalized_path": "/cloud/bindings{param}",
@@ -98410,6 +99137,316 @@
         ]
       },
       {
+        "complexity": 0,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"cloud\", \"/cloud/byok/providers\")",
+            "file": "web/dashboard/src/lib/byok.ts",
+            "line": 120,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "<inline func>",
+        "handlerFile": "",
+        "handlerLine": "",
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/cloud/byok/providers",
+        "path": "/cloud/byok/providers",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "cloud|GET|/cloud/byok/providers",
+        "sensitive": false,
+        "service": "cloud",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "byok"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"cloud\", \"/cloud/byok/keys\")",
+            "file": "web/dashboard/src/lib/byok.ts",
+            "line": 125,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "listBYOK",
+        "handlerFile": "services/cloud/byok_routes.go",
+        "handlerLine": 65,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/cloud/byok/keys",
+        "path": "/cloud/byok/keys",
+        "receiverCalls": [
+          "s.byokStore.ListBYOKKeys"
+        ],
+        "risk": "low",
+        "routeKey": "cloud|GET|/cloud/byok/keys",
+        "sensitive": false,
+        "service": "cloud",
+        "serviceCalls": [
+          "ListBYOK"
+        ],
+        "storeCalls": [
+          "ListBindings"
+        ],
+        "uiLabels": [
+          "byok"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"cloud\", \"/cloud/byok/runs\")",
+            "file": "web/dashboard/src/lib/byok.ts",
+            "line": 134,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "listBYOKRuns",
+        "handlerFile": "services/cloud/byok_routes.go",
+        "handlerLine": 74,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/cloud/byok/runs",
+        "path": "/cloud/byok/runs",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "cloud|GET|/cloud/byok/runs",
+        "sensitive": false,
+        "service": "cloud",
+        "serviceCalls": [
+          "byokReady"
+        ],
+        "storeCalls": [],
+        "uiLabels": [
+          "byok"
+        ]
+      },
+      {
+        "complexity": 3,
+        "externalPackages": [
+          "errors.Is"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"cloud\", `/cloud/byok/keys/${encodeURIComponent(id)}`)",
+            "file": "web/dashboard/src/lib/byok.ts",
+            "line": 130,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "getBYOK",
+        "handlerFile": "services/cloud/byok_routes.go",
+        "handlerLine": 87,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/cloud/byok/keys/{param}",
+        "path": "/cloud/byok/keys/{id}",
+        "receiverCalls": [
+          "s.byokStore.GetBYOKKey",
+          "s.byokStore.ListBYOKMaterials",
+          "s.byokStore.ListBYOKRuns"
+        ],
+        "risk": "low",
+        "routeKey": "cloud|GET|/cloud/byok/keys/{param}",
+        "sensitive": false,
+        "service": "cloud",
+        "serviceCalls": [
+          "GetBYOK"
+        ],
+        "storeCalls": [],
+        "uiLabels": [
+          "byok"
+        ]
+      },
+      {
+        "complexity": 4,
+        "externalPackages": [
+          "fmt.Sprintf",
+          "strings.TrimSpace",
+          "strings.Join",
+          "strings.EqualFold",
+          "time.Now"
+        ],
+        "frontendSites": [],
+        "handler": "createBYOK",
+        "handlerFile": "services/cloud/byok_routes.go",
+        "handlerLine": 96,
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/cloud/byok/keys",
+        "path": "/cloud/byok/keys",
+        "receiverCalls": [
+          "s.byokKeycore.KeyInfo",
+          "s.byokStore.CreateBYOKKey",
+          "s.byokStore.UpdateBYOKKey",
+          "s.byokStore.PutBYOKMaterial"
+        ],
+        "risk": "medium",
+        "routeKey": "cloud|POST|/cloud/byok/keys",
+        "sensitive": false,
+        "service": "cloud",
+        "serviceCalls": [
+          "CreateBYOK"
+        ],
+        "storeCalls": [],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [],
+        "frontendSites": [],
+        "handler": "op(OpRotate)",
+        "handlerFile": "",
+        "handlerLine": "",
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/cloud/byok/keys/{param}/rotate",
+        "path": "/cloud/byok/keys/{id}/rotate",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "cloud|POST|/cloud/byok/keys/{param}/rotate",
+        "sensitive": false,
+        "service": "cloud",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [],
+        "frontendSites": [],
+        "handler": "op(OpReimport)",
+        "handlerFile": "",
+        "handlerLine": "",
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/cloud/byok/keys/{param}/reimport",
+        "path": "/cloud/byok/keys/{id}/reimport",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "cloud|POST|/cloud/byok/keys/{param}/reimport",
+        "sensitive": false,
+        "service": "cloud",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [],
+        "frontendSites": [],
+        "handler": "op(OpRestore)",
+        "handlerFile": "",
+        "handlerLine": "",
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/cloud/byok/keys/{param}/restore",
+        "path": "/cloud/byok/keys/{id}/restore",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "cloud|POST|/cloud/byok/keys/{param}/restore",
+        "sensitive": false,
+        "service": "cloud",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [],
+        "frontendSites": [],
+        "handler": "op(OpVerify)",
+        "handlerFile": "",
+        "handlerLine": "",
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/cloud/byok/keys/{param}/verify",
+        "path": "/cloud/byok/keys/{id}/verify",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "cloud|POST|/cloud/byok/keys/{param}/verify",
+        "sensitive": false,
+        "service": "cloud",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [],
+        "frontendSites": [],
+        "handler": "op(OpSync)",
+        "handlerFile": "",
+        "handlerLine": "",
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/cloud/byok/keys/{param}/sync",
+        "path": "/cloud/byok/keys/{id}/sync",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "cloud|POST|/cloud/byok/keys/{param}/sync",
+        "sensitive": false,
+        "service": "cloud",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [],
+        "frontendSites": [],
+        "handler": "op(OpRevoke)",
+        "handlerFile": "",
+        "handlerLine": "",
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/cloud/byok/keys/{param}/revoke",
+        "path": "/cloud/byok/keys/{id}/revoke",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "cloud|POST|/cloud/byok/keys/{param}/revoke",
+        "sensitive": false,
+        "service": "cloud",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
         "complexity": 2,
         "externalPackages": [
           "errors.Is",
@@ -98504,13 +99541,13 @@
           {
             "expression": "serviceRequest(\"cloud\", \"/cloud/accounts\")",
             "file": "web/dashboard/src/lib/cloud.ts",
-            "line": 139,
+            "line": 129,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleRegisterAccount",
         "handlerFile": "services/cloud/handler.go",
-        "handlerLine": 44,
+        "handlerLine": 42,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -98541,7 +99578,7 @@
         "frontendSites": [],
         "handler": "handleListAccounts",
         "handlerFile": "services/cloud/handler.go",
-        "handlerLine": 62,
+        "handlerLine": 60,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -98572,13 +99609,13 @@
           {
             "expression": "serviceRequest(\"cloud\", `/cloud/accounts/${encodeURIComponent(String(accountId || \"\").trim())}`)",
             "file": "web/dashboard/src/lib/cloud.ts",
-            "line": 156,
+            "line": 146,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleDeleteAccount",
         "handlerFile": "services/cloud/handler.go",
-        "handlerLine": 76,
+        "handlerLine": 74,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -98611,13 +99648,13 @@
           {
             "expression": "serviceRequest(\"cloud\", \"/cloud/region-mappings\")",
             "file": "web/dashboard/src/lib/cloud.ts",
-            "line": 175,
+            "line": 165,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleSetRegionMapping",
         "handlerFile": "services/cloud/handler.go",
-        "handlerLine": 95,
+        "handlerLine": 93,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -98648,7 +99685,7 @@
         "frontendSites": [],
         "handler": "handleListRegionMappings",
         "handlerFile": "services/cloud/handler.go",
-        "handlerLine": 113,
+        "handlerLine": 111,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -98670,95 +99707,6 @@
         ]
       },
       {
-        "complexity": 4,
-        "externalPackages": [
-          "strings.TrimSpace",
-          "strings.EqualFold",
-          "encoding/json.Unmarshal",
-          "encoding/json.Marshal",
-          "errors.New"
-        ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"cloud\", \"/cloud/import\")",
-            "file": "web/dashboard/src/lib/cloud.ts",
-            "line": 188,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleImportKey",
-        "handlerFile": "services/cloud/handler.go",
-        "handlerLine": 127,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "POST",
-        "normalizedPath": "/cloud/import",
-        "path": "/cloud/import",
-        "receiverCalls": [
-          "s.keycore.GetKey",
-          "s.keycore.ExportKey"
-        ],
-        "risk": "medium",
-        "routeKey": "cloud|POST|/cloud/import",
-        "sensitive": false,
-        "service": "cloud",
-        "serviceCalls": [
-          "ImportKeyToCloud"
-        ],
-        "storeCalls": [
-          "CreateBinding",
-          "GetBinding"
-        ],
-        "uiLabels": [
-          "byok"
-        ]
-      },
-      {
-        "complexity": 7,
-        "externalPackages": [
-          "strings.TrimSpace",
-          "strings.EqualFold",
-          "errors.New"
-        ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"cloud\", `/cloud/bindings/${encodeURIComponent(bindingId)}/rotate`)",
-            "file": "web/dashboard/src/lib/cloud.ts",
-            "line": 208,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleRotateBinding",
-        "handlerFile": "services/cloud/handler.go",
-        "handlerLine": 152,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "POST",
-        "normalizedPath": "/cloud/bindings/{param}/rotate",
-        "path": "/cloud/bindings/{id}/rotate",
-        "receiverCalls": [
-          "s.providers.Get",
-          "s.keycore.RotateKey",
-          "s.keycore.GetKey",
-          "s.keycore.ExportKey"
-        ],
-        "risk": "medium",
-        "routeKey": "cloud|POST|/cloud/bindings/{param}/rotate",
-        "sensitive": false,
-        "service": "cloud",
-        "serviceCalls": [
-          "RotateCloudKey"
-        ],
-        "storeCalls": [
-          "GetBinding",
-          "GetAccount",
-          "UpdateBinding"
-        ],
-        "uiLabels": [
-          "byok"
-        ]
-      },
-      {
         "complexity": 7,
         "externalPackages": [
           "strings.TrimSpace",
@@ -98772,13 +99720,13 @@
           {
             "expression": "serviceRequest(\"cloud\", \"/cloud/sync\")",
             "file": "web/dashboard/src/lib/cloud.ts",
-            "line": 221,
+            "line": 178,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleSync",
         "handlerFile": "services/cloud/handler.go",
-        "handlerLine": 195,
+        "handlerLine": 125,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -98815,7 +99763,7 @@
         "frontendSites": [],
         "handler": "handleInventory",
         "handlerFile": "services/cloud/handler.go",
-        "handlerLine": 220,
+        "handlerLine": 150,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -98847,7 +99795,7 @@
         "frontendSites": [],
         "handler": "handleListBindings",
         "handlerFile": "services/cloud/handler.go",
-        "handlerLine": 239,
+        "handlerLine": 169,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -98877,7 +99825,7 @@
         "frontendSites": [],
         "handler": "handleGetBinding",
         "handlerFile": "services/cloud/handler.go",
-        "handlerLine": 255,
+        "handlerLine": 185,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -108947,6 +109895,49 @@
         ]
       },
       {
+        "complexity": 7,
+        "externalPackages": [
+          "errors.As",
+          "errors.Is",
+          "strings.TrimSpace",
+          "strings.Contains",
+          "crypto/x509.MarshalPKIXPublicKey",
+          "crypto/x509.ParsePKCS8PrivateKey",
+          "encoding/hex.EncodeToString",
+          "strings.Join",
+          "strings.ToUpper"
+        ],
+        "frontendSites": [],
+        "handler": "cloudWrap",
+        "handlerFile": "services/keycore/cloud_wrap.go",
+        "handlerLine": 214,
+        "hasFrontend": false,
+        "internalPackages": [
+          "pkg/tenantcheck.IsServicePrincipal",
+          "pkg/crypto.ParseCloudWrappingKey",
+          "pkg/crypto.FingerprintPublicKey",
+          "pkg/crypto.CloudWrapNeedsModuleOutside",
+          "pkg/crypto.Zeroize",
+          "pkg/crypto.WrapForCloudImport",
+          "pkg/crypto.SHA256"
+        ],
+        "method": "POST",
+        "normalizedPath": "/keys/{param}/cloud-wrap",
+        "path": "/keys/{id}/cloud-wrap",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|POST|/keys/{param}/cloud-wrap",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [
+          "CloudWrap"
+        ],
+        "storeCalls": [],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
         "complexity": 3,
         "externalPackages": [
           "encoding/hex.EncodeToString",
@@ -109049,7 +110040,7 @@
         ],
         "handler": "handleListKeys",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 508,
+        "handlerLine": 509,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/tenantcheck.Enforce",
@@ -109095,7 +110086,7 @@
         "frontendSites": [],
         "handler": "handleGetKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 565,
+        "handlerLine": 566,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -109160,7 +110151,7 @@
         ],
         "handler": "handleExportKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 851,
+        "handlerLine": 852,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -109246,7 +110237,7 @@
         ],
         "handler": "handleListVersions",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 930,
+        "handlerLine": 931,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -109280,7 +110271,7 @@
         "frontendSites": [],
         "handler": "handleGetVersion",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 948,
+        "handlerLine": 949,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -109311,7 +110302,7 @@
         "frontendSites": [],
         "handler": "handleGetKCV",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1004,
+        "handlerLine": 1005,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -109344,7 +110335,7 @@
         "frontendSites": [],
         "handler": "handleGetUsage",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1018,
+        "handlerLine": 1019,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -109371,7 +110362,7 @@
         "frontendSites": [],
         "handler": "handleGetApproval",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1193,
+        "handlerLine": 1194,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -109400,7 +110391,7 @@
         "frontendSites": [],
         "handler": "handleGetIVLog",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1309,
+        "handlerLine": 1310,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -109425,7 +110416,7 @@
         "frontendSites": [],
         "handler": "handleGetIVByRef",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1335,
+        "handlerLine": 1336,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -109461,7 +110452,7 @@
         ],
         "handler": "handleListTags",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1228,
+        "handlerLine": 1229,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -109499,7 +110490,7 @@
         ],
         "handler": "handleEncrypt",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1393,
+        "handlerLine": 1394,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -109532,7 +110523,7 @@
         ],
         "handler": "handleDecrypt",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1432,
+        "handlerLine": 1433,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -109565,7 +110556,7 @@
         ],
         "handler": "handleSign",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1471,
+        "handlerLine": 1472,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -109604,7 +110595,7 @@
         ],
         "handler": "handleVerify",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1475,
+        "handlerLine": 1476,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -109636,7 +110627,7 @@
         "frontendSites": [],
         "handler": "handleWrap",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1507,
+        "handlerLine": 1508,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -109659,7 +110650,7 @@
         "frontendSites": [],
         "handler": "handleUnwrap",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1511,
+        "handlerLine": 1512,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -109682,7 +110673,7 @@
         "frontendSites": [],
         "handler": "handleMAC",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1515,
+        "handlerLine": 1516,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -109721,7 +110712,7 @@
         ],
         "handler": "handleDerive",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1519,
+        "handlerLine": 1520,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -109753,7 +110744,7 @@
         "frontendSites": [],
         "handler": "handleServiceDerive",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1562,
+        "handlerLine": 1563,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -109780,7 +110771,7 @@
         "frontendSites": [],
         "handler": "handleClusterJoinKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 2333,
+        "handlerLine": 2334,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.NewKEMRecipient"
@@ -109810,7 +110801,7 @@
         "frontendSites": [],
         "handler": "handleClusterMEKExport",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 2343,
+        "handlerLine": 2344,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.KEMSeal"
@@ -109846,7 +110837,7 @@
         "frontendSites": [],
         "handler": "handleClusterMEKImport",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 2362,
+        "handlerLine": 2363,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -109888,7 +110879,7 @@
         ],
         "handler": "handleKEMEncapsulate",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1592,
+        "handlerLine": 1593,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -109931,7 +110922,7 @@
         ],
         "handler": "handleKEMDecapsulate",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1632,
+        "handlerLine": 1633,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -109972,7 +110963,7 @@
         ],
         "handler": "handleHash",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1671,
+        "handlerLine": 1672,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -110013,7 +111004,7 @@
         ],
         "handler": "handleRandom",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1699,
+        "handlerLine": 1700,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -111431,7 +112422,7 @@
         ],
         "handler": "handleCreateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 275,
+        "handlerLine": 276,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -111474,7 +112465,7 @@
         ],
         "handler": "handleImportKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 316,
+        "handlerLine": 317,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -111519,7 +112510,7 @@
         ],
         "handler": "handleFormKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 350,
+        "handlerLine": 351,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -111552,7 +112543,7 @@
         "frontendSites": [],
         "handler": "handleBulkImport",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 385,
+        "handlerLine": 386,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -111579,7 +112570,7 @@
         "frontendSites": [],
         "handler": "handleBulkRotate",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 412,
+        "handlerLine": 413,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -111610,7 +112601,7 @@
         "frontendSites": [],
         "handler": "handleBulkDelete",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 447,
+        "handlerLine": 448,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -111656,7 +112647,7 @@
         "frontendSites": [],
         "handler": "handleUpdateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 585,
+        "handlerLine": 586,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -111735,7 +112726,7 @@
         ],
         "handler": "handleRotateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 603,
+        "handlerLine": 604,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -111789,7 +112780,7 @@
         ],
         "handler": "handleActivateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 646,
+        "handlerLine": 647,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111828,7 +112819,7 @@
         ],
         "handler": "handleDeactivateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 688,
+        "handlerLine": 689,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111861,7 +112852,7 @@
         ],
         "handler": "handleDisableKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 691,
+        "handlerLine": 692,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111903,7 +112894,7 @@
         ],
         "handler": "handleDestroyKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 694,
+        "handlerLine": 695,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111954,7 +112945,7 @@
         ],
         "handler": "handleSetExportPolicy",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1111,
+        "handlerLine": 1112,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -111986,7 +112977,7 @@
         "frontendSites": [],
         "handler": "handleActivateVersion",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 963,
+        "handlerLine": 964,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -112009,7 +113000,7 @@
         "frontendSites": [],
         "handler": "handleDeactivateVersion",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 966,
+        "handlerLine": 967,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -112036,7 +113027,7 @@
         "frontendSites": [],
         "handler": "handleDeleteVersion",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 985,
+        "handlerLine": 986,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "DELETE",
@@ -112072,7 +113063,7 @@
         ],
         "handler": "handleSetUsageLimit",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1039,
+        "handlerLine": 1040,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -112104,7 +113095,7 @@
         "frontendSites": [],
         "handler": "handleResetUsage",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1149,
+        "handlerLine": 1150,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -112135,7 +113126,7 @@
         "frontendSites": [],
         "handler": "handleSetApproval",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1162,
+        "handlerLine": 1163,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -112166,7 +113157,7 @@
         "frontendSites": [],
         "handler": "handleSetIVMode",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1207,
+        "handlerLine": 1208,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -112208,7 +113199,7 @@
         ],
         "handler": "handleUpsertTag",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1253,
+        "handlerLine": 1254,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -112253,7 +113244,7 @@
         ],
         "handler": "handleDeleteTag",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1289,
+        "handlerLine": 1290,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -112598,7 +113589,7 @@
         "frontendSites": [],
         "handler": "handleMeterUsage",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1060,
+        "handlerLine": 1061,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -114069,7 +115060,7 @@
         ],
         "handler": "getHSM",
         "handlerFile": "services/keycore/hsm.go",
-        "handlerLine": 557,
+        "handlerLine": 581,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/hsm.Status"
@@ -114112,7 +115103,7 @@
         ],
         "handler": "putHSM",
         "handlerFile": "services/keycore/hsm.go",
-        "handlerLine": 566,
+        "handlerLine": 590,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/hsm.Status",
@@ -114228,7 +115219,7 @@
         ],
         "handler": "listHSMObjects",
         "handlerFile": "services/keycore/hsm.go",
-        "handlerLine": 592,
+        "handlerLine": 616,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/hsm.TenantPrefix",
@@ -114274,7 +115265,7 @@
         ],
         "handler": "inspectHSMKey",
         "handlerFile": "services/keycore/hsm.go",
-        "handlerLine": 613,
+        "handlerLine": 637,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/hsm.TenantPrefix",
@@ -120600,7 +121591,7 @@
         "frontendSites": [],
         "handler": "generate",
         "handlerFile": "pkg/hsmconnector/handler.go",
-        "handlerLine": 192,
+        "handlerLine": 202,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/hsm.NormalizeAlgorithm"
@@ -120620,6 +121611,34 @@
         ]
       },
       {
+        "complexity": 2,
+        "externalPackages": [
+          "errors.Is"
+        ],
+        "frontendSites": [],
+        "handler": "wrapForImport",
+        "handlerFile": "pkg/hsmconnector/byok.go",
+        "handlerLine": 147,
+        "hasFrontend": false,
+        "internalPackages": [
+          "pkg/crypto.ParseCloudWrappingKey",
+          "pkg/crypto.FingerprintPublicKey"
+        ],
+        "method": "POST",
+        "normalizedPath": "/hsm/keys/wrap-for-import",
+        "path": "/hsm/keys/wrap-for-import",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "hsm-connector|POST|/hsm/keys/wrap-for-import",
+        "sensitive": false,
+        "service": "hsm-connector",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
         "complexity": 3,
         "externalPackages": [
           "fmt.Sprintf",
@@ -120628,7 +121647,7 @@
         "frontendSites": [],
         "handler": "importKey",
         "handlerFile": "pkg/hsmconnector/handler.go",
-        "handlerLine": 222,
+        "handlerLine": 233,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -120657,7 +121676,7 @@
         "frontendSites": [],
         "handler": "tenantKey",
         "handlerFile": "pkg/hsmconnector/handler.go",
-        "handlerLine": 281,
+        "handlerLine": 292,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/hsm.TenantKeyLabel"
@@ -120682,7 +121701,7 @@
         "frontendSites": [],
         "handler": "encrypt",
         "handlerFile": "pkg/hsmconnector/handler.go",
-        "handlerLine": 310,
+        "handlerLine": 321,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -120705,7 +121724,7 @@
         "frontendSites": [],
         "handler": "decrypt",
         "handlerFile": "pkg/hsmconnector/handler.go",
-        "handlerLine": 332,
+        "handlerLine": 343,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -120728,7 +121747,7 @@
         "frontendSites": [],
         "handler": "sign",
         "handlerFile": "pkg/hsmconnector/handler.go",
-        "handlerLine": 353,
+        "handlerLine": 364,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -120751,7 +121770,7 @@
         "frontendSites": [],
         "handler": "verify",
         "handlerFile": "pkg/hsmconnector/handler.go",
-        "handlerLine": 372,
+        "handlerLine": 383,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -120776,7 +121795,7 @@
         "frontendSites": [],
         "handler": "random",
         "handlerFile": "pkg/hsmconnector/handler.go",
-        "handlerLine": 469,
+        "handlerLine": 480,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -120799,7 +121818,7 @@
         "frontendSites": [],
         "handler": "destroy",
         "handlerFile": "pkg/hsmconnector/handler.go",
-        "handlerLine": 392,
+        "handlerLine": 403,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/hsm.TenantKeyLabel"
@@ -120824,7 +121843,7 @@
         "frontendSites": [],
         "handler": "inspect",
         "handlerFile": "pkg/hsmconnector/handler.go",
-        "handlerLine": 424,
+        "handlerLine": 435,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -120847,7 +121866,7 @@
         "frontendSites": [],
         "handler": "objects",
         "handlerFile": "pkg/hsmconnector/handler.go",
-        "handlerLine": 440,
+        "handlerLine": 451,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -120872,7 +121891,7 @@
         "frontendSites": [],
         "handler": "status",
         "handlerFile": "pkg/hsmconnector/handler.go",
-        "handlerLine": 490,
+        "handlerLine": 501,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -121627,7 +122646,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-11T15:47:12Z",
+    "generatedAt": "2026-10-11T16:32:59Z",
     "methods": [
       "DELETE",
       "GET",
@@ -121667,9 +122686,9 @@
       "workload"
     ],
     "summary": {
-      "flows": 890,
-      "frontendBacked": 524,
-      "highRisk": 345,
+      "flows": 901,
+      "frontendBacked": 526,
+      "highRisk": 346,
       "services": 28
     }
   }

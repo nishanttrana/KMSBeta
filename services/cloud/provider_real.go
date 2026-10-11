@@ -16,7 +16,6 @@ import (
 	awscreds "github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	awskms "github.com/aws/aws-sdk-go-v2/service/kms"
-	awskmstypes "github.com/aws/aws-sdk-go-v2/service/kms/types"
 	awssts "github.com/aws/aws-sdk-go-v2/service/sts"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
@@ -30,7 +29,6 @@ func newRealProviderRegistry() *ProviderRegistry {
 	r.Register(newOCIProvider())
 	r.Register(newSalesforceProvider())
 	r.Register(newAlibabaProvider())
-	r.Register(newServiceNowProvider())
 	return r
 }
 
@@ -47,14 +45,6 @@ func (p *unsupportedProvider) Name() string { return p.name }
 
 func (p *unsupportedProvider) DefaultRegion() string { return "global" }
 
-func (p *unsupportedProvider) ImportKey(_ context.Context, _ ImportInput) (ImportResult, error) {
-	return ImportResult{}, errors.New(defaultString(p.reason, "provider is not available"))
-}
-
-func (p *unsupportedProvider) RotateKey(_ context.Context, _ RotateInput) (ImportResult, error) {
-	return ImportResult{}, errors.New(defaultString(p.reason, "provider is not available"))
-}
-
 func (p *unsupportedProvider) SyncBinding(_ context.Context, _ SyncInput) (ImportResult, error) {
 	return ImportResult{}, errors.New(defaultString(p.reason, "provider is not available"))
 }
@@ -70,96 +60,6 @@ func newAWSProvider() *awsProvider { return &awsProvider{} }
 func (p *awsProvider) Name() string { return ProviderAWS }
 
 func (p *awsProvider) DefaultRegion() string { return "us-east-1" }
-
-func (p *awsProvider) ImportKey(ctx context.Context, in ImportInput) (ImportResult, error) {
-	client, region, err := p.client(ctx, in.Region, in.Account, in.Credentials)
-	if err != nil {
-		return ImportResult{}, err
-	}
-	keySpec, keyUsage, err := mapAWSKeySpecUsage(in.KeyMeta)
-	if err != nil {
-		return ImportResult{}, err
-	}
-	tags := []awskmstypes.Tag{
-		{TagKey: aws.String("vecta_tenant"), TagValue: aws.String(in.TenantID)},
-		{TagKey: aws.String("vecta_key_id"), TagValue: aws.String(in.KeyID)},
-	}
-	createOut, err := client.CreateKey(ctx, &awskms.CreateKeyInput{
-		Description: aws.String(fmt.Sprintf("Vecta managed key for tenant=%s key_id=%s", in.TenantID, in.KeyID)),
-		KeyUsage:    keyUsage,
-		KeySpec:     keySpec,
-		Tags:        tags,
-		MultiRegion: aws.Bool(false),
-	})
-	if err != nil {
-		return ImportResult{}, err
-	}
-	if createOut == nil || createOut.KeyMetadata == nil || createOut.KeyMetadata.KeyId == nil {
-		return ImportResult{}, errors.New("aws create key returned empty metadata")
-	}
-	cloudKeyID := strings.TrimSpace(aws.ToString(createOut.KeyMetadata.KeyId))
-	cloudKeyRef := strings.TrimSpace(aws.ToString(createOut.KeyMetadata.Arn))
-	alias := awsAlias(defaultString(anyToString(in.Metadata["alias"]), fmt.Sprintf("alias/vecta-%s", sanitizeCloudName(in.KeyID))))
-	if alias != "" {
-		_, aliasErr := client.CreateAlias(ctx, &awskms.CreateAliasInput{
-			AliasName:   aws.String(alias),
-			TargetKeyId: aws.String(cloudKeyID),
-		})
-		if aliasErr != nil {
-			// Keep key imported even if alias creation fails.
-			in.Metadata["alias_error"] = aliasErr.Error()
-		}
-	}
-	return ImportResult{
-		CloudKeyID:  cloudKeyID,
-		CloudKeyRef: cloudKeyRef,
-		State:       strings.ToLower(string(createOut.KeyMetadata.KeyState)),
-		Metadata: map[string]interface{}{
-			"provider":          ProviderAWS,
-			"region":            region,
-			"key_spec":          string(keySpec),
-			"key_usage":         string(keyUsage),
-			"native_key_create": true,
-			"alias":             alias,
-			"imported_at":       time.Now().UTC().Format(time.RFC3339Nano),
-		},
-	}, nil
-}
-
-func (p *awsProvider) RotateKey(ctx context.Context, in RotateInput) (ImportResult, error) {
-	client, region, err := p.client(ctx, in.Binding.Region, in.Account, in.Credentials)
-	if err != nil {
-		return ImportResult{}, err
-	}
-	keyID := strings.TrimSpace(in.Binding.CloudKeyID)
-	if keyID == "" {
-		return ImportResult{}, errors.New("cloud key id is required")
-	}
-	_, _ = client.EnableKeyRotation(ctx, &awskms.EnableKeyRotationInput{KeyId: aws.String(keyID)})
-	_, _ = client.UpdateKeyDescription(ctx, &awskms.UpdateKeyDescriptionInput{
-		KeyId:       aws.String(keyID),
-		Description: aws.String(fmt.Sprintf("Vecta rotated at %s reason=%s", time.Now().UTC().Format(time.RFC3339), defaultString(in.Reason, "manual"))),
-	})
-	desc, err := client.DescribeKey(ctx, &awskms.DescribeKeyInput{KeyId: aws.String(keyID)})
-	if err != nil {
-		return ImportResult{}, err
-	}
-	if desc == nil || desc.KeyMetadata == nil {
-		return ImportResult{}, errors.New("aws describe key returned empty metadata")
-	}
-	return ImportResult{
-		CloudKeyID:  keyID,
-		CloudKeyRef: strings.TrimSpace(aws.ToString(desc.KeyMetadata.Arn)),
-		State:       strings.ToLower(string(desc.KeyMetadata.KeyState)),
-		Metadata: map[string]interface{}{
-			"provider":      ProviderAWS,
-			"region":        region,
-			"rotated_at":    time.Now().UTC().Format(time.RFC3339Nano),
-			"rotation_mode": "native",
-			"reason":        defaultString(in.Reason, "manual"),
-		},
-	}, nil
-}
 
 func (p *awsProvider) SyncBinding(ctx context.Context, in SyncInput) (ImportResult, error) {
 	client, region, err := p.client(ctx, in.Binding.Region, in.Account, in.Credentials)
@@ -274,156 +174,17 @@ func (p *awsProvider) client(ctx context.Context, regionHint string, account Clo
 	return client, region, nil
 }
 
-func mapAWSKeySpecUsage(keyMeta map[string]interface{}) (awskmstypes.KeySpec, awskmstypes.KeyUsageType, error) {
-	algorithm := strings.ToUpper(strings.TrimSpace(anyToString(keyMeta["algorithm"])))
-	purpose := strings.ToLower(strings.TrimSpace(anyToString(keyMeta["purpose"])))
-	if strings.Contains(algorithm, "ML-") || strings.Contains(algorithm, "KYBER") || strings.Contains(algorithm, "DILITHIUM") {
-		return "", "", errors.New("aws kms does not support pqc key import in this flow")
-	}
-	if strings.Contains(algorithm, "RSA-2048") {
-		if strings.Contains(purpose, "sign") {
-			return awskmstypes.KeySpecRsa2048, awskmstypes.KeyUsageTypeSignVerify, nil
-		}
-		return awskmstypes.KeySpecRsa2048, awskmstypes.KeyUsageTypeEncryptDecrypt, nil
-	}
-	if strings.Contains(algorithm, "RSA-3072") {
-		if strings.Contains(purpose, "sign") {
-			return awskmstypes.KeySpecRsa3072, awskmstypes.KeyUsageTypeSignVerify, nil
-		}
-		return awskmstypes.KeySpecRsa3072, awskmstypes.KeyUsageTypeEncryptDecrypt, nil
-	}
-	if strings.Contains(algorithm, "RSA-4096") {
-		if strings.Contains(purpose, "sign") {
-			return awskmstypes.KeySpecRsa4096, awskmstypes.KeyUsageTypeSignVerify, nil
-		}
-		return awskmstypes.KeySpecRsa4096, awskmstypes.KeyUsageTypeEncryptDecrypt, nil
-	}
-	if strings.Contains(algorithm, "ECDSA-P256") || strings.Contains(algorithm, "ECDH-P256") {
-		if strings.Contains(purpose, "derive") || strings.Contains(purpose, "agreement") || strings.Contains(algorithm, "ECDH") {
-			return awskmstypes.KeySpecEccNistP256, awskmstypes.KeyUsageTypeKeyAgreement, nil
-		}
-		return awskmstypes.KeySpecEccNistP256, awskmstypes.KeyUsageTypeSignVerify, nil
-	}
-	if strings.Contains(algorithm, "ECDSA-P384") || strings.Contains(algorithm, "ECDH-P384") {
-		if strings.Contains(purpose, "derive") || strings.Contains(purpose, "agreement") || strings.Contains(algorithm, "ECDH") {
-			return awskmstypes.KeySpecEccNistP384, awskmstypes.KeyUsageTypeKeyAgreement, nil
-		}
-		return awskmstypes.KeySpecEccNistP384, awskmstypes.KeyUsageTypeSignVerify, nil
-	}
-	if strings.Contains(algorithm, "ECDSA-P521") || strings.Contains(algorithm, "ECDH-P521") {
-		if strings.Contains(purpose, "derive") || strings.Contains(purpose, "agreement") || strings.Contains(algorithm, "ECDH") {
-			return awskmstypes.KeySpecEccNistP521, awskmstypes.KeyUsageTypeKeyAgreement, nil
-		}
-		return awskmstypes.KeySpecEccNistP521, awskmstypes.KeyUsageTypeSignVerify, nil
-	}
-	if strings.Contains(algorithm, "ED25519") {
-		return "", "", errors.New("aws kms does not support EdDSA key specs in this flow")
-	}
-	if strings.HasPrefix(algorithm, "AES") || strings.Contains(algorithm, "3DES") || strings.Contains(algorithm, "CAMELLIA") || strings.Contains(algorithm, "CHACHA") {
-		return awskmstypes.KeySpecSymmetricDefault, awskmstypes.KeyUsageTypeEncryptDecrypt, nil
-	}
-	return "", "", fmt.Errorf("unsupported algorithm for aws kms: %s", algorithm)
+type gcpProvider struct {
+	// options are extra client options; tests point the client at a local
+	// gRPC server with them.
+	options []option.ClientOption
 }
-
-type gcpProvider struct{}
 
 func newGCPProvider() *gcpProvider { return &gcpProvider{} }
 
 func (p *gcpProvider) Name() string { return ProviderGCP }
 
 func (p *gcpProvider) DefaultRegion() string { return "us-central1" }
-
-func (p *gcpProvider) ImportKey(ctx context.Context, in ImportInput) (ImportResult, error) {
-	client, projectID, location, keyRing, err := p.client(ctx, in.Region, in.Account, in.Credentials)
-	if err != nil {
-		return ImportResult{}, err
-	}
-	defer client.Close() //nolint:errcheck
-	keyRingPath := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", projectID, location, keyRing)
-	if _, ringErr := client.GetKeyRing(ctx, &cloudkmspb.GetKeyRingRequest{Name: keyRingPath}); ringErr != nil {
-		_, createRingErr := client.CreateKeyRing(ctx, &cloudkmspb.CreateKeyRingRequest{
-			Parent:    fmt.Sprintf("projects/%s/locations/%s", projectID, location),
-			KeyRingId: keyRing,
-			KeyRing:   &cloudkmspb.KeyRing{},
-		})
-		if createRingErr != nil {
-			return ImportResult{}, createRingErr
-		}
-	}
-	purpose, algorithm, err := mapGCPPurposeAlgorithm(in.KeyMeta)
-	if err != nil {
-		return ImportResult{}, err
-	}
-	keyID := sanitizeCloudName(defaultString(anyToString(in.Metadata["cloud_key_id"]), in.KeyID))
-	if keyID == "" {
-		keyID = sanitizeCloudName(newID("gcpkey"))
-	}
-	create, err := client.CreateCryptoKey(ctx, &cloudkmspb.CreateCryptoKeyRequest{
-		Parent:      keyRingPath,
-		CryptoKeyId: keyID,
-		CryptoKey: &cloudkmspb.CryptoKey{
-			Purpose: purpose,
-			VersionTemplate: &cloudkmspb.CryptoKeyVersionTemplate{
-				Algorithm: algorithm,
-			},
-			Labels: map[string]string{
-				"vecta_tenant": sanitizeLabel(in.TenantID),
-				"vecta_key_id": sanitizeLabel(in.KeyID),
-			},
-		},
-	})
-	if err != nil {
-		return ImportResult{}, err
-	}
-	name := strings.TrimSpace(create.GetName())
-	return ImportResult{
-		CloudKeyID:  name,
-		CloudKeyRef: name,
-		State:       "enabled",
-		Metadata: map[string]interface{}{
-			"provider":          ProviderGCP,
-			"project_id":        projectID,
-			"location":          location,
-			"key_ring":          keyRing,
-			"native_key_create": true,
-			"imported_at":       time.Now().UTC().Format(time.RFC3339Nano),
-		},
-	}, nil
-}
-
-func (p *gcpProvider) RotateKey(ctx context.Context, in RotateInput) (ImportResult, error) {
-	client, projectID, location, keyRing, err := p.client(ctx, in.Binding.Region, in.Account, in.Credentials)
-	if err != nil {
-		return ImportResult{}, err
-	}
-	defer client.Close() //nolint:errcheck
-	cryptoKeyName := strings.TrimSpace(in.Binding.CloudKeyID)
-	if cryptoKeyName == "" {
-		return ImportResult{}, errors.New("cloud key id is required")
-	}
-	if !strings.Contains(cryptoKeyName, "/cryptoKeys/") {
-		cryptoKeyName = fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s", projectID, location, keyRing, sanitizeCloudName(cryptoKeyName))
-	}
-	_, err = client.CreateCryptoKeyVersion(ctx, &cloudkmspb.CreateCryptoKeyVersionRequest{
-		Parent: cryptoKeyName,
-		CryptoKeyVersion: &cloudkmspb.CryptoKeyVersion{
-			State: cloudkmspb.CryptoKeyVersion_ENABLED,
-		},
-	})
-	if err != nil {
-		return ImportResult{}, err
-	}
-	return ImportResult{
-		CloudKeyID:  cryptoKeyName,
-		CloudKeyRef: cryptoKeyName,
-		State:       "enabled",
-		Metadata: map[string]interface{}{
-			"provider":    ProviderGCP,
-			"rotated_at":  time.Now().UTC().Format(time.RFC3339Nano),
-			"rotation_op": "create_version",
-		},
-	}, nil
-}
 
 func (p *gcpProvider) SyncBinding(ctx context.Context, in SyncInput) (ImportResult, error) {
 	client, projectID, location, keyRing, err := p.client(ctx, in.Binding.Region, in.Account, in.Credentials)
@@ -505,50 +266,14 @@ func (p *gcpProvider) client(ctx context.Context, regionHint string, account Clo
 	if rawCreds := strings.TrimSpace(anyToString(creds["_raw_json"])); rawCreds != "" {
 		opts = append(opts, option.WithCredentialsJSON([]byte(rawCreds)))
 	}
-	client, err := gcpkms.NewKeyManagementClient(ctx, opts...)
+	if endpoint := strings.TrimSpace(anyToString(creds["endpoint"])); endpoint != "" {
+		opts = append(opts, option.WithEndpoint(endpoint)) // a private endpoint
+	}
+	client, err := gcpkms.NewKeyManagementClient(ctx, append(opts, p.options...)...)
 	if err != nil {
 		return nil, "", "", "", err
 	}
 	return client, projectID, location, keyRing, nil
-}
-
-func mapGCPPurposeAlgorithm(keyMeta map[string]interface{}) (cloudkmspb.CryptoKey_CryptoKeyPurpose, cloudkmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm, error) {
-	algorithm := strings.ToUpper(strings.TrimSpace(anyToString(keyMeta["algorithm"])))
-	purpose := strings.ToLower(strings.TrimSpace(anyToString(keyMeta["purpose"])))
-	if strings.HasPrefix(algorithm, "AES") || strings.Contains(algorithm, "CHACHA") || strings.Contains(algorithm, "CAMELLIA") || strings.Contains(algorithm, "3DES") {
-		return cloudkmspb.CryptoKey_ENCRYPT_DECRYPT, cloudkmspb.CryptoKeyVersion_GOOGLE_SYMMETRIC_ENCRYPTION, nil
-	}
-	if strings.Contains(algorithm, "RSA-2048") {
-		if strings.Contains(purpose, "sign") {
-			return cloudkmspb.CryptoKey_ASYMMETRIC_SIGN, cloudkmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_2048_SHA256, nil
-		}
-		return cloudkmspb.CryptoKey_ASYMMETRIC_DECRYPT, cloudkmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256, nil
-	}
-	if strings.Contains(algorithm, "RSA-3072") {
-		if strings.Contains(purpose, "sign") {
-			return cloudkmspb.CryptoKey_ASYMMETRIC_SIGN, cloudkmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_3072_SHA256, nil
-		}
-		return cloudkmspb.CryptoKey_ASYMMETRIC_DECRYPT, cloudkmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_3072_SHA256, nil
-	}
-	if strings.Contains(algorithm, "RSA-4096") {
-		if strings.Contains(purpose, "sign") {
-			return cloudkmspb.CryptoKey_ASYMMETRIC_SIGN, cloudkmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_4096_SHA512, nil
-		}
-		return cloudkmspb.CryptoKey_ASYMMETRIC_DECRYPT, cloudkmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_4096_SHA256, nil
-	}
-	if strings.Contains(algorithm, "ECDSA-P256") {
-		return cloudkmspb.CryptoKey_ASYMMETRIC_SIGN, cloudkmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256, nil
-	}
-	if strings.Contains(algorithm, "ECDSA-P384") {
-		return cloudkmspb.CryptoKey_ASYMMETRIC_SIGN, cloudkmspb.CryptoKeyVersion_EC_SIGN_P384_SHA384, nil
-	}
-	if strings.Contains(algorithm, "ECDH-") || strings.Contains(purpose, "derive") {
-		return 0, 0, errors.New("gcp kms key-agreement mapping is not supported in this flow")
-	}
-	if strings.Contains(algorithm, "ML-") || strings.Contains(algorithm, "DILITHIUM") {
-		return 0, 0, errors.New("gcp kms pqc algorithms are not supported in this flow")
-	}
-	return 0, 0, fmt.Errorf("unsupported algorithm for gcp kms: %s", algorithm)
 }
 
 func awsAlias(v string) string {

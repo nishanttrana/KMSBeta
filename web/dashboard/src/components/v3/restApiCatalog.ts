@@ -320,21 +320,39 @@ export const REST_API_CATALOG = [
     ]
   },
   {
-    id: "byok-import-key",
+    id: "byok-create",
     group: "BYOK",
-    title: "Import/Sync Key To CSP",
+    title: "Bring Your Own Key To A Cloud",
     service: "cloud",
     method: "POST",
-    pathTemplate: "/cloud/import",
+    pathTemplate: "/cloud/byok/keys",
     bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "key_id": "{{key_id}}",\n  "provider": "aws",\n  "account_id": "acct_aws_01",\n  "vecta_region": "primary",\n  "cloud_region": "us-east-1",\n  "metadata_json": "{\\"source\\":\\"rest-api\\"}"\n}',
-    description: "Imports or binds a KMS key to cloud KMS/HSM target using configured account credentials.",
-    requestExample: "POST /svc/cloud/cloud/import",
-    responseExample: { binding: { id: "bind_01", key_id: "key_123", provider: "aws", cloud_key_ref: "arn:aws:kms:..." } },
+      '{\n  "account_id": "acct_aws_01",\n  "key_id": "{{key_id}}",\n  "alias": "orders-db",\n  "validity_days": 365\n}',
+    description: "Creates the cloud key and imports the KMS key's current version: the cloud's wrapping key, wrapped in keycore (KMS keys) or inside the PKCS#11 HSM (HSM keys made with cloud import allowed), imported, verified. Returns the key and the run's steps.",
+    requestExample: "POST /svc/cloud/cloud/byok/keys",
+    responseExample: { key: { id: "byok_01", provider: "aws", key_id: "key_123", source: "hsm", cloud_key_id: "1234abcd-...", material_state: "current" }, run: { status: "succeeded", steps: [{ name: "Wrap the key material inside the HSM", status: "succeeded" }] } },
     errorCodes: [
-      { code: 400, meaning: "Provider/account/key payload invalid" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 422, meaning: "Cloud import refused by CSP or policy" }
+      { code: 400, meaning: "Key spec or validity not supported by the cloud" },
+      { code: 403, meaning: "Key access, export policy or FIPS mode refused the material" },
+      { code: 409, meaning: "Key not exportable, HSM key not made for cloud import, or approval required" },
+      { code: 424, meaning: "Key access justification service unreachable" },
+      { code: 502, meaning: "A cloud step failed; the response carries the run and its steps" }
+    ]
+  },
+  {
+    id: "byok-rotate",
+    group: "BYOK",
+    title: "Rotate A BYOK Key",
+    service: "cloud",
+    method: "POST",
+    pathTemplate: "/cloud/byok/keys/{{byok_id}}/rotate",
+    bodyTemplate: '{\n  "validity_days": 365\n}',
+    description: "Rotates the KMS key, imports the new version as new material and makes it current in the cloud. Reimport, revoke, restore, verify and sync are the sibling operations.",
+    requestExample: "POST /svc/cloud/cloud/byok/keys/byok_01/rotate",
+    responseExample: { key: { id: "byok_01", current_material_id: "mat-2" }, run: { status: "succeeded" } },
+    errorCodes: [
+      { code: 409, meaning: "The cloud can't take new material on a key (Alibaba) or there is no current material" },
+      { code: 502, meaning: "A cloud step failed; the response carries the run and its steps" }
     ]
   },
   {

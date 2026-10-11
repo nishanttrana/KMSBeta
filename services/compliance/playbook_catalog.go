@@ -56,6 +56,8 @@ var playbookTriggers = []TriggerSpec{
 	{Type: "key_rotated", Label: "Key rotated", Group: "Key lifecycle", Subjects: []string{"audit.key.rotate"}, SuccessOnly: true},
 	{Type: "key_destroyed", Label: "Key destroyed", Group: "Key lifecycle", Subjects: []string{"audit.key.destroyed"}, SuccessOnly: true},
 	{Type: "key_exported", Label: "Key exported", Group: "Key lifecycle", Subjects: []string{"audit.key.export"}, SuccessOnly: true},
+	{Type: "byok_material_imported", Label: "Key material imported into a cloud (BYOK)", Group: "Key lifecycle", Subjects: []string{"audit.cloud.byok_created", "audit.cloud.byok_rotated", "audit.cloud.byok_reimported", "audit.cloud.byok_restored"}, SuccessOnly: true},
+	{Type: "byok_material_revoked", Label: "Cloud key material revoked (BYOK kill switch)", Group: "Key lifecycle", Subjects: []string{"audit.cloud.byok_revoked"}, SuccessOnly: true},
 	{Type: "key_access_refused", Label: "Key access refused", Group: "Key lifecycle", Subjects: []string{"audit.key.access_refused"}},
 	{Type: "key_request_replay_detected", Label: "Key request replay detected", Group: "Key lifecycle", Subjects: []string{"audit.key.request_replay_detected"}},
 	{Type: "key_hsm_refused", Label: "HSM refused a key operation", Group: "Key lifecycle", Subjects: []string{"audit.key.hsm_refused"}},

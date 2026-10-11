@@ -22,7 +22,6 @@ func newMockProviderRegistry() *ProviderRegistry {
 	r.Register(newMockProvider(ProviderOCI))
 	r.Register(newMockProvider(ProviderSalesforce))
 	r.Register(newMockProvider(ProviderAlibaba))
-	r.Register(newMockProvider(ProviderServiceNow))
 	return r
 }
 
@@ -50,51 +49,9 @@ func (m *mockProvider) DefaultRegion() string {
 		return "global"
 	case ProviderAlibaba:
 		return "cn-hangzhou"
-	case ProviderServiceNow:
-		return "us"
 	default:
 		return "global"
 	}
-}
-
-func (m *mockProvider) ImportKey(_ context.Context, in ImportInput) (ImportResult, error) {
-	if strings.TrimSpace(in.KeyID) == "" {
-		return ImportResult{}, errors.New("key_id is required")
-	}
-	digest := providerDigest(m.name, in.TenantID, in.Account.ID, in.KeyID, in.Region, "import")
-	cloudKeyID := fmt.Sprintf("%s-key-%s", m.name, digest[:16])
-	ref := m.buildRef(in.Account, in.Region, cloudKeyID)
-	meta := cloneMap(in.Metadata)
-	meta["provider"] = m.name
-	meta["action"] = "import"
-	meta["cloud_key_id"] = cloudKeyID
-	meta["generated_at"] = time.Now().UTC().Format(time.RFC3339Nano)
-	return ImportResult{
-		CloudKeyID:  cloudKeyID,
-		CloudKeyRef: ref,
-		State:       "enabled",
-		Metadata:    meta,
-	}, nil
-}
-
-func (m *mockProvider) RotateKey(_ context.Context, in RotateInput) (ImportResult, error) {
-	if strings.TrimSpace(in.Binding.CloudKeyID) == "" {
-		return ImportResult{}, errors.New("cloud key id is required")
-	}
-	meta := map[string]interface{}{
-		"provider":     m.name,
-		"action":       "rotate",
-		"reason":       defaultString(in.Reason, "manual"),
-		"cloud_key_id": in.Binding.CloudKeyID,
-		"rotated_at":   time.Now().UTC().Format(time.RFC3339Nano),
-		"key_id":       in.Binding.KeyID,
-	}
-	return ImportResult{
-		CloudKeyID:  in.Binding.CloudKeyID,
-		CloudKeyRef: in.Binding.CloudKeyRef,
-		State:       "enabled",
-		Metadata:    meta,
-	}, nil
 }
 
 func (m *mockProvider) SyncBinding(_ context.Context, in SyncInput) (ImportResult, error) {
@@ -149,8 +106,6 @@ func (m *mockProvider) buildRef(account CloudAccount, region string, cloudKeyID 
 		return fmt.Sprintf("salesforce://tenant-secrets/%s", cloudKeyID)
 	case ProviderAlibaba:
 		return fmt.Sprintf("acs:kms:%s:%s:key/%s", region, account.ID, cloudKeyID)
-	case ProviderServiceNow:
-		return fmt.Sprintf("servicenow://%s/encryption/key/%s", account.Name, cloudKeyID)
 	default:
 		return cloudKeyID
 	}

@@ -9,6 +9,13 @@
   connector refuses a label outside the caller's tenant.
 - Only the `kms-keycore` and `kms-governance` identities may use HSM keys.
   Every operation and refusal is audited.
+- Every key the KMS generates in an HSM is sensitive and never extractable,
+  with one exception (10.0.0-beta): a key created with `export_allowed` for
+  a cloud import is generated sensitive and **extractable**, labelled
+  `hsm_cloud_import: allowed`, and leaves only through
+  `POST /hsm/keys/wrap-for-import`, wrapped inside the HSM to a cloud KMS's
+  RSA key ([CLOUD_BYOK.md](CLOUD_BYOK.md)). Turning export on later doesn't
+  make another key extractable: the HSM refuses.
 
 ## Two roles for an HSM (8.0.0-beta)
 

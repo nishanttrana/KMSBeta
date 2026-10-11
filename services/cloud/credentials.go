@@ -27,7 +27,7 @@ import (
 // names are the providers' own, so the two match.
 var credentialType = map[string]string{
 	ProviderAWS: "aws", ProviderAzure: "azure", ProviderGCP: "gcp", ProviderOCI: "oci",
-	ProviderAlibaba: "alibaba", ProviderSalesforce: "salesforce", ProviderServiceNow: "servicenow",
+	ProviderAlibaba: "alibaba", ProviderSalesforce: "salesforce",
 }
 
 var providerOfCredential = func() map[string]string {
@@ -273,7 +273,6 @@ var aliases = map[string]map[string]string{
 		"region": "region", "compartment_id": "compartment_id", "management_endpoint": "management_endpoint", "kms_management_endpoint": "management_endpoint"},
 	"alibaba":    {"access_key_id": "access_key_id", "access_key_secret": "access_key_secret", "region": "region", "endpoint_url": "endpoint_url"},
 	"salesforce": {"instance_url": "instance_url", "client_id": "client_id", "client_secret": "client_secret", "username": "username", "password": "password", "security_token": "security_token", "login_url": "login_url"},
-	"servicenow": {"instance_url": "instance_url", "username": "username", "password": "password"},
 }
 
 // credentialFields turns a legacy credentials document into the fields of

@@ -36,38 +36,20 @@ func TestServiceImportRotateSyncAndInventory(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	binding, err := svc.ImportKeyToCloud(ctx, ImportKeyToCloudRequest{
-		TenantID:    "tenant-1",
-		KeyID:       "key-1",
-		AccountID:   account.ID,
-		VectaRegion: "vecta-us-east",
-	})
-	if err != nil {
+	// A key a release before 10.0.0-beta created natively in the cloud: it
+	// is listed read-only as cloud-generated, and BYOK operations refuse it.
+	legacy := CloudKeyBinding{ID: "cbk_legacy", TenantID: "tenant-1", KeyID: "key-1", Provider: ProviderAWS, AccountID: account.ID,
+		CloudKeyID: "1234abcd-legacy", CloudKeyRef: "arn:aws:kms:us-east-2:111122223333:key/1234abcd-legacy", Region: "us-east-2",
+		SyncStatus: "synced", MetadataJSON: "{}"}
+	if err := svc.store.CreateBinding(ctx, legacy); err != nil {
 		t.Fatal(err)
 	}
-	if binding.Region != "us-east-2" {
-		t.Fatalf("expected mapped region us-east-2 got %s", binding.Region)
+	listed, err := svc.ListBYOK(ctx, "tenant-1")
+	if err != nil || len(listed) != 1 || listed[0].Origin != OriginCloudGenerated || listed[0].CloudKeyID != legacy.CloudKeyID {
+		t.Fatalf("legacy binding in the BYOK list: %v %+v", err, listed)
 	}
-	if binding.CloudKeyID == "" || binding.CloudKeyRef == "" {
-		t.Fatalf("expected cloud binding identifiers: %+v", binding)
-	}
-
-	rotated, versionID, err := svc.RotateCloudKey(ctx, RotateCloudKeyRequest{
-		TenantID:  "tenant-1",
-		BindingID: binding.ID,
-		Reason:    "scheduled",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if versionID == "" {
-		t.Fatalf("expected version id after rotation")
-	}
-	if rotated.SyncStatus != "synced" {
-		t.Fatalf("unexpected rotate result: %+v", rotated)
-	}
-	if pub.Count("audit.cloud.key_rotated") == 0 {
-		t.Fatalf("expected key_rotated event")
+	if _, _, err := svc.RunBYOK(ctx, "tenant-1", legacy.ID, OpRotate, "alice", BYOKOperationRequest{}); byokReason(err) != "not_found" {
+		t.Fatalf("BYOK rotate of a cloud-generated key: %v", err)
 	}
 
 	job, err := svc.SyncCloudKeys(ctx, SyncCloudKeysRequest{

@@ -32,8 +32,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("DELETE /cloud/accounts/{id}", h.handleDeleteAccount)
 	mux.HandleFunc("POST /cloud/region-mappings", h.handleSetRegionMapping)
 	mux.HandleFunc("GET /cloud/region-mappings", h.handleListRegionMappings)
-	mux.HandleFunc("POST /cloud/import", h.handleImportKey)
-	mux.HandleFunc("POST /cloud/bindings/{id}/rotate", h.handleRotateBinding)
 	mux.HandleFunc("POST /cloud/sync", h.handleSync)
 	mux.HandleFunc("GET /cloud/inventory", h.handleInventory)
 	mux.HandleFunc("GET /cloud/bindings", h.handleListBindings)
@@ -122,74 +120,6 @@ func (h *Handler) handleListRegionMappings(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
-}
-
-func (h *Handler) handleImportKey(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	var req ImportKeyToCloudRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
-		return
-	}
-	if !bodyTenantAllowed(w, r, req.TenantID, reqID) {
-		return
-	}
-	if strings.TrimSpace(req.RequesterIP) == "" {
-		req.RequesterIP = requestIP(r)
-	}
-	out, err := h.svc.ImportKeyToCloud(r.Context(), req)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, req.TenantID, "import_failed")
-		return
-	}
-	status := http.StatusCreated
-	if strings.EqualFold(out.OperationStatus, "pending_approval") {
-		status = http.StatusAccepted
-	}
-	writeJSON(w, status, map[string]interface{}{"binding": out, "request_id": reqID})
-}
-
-func (h *Handler) handleRotateBinding(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	var body struct {
-		Reason            string `json:"reason"`
-		RequesterID       string `json:"requester_id,omitempty"`
-		RequesterEmail    string `json:"requester_email,omitempty"`
-		RequesterIP       string `json:"requester_ip,omitempty"`
-		JustificationCode string `json:"justification_code,omitempty"`
-		JustificationText string `json:"justification_text,omitempty"`
-	}
-	_ = decodeJSON(r, &body)
-	if strings.TrimSpace(body.RequesterIP) == "" {
-		body.RequesterIP = requestIP(r)
-	}
-	out, versionID, err := h.svc.RotateCloudKey(r.Context(), RotateCloudKeyRequest{
-		TenantID:          tenantID,
-		BindingID:         r.PathValue("id"),
-		Reason:            body.Reason,
-		RequesterID:       body.RequesterID,
-		RequesterEmail:    body.RequesterEmail,
-		RequesterIP:       body.RequesterIP,
-		JustificationCode: body.JustificationCode,
-		JustificationText: body.JustificationText,
-	})
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID, "rotate_failed")
-		return
-	}
-	status := http.StatusOK
-	if strings.EqualFold(out.OperationStatus, "pending_approval") {
-		status = http.StatusAccepted
-	}
-	writeJSON(w, status, map[string]interface{}{
-		"binding":    out,
-		"version_id": versionID,
-		"request_id": reqID,
-	})
 }
 
 func (h *Handler) handleSync(w http.ResponseWriter, r *http.Request) {

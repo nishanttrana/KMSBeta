@@ -306,18 +306,34 @@ func (s *Service) createHSMKey(ctx context.Context, req CreateKeyRequest) (Key, 
 	}
 	keyID := newID("key")
 	label := hsm.KeyLabel(req.TenantID, keyID, 1)
-	gen, err := backend.Generate(ctx, req.TenantID, label, alg)
+	var gen hsm.GenerateResult
+	if req.ExportAllowed {
+		// Cloud import (BYOK): the HSM generates it sensitive and
+		// extractable, so it can leave only wrapped to a cloud's key
+		// (cloud_wrap.go). Without it, the key never leaves the HSM.
+		imp, ok := backend.(hsmCloudImporter)
+		if !ok {
+			return Key{}, s.refuseHSM(ctx, req.TenantID, "", "key.create", http.StatusServiceUnavailable, "hsm_unavailable", "the HSM connector can't generate keys for cloud import")
+		}
+		gen, err = imp.GenerateForCloudImport(ctx, req.TenantID, label, alg)
+	} else {
+		gen, err = backend.Generate(ctx, req.TenantID, label, alg)
+	}
 	if err != nil {
 		return Key{}, s.hsmFailure(ctx, req.TenantID, keyID, "key.create", err)
 	}
 	kcv, kcvMethod := hsmKCV(gen)
 	labels := hsmKeyLabels(req.Labels, target, gen.HSM)
+	if req.ExportAllowed {
+		labels[labelHSMCloudImport] = "allowed"
+	}
 	key := Key{
 		ID: keyID, TenantID: req.TenantID, Name: req.Name, Algorithm: req.Algorithm, KeyType: req.KeyType,
 		Purpose: req.Purpose, Status: initialStatus, ActivationDate: activationAt, CurrentVersion: 1,
 		KCV: kcv, KCVAlgorithm: kcvMethod, IVMode: req.IVMode, Owner: req.Owner, Cloud: req.Cloud, Region: req.Region,
 		Compliance: req.Compliance, Tags: req.Tags, Labels: labels,
-		ExportAllowed: false, // the key never leaves the HSM
+		// Leaves the HSM only wrapped for a cloud import, and only if asked.
+		ExportAllowed: req.ExportAllowed,
 		OpsLimit:      req.OpsLimit, OpsLimitWindow: req.OpsLimitWindow,
 		ApprovalRequired: req.ApprovalRequired, ApprovalPolicyID: req.ApprovalPolicyID, CreatedBy: req.CreatedBy,
 	}
@@ -357,8 +373,16 @@ func (s *Service) rotateHSMKey(ctx context.Context, key Key) (KeyVersion, error)
 	}
 	next := key.CurrentVersion + 1
 	label := hsm.KeyLabel(key.TenantID, key.ID, next)
-	// The next version goes to the HSM the key is on.
-	gen, err := s.hsmOf(key).Generate(ctx, key.TenantID, label, hsm.NormalizeAlgorithm(key.Algorithm))
+	// The next version goes to the HSM the key is on, extractable for
+	// cloud import only if the key was created that way.
+	backend := s.hsmOf(key)
+	var gen hsm.GenerateResult
+	var err error
+	if imp, ok := backend.(hsmCloudImporter); ok && key.Labels[labelHSMCloudImport] == "allowed" {
+		gen, err = imp.GenerateForCloudImport(ctx, key.TenantID, label, hsm.NormalizeAlgorithm(key.Algorithm))
+	} else {
+		gen, err = backend.Generate(ctx, key.TenantID, label, hsm.NormalizeAlgorithm(key.Algorithm))
+	}
 	if err != nil {
 		return KeyVersion{}, s.hsmFailure(ctx, key.TenantID, key.ID, "key.rotate", err)
 	}

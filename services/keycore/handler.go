@@ -229,6 +229,7 @@ func (h *Handler) routes() *http.ServeMux {
 	h.hsmRouter(kernelEmitter{h}).MountOn(mux)
 	h.keyConsumersRouter(kernelEmitter{h}).MountOn(mux)
 	h.rewrapRouter(kernelEmitter{h}).MountOn(mux)
+	h.cloudWrapRouter(kernelEmitter{h}).MountOn(mux)
 	h.publicKeyRouter(kernelEmitter{h}).MountOn(mux)
 	// Cluster master-key transfer: cluster-manager service identity only.
 	mux.HandleFunc("POST /cluster/mek/join-key", h.handleClusterJoinKey)

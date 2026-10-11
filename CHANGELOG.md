@@ -4,6 +4,65 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [10.0.0-beta] — 2026-10-11
+
+### Cloud BYOK: real key import into every cloud, from the KMS or inside your HSM
+Modelled on the owner's AWS BYOK console (a Primus HSM through its TSB), for
+every cloud the KMS connects to and without a TSB
+([docs/SECURITY/CLOUD_BYOK.md](docs/SECURITY/CLOUD_BYOK.md)).
+- **Breaking: the old "import" is removed; it never imported anything.**
+  `POST /cloud/import` called each cloud's own `CreateKey`, so the cloud
+  generated the material and the KMS key was not involved, and
+  `POST /cloud/bindings/{id}/rotate` on AWS only turned on AWS's own
+  rotation, discarding its errors. Both routes are gone. Keys they created are
+  listed read-only as **cloud-generated**.
+- **New: BYOK for AWS KMS, Google Cloud KMS, Azure Key Vault / Managed HSM,
+  OCI Vault, Alibaba Cloud KMS and Salesforce Shield**, each through its own
+  import protocol: EXTERNAL keys and import tokens (AWS, Alibaba), import jobs
+  (Google), a temporary key exchange key and transfer blob (Azure), the
+  vault's wrapping key (OCI), tenant secrets with their hash (Salesforce).
+  Operations: create and import, rotate (new material, made current),
+  reimport (renew expiry), revoke (the kill switch: delete material, or
+  disable where the cloud can't delete), restore, verify (a cryptographic
+  round trip in the cloud) and sync, each offered only where the cloud
+  supports it (`GET /cloud/byok/providers`).
+- **New: material from the KMS or from a PKCS#11 HSM.** keycore wraps a KMS
+  key's version to the cloud's key (`POST /keys/{id}/cloud-wrap`, only the
+  cloud service may call it, for the user who asked, with every export
+  check). A key created **in an HSM with cloud import allowed** is generated
+  sensitive and extractable and wrapped **inside the HSM** with `C_WrapKey`
+  (`POST /hsm/keys/wrap-for-import`); every other HSM key stays
+  non-extractable. New delegated usage `cloud-import`; new route permission
+  `key.cloud_import`.
+- **New: custody and runs.** Each import records the KMS version, KCV, cloud
+  material ID, scheme, source and the cloud wrapping key's fingerprint. Every
+  operation is a run of named steps with the cloud call and its CLI
+  equivalent; the dashboard exports them as a script.
+- **New dashboard console** (Cloud Key Control → BYOK): tiles and charts by
+  cloud, material state and source, each drilling into its keys; a key's
+  custody, runs and the operations its cloud supports; a "Bring your own key"
+  wizard that creates the KMS key (KMS entropy or a chosen HSM) and imports
+  it; Activity with every run.
+- **New audit events**: `audit.cloud.byok_created`, `byok_rotated`,
+  `byok_reimported`, `byok_revoked`, `byok_restored`, `byok_verified`,
+  `byok_synced` (and reads), `audit.key.cloud_wrapped`,
+  `audit.hsm.key_wrapped_for_cloud`, refusals included. New playbook
+  triggers `byok_material_imported` and `byok_material_revoked`.
+- **FIPS**: in strict mode the KMS refuses the schemes that run outside the
+  module (RSA-OAEP SHA-1 for Azure and Salesforce, AES key wrap with padding
+  for private keys); HSM-generated keys are still wrapped in the HSM. Listed
+  in the FIPS impact catalogue.
+- **Removed: the ServiceNow cloud provider.** It called an endpoint that
+  doesn't exist (`/api/now/encryption/key`); no account could reach it.
+- **Fixed: Alibaba Cloud accounts can be registered** (the provider list
+  left them out) and honour the credential's `endpoint_url`.
+- **Not yet verified against real cloud accounts**: each cloud is tested
+  against a double of its wire protocol that unwraps with its own key. Still
+  to build: cloud key pages (policy, grants, aliases, tags), a structured
+  per-cloud console, and automation as playbook actions.
+- 004 migration: `cloud_byok_keys`, `cloud_byok_materials`,
+  `cloud_byok_runs` (replicated under `byok`).
+
 ## [9.6.0-beta] — 2026-10-11
 
 ### Dashboard: a module's views open under its name in the sidebar
