@@ -36,7 +36,7 @@ func TestHYOKRefusesSpoofedIdentity(t *testing.T) {
 	if rr := hyokCall(h, "", http.MethodPost, path, body, "X-Client-CN", "tenant-a:cloud", "X-Client-Subject", "CN=tenant-a:cloud"); rr.Code != http.StatusUnauthorized {
 		t.Fatalf("spoofed client-cert headers accepted: %d %s", rr.Code, rr.Body.String())
 	}
-	if rr := hyokCall(h, "jwt:tenant-b:admin", http.MethodPost, path, body); rr.Code != http.StatusUnauthorized {
+	if rr := hyokCall(h, "jwt:tenant-b:admin", http.MethodPost, path, body); rr.Code != http.StatusForbidden {
 		t.Fatalf("other tenant's token accepted: %d", rr.Code)
 	}
 	if rr := hyokCall(h, "forged", http.MethodPost, path, body); rr.Code != http.StatusUnauthorized {
@@ -52,7 +52,7 @@ func TestHYOKAdminRoutesRequireTenantAdmin(t *testing.T) {
 	if rr := hyokCall(h, "", http.MethodPut, "/hyok/v1/endpoints/generic?tenant_id=tenant-a", cfg); rr.Code != http.StatusUnauthorized {
 		t.Fatalf("unauthenticated configure: %d", rr.Code)
 	}
-	if rr := hyokCall(h, "jwt:tenant-b:admin", http.MethodPut, "/hyok/v1/endpoints/generic?tenant_id=tenant-a", cfg); rr.Code != http.StatusUnauthorized {
+	if rr := hyokCall(h, "jwt:tenant-b:admin", http.MethodPut, "/hyok/v1/endpoints/generic?tenant_id=tenant-a", cfg); rr.Code != http.StatusForbidden {
 		t.Fatalf("cross-tenant configure: %d", rr.Code)
 	}
 	if rr := hyokCall(h, "jwt:tenant-a:operator", http.MethodPut, "/hyok/v1/endpoints/generic?tenant_id=tenant-a", cfg); rr.Code != http.StatusForbidden {

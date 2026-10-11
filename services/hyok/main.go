@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
 	"errors"
 	"log"
 	"net"
@@ -23,13 +22,12 @@ import (
 
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauditmw "vecta-kms/pkg/auditmw"
-	pkgauth "vecta-kms/pkg/auth"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
-	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	pkgkeyaccess "vecta-kms/pkg/keyaccess"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
@@ -86,7 +84,9 @@ func main() {
 
 	jwtParser, err := loadJWTParser(cfg.JWTIssuer, cfg.JWTAudience)
 	if err != nil {
-		logger.Fatalf("jwt parser setup failed: %v", err)
+		// Fail closed, like keycore and governance: without the key every
+		// call would be refused as unauthorized.
+		logger.Fatalf("refusing to start: %v", err)
 	}
 
 	svc := NewService(
@@ -198,32 +198,18 @@ func loadHTTPServerTLSConfig() *tls.Config {
 	return cfg
 }
 
+// loadJWTParser returns the token parser, or an error when no verification
+// key is configured: HYOK_JWT_PUBLIC_KEY_PEM/_B64, then the shared
+// JWT_PUBLIC_KEY_PEM/_B64 that compose sets.
 func loadJWTParser(issuer string, audience string) (JWTParser, error) {
-	pubPEM := strings.TrimSpace(os.Getenv("HYOK_JWT_PUBLIC_KEY_PEM"))
-	if pubPEM == "" {
-		if b64 := strings.TrimSpace(os.Getenv("HYOK_JWT_PUBLIC_KEY_B64")); b64 != "" {
-			raw, err := base64.StdEncoding.DecodeString(b64)
-			if err != nil {
-				return nil, err
-			}
-			pubPEM = string(raw)
-		}
-	}
-	pubPEM = strings.ReplaceAll(pubPEM, `\n`, "\n")
-	if pubPEM == "" {
-		return nil, nil
-	}
-	pub, err := pkgcrypto.ParseRSAPublicKeyPEM(pubPEM)
+	parser, err := pkgjwtauth.LoadParser(pkgjwtauth.Config{Prefix: "HYOK", Issuer: issuer, Audience: audience})
 	if err != nil {
-		return nil, errors.New("unable to parse RSA public key")
+		return nil, err
 	}
-	return func(token string) (*pkgauth.Claims, error) {
-		return pkgauth.ParseRS256WithOptions(token, pub, pkgauth.ParseOptions{
-			Issuer:   issuer,
-			Audience: audience,
-			Leeway:   30 * time.Second,
-		})
-	}, nil
+	if parser == nil {
+		return nil, errors.New("no JWT verification key: set JWT_PUBLIC_KEY_B64 (or HYOK_JWT_PUBLIC_KEY_PEM/_B64)")
+	}
+	return parser, nil
 }
 
 func devMTLSConfig() (*tls.Config, error) {

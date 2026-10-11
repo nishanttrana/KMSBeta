@@ -5,6 +5,26 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### A service that started without its token key (10.1.0-beta)
+- **HYOK signed the dashboard out.** `services/hyok` had its own
+  `loadJWTParser` that read only `HYOK_JWT_PUBLIC_KEY_*`. Compose sets the
+  shared `JWT_PUBLIC_KEY_B64`, so the parser was nil, the service started
+  healthy, and every request got `401 jwt parser is not configured`. The
+  dashboard clears the session on any 401 (`lib/serviceApi.ts`), so one
+  misconfigured service looked like a logout bug.
+  How it slipped through: the handler tests inject a parser, so nothing
+  exercised the loader, and the health check is a TCP probe that can't see
+  it. keycore, governance, ekm, posture and cluster-manager already refuse
+  to start without a key; HYOK was the one copy that returned `nil, nil` and
+  carried on. Fix: `pkg/jwtauth.LoadParser` plus a fatal on nil, with
+  `TestSharedJWTKeyLoadedAndMissingKeyRefusesStart`.
+- **401 means "this session is dead" to the dashboard.** A service must keep
+  it for a missing or unverifiable token. A valid token in the wrong tenant
+  is 403 (HYOK returned 401). Still open: auth answers 401 for a wrong
+  current password, MFA code or CLI credential from a signed-in user
+  (`services/auth/handler.go`), and workload for a disallowed audience;
+  if the dashboard reaches those through `serviceRequest` they sign out too.
+
 ### Cloud "BYOK" that brought no key (10.0.0-beta)
 - **An import that called the cloud's `CreateKey`.** Every provider's
   `ImportKey` created a native key in the cloud; the cloud generated the

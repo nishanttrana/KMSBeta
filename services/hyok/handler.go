@@ -287,7 +287,8 @@ func (h *Handler) authenticateAndTenant(r *http.Request, w http.ResponseWriter, 
 	}
 	identity, err := h.authenticate(r, hint)
 	if err != nil {
-		writeErr(w, http.StatusUnauthorized, "unauthorized", err.Error(), reqID, hint)
+		status, code := authRefusal(err)
+		writeErr(w, status, code, err.Error(), reqID, hint)
 		return AuthIdentity{}, "", false
 	}
 	tenantID := hint
@@ -404,9 +405,21 @@ func (h *Handler) authenticate(r *http.Request, tenantHint string) (AuthIdentity
 		}
 	}
 	if tenantHint != "" && id.TenantID != "" && !strings.EqualFold(id.TenantID, tenantHint) {
-		return AuthIdentity{}, errors.New("tenant mismatch with bearer token")
+		// The token is valid; the caller is in the wrong tenant. 403, so a
+		// client does not treat it as a dead session.
+		return AuthIdentity{}, newServiceError(http.StatusForbidden, "forbidden", "tenant mismatch with bearer token")
 	}
 	return id, nil
+}
+
+// authRefusal is the status of an authenticate error: 401 unless it names
+// its own (a tenant mismatch is 403).
+func authRefusal(err error) (int, string) {
+	var svcErr serviceError
+	if errors.As(err, &svcErr) {
+		return svcErr.HTTPStatus, svcErr.Code
+	}
+	return http.StatusUnauthorized, "unauthorized"
 }
 
 // adminCaller authenticates a caller of the endpoint-administration routes
@@ -426,7 +439,8 @@ func (h *Handler) adminCaller(w http.ResponseWriter, r *http.Request, reqID, ten
 	}
 	id, err := h.authenticate(r, tenantID)
 	if err != nil {
-		return refuse(http.StatusUnauthorized, "unauthorized", err.Error())
+		status, code := authRefusal(err)
+		return refuse(status, code, err.Error())
 	}
 	if write && !hyokAdminRole(id.Role) {
 		return refuse(http.StatusForbidden, "forbidden", "changing HYOK endpoints requires a tenant administrator")

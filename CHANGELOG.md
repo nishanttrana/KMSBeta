@@ -4,6 +4,20 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [10.1.0-beta] — 2026-10-11
+
+### Opening HYOK no longer signs you out
+- **Fixed: the HYOK service ran without a token-verification key.** It read
+  only `HYOK_JWT_PUBLIC_KEY_PEM/_B64`, which no installer or compose file
+  sets, and not the shared `JWT_PUBLIC_KEY_B64` every other service uses. It
+  started anyway and refused every call with `401 jwt parser is not
+  configured`; the dashboard ends the session on any 401, so opening HYOK
+  (or any view that reads HYOK status) returned to the sign-in page. HYOK now
+  loads the key through `pkg/jwtauth` (per-service variable first, then the
+  shared one) and refuses to start without one, like keycore and governance.
+- **Changed: a valid token for another tenant is `403 forbidden` on HYOK
+  routes**, not `401`. Missing, malformed and unverifiable tokens stay `401`.
+
 ## [10.0.0-beta] — 2026-10-11
 
 ### Cloud BYOK: real key import into every cloud, from the KMS or inside your HSM
