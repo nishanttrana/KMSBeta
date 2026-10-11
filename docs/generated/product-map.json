@@ -19210,7 +19210,7 @@
       "file": "web/dashboard/src/components/LoginScreen.tsx",
       "handler": "handleLogin",
       "label": "{loading ? ( <> Authenticating\u2026 ) : ( <> Sign In )}",
-      "line": 369,
+      "line": 325,
       "tabs": [],
       "tag": "button"
     },
@@ -19218,7 +19218,7 @@
       "file": "web/dashboard/src/components/LoginScreen.tsx",
       "handler": "",
       "label": "handleSSOLogin(sp.provider)} disabled= className=\"w-full rounded-lg border bo...",
-      "line": 405,
+      "line": 355,
       "tabs": [],
       "tag": "button"
     },
@@ -19226,7 +19226,7 @@
       "file": "web/dashboard/src/components/LoginScreen.tsx",
       "handler": "",
       "label": "setShowPolicyHint((v) => !v)} className=\"text-cyber-accent transition-colors...",
-      "line": 441,
+      "line": 391,
       "tabs": [],
       "tag": "button"
     },
@@ -19234,7 +19234,7 @@
       "file": "web/dashboard/src/components/LoginScreen.tsx",
       "handler": "handlePasswordChange",
       "label": "{savingPassword ? ( <> Applying\u2026 ) : ( <> Update Password and Continue )}",
-      "line": 473,
+      "line": 423,
       "tabs": [],
       "tag": "button"
     },
@@ -19266,7 +19266,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setCollapsed((v) => !v)} title= className=\"vk-icon-btn\" style={{ width: 22, h...",
-      "line": 636,
+      "line": 626,
       "tabs": [],
       "tag": "button"
     },
@@ -19274,7 +19274,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "onLogout",
       "label": "Sign out",
-      "line": 820,
+      "line": 812,
       "tabs": [],
       "tag": "button"
     },
@@ -19282,7 +19282,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "togglePin(tab)} title= style={{ display: \"inline-flex\", alignItems: \"center\",...",
-      "line": 873,
+      "line": 864,
       "tabs": [],
       "tag": "button"
     },
@@ -19290,7 +19290,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setPaletteOpen(true)} title=\"Command palette (\u2318K)\" className=\"vk-search-btn\"...",
-      "line": 896,
+      "line": 887,
       "tabs": [],
       "tag": "button"
     },
@@ -19298,7 +19298,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "selectTab(\"admin\")} style={cliEnabled ? : }>",
-      "line": 946,
+      "line": 936,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19306,7 +19306,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" aria-label=\"About this KMS build\" aria-expanded= ti...",
-      "line": 983,
+      "line": 973,
       "tabs": [],
       "tag": "button"
     },
@@ -19314,7 +19314,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" style={{ display: \"inline-flex\", alignItems: \"cente...",
-      "line": 1018,
+      "line": 1008,
       "tabs": [],
       "tag": "button"
     },
@@ -19393,7 +19393,7 @@
     {
       "file": "web/dashboard/src/components/v3/legacyPrimitives.tsx",
       "handler": "",
-      "label": "onChange(t)} style={{ background: active === t ? C.accentDim : \"transparent\",...",
+      "label": "onChange(t)} style={{ background: \"transparent\", color: active === t ? C.text...",
       "line": 677,
       "tabs": [],
       "tag": "button"
@@ -20904,7 +20904,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "void refresh()} disabled= style={{ display: \"inline-flex\", alignItems: \"cente...",
-      "line": 307,
+      "line": 308,
       "tabs": [
         "home",
         "recommendations"
@@ -33059,7 +33059,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-11T17:16:44Z",
+  "generated_at": "2026-10-11T17:36:37Z",
   "navigation": [
     {
       "group": "Overview",
@@ -121836,7 +121836,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-11T17:16:44Z",
+    "generatedAt": "2026-10-11T17:36:37Z",
     "methods": [
       "DELETE",
       "GET",

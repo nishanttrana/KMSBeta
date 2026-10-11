@@ -63,7 +63,7 @@ export const KeyDerivationPanel = ({ session, onToast }: Props) => {
           <div style={{ fontSize: 11, color: C.dim }}>No data protection keys have been used yet.</div>
         ) : (
           <>
-            {legacy > 0 && <div style={{ fontSize: 11, color: C.red, marginBottom: 8 }}>{legacy} key(s) still use identifier-derived working keys.</div>}
+            {legacy > 0 && <div style={{ fontSize: 11, color: C.redFg, marginBottom: 8 }}>{legacy} key(s) still use identifier-derived working keys.</div>}
             <div style={{ display: "grid", gap: 6 }}>
               {items.map((k) => (
                 <div key={k.key_id} style={{ display: "grid", gridTemplateColumns: "minmax(0,1.4fr) auto minmax(0,1fr) auto", gap: 8, alignItems: "center", fontSize: 11, color: C.text }}>

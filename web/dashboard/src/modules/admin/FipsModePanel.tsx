@@ -107,7 +107,7 @@ export const FipsModePanel = ({ session, onToast }: Props) => {
       </div>
       {impact && (
         <div style={{ border: `1px solid ${impact.downgrade ? C.red : C.amber}`, borderRadius: 8, padding: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: impact.downgrade ? C.red : C.amber }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: impact.downgrade ? C.redFg : C.amberFg }}>
             {impact.downgrade ? "Security downgrade: " : ""}{impact.from} to {impact.to}
           </div>
           {list("Stops working", C.red, impact.stops)}
@@ -128,7 +128,7 @@ export const FipsModePanel = ({ session, onToast }: Props) => {
       {status.services.length > 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 4, marginTop: 4 }}>
           {status.services.map((s) => (
-            <div key={s.service + s.instance} style={{ fontSize: 10, color: s.mode === status.effective ? C.dim : C.amber }}>
+            <div key={s.service + s.instance} style={{ fontSize: 10, color: s.mode === status.effective ? C.dim : C.amberFg }}>
               {s.service}: {s.mode}{s.validated ? " · validated" : ""}
             </div>
           ))}

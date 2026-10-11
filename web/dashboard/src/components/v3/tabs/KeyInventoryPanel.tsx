@@ -60,7 +60,7 @@ export function KeyInventoryPanel({ session }: any) {
         <Btn onClick={load} small><RefreshCcw size={12} />{loading ? "Loading…" : "Refresh"}</Btn>
       </div>
 
-      {err && <div style={{ padding: 12, borderRadius: 6, background: C.redDim, color: C.red, fontSize: 12, marginBottom: 16 }}>{err}</div>}
+      {err && <div style={{ padding: 12, borderRadius: 6, background: C.redDim, color: C.redFg, fontSize: 12, marginBottom: 16 }}>{err}</div>}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 12, marginBottom: 24 }}>
         {[
@@ -70,7 +70,7 @@ export function KeyInventoryPanel({ session }: any) {
           { label: "Avg Key Age (days)", value: analytics.avg_age_days?.toFixed?.(1), icon: TrendingUp },
         ].map(({ label, value, icon: Icon }: any) => (
           <Card key={label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ background: C.accent + "22", borderRadius: 8, padding: 10 }}><Icon size={16} style={{ color: C.accent }} /></div>
+            <div style={{ background: C.accent + "22", borderRadius: 8, padding: 10 }}><Icon size={16} style={{ color: C.accentFg }} /></div>
             <div>
               <div style={{ fontSize: 20, fontWeight: 700, color: C.text }}>{value ?? "—"}</div>
               <div style={{ fontSize: 11, color: C.muted }}>{label}</div>

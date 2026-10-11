@@ -530,14 +530,14 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
             <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>Issuance / Exchange Output</div>
             {lastIssued && (
               <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, marginBottom: 8 }}>Last Issued SVID</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.accentFg, marginBottom: 8 }}>Last Issued SVID</div>
                 <div style={{ fontSize: 10, color: C.dim, marginBottom: 8 }}>{lastIssued.spiffe_id} • {String(lastIssued.svid_type || "").toUpperCase()} • Expires {fmtTS(lastIssued.expires_at)}</div>
                 <Txt rows={lastIssued?.jwt_svid ? 8 : 10} value={String(lastIssued?.jwt_svid || lastIssued?.certificate_pem || "")} readOnly />
               </div>
             )}
             {lastExchange && (
               <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: C.green, marginBottom: 8 }}>Last Exchanged KMS Token</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.greenFg, marginBottom: 8 }}>Last Exchanged KMS Token</div>
                 <div style={{ fontSize: 10, color: C.dim, marginBottom: 8 }}>{lastExchange.spiffe_id} • {lastExchange.interface_name} • Expires {fmtTS(lastExchange.kms_access_token_expiry)}</div>
                 <Txt rows={8} value={String(lastExchange?.kms_access_token || "")} readOnly />
               </div>
@@ -562,7 +562,7 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           <Card>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>Recent Workload Key Usage</div>
-            {usageError && <div style={{ fontSize: 11, color: C.amber, marginBottom: 8 }}>Usage unavailable: {usageError}</div>}
+            {usageError && <div style={{ fontSize: 11, color: C.amberFg, marginBottom: 8 }}>Usage unavailable: {usageError}</div>}
             <div style={{ display: "grid", gap: 8 }}>
               {usage.map((item: any) => (
                 <div key={`${item.event_id}-${item.key_id}-${item.operation}`} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 10, background: C.card }}>

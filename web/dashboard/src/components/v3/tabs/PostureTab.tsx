@@ -183,17 +183,17 @@ const ChartTooltip = ({ containerStyle, children }: any) => (
 
 const RiskTrendTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
-  return <ChartTooltip><div style={{ fontWeight: 700, marginBottom: 4, color: C.accent }}>{label}</div><div>Risk Score: <span style={{ fontWeight: 700, color: C.text }}>{payload[0]?.value}</span></div></ChartTooltip>;
+  return <ChartTooltip><div style={{ fontWeight: 700, marginBottom: 4, color: C.accentFg }}>{label}</div><div>Risk Score: <span style={{ fontWeight: 700, color: C.text }}>{payload[0]?.value}</span></div></ChartTooltip>;
 };
 
 const DomainBarTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
-  return <ChartTooltip><div style={{ fontWeight: 700, marginBottom: 4, color: C.accent }}>{label}</div>{payload.map((entry: any) => <div key={entry.dataKey} style={{ color: entry.color }}>{entry.name}: <span style={{ fontWeight: 700, color: C.text }}>{entry.value}</span></div>)}</ChartTooltip>;
+  return <ChartTooltip><div style={{ fontWeight: 700, marginBottom: 4, color: C.accentFg }}>{label}</div>{payload.map((entry: any) => <div key={entry.dataKey} style={{ color: entry.color }}>{entry.name}: <span style={{ fontWeight: 700, color: C.text }}>{entry.value}</span></div>)}</ChartTooltip>;
 };
 
 const HistogramTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
-  return <ChartTooltip><div style={{ fontWeight: 700, marginBottom: 4, color: C.accent }}>Score Range: {label}</div><div>Findings: <span style={{ fontWeight: 700, color: C.text }}>{payload[0]?.value}</span></div></ChartTooltip>;
+  return <ChartTooltip><div style={{ fontWeight: 700, marginBottom: 4, color: C.accentFg }}>Score Range: {label}</div><div>Findings: <span style={{ fontWeight: 700, color: C.text }}>{payload[0]?.value}</span></div></ChartTooltip>;
 };
 
 // ── Component ───────────────────────────────────────────────────
@@ -567,8 +567,8 @@ export const PostureTab = ({ session, onToast }: any) => {
             {riskDrivers.slice(0, 5).map((driver: any) => (
               <div key={String(driver?.id || driver?.label)} style={{ display: "grid", gridTemplateColumns: "90px 1fr", gap: 10, padding: "8px 0", borderTop: `1px solid ${C.border}` }}>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: C.accent }}>{Number(driver?.delta_points || 0) >= 0 ? "+" : ""}{Number(driver?.delta_points || 0)}</div>
-                  <div style={{ fontSize: 8, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{String(driver?.domain || "risk")}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: C.accentFg }}>{Number(driver?.delta_points || 0) >= 0 ? "+" : ""}{Number(driver?.delta_points || 0)}</div>
+                  <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{String(driver?.domain || "risk")}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{String(driver?.label || "-")}</div>
@@ -593,7 +593,7 @@ export const PostureTab = ({ session, onToast }: any) => {
                     <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{String(badge?.label || "-")}</div>
                     <B c={healthTone(String(badge?.status || ""))}>{String(badge?.status || "unknown")}</B>
                   </div>
-                  <div style={{ fontSize: 9, color: C.dim, marginTop: 4 }}>{String(badge?.detail || "-")}</div>
+                  <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{String(badge?.detail || "-")}</div>
                 </div>
               ))}
               {!validationBadges.length && <div style={{ fontSize: 10, color: C.muted }}>No validation telemetry yet.</div>}
@@ -611,7 +611,7 @@ export const PostureTab = ({ session, onToast }: any) => {
               <Stat l="Policy Mismatches" v={String(Number(autokeySummary?.policy_mismatch_count || 0))} c={Number(autokeySummary?.policy_mismatch_count || 0) > 0 ? "amber" : "green"} />
               <Stat l="Provisioned 24h" v={String(Number(autokeySummary?.provisioned_24h || 0))} c="blue" />
             </div>
-            <div style={{ fontSize: 9, color: C.dim, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 10, color: C.dim, lineHeight: 1.5 }}>
               {Boolean(autokeySummary?.enabled)
                 ? "Autokey templates and per-service defaults are active. Watch approval backlog and policy mismatches to keep self-service provisioning aligned."
                 : "Autokey is disabled, so teams still need manual key creation instead of central-policy handle provisioning."}
@@ -642,7 +642,7 @@ export const PostureTab = ({ session, onToast }: any) => {
               <Stat l="Disabled Users" v={String(Number(scimSummary?.disabled_users || 0))} c={Number(scimSummary?.disabled_users || 0) > 0 ? "amber" : "green"} />
               <Stat l="Role-Mapped Groups" v={String(Number(scimSummary?.role_mapped_groups || 0))} c="blue" />
             </div>
-            <div style={{ fontSize: 9, color: C.dim, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 10, color: C.dim, lineHeight: 1.5 }}>
               {Boolean(scimSummary?.enabled)
                 ? (Boolean(scimSummary?.token_configured)
                   ? "Tenant SCIM provisioning is active. Track disabled identities and unmapped groups so inbound provisioning stays aligned with least-privilege RBAC."
@@ -660,7 +660,7 @@ export const PostureTab = ({ session, onToast }: any) => {
               {[["Open", Number(slaOverview?.open_count || 0), C.blue], ["Due Soon", Number(slaOverview?.due_soon_count || 0), C.amber], ["Avg Age", `${Math.round(Number(slaOverview?.average_age_hours || 0))}h`, C.accent]].map(([label, value, color]) => (
                 <div key={String(label)} style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10, textAlign: "center" }}>
                   <div style={{ fontSize: 16, fontWeight: 800, color: color as string }}>{value}</div>
-                  <div style={{ fontSize: 8, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{label}</div>
+                  <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{label}</div>
                 </div>
               ))}
             </div>
@@ -677,7 +677,7 @@ export const PostureTab = ({ session, onToast }: any) => {
               <Stat l="Replay Violations" v={String(Number(restClientSecurity?.replay_violations || 0))} c={Number(restClientSecurity?.replay_violations || 0) > 0 ? "red" : "green"} />
               <Stat l="Unsigned Rejects" v={String(Number(restClientSecurity?.unsigned_rejects || 0))} c={Number(restClientSecurity?.unsigned_rejects || 0) > 0 ? "amber" : "green"} />
             </div>
-            <div style={{ fontSize: 9, color: C.dim, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 10, color: C.dim, lineHeight: 1.5 }}>
               {Number(restClientSecurity?.non_compliant_clients || 0) > 0
                 ? `${Number(restClientSecurity?.non_compliant_clients || 0)} REST clients still use legacy API key or bearer mode. Move them to OAuth mTLS, DPoP, or HTTP Message Signatures to remove replayable tokens from the posture backlog.`
                 : "All tracked REST clients are using sender-constrained authentication modes."}
@@ -695,7 +695,7 @@ export const PostureTab = ({ session, onToast }: any) => {
               <Stat l="Unjustified" v={String(Number(keyAccessSummary?.unjustified_count_24h || 0))} c={Number(keyAccessSummary?.unjustified_count_24h || 0) > 0 ? "amber" : "green"} />
               <Stat l="Bypass Signals" v={String(Number(keyAccessSummary?.bypass_count_24h || 0))} c={Number(keyAccessSummary?.bypass_count_24h || 0) > 0 ? "red" : "green"} />
             </div>
-            <div style={{ fontSize: 9, color: C.dim, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 10, color: C.dim, lineHeight: 1.5 }}>
               {Boolean(keyAccessSummary?.enabled)
                 ? "External decrypt, sign, wrap, and HYOK/EKM access paths are governed by justification codes and optional approval rules. Treat bypass or unjustified requests as posture regressions."
                 : "Per-request usage justifications are disabled, so external key use is not being explained or policy-bound at request time."}
@@ -713,7 +713,7 @@ export const PostureTab = ({ session, onToast }: any) => {
               <Stat l="Transparency Logged" v={String(Number(signingSummary?.transparency_logged_24h || 0))} c={Number(signingSummary?.transparency_logged_24h || 0) < Number(signingSummary?.record_count_24h || 0) ? "amber" : "green"} />
               <Stat l="Verify Failures" v={String(Number(signingSummary?.verification_failures_24h || 0))} c={Number(signingSummary?.verification_failures_24h || 0) > 0 ? "red" : "green"} />
             </div>
-            <div style={{ fontSize: 9, color: C.dim, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 10, color: C.dim, lineHeight: 1.5 }}>
               {Boolean(signingSummary?.enabled)
                 ? "Artifact and Git signing are backed by KMS keys, workload/OIDC identity constraints, and transparency-linked records. Watch verification failures and unsigned transparency gaps before treating supply-chain posture as healthy."
                 : "Artifact signing is disabled, so release provenance and workload-bound signing policy are not enforced for blobs, OCI metadata, or Git artifacts."}
@@ -730,7 +730,7 @@ export const PostureTab = ({ session, onToast }: any) => {
                 <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{String(group?.label || "-")}</span>
                 <B c={group?.id === "approval-required" ? "red" : group?.id === "manual" ? "amber" : "green"}>{Number(group?.count || 0)}</B>
               </div>
-              <div style={{ fontSize: 9, color: C.dim, marginBottom: 8 }}>{String(group?.description || "")}</div>
+              <div style={{ fontSize: 10, color: C.dim, marginBottom: 8 }}>{String(group?.description || "")}</div>
               <div style={{ display: "grid", gap: 6 }}>
                 {(Array.isArray(group?.actions) ? group.actions : []).slice(0, 3).map((action: any) => (
                   <div key={String(action?.id || action?.action_type)} style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10, background: C.surface }}>
@@ -738,8 +738,8 @@ export const PostureTab = ({ session, onToast }: any) => {
                       <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{String(action?.action_type || "-")}</div>
                       <B c={actionStatusTone(String(action?.status || ""))}>{String(action?.status || "-")}</B>
                     </div>
-                    <div style={{ fontSize: 9, color: C.dim, marginTop: 4 }}>{String(action?.recommended_action || "")}</div>
-                    <div style={{ fontSize: 8, color: C.muted, marginTop: 4 }}>Impact: {Number(action?.impact_estimate?.risk_reduction || 0)} points, rollback: {String(action?.rollback_hint || "-")}</div>
+                    <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{String(action?.recommended_action || "")}</div>
+                    <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>Impact: {Number(action?.impact_estimate?.risk_reduction || 0)} points, rollback: {String(action?.rollback_hint || "-")}</div>
                   </div>
                 ))}
                 {!group?.count && <div style={{ fontSize: 10, color: C.muted }}>No actions in this bucket.</div>}
@@ -758,7 +758,7 @@ export const PostureTab = ({ session, onToast }: any) => {
               {blastHotspots.slice(0, 4).map((blast: any, idx: number) => (
                 <div key={`${blast?.summary}-${idx}`} style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10, background: C.surface }}>
                   <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{String(blast?.summary || "-")}</div>
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 8, color: C.muted, marginTop: 5 }}>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 10, color: C.muted, marginTop: 5 }}>
                     <span>{Number(blast?.event_count || 0)} events</span>
                     <span>{Array.isArray(blast?.services) ? blast.services.length : 0} services</span>
                     <span>{Array.isArray(blast?.apps) ? blast.apps.length : 0} apps</span>
@@ -782,8 +782,8 @@ export const PostureTab = ({ session, onToast }: any) => {
                     <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{String(scenario?.label || "-")}</div>
                     <B c={Number(scenario?.risk_delta || 0) < 0 ? "green" : "amber"}>{Number(scenario?.risk_delta || 0)}</B>
                   </div>
-                  <div style={{ fontSize: 9, color: C.dim, marginTop: 4 }}>{String(scenario?.summary || "")}</div>
-                  {Array.isArray(scenario?.based_on) && scenario.based_on.length > 0 && <div style={{ fontSize: 8, color: C.muted, marginTop: 4 }}>Based on: {scenario.based_on.slice(0, 3).join(" · ")}</div>}
+                  <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{String(scenario?.summary || "")}</div>
+                  {Array.isArray(scenario?.based_on) && scenario.based_on.length > 0 && <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>Based on: {scenario.based_on.slice(0, 3).join(" · ")}</div>}
                 </div>
               ))}
               {!scenarioCards.length && <div style={{ fontSize: 10, color: C.muted }}>No open actions to simulate yet.</div>}
@@ -796,8 +796,8 @@ export const PostureTab = ({ session, onToast }: any) => {
 
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <DrillHint />
-        <span style={{ fontSize: 9, color: C.muted, marginBottom: 8 }}>{`Charts cover findings detected and risk snapshots captured in: ${windowLabel(windowId)}.`}</span>
-        {findingsTruncated && <span style={{ fontSize: 9, color: C.amber, marginBottom: 8 }}>{`Newest ${FINDINGS_CAP} findings in this window charted; the window has more.`}</span>}
+        <span style={{ fontSize: 10, color: C.muted, marginBottom: 8 }}>{`Charts cover findings detected and risk snapshots captured in: ${windowLabel(windowId)}.`}</span>
+        {findingsTruncated && <span style={{ fontSize: 10, color: C.amberFg, marginBottom: 8 }}>{`Newest ${FINDINGS_CAP} findings in this window charted; the window has more.`}</span>}
       </div>
       {/* Row 1: Risk Gauge + Engine Radar + Severity Donut */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
@@ -814,8 +814,8 @@ export const PostureTab = ({ session, onToast }: any) => {
             </RadialBarChart>
           </ResponsiveContainer>
           <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 2 }}>
-            <div style={{ textAlign: "center" }}><div style={{ fontSize: 9, color: C.muted }}>24h</div><div style={{ fontSize: 14, fontWeight: 700, color: riskColor24 }}>{risk24}</div></div>
-            <div style={{ textAlign: "center" }}><div style={{ fontSize: 9, color: C.muted }}>7d</div><div style={{ fontSize: 14, fontWeight: 700, color: riskColor7d }}>{risk7d}</div></div>
+            <div style={{ textAlign: "center" }}><div style={{ fontSize: 10, color: C.muted }}>24h</div><div style={{ fontSize: 14, fontWeight: 700, color: riskColor24 }}>{risk24}</div></div>
+            <div style={{ textAlign: "center" }}><div style={{ fontSize: 10, color: C.muted }}>7d</div><div style={{ fontSize: 14, fontWeight: 700, color: riskColor7d }}>{risk7d}</div></div>
           </div>
           </> : (
             <div style={{ height: 180, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, textAlign: "center" }}>
@@ -823,12 +823,12 @@ export const PostureTab = ({ session, onToast }: any) => {
               <div style={{ width: "70%", height: 8, borderRadius: 4, background: C.border, overflow: "hidden" }}>
                 <div style={{ width: `${Math.min(100, (baselineDays / requiredDays) * 100)}%`, height: "100%", background: C.accent }} />
               </div>
-              <div style={{ fontSize: 9, color: C.muted, lineHeight: 1.5, maxWidth: 260 }}>
+              <div style={{ fontSize: 10, color: C.muted, lineHeight: 1.5, maxWidth: 260 }}>
                 A risk score needs {requiredDays} complete days of this tenant's own activity to compare against. Findings based on facts (expired certificates, missed renewals, overdue remediation) are still raised.
               </div>
             </div>
           )}
-          <div style={{ fontSize: 9, color: C.muted, textAlign: "center", marginTop: 4 }}>Captured: {fmtTS(risk?.captured_at)}</div>
+          <div style={{ fontSize: 10, color: C.muted, textAlign: "center", marginTop: 4 }}>Captured: {fmtTS(risk?.captured_at)}</div>
         </Card>
 
         {/* Engine Radar */}
@@ -842,14 +842,14 @@ export const PostureTab = ({ session, onToast }: any) => {
               onClick={(st) => { const p = radarData[clickedIndex(st)]; if (p) drillEngine(p.axis.toLowerCase()); }}>
               <PolarGrid stroke={C.border} />
               <PolarAngleAxis dataKey="axis" tick={{ fill: C.dim, fontSize: 10 }} />
-              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: C.muted, fontSize: 8 }} tickCount={4} />
+              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: C.muted, fontSize: 10 }} tickCount={4} />
               <Radar dataKey="value" stroke={C.accent} fill={C.accent} fillOpacity={0.2} strokeWidth={2} />
             </RadarChart>
           </ResponsiveContainer>
           <div style={{ display: "flex", justifyContent: "center", gap: 14, marginTop: 2 }}>
-            <div onClick={() => drillEngine("predictive")} style={{ fontSize: 9, color: C.muted, ...clickable }}>Predictive: <span style={{ color: C.blue, fontWeight: 700 }}>{pred}</span></div>
-            <div onClick={() => drillEngine("preventive")} style={{ fontSize: 9, color: C.muted, ...clickable }}>Preventive: <span style={{ color: C.amber, fontWeight: 700 }}>{prev}</span></div>
-            <div onClick={() => drillEngine("corrective")} style={{ fontSize: 9, color: C.muted, ...clickable }}>Corrective: <span style={{ color: C.green, fontWeight: 700 }}>{corr}</span></div>
+            <div onClick={() => drillEngine("predictive")} style={{ fontSize: 10, color: C.muted, ...clickable }}>Predictive: <span style={{ color: C.blueFg, fontWeight: 700 }}>{pred}</span></div>
+            <div onClick={() => drillEngine("preventive")} style={{ fontSize: 10, color: C.muted, ...clickable }}>Preventive: <span style={{ color: C.amberFg, fontWeight: 700 }}>{prev}</span></div>
+            <div onClick={() => drillEngine("corrective")} style={{ fontSize: 10, color: C.muted, ...clickable }}>Corrective: <span style={{ color: C.greenFg, fontWeight: 700 }}>{corr}</span></div>
           </div>
         </Card>
 
@@ -866,7 +866,7 @@ export const PostureTab = ({ session, onToast }: any) => {
                 {severityDonut.map((entry, idx) => <Cell key={idx} fill={entry.fill} style={clickable} />)}
               </Pie>
               <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTooltip><span style={{ color: payload[0]?.payload?.fill, fontWeight: 700 }}>{payload[0]?.name}</span>: {payload[0]?.value}</ChartTooltip> : null} />
-              <Legend verticalAlign="bottom" height={28} iconType="circle" iconSize={8} formatter={(value) => <span style={{ color: C.dim, fontSize: 9 }}>{value}</span>} />
+              <Legend verticalAlign="bottom" height={28} iconType="circle" iconSize={8} formatter={(value) => <span style={{ color: C.dim, fontSize: 10 }}>{value}</span>} />
             </PieChart>
           </ResponsiveContainer> : <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 10, color: C.muted }}>No findings data</span></div>}
         </Card>
@@ -882,8 +882,8 @@ export const PostureTab = ({ session, onToast }: any) => {
           {trendData.length > 0 ? <ResponsiveContainer width="100%" height={180}>
             <AreaChart data={trendData} style={clickable} onClick={(st) => { const p = trendData[clickedIndex(st)]; if (p) setSnapshot(p.entry); }}>
               <defs><linearGradient id="riskGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.accent} stopOpacity={0.25} /><stop offset="95%" stopColor={C.accent} stopOpacity={0} /></linearGradient></defs>
-              <XAxis dataKey="name" tick={{ fill: C.muted, fontSize: 8 }} axisLine={{ stroke: C.border }} tickLine={false} interval="preserveStartEnd" />
-              <YAxis domain={[0, 100]} tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} width={30} />
+              <XAxis dataKey="name" tick={{ fill: C.muted, fontSize: 10 }} axisLine={{ stroke: C.border }} tickLine={false} interval="preserveStartEnd" />
+              <YAxis domain={[0, 100]} tick={{ fill: C.muted, fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
               <Tooltip content={RiskTrendTooltip} cursor={{ stroke: C.borderHi, strokeDasharray: "3 3" }} />
               <Area type="monotone" dataKey="risk" stroke={C.accent} strokeWidth={2} fill="url(#riskGradient)" dot={{ fill: C.accent, r: 2, strokeWidth: 0 }} activeDot={{ fill: C.accent, r: 4, stroke: C.bg, strokeWidth: 2 }} />
             </AreaChart>
@@ -897,8 +897,8 @@ export const PostureTab = ({ session, onToast }: any) => {
           </div>
           {findings.length > 0 ? <ResponsiveContainer width="100%" height={180}>
             <BarChart data={riskHistogram}>
-              <XAxis dataKey="name" tick={{ fill: C.dim, fontSize: 9 }} axisLine={{ stroke: C.border }} tickLine={false} />
-              <YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} width={25} allowDecimals={false} />
+              <XAxis dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={{ stroke: C.border }} tickLine={false} />
+              <YAxis tick={{ fill: C.muted, fontSize: 10 }} axisLine={false} tickLine={false} width={25} allowDecimals={false} />
               <Tooltip content={HistogramTooltip} cursor={{ fill: C.accentDim }} />
               <RBar dataKey="count" radius={[4, 4, 0, 0]} style={clickable}
                 onClick={(_, i) => setDrill({ label: `Risk score ${riskHistogram[i]?.name}`, match: (f) => findingRiskBucket(f) === i })}>
@@ -913,7 +913,7 @@ export const PostureTab = ({ session, onToast }: any) => {
       {statusTotal > 0 && <Card style={{ padding: "12px 14px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: C.text }}>Findings Resolution Status</span>
-          <span style={{ fontSize: 9, color: C.muted }}>{statusTotal} total</span>
+          <span style={{ fontSize: 10, color: C.muted }}>{statusTotal} total</span>
         </div>
         <div style={{ display: "flex", height: 14, borderRadius: 7, overflow: "hidden", border: `1px solid ${C.border}` }}>
           {statusCounts.resolved > 0 && <div style={{ width: `${(statusCounts.resolved / statusTotal) * 100}%`, background: C.green, transition: "width .4s", ...clickable }} title={`Resolved: ${statusCounts.resolved}`} onClick={() => setDrill({ label: "Status: resolved", match: (f) => findingStatusBucket(f) === "resolved" })} />}
@@ -922,7 +922,7 @@ export const PostureTab = ({ session, onToast }: any) => {
           {statusCounts.reopened > 0 && <div style={{ width: `${(statusCounts.reopened / statusTotal) * 100}%`, background: C.red, transition: "width .4s", ...clickable }} title={`Reopened: ${statusCounts.reopened}`} onClick={() => setDrill({ label: "Status: reopened", match: (f) => findingStatusBucket(f) === "reopened" })} />}
         </div>
         <div style={{ display: "flex", gap: 14, marginTop: 6, flexWrap: "wrap" }}>
-          {[{ label: "Resolved", color: C.green, count: statusCounts.resolved }, { label: "Acknowledged", color: C.blue, count: statusCounts.acknowledged }, { label: "Open", color: C.amber, count: statusCounts.open }, { label: "Reopened", color: C.red, count: statusCounts.reopened }].map((s) => <div key={s.label} onClick={() => setDrill({ label: `Status: ${s.label.toLowerCase()}`, match: (f) => findingStatusBucket(f) === s.label.toLowerCase() })} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: C.dim, ...clickable }}>
+          {[{ label: "Resolved", color: C.green, count: statusCounts.resolved }, { label: "Acknowledged", color: C.blue, count: statusCounts.acknowledged }, { label: "Open", color: C.amber, count: statusCounts.open }, { label: "Reopened", color: C.red, count: statusCounts.reopened }].map((s) => <div key={s.label} onClick={() => setDrill({ label: `Status: ${s.label.toLowerCase()}`, match: (f) => findingStatusBucket(f) === s.label.toLowerCase() })} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.dim, ...clickable }}>
             <div style={{ width: 8, height: 8, borderRadius: 2, background: s.color }} />{s.label} ({s.count})
           </div>)}
         </div>
@@ -976,7 +976,7 @@ export const PostureTab = ({ session, onToast }: any) => {
       {/* Findings table */}
       <Card style={{ padding: "12px 14px" }}>
         <div style={{ maxHeight: 500, overflow: "auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr 80px 60px 1fr 80px", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.borderHi}`, fontSize: 9, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, position: "sticky", top: 0, background: C.card, zIndex: 1 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr 80px 60px 1fr 80px", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.borderHi}`, fontSize: 10, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, position: "sticky", top: 0, background: C.card, zIndex: 1 }}>
             <span>Title</span><span>Engine</span><span>Severity</span><span>Risk</span><span>Status</span><span>Detected</span>
           </div>
           {visibleFindings.map((item: any) => {
@@ -985,14 +985,14 @@ export const PostureTab = ({ session, onToast }: any) => {
             return <div key={String(item.id)} onClick={() => setSelectedFinding(item)} style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr 80px 60px 1fr 80px", gap: 8, padding: "8px 0", borderBottom: `1px solid ${C.border}`, fontSize: 11, alignItems: "center", cursor: "pointer", transition: "background .15s" }} onMouseEnter={(e) => (e.currentTarget.style.background = C.cardHover)} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
               <div>
                 <div style={{ fontWeight: 600, color: C.text }}>{String(item?.title || item?.finding_type || "-")}</div>
-                <div style={{ fontSize: 9, color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 400 }}>{String(item?.recommended_action || "-")}</div>
+                <div style={{ fontSize: 10, color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 400 }}>{String(item?.recommended_action || "-")}</div>
               </div>
               <span style={{ color: C.dim, fontSize: 10 }}>{String(item?.engine || "-")}</span>
               <span><B c={severityTone(String(item?.severity || ""))}>{String(item?.severity || "-")}</B></span>
               <span style={{ color: C.text, fontWeight: 700 }}>{Number(item?.risk_score || 0)}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <span style={{ color: C.dim, fontSize: 10 }}>{String(item?.status || "-")}</span>
-                {reopens > 0 && <span style={{ fontSize: 8, color: C.red, fontWeight: 700 }}>(×{reopens})</span>}
+                {reopens > 0 && <span style={{ fontSize: 10, color: C.redFg, fontWeight: 700 }}>(×{reopens})</span>}
                 {sla && <B c={sla.tone}>{sla.label}</B>}
               </div>
               <span style={{ color: C.muted, fontSize: 10 }}>{shortTS(item?.detected_at)}</span>
@@ -1024,7 +1024,7 @@ export const PostureTab = ({ session, onToast }: any) => {
       {/* Actions table */}
       <Card style={{ padding: "12px 14px" }}>
         <div style={{ maxHeight: 500, overflow: "auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 80px 100px 2fr", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.borderHi}`, fontSize: 9, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, position: "sticky", top: 0, background: C.card, zIndex: 1 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 80px 100px 2fr", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.borderHi}`, fontSize: 10, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, position: "sticky", top: 0, background: C.card, zIndex: 1 }}>
             <span>Action Type</span><span>Safety Gate</span><span>Status</span><span>Approval</span><span>Recommendation</span>
           </div>
           {visibleActions.map((item: any) => {
@@ -1055,7 +1055,7 @@ export const PostureTab = ({ session, onToast }: any) => {
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={domainBarData} barGap={2} barCategoryGap="20%">
             <XAxis dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={{ stroke: C.border }} tickLine={false} />
-            <YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} width={35} />
+            <YAxis tick={{ fill: C.muted, fontSize: 10 }} axisLine={false} tickLine={false} width={35} />
             <Tooltip content={DomainBarTooltip} cursor={{ fill: C.accentDim }} />
             <RBar dataKey="Events" fill={C.blue} radius={[3, 3, 0, 0]} style={clickable} onClick={(_, i) => { const d = domainMetrics[i]; if (d) drillDomain(d.key); }} />
             <RBar dataKey="Failures" fill={C.red} radius={[3, 3, 0, 0]} style={clickable} onClick={(_, i) => { const d = domainMetrics[i]; if (d) drillDomain(d.key); }} />
@@ -1081,20 +1081,20 @@ export const PostureTab = ({ session, onToast }: any) => {
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
-              <div><div style={{ fontSize: 9, color: C.muted }}>Events</div><div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>{domain.events}</div></div>
-              <div><div style={{ fontSize: 9, color: C.muted }}>Failures</div><div style={{ fontSize: 18, fontWeight: 700, color: domain.failures > 0 ? C.red : C.text }}>{domain.failures}</div></div>
+              <div><div style={{ fontSize: 10, color: C.muted }}>Events</div><div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>{domain.events}</div></div>
+              <div><div style={{ fontSize: 10, color: C.muted }}>Failures</div><div style={{ fontSize: 18, fontWeight: 700, color: domain.failures > 0 ? C.redFg : C.text }}>{domain.failures}</div></div>
             </div>
 
             <div style={{ fontSize: 10, color: C.dim, marginBottom: 6 }}>Avg latency: <span style={{ color: C.text, fontWeight: 600 }}>{domain.latency > 0 ? `${domain.latency.toFixed(1)} ms` : "-"}</span></div>
 
-            {domain.key === "kmip" && <div style={{ fontSize: 9, color: C.muted }}>Interop failed: <span style={{ color: domain.interop > 0 ? C.red : C.green, fontWeight: 700 }}>{domain.interop}</span></div>}
-            {domain.key === "sdk" && <div style={{ fontSize: 9, color: C.muted }}>Missing receipts: <span style={{ color: domain.receiptMissing > 0 ? C.red : C.green, fontWeight: 700 }}>{domain.receiptMissing}</span></div>}
+            {domain.key === "kmip" && <div style={{ fontSize: 10, color: C.muted }}>Interop failed: <span style={{ color: domain.interop > 0 ? C.redFg : C.greenFg, fontWeight: 700 }}>{domain.interop}</span></div>}
+            {domain.key === "sdk" && <div style={{ fontSize: 10, color: C.muted }}>Missing receipts: <span style={{ color: domain.receiptMissing > 0 ? C.redFg : C.greenFg, fontWeight: 700 }}>{domain.receiptMissing}</span></div>}
 
             {(validationByDomain[domain.key] || []).length > 0 && <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
               {(validationByDomain[domain.key] || []).slice(0, 2).map((badge: any) => (
                 <div key={`${badge?.domain}-${badge?.kind}`} style={{ padding: "5px 8px", borderRadius: 999, border: `1px solid ${C.border}`, background: C.surface }}>
-                  <span style={{ fontSize: 8, color: C.muted }}>{String(badge?.kind || "").replace(/_/g, " ")}</span>{" "}
-                  <span style={{ fontSize: 8, color: healthTone(String(badge?.status || "")) === "red" ? C.red : healthTone(String(badge?.status || "")) === "amber" ? C.amber : healthTone(String(badge?.status || "")) === "green" ? C.green : C.blue, fontWeight: 700 }}>
+                  <span style={{ fontSize: 10, color: C.muted }}>{String(badge?.kind || "").replace(/_/g, " ")}</span>{" "}
+                  <span style={{ fontSize: 10, color: healthTone(String(badge?.status || "")) === "red" ? C.redFg : healthTone(String(badge?.status || "")) === "amber" ? C.amberFg : healthTone(String(badge?.status || "")) === "green" ? C.greenFg : C.blueFg, fontWeight: 700 }}>
                     {String(badge?.status || "unknown")}
                   </span>
                 </div>
@@ -1103,20 +1103,20 @@ export const PostureTab = ({ session, onToast }: any) => {
 
             {/* Failure rate bar */}
             <div style={{ marginTop: 8 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: C.muted, marginBottom: 2 }}><span>Failure Rate</span><span>{domain.rate.toFixed(1)}%</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: C.muted, marginBottom: 2 }}><span>Failure Rate</span><span>{domain.rate.toFixed(1)}%</span></div>
               <div style={{ height: 5, borderRadius: 999, border: `1px solid ${C.border}`, background: C.bg }}>
                 <div style={{ width: `${Math.max(2, Math.min(100, domain.rate))}%`, height: "100%", borderRadius: 999, background: toneColor }} />
               </div>
             </div>
             {/* Latency bar */}
             <div style={{ marginTop: 4 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: C.muted, marginBottom: 2 }}><span>Latency</span><span>{domain.latency > 0 ? `${domain.latency.toFixed(0)}ms` : "-"}</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: C.muted, marginBottom: 2 }}><span>Latency</span><span>{domain.latency > 0 ? `${domain.latency.toFixed(0)}ms` : "-"}</span></div>
               <div style={{ height: 5, borderRadius: 999, border: `1px solid ${C.border}`, background: C.bg }}>
                 <div style={{ width: `${Math.max(2, Math.min(100, domain.latency > 0 ? Math.min(100, (domain.latency / 500) * 100) : 0))}%`, height: "100%", borderRadius: 999, background: domain.latency >= 500 ? C.red : domain.latency >= 100 ? C.amber : C.green }} />
               </div>
             </div>
 
-            <div style={{ marginTop: 8, fontSize: 9, color: C.accent, fontWeight: 600 }}>Click to view findings →</div>
+            <div style={{ marginTop: 8, fontSize: 10, color: C.accentFg, fontWeight: 600 }}>Click to view findings →</div>
           </Card>;
         })}
       </div>
@@ -1131,13 +1131,13 @@ export const PostureTab = ({ session, onToast }: any) => {
           {[["Risk 24h", snapshot.risk_24h], ["Risk 7d", snapshot.risk_7d], ["Predictive", snapshot.predictive_score], ["Preventive", snapshot.preventive_score], ["Corrective", snapshot.corrective_score]].map(([l, v]) => (
             <div key={String(l)} style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 8, textAlign: "center" }}>
               <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>{Number(v || 0)}</div>
-              <div style={{ fontSize: 8, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{l}</div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{l}</div>
             </div>
           ))}
         </div>
-        <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Signals behind this score</div>
+        <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Signals behind this score</div>
         {snapshot.top_signals && Object.keys(snapshot.top_signals).length
-          ? <pre style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, padding: 10, fontSize: 9, color: C.dim, overflow: "auto", maxHeight: 320, fontFamily: "'JetBrains Mono',monospace" }}>{JSON.stringify(snapshot.top_signals, null, 2)}</pre>
+          ? <pre style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, padding: 10, fontSize: 10, color: C.dim, overflow: "auto", maxHeight: 320, fontFamily: "'JetBrains Mono',monospace" }}>{JSON.stringify(snapshot.top_signals, null, 2)}</pre>
           : <div style={{ fontSize: 10, color: C.muted }}>This snapshot recorded no signals.</div>}
       </>}
     </Modal>
@@ -1150,7 +1150,7 @@ export const PostureTab = ({ session, onToast }: any) => {
           <span style={{ fontSize: 10, color: C.dim }}>Engine: {String(selectedFinding.engine || "-")}</span>
           <span style={{ fontSize: 10, color: C.dim }}>Type: {String(selectedFinding.finding_type || "-")}</span>
           {(() => { const sla = slaBadge(selectedFinding.sla_due_at); return sla ? <B c={sla.tone}>{sla.label}</B> : null; })()}
-          {Number(selectedFinding.reopen_count || 0) > 0 && <span style={{ fontSize: 10, color: C.red, fontWeight: 700 }}>Reopened ×{selectedFinding.reopen_count}</span>}
+          {Number(selectedFinding.reopen_count || 0) > 0 && <span style={{ fontSize: 10, color: C.redFg, fontWeight: 700 }}>Reopened ×{selectedFinding.reopen_count}</span>}
         </div>
 
         {/* Description */}
@@ -1162,7 +1162,7 @@ export const PostureTab = ({ session, onToast }: any) => {
         {/* Recommended Action */}
         {selectedFinding.recommended_action && <Card style={{ padding: "10px 14px", marginBottom: 10 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Recommended Action</div>
-          <div style={{ fontSize: 11, color: C.accent, lineHeight: 1.5 }}>{String(selectedFinding.recommended_action)}</div>
+          <div style={{ fontSize: 11, color: C.accentFg, lineHeight: 1.5 }}>{String(selectedFinding.recommended_action)}</div>
         </Card>}
 
         {Array.isArray(selectedFinding.risk_drivers) && selectedFinding.risk_drivers.length > 0 && <Card style={{ padding: "10px 14px", marginBottom: 10 }}>
@@ -1171,8 +1171,8 @@ export const PostureTab = ({ session, onToast }: any) => {
             {selectedFinding.risk_drivers.map((driver: any) => (
               <div key={String(driver?.id || driver?.label)} style={{ display: "grid", gridTemplateColumns: "70px 1fr", gap: 10, alignItems: "start", paddingTop: 6, borderTop: `1px solid ${C.border}` }}>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: C.accent }}>+{Number(driver?.delta_points || 0)}</div>
-                  <div style={{ fontSize: 8, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{String(driver?.domain || "risk")}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: C.accentFg }}>+{Number(driver?.delta_points || 0)}</div>
+                  <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{String(driver?.domain || "risk")}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>{String(driver?.label || "-")}</div>
@@ -1188,7 +1188,7 @@ export const PostureTab = ({ session, onToast }: any) => {
           <div style={{ fontSize: 10, color: C.text, marginBottom: 6 }}>{String(selectedFinding.blast_radius.summary || "-")}</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
             {[["Services", selectedFinding.blast_radius.services], ["Apps", selectedFinding.blast_radius.apps], ["Resources", selectedFinding.blast_radius.resources], ["Actors", selectedFinding.blast_radius.actors]].map(([label, values]) => (
-              <div key={String(label)} style={{ fontSize: 9, color: C.dim }}>
+              <div key={String(label)} style={{ fontSize: 10, color: C.dim }}>
                 <div style={{ textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 4 }}>{label}</div>
                 <div style={{ color: C.text, lineHeight: 1.45 }}>{Array.isArray(values) && values.length ? values.slice(0, 4).join(", ") : "-"}</div>
               </div>
@@ -1206,15 +1206,15 @@ export const PostureTab = ({ session, onToast }: any) => {
         <Card style={{ padding: "10px 14px", marginBottom: 10 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Timeline</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
-            <div><div style={{ fontSize: 9, color: C.muted }}>Detected</div><div style={{ fontSize: 10, color: C.text }}>{fmtTS(selectedFinding.detected_at)}</div></div>
-            <div><div style={{ fontSize: 9, color: C.muted }}>Updated</div><div style={{ fontSize: 10, color: C.text }}>{fmtTS(selectedFinding.updated_at)}</div></div>
-            <div><div style={{ fontSize: 9, color: C.muted }}>Resolved</div><div style={{ fontSize: 10, color: C.text }}>{fmtTS(selectedFinding.resolved_at)}</div></div>
-            <div><div style={{ fontSize: 9, color: C.muted }}>SLA Due</div><div style={{ fontSize: 10, color: C.text }}>{fmtTS(selectedFinding.sla_due_at)}</div></div>
+            <div><div style={{ fontSize: 10, color: C.muted }}>Detected</div><div style={{ fontSize: 10, color: C.text }}>{fmtTS(selectedFinding.detected_at)}</div></div>
+            <div><div style={{ fontSize: 10, color: C.muted }}>Updated</div><div style={{ fontSize: 10, color: C.text }}>{fmtTS(selectedFinding.updated_at)}</div></div>
+            <div><div style={{ fontSize: 10, color: C.muted }}>Resolved</div><div style={{ fontSize: 10, color: C.text }}>{fmtTS(selectedFinding.resolved_at)}</div></div>
+            <div><div style={{ fontSize: 10, color: C.muted }}>SLA Due</div><div style={{ fontSize: 10, color: C.text }}>{fmtTS(selectedFinding.sla_due_at)}</div></div>
           </div>
         </Card>
 
         {/* Metadata */}
-        <div style={{ display: "flex", gap: 12, fontSize: 9, color: C.muted, marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 12, fontSize: 10, color: C.muted, marginBottom: 12 }}>
           <span>ID: <span style={{ color: C.dim }}>{String(selectedFinding.id || "-")}</span></span>
           <span>Fingerprint: <span style={{ color: C.dim }}>{String(selectedFinding.fingerprint || "-")}</span></span>
           <span>Status: <span style={{ color: C.text, fontWeight: 700 }}>{String(selectedFinding.status || "-")}</span></span>
@@ -1244,22 +1244,22 @@ export const PostureTab = ({ session, onToast }: any) => {
         {/* Recommended Action */}
         <Card style={{ padding: "10px 14px", marginBottom: 10 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Recommended Action</div>
-          <div style={{ fontSize: 11, color: C.accent, lineHeight: 1.5 }}>{String(selectedAction.recommended_action || "-")}</div>
+          <div style={{ fontSize: 11, color: C.accentFg, lineHeight: 1.5 }}>{String(selectedAction.recommended_action || "-")}</div>
         </Card>
 
         {(selectedAction.impact_estimate || selectedAction.rollback_hint) && <Card style={{ padding: "10px 14px", marginBottom: 10 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Impact Estimate</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
             <div>
-              <div style={{ fontSize: 9, color: C.muted }}>Risk Reduction</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: C.green }}>{Number(selectedAction?.impact_estimate?.risk_reduction || 0)} pts</div>
+              <div style={{ fontSize: 10, color: C.muted }}>Risk Reduction</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.greenFg }}>{Number(selectedAction?.impact_estimate?.risk_reduction || 0)} pts</div>
             </div>
             <div>
-              <div style={{ fontSize: 9, color: C.muted }}>Operational Cost</div>
+              <div style={{ fontSize: 10, color: C.muted }}>Operational Cost</div>
               <div style={{ fontSize: 11, color: C.text }}>{String(selectedAction?.impact_estimate?.operational_cost || "-")}</div>
             </div>
             <div>
-              <div style={{ fontSize: 9, color: C.muted }}>Time To Apply</div>
+              <div style={{ fontSize: 10, color: C.muted }}>Time To Apply</div>
               <div style={{ fontSize: 11, color: C.text }}>{String(selectedAction?.impact_estimate?.time_to_apply || "-")}</div>
             </div>
           </div>
@@ -1269,7 +1269,7 @@ export const PostureTab = ({ session, onToast }: any) => {
         {selectedAction.blast_radius && ((selectedAction.blast_radius.event_count || 0) > 0 || (selectedAction.blast_radius.services || []).length > 0) && <Card style={{ padding: "10px 14px", marginBottom: 10 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Blast Radius</div>
           <div style={{ fontSize: 10, color: C.text, marginBottom: 6 }}>{String(selectedAction.blast_radius.summary || "-")}</div>
-          <div style={{ fontSize: 9, color: C.dim, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 10, color: C.dim, lineHeight: 1.5 }}>
             Services: {Array.isArray(selectedAction.blast_radius.services) && selectedAction.blast_radius.services.length ? selectedAction.blast_radius.services.join(", ") : "-"}
             <br />
             Apps: {Array.isArray(selectedAction.blast_radius.apps) && selectedAction.blast_radius.apps.length ? selectedAction.blast_radius.apps.join(", ") : "-"}
@@ -1292,16 +1292,16 @@ export const PostureTab = ({ session, onToast }: any) => {
         <Card style={{ padding: "10px 14px", marginBottom: 10 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Timeline</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-            <div><div style={{ fontSize: 9, color: C.muted }}>Created</div><div style={{ fontSize: 10, color: C.text }}>{fmtTS(selectedAction.created_at)}</div></div>
-            <div><div style={{ fontSize: 9, color: C.muted }}>Updated</div><div style={{ fontSize: 10, color: C.text }}>{fmtTS(selectedAction.updated_at)}</div></div>
-            <div><div style={{ fontSize: 9, color: C.muted }}>Executed</div><div style={{ fontSize: 10, color: C.text }}>{fmtTS(selectedAction.executed_at)}</div></div>
+            <div><div style={{ fontSize: 10, color: C.muted }}>Created</div><div style={{ fontSize: 10, color: C.text }}>{fmtTS(selectedAction.created_at)}</div></div>
+            <div><div style={{ fontSize: 10, color: C.muted }}>Updated</div><div style={{ fontSize: 10, color: C.text }}>{fmtTS(selectedAction.updated_at)}</div></div>
+            <div><div style={{ fontSize: 10, color: C.muted }}>Executed</div><div style={{ fontSize: 10, color: C.text }}>{fmtTS(selectedAction.executed_at)}</div></div>
           </div>
         </Card>
 
         {/* Metadata */}
-        <div style={{ display: "flex", gap: 12, fontSize: 9, color: C.muted, marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 12, fontSize: 10, color: C.muted, marginBottom: 12 }}>
           <span>ID: <span style={{ color: C.dim }}>{String(selectedAction.id || "-")}</span></span>
-          <span>Finding: <span style={{ color: C.accent, cursor: "pointer", textDecoration: "underline" }} onClick={() => {
+          <span>Finding: <span style={{ color: C.accentFg, cursor: "pointer", textDecoration: "underline" }} onClick={() => {
             const finding = findings.find((f: any) => f.id === selectedAction.finding_id);
             if (finding) { setSelectedAction(null); setSelectedFinding(finding); } else { setSelectedAction(null); setTab("Findings"); }
           }}>{String(selectedAction.finding_id || "-")}</span></span>

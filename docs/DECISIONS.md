@@ -7,6 +7,21 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-11 — Console look: system fonts, an ink sidebar, one accent
+**Decision:** the console uses the operating system's fonts, an azure accent,
+and a sidebar that stays dark in both themes (11.1.0-beta). The brand
+gradient (azure to mint) is used only for the mark and progress bars.
+**Why:** a key-management console should make no request to a third party
+and must work on a closed network; system fonts cost no bytes and paint on
+the first frame. A fixed sidebar keeps navigation in the same place and
+colour when the theme changes.
+**Rejected:** allowing a font host in the CSP (a third-party call from every
+sign-in page); bundling Inter and JetBrains Mono (two more shipped
+dependencies for a look the system fonts already give); a green or teal
+accent (reads as "healthy" beside status colours); amber or red (reads as
+warning or failure).
+**Enforced by:** `web/dashboard/tests/unit/brandAndLegibility.test.ts`.
+
 ## 2026-10-11 — The auth service is not given the container runtime
 **Decision:** no service mounts the Docker socket. System Health lists a
 component from Consul or a successful connection to its port. The restart

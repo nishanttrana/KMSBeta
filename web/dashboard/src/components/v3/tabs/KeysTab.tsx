@@ -1831,8 +1831,8 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       </div>
       <div style={{background:C.card,borderRadius:12,border:`1px solid ${C.borderHi}`,overflowX:"auto",overflowY:"visible"}}>
         <table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr style={{borderBottom:`1px solid ${C.borderHi}`}}>
-          {visibleColumns.map((column)=><th key={column.id} style={{padding:"8px 10px",fontSize:9,color:C.muted,textAlign:"left",textTransform:"uppercase",letterSpacing:.8}}>{column.label}</th>)}
-          <th style={{padding:"8px 10px",fontSize:9,color:C.muted,textAlign:"right",textTransform:"uppercase",letterSpacing:.8,width:48}}>
+          {visibleColumns.map((column)=><th key={column.id} style={{padding:"8px 10px",fontSize: 10,color:C.muted,textAlign:"left",textTransform:"uppercase",letterSpacing:.8}}>{column.label}</th>)}
+          <th style={{padding:"8px 10px",fontSize: 10,color:C.muted,textAlign:"right",textTransform:"uppercase",letterSpacing:.8,width:48}}>
             <div style={{display:"inline-flex",position:"relative"}} onClick={(e)=>e.stopPropagation()}>
               <button
                 onClick={(e)=>{
@@ -1915,15 +1915,15 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
             return <tr key={k.id} style={{borderBottom:`1px solid ${rowBorder}`,cursor:"pointer",background:rowBg,opacity:isDeletedState?0.86:1}} onClick={()=>{setSelectedKey(k);setModal("detail");}}>
               {columnVisibility.name&&<td style={{padding:"8px 10px"}}>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div style={{fontSize:11,color:rowText,fontWeight:700}}>{k.name}{k.inHSM&&<span title="Generated in and used only inside the tenant's HSM" style={{marginLeft:6,fontSize:8,fontWeight:700,color:C.accent,border:`1px solid ${C.accent}`,borderRadius:3,padding:"0 4px"}}>HSM</span>}</div>
-                  {k.componentRole&&<span style={{padding:"1px 6px",borderRadius:999,border:`1px solid ${k.componentRole==="private"?C.pink:C.blue}`,background:`${k.componentRole==="private"?C.pink:C.blue}22`,fontSize:9,color:k.componentRole==="private"?C.pink:C.blue,textTransform:"capitalize"}}>{k.componentRole}</span>}
+                  <div style={{fontSize:11,color:rowText,fontWeight:700}}>{k.name}{k.inHSM&&<span title="Generated in and used only inside the tenant's HSM" style={{marginLeft:6,fontSize: 10,fontWeight:700,color:C.accentFg,border:`1px solid ${C.accent}`,borderRadius:3,padding:"0 4px"}}>HSM</span>}</div>
+                  {k.componentRole&&<span style={{padding:"1px 6px",borderRadius:999,border:`1px solid ${k.componentRole==="private"?C.pink:C.blue}`,background:`${k.componentRole==="private"?C.pink:C.blue}22`,fontSize: 10,color:k.componentRole==="private"?C.pinkFg:C.blueFg,textTransform:"capitalize"}}>{k.componentRole}</span>}
                 </div>
-                <div style={{fontSize:9,color:isDeletedState?C.muted:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{k.id}</div>
+                <div style={{fontSize: 10,color:isDeletedState?C.muted:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{k.id}</div>
               </td>}
               {columnVisibility.algorithm&&<td style={{padding:"8px 10px",fontSize:10,color:rowAccent,fontWeight:700}}>{k.algoFamily||"-"}</td>}
               {columnVisibility.sizeCurve&&<td style={{padding:"8px 10px",fontSize:10,color:rowText,fontFamily:"'JetBrains Mono',monospace"}}>{k.algoSizeCurve||"-"}</td>}
               {columnVisibility.status&&<td style={{padding:"8px 10px"}}><B c={isDeletedState?"muted":tone}>{stateLabel}</B></td>}
-              {columnVisibility.destroyAt&&<td style={{padding:"8px 10px",fontSize:10,color:isDeletePending?C.amber:rowText,fontFamily:"'JetBrains Mono',monospace"}}>
+              {columnVisibility.destroyAt&&<td style={{padding:"8px 10px",fontSize:10,color:isDeletePending?C.amberFg:rowText,fontFamily:"'JetBrains Mono',monospace"}}>
                 {formatDestroyAt(k.destroyAt)}
               </td>}
               {columnVisibility.fips&&<td style={{padding:"8px 10px"}}>
@@ -1952,12 +1952,12 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
               {columnVisibility.tags&&<td style={{padding:"8px 10px",maxWidth:220}}>
                 <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
                   {keyTags.slice(0,3).map((tag)=>(
-                    <span key={`${k.id}-${tag}`} style={{padding:"2px 7px",borderRadius:999,border:`1px solid ${tagColorByName(tagCatalog,tag)}`,background:`${tagColorByName(tagCatalog,tag)}22`,fontSize:9,color:tagColorByName(tagCatalog,tag),whiteSpace:"nowrap"}}>
+                    <span key={`${k.id}-${tag}`} style={{padding:"2px 7px",borderRadius:999,border:`1px solid ${tagColorByName(tagCatalog,tag)}`,background:`${tagColorByName(tagCatalog,tag)}22`,fontSize: 10,color:tagColorByName(tagCatalog,tag),whiteSpace:"nowrap"}}>
                       {tag}
                     </span>
                   ))}
-                  {keyTags.length>3&&<span style={{fontSize:9,color:C.muted}}>{`+${keyTags.length-3}`}</span>}
-                  {!keyTags.length&&<span style={{fontSize:9,color:C.muted}}>-</span>}
+                  {keyTags.length>3&&<span style={{fontSize: 10,color:C.muted}}>{`+${keyTags.length-3}`}</span>}
+                  {!keyTags.length&&<span style={{fontSize: 10,color:C.muted}}>-</span>}
                 </div>
               </td>}
               {columnVisibility.actions&&<td style={{padding:"8px 10px"}}>
@@ -2089,7 +2089,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                         resetDestroyForm();
                         setModal("destroy");
                       }}
-                      style={{background:"transparent",border:"none",color:C.red,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6}}
+                      style={{background:"transparent",border:"none",color:C.redFg,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6}}
                     >
                       Delete
                     </button>:<div style={{padding:"6px 8px",fontSize:10,color:C.muted}}>Deleted (forensic record)</div>}
@@ -2332,7 +2332,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                     {wrappingKeyChoices.map((item)=><option key={`${idx}-${item.id}`} value={item.id}>{`${item.name} (${item.id})`}</option>)}
                   </Sel>
                 </Row2>
-                <div style={{marginTop:6,fontSize:9,color:C.muted}}>Each component is decrypted under selected KEK, then all components are XOR-combined with optional DES parity enforcement.</div>
+                <div style={{marginTop:6,fontSize: 10,color:C.muted}}>Each component is decrypted under selected KEK, then all components are XOR-combined with optional DES parity enforcement.</div>
               </>}
             </div>
           ))}
@@ -2455,7 +2455,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
             <option value="">Not wrapped (raw import)</option>
             {wrappingKeyChoices.map((item)=><option key={item.id} value={item.id}>{`${item.name} (${item.id})`}</option>)}
           </Sel>
-          {!wrappingKeyChoices.length&&<div style={{marginTop:6,fontSize:10,color:C.amber}}>No active wrap/unwrap key available.</div>}
+          {!wrappingKeyChoices.length&&<div style={{marginTop:6,fontSize:10,color:C.amberFg}}>No active wrap/unwrap key available.</div>}
         </FG>
       </Row2>
       <Row2>
@@ -2505,9 +2505,9 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         const selectedCanExport=!selectedDeletedLike&&Boolean(selectedKey.exportAllowed);
         const selectedStateBusy=statusUpdatingId===selectedKey.id;
         return <><Row3>
-        <FG label="Key ID"><div style={{fontFamily:"monospace",fontSize:11,color:C.accent}}>{selectedKey.id}</div></FG>
+        <FG label="Key ID"><div style={{fontFamily:"monospace",fontSize:11,color:C.accentFg}}>{selectedKey.id}</div></FG>
         <FG label="Algorithm"><div style={{fontSize:11,color:C.text}}>{selectedKey.algoFamily||"-"}</div></FG>
-        <FG label="KCV"><div style={{fontFamily:"monospace",fontSize:11,color:C.green}}>{selectedKey.kcv}</div></FG>
+        <FG label="KCV"><div style={{fontFamily:"monospace",fontSize:11,color:C.greenFg}}>{selectedKey.kcv}</div></FG>
       </Row3>
       <FG label="Size / Curve"><div style={{fontSize:11,color:C.text,fontFamily:"'JetBrains Mono',monospace"}}>{selectedKey.algoSizeCurve||"-"}</div></FG>
       <Row3>
@@ -2522,9 +2522,9 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       <Row3>
         <FG label="Created"><div style={{fontSize:11,color:C.dim}}>{selectedKey.created}</div></FG>
         <FG label="Last Rotated"><div style={{fontSize:11,color:C.dim}}>{selectedKey.rotated}</div></FG>
-        <FG label="Expires"><div style={{fontSize:11,color:selectedKey.expires==="-"?C.dim:C.amber}}>{selectedKey.expires}</div></FG>
+        <FG label="Expires"><div style={{fontSize:11,color:selectedKey.expires==="-"?C.dim:C.amberFg}}>{selectedKey.expires}</div></FG>
       </Row3>
-      <FG label="Total Operations"><div style={{fontSize:18,fontWeight:700,color:C.accent}}>{selectedKey.ops}</div></FG>
+      <FG label="Total Operations"><div style={{fontSize:18,fontWeight:700,color:C.accentFg}}>{selectedKey.ops}</div></FG>
       {(selectedKey.inHSM||hsmTenantKey)&&<HSMKeyCheckPanel session={session} keyID={selectedKey.id}/>}
       <FG label="Tags">
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
@@ -2543,9 +2543,9 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
               <div>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
                   <span style={{fontSize:10,color:C.text,fontWeight:700}}>{comp.name}</span>
-                  <span style={{fontSize:9,color:comp.componentRole==="private"?C.pink:C.blue,textTransform:"capitalize"}}>{comp.componentRole||"component"}</span>
+                  <span style={{fontSize: 10,color:comp.componentRole==="private"?C.pinkFg:C.blueFg,textTransform:"capitalize"}}>{comp.componentRole||"component"}</span>
                 </div>
-                <div style={{fontSize:9,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{comp.id}</div>
+                <div style={{fontSize: 10,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{comp.id}</div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
                 <B c={keyStateTone(compNorm)}>{keyStateLabel(compNorm)}</B>
@@ -2666,7 +2666,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
               return <div key={`${subjectType}:${subjectID}`} style={{display:"grid",gridTemplateColumns:"1fr auto",alignItems:"center",gap:8,padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,background:C.surface}}>
                 <div>
                   <div style={{fontSize:10,color:C.text,fontWeight:700}}>{`${subjectType==="group"?"Group":"User"}: ${subjectLabel}`}</div>
-                  <div style={{fontSize:9,color:C.muted}}>{operations||"No operations"}{extra?` | ${extra}`:""}</div>
+                  <div style={{fontSize: 10,color:C.muted}}>{operations||"No operations"}{extra?` | ${extra}`:""}</div>
                 </div>
                 <Btn danger small onClick={()=>removePolicyGrant(subjectType,subjectID)}>Remove</Btn>
               </div>;
@@ -2717,7 +2717,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
 
     {/*  EXPORT KEY MODAL  */}
     <Modal open={modal==="export"} onClose={()=>setModal(null)} title={`Export Key: ${selectedKey?.name||""}`}>
-      <div style={{background:C.amberDim,border:`1px solid ${C.amber}`,borderRadius:8,padding:10,marginBottom:12,fontSize:10,color:C.amber}}>
+      <div style={{background:C.amberDim,border:`1px solid ${C.amber}`,borderRadius:8,padding:10,marginBottom:12,fontSize:10,color:C.amberFg}}>
         {exportMode==="public-plaintext"
           ?"Warning: public key will be exported in plaintext (not wrapped)."
           :"Warning: key material will be exported wrapped. This is a HIGH severity audit event."}
@@ -2733,7 +2733,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
           <option value="">Select wrapping key...</option>
           {wrappingKeyChoices.map((item)=><option key={item.id} value={item.id}>{`${item.name} (${item.id})`}</option>)}
         </Sel>
-        {!wrappingKeyChoices.length&&<div style={{marginTop:6,fontSize:10,color:C.amber}}>No active wrap/unwrap key available.</div>}
+        {!wrappingKeyChoices.length&&<div style={{marginTop:6,fontSize:10,color:C.amberFg}}>No active wrap/unwrap key available.</div>}
       </FG>}
       <FG label="Export Format">
         {exportMode==="public-plaintext"
@@ -2749,14 +2749,14 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
 
     {/*  DESTROY KEY MODAL  */}
     <Modal open={modal==="destroy"} onClose={()=>setModal(null)} title={`Destroy Key: ${selectedKey?.name||""}`}>
-      <div style={{background:C.redDim,border:`1px solid ${C.red}`,borderRadius:8,padding:12,marginBottom:12,fontSize:11,color:C.red}}>
+      <div style={{background:C.redDim,border:`1px solid ${C.red}`,borderRadius:8,padding:12,marginBottom:12,fontSize:11,color:C.redFg}}>
         <strong>CRITICAL: This action is irreversible.</strong><br/>All key material will be zeroized. Data encrypted with this key will become permanently unrecoverable.
       </div>
       <FG label="Destruction Method">
         <Radio label="Destroy After (days) - mark key pending and auto-delete later" selected={destroyMode==="scheduled"} onSelect={()=>setDestroyMode("scheduled")}/>
         {destroyMode==="scheduled"&&<div style={{marginTop:8}}>
           <Inp type="number" min={1} max={3650} value={destroyAfterDays} onChange={(e)=>setDestroyAfterDays(Number(e.target.value)||0)} placeholder="Enter number of days (1-3650)"/>
-          <div style={{fontSize:9,color:C.muted,marginTop:4}}>Key remains blocked immediately and is permanently deleted after this many days.</div>
+          <div style={{fontSize: 10,color:C.muted,marginTop:4}}>Key remains blocked immediately and is permanently deleted after this many days.</div>
         </div>}
         <Radio label="Destroy Immediately - permanently delete now" selected={destroyMode==="immediate"} onSelect={()=>setDestroyMode("immediate")}/>
       </FG>
@@ -2778,7 +2778,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       <CanaryKeysPanel session={session}/>
     </Modal>
     <Modal open={modal==="generate-pqc"} onClose={()=>setModal(null)} title="Generate Post-Quantum Key" width={920}>
-      <div style={{background:C.purpleDim,border:`1px solid ${C.purple}`,borderRadius:8,padding:10,marginBottom:12,fontSize:10,color:C.purple}}>Post-Quantum Cryptography - NIST FIPS 203/204/205 approved algorithms</div>
+      <div style={{background:C.purpleDim,border:`1px solid ${C.purple}`,borderRadius:8,padding:10,marginBottom:12,fontSize:10,color:C.purpleFg}}>Post-Quantum Cryptography - NIST FIPS 203/204/205 approved algorithms</div>
       <Row2>
         <FG label="PQC Algorithm" required>
           <Sel value={pqcAlgorithm} onChange={(e)=>setPqcAlgorithm(e.target.value)}>

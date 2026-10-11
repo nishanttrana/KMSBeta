@@ -173,7 +173,7 @@ function ThreatModal({ threat, onClose, onSave }: { threat: CarafThreat | null; 
         </Field> : <div />}
       </Grid2>
       <Field label="Note (optional)"><input style={inputStyle} value={note} onChange={e => setNote(e.target.value)} placeholder="why you expect it then" /></Field>
-      {error && <div style={{ fontSize: 12, color: C.red }}>Threat not saved: {error}</div>}
+      {error && <div style={{ fontSize: 12, color: C.redFg }}>Threat not saved: {error}</div>}
     </Modal>
   );
 }
@@ -240,7 +240,7 @@ function AssetModal({ asset, keyCatalog, onClose, onSave }: { asset: CarafAssetA
         <datalist id="caraf-keys">{keyCatalog.slice(0, 500).map((k: any) => <option key={k.id} value={k.id}>{`${k.name ?? ""} ${k.algorithm ?? ""}`}</option>)}</datalist>
       </Field>
       <Field label="Other algorithms it uses (comma-separated)"><input style={inputStyle} value={f.algorithms} onChange={set("algorithms")} placeholder="e.g. ECDSA-P256, AES-128-GCM" /></Field>
-      {error && <div style={{ fontSize: 12, color: C.red }}>Asset not saved: {error}</div>}
+      {error && <div style={{ fontSize: 12, color: C.redFg }}>Asset not saved: {error}</div>}
     </Modal>
   );
 }
@@ -296,7 +296,7 @@ function DecisionModal({ item, onClose, onSave }: { item: CarafAssetAssessment; 
       )}
       {decision === "accept" && <div style={{ fontSize: 11, color: C.muted }}>An accepted risk lapses on its review date and shows as expired until reviewed.</div>}
       {!clearing && <Field label="Note (optional)"><input style={inputStyle} value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. compensating control: gateway wraps the legacy TLS" /></Field>}
-      {error && <div style={{ fontSize: 12, color: C.red }}>Decision not recorded: {error}</div>}
+      {error && <div style={{ fontSize: 12, color: C.redFg }}>Decision not recorded: {error}</div>}
     </Modal>
   );
 }
@@ -335,7 +335,7 @@ export function CarafPanel({ session, keyCatalog }: { session: any; keyCatalog: 
 
   if (loading) return <div style={{ ...S.empty, display: "flex", gap: 8, justifyContent: "center" }}><RefreshCw size={14} /> Loading risk assessment…</div>;
   if (error || !data) {
-    return <div style={{ ...S.empty, color: C.red }}>Not assessed: the risk assessment is unavailable. {error}</div>;
+    return <div style={{ ...S.empty, color: C.redFg }}>Not assessed: the risk assessment is unavailable. {error}</div>;
   }
   const s = data.summary;
 
@@ -354,7 +354,7 @@ export function CarafPanel({ session, keyCatalog }: { session: any; keyCatalog: 
       </div>
       {s.assets > 0 && <RiskOverview data={data} />}
       <Findings items={data.findings} />
-      {actionError && <div style={{ fontSize: 12, color: C.red, marginTop: 12 }}>Not changed: {actionError}</div>}
+      {actionError && <div style={{ fontSize: 12, color: C.redFg, marginTop: 12 }}>Not changed: {actionError}</div>}
 
       <div style={S.divider} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -400,7 +400,7 @@ export function CarafPanel({ session, keyCatalog }: { session: any; keyCatalog: 
                   <td style={S.td}>
                     <b>{x.asset.name}</b>
                     <div style={{ fontSize: 10, color: C.muted }}>{[x.asset.owner, x.asset.ownership !== "unknown" ? x.asset.ownership.replace("_", " ") : "", x.asset.sensitivity !== "unknown" ? `${x.asset.sensitivity} sensitivity` : ""].filter(Boolean).join(" · ")}</div>
-                    {x.missing_keys.length > 0 && <div style={{ fontSize: 10, color: C.red }}>{x.missing_keys.length} linked key(s) no longer live</div>}
+                    {x.missing_keys.length > 0 && <div style={{ fontSize: 10, color: C.redFg }}>{x.missing_keys.length} linked key(s) no longer live</div>}
                     {(x.consumers ?? []).length > 0 && <div title={x.consumers.join("\n")} style={{ fontSize: 10, color: C.dim }}>used by {x.consumers.length} caller(s): {x.consumers.slice(0, 2).join(", ")}{x.consumers.length > 2 ? "…" : ""}</div>}
                   </td>
                   <td style={{ ...S.td, ...S.mono, fontSize: 11 }}>{x.algorithms.join(", ") || "—"}</td>

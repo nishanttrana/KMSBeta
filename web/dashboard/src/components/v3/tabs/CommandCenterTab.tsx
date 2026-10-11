@@ -214,8 +214,7 @@ const CATEGORY_ORDER: RecCategory[] = ["Key lifecycle", "Algorithms", "Post-quan
 function Coverage({ checks }: { checks: ControlCheck[] }) {
   return (
     <div style={{ ...card, padding: 16 }}>
-      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Control coverage</div>
-      <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>Evaluated against live tenant state</div>
+      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Control coverage</div>
       {CATEGORY_ORDER.map((cat) => {
         const items = checks.filter((c) => c.category === cat);
         if (!items.length) return null;
@@ -284,6 +283,8 @@ export const CommandCenterTab = ({ session, fipsMode, onNavigate }: Props) => {
   const now = snapshot?.now.getTime() ?? 0;
 
   const activeKeys = (snapshot?.keys || []).filter((k) => /active|enabled/i.test(k.status));
+  // A scan summary without its counts is no scan: show "no scan on record", never NaN.
+  const pqcScan = snapshot?.pqc && Number.isFinite(snapshot.pqc.total_assets) ? snapshot.pqc : null;
   const pqcExposed = activeKeys.filter((k) => isQuantumVulnerable(k.algorithm)).length;
   const certsSoon = (snapshot?.certs || []).filter((c) => {
     const e = Date.parse(c.not_after || "");
@@ -332,7 +333,7 @@ export const CommandCenterTab = ({ session, fipsMode, onNavigate }: Props) => {
         </div>
         <Kpi icon={KeyRound} label="Active keys" value={snapshot?.keys ? activeKeys.length.toLocaleString() : "—"} sub={snapshot?.keys ? `${pqcExposed} quantum-vulnerable` : "keycore unreachable"} />
         <Kpi icon={FileCheck2} label="Certs expiring ≤30d" value={snapshot?.certs ? String(certsSoon) : "—"} sub={snapshot?.certs ? `${snapshot.certs.length} certificates tracked` : "PKI not reachable"} tone={certsSoon ? C.amberFg : undefined} />
-        <Kpi icon={Atom} label="PQC or hybrid assets" value={snapshot?.pqc ? `${snapshot.pqc.pqc_ready_assets + snapshot.pqc.hybrid_assets} / ${snapshot.pqc.total_assets}` : "—"} sub={snapshot?.pqc ? `${snapshot.pqc.classical_assets} classical, latest scan` : "no scan on record"} />
+        <Kpi icon={Atom} label="PQC or hybrid assets" value={pqcScan ? `${pqcScan.pqc_ready_assets + pqcScan.hybrid_assets} / ${pqcScan.total_assets}` : "—"} sub={pqcScan ? `${pqcScan.classical_assets} classical, latest scan` : "no scan on record"} />
         <Kpi icon={LifeBuoy} label="Last good backup" value={lastBackup ? `${Math.max(0, Math.floor((now - lastBackup) / 86_400_000))}d` : "—"} sub={lastBackup ? new Date(lastBackup).toLocaleDateString() : snapshot?.backups ? "none completed" : "not assessed"} tone={!lastBackup && snapshot?.backups ? C.redFg : undefined} />
       </div>
 
@@ -341,7 +342,6 @@ export const CommandCenterTab = ({ session, fipsMode, onNavigate }: Props) => {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px" }}>
             <div>
               <div style={{ fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}><ShieldAlert size={16} color={C.accentFg} /> Recommended actions</div>
-              <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Prioritised by severity and blast radius, mapped to NIST, PCI DSS 4.0, DORA and CNSA 2.0</div>
             </div>
             {onNavigate && visible.length > 6 && (
               <button onClick={() => onNavigate("recommendations")} style={{ fontSize: 12.5, fontWeight: 600, color: C.accentFg, background: "none", border: 0, cursor: "pointer" }}>View all {visible.length} →</button>

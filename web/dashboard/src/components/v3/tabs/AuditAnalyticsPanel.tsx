@@ -18,8 +18,8 @@ const RESULT_COLORS: Record<string, string> = { success: C.green, failure: C.red
 const RISK_COLORS: string[] = [C.green, C.green, C.amber, C.orange, C.red];
 
 const title: React.CSSProperties = { fontSize: 10, fontWeight: 600, color: C.dim, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 };
-const axisTick = { fill: C.muted, fontSize: 9 };
-const TH: React.CSSProperties = { fontSize: 9, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, padding: "5px 6px", textAlign: "left", borderBottom: `1px solid ${C.border}` };
+const axisTick = { fill: C.muted, fontSize: 10 };
+const TH: React.CSSProperties = { fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, padding: "5px 6px", textAlign: "left", borderBottom: `1px solid ${C.border}` };
 const TD: React.CSSProperties = { fontSize: 10, color: C.dim, padding: "5px 6px", borderBottom: `1px solid ${C.border}`, whiteSpace: "nowrap", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" };
 
 const shortService = (s: string) => String(s || "").replace(/^kms-/, "");
@@ -74,7 +74,7 @@ export function AuditAnalyticsPanel({ session, onOpenEvent }: { session: AuthSes
       </div>
 
       {err ? (
-        <Card><div style={{ fontSize: 11, color: C.red }}>{`Audit analytics unavailable: ${err}`}</div></Card>
+        <Card><div style={{ fontSize: 11, color: C.redFg }}>{`Audit analytics unavailable: ${err}`}</div></Card>
       ) : !stats ? null : <>
         <DrillHint />
         <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
@@ -94,7 +94,7 @@ export function AuditAnalyticsPanel({ session, onOpenEvent }: { session: AuthSes
                   {byResult.map((r) => <Cell key={r.key} fill={RESULT_COLORS[r.key] || C.dim} style={clickable} />)}
                 </Pie>
                 <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 9, color: C.dim }} />
+                <Legend wrapperStyle={{ fontSize: 10, color: C.dim }} />
               </PieChart>
             </ResponsiveContainer>
           </Card>
@@ -103,7 +103,7 @@ export function AuditAnalyticsPanel({ session, onOpenEvent }: { session: AuthSes
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={stats.top_services.map((s) => ({ ...s, name: shortService(s.key) }))} layout="vertical" margin={{ left: 40, right: 10 }}>
                 <XAxis type="number" tick={axisTick} axisLine={{ stroke: C.border }} tickLine={false} allowDecimals={false} />
-                <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 9 }} axisLine={false} tickLine={false} width={60} />
+                <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={false} tickLine={false} width={60} />
                 <Tooltip />
                 <Bar dataKey="count" name="Events" fill={C.blue} radius={[0, 4, 4, 0]} barSize={12} style={clickable}
                   onClick={(d) => { const s = d?.payload as { key: string; count: number }; open(`Service: ${shortService(s.key)}`, s.count, { service: s.key }); }} />

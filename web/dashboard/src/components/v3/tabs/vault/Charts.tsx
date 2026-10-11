@@ -69,7 +69,7 @@ export function VaultTiles({ secrets, now, active, onDrill, stats, statsError }:
   const v1 = count(secrets, neverRotatedDrill());
   const limited = count(secrets, restrictedDrill());
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10, marginBottom: 14 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(148px,1fr))", gap: 10, marginBottom: 14 }}>
       {tile(allDrill(), <Stat l="Secrets" v={total.toLocaleString()} s={`${new Set(secrets.map((s) => s.secret_type)).size} types`} c="accent" i={Lock} />)}
       <Stat l="Versions stored" v={stats ? stats.total_versions.toLocaleString() : "-"} s={stats ? "all values, all versions" : `unavailable: ${statsError || "no answer"}`} c="blue" i={History} />
       {tile(expiringDrill(now), <Stat l="Expiring in 30 days" v={String(expiring)} s={`${pct(expiring, total)}% of secrets`} c="amber" i={Clock} />)}

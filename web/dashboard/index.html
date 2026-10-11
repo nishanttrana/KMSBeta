@@ -3,28 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vecta KMS Dashboard</title>
-    <meta name="description" content="Vecta KMS Cyber Command Center" />
-    <script>
-      // No-FOUC theme bootstrap — runs before any paint.
-      (function () {
-        try {
-          var saved = localStorage.getItem("vecta.theme");
-          var theme =
-            saved === "dark" || saved === "light"
-              ? saved
-              : window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches
-              ? "light"
-              : "dark";
-          document.documentElement.setAttribute("data-theme", theme);
-        } catch (e) {
-          document.documentElement.setAttribute("data-theme", "dark");
-        }
-      })();
-    </script>
+    <title>Vecta KMS</title>
+    <meta name="description" content="Vecta KMS console" />
+    <meta name="theme-color" content="#090c12" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script src="/theme-boot.js"></script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- First paint, replaced when the app mounts. Same markup as InitialLoadingScreen. -->
+      <main class="vk-boot" role="status" aria-label="Loading Vecta KMS">
+        <svg class="vk-mark vk-mark--live" width="56" height="56" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="vk-boot-g" x1="12" y1="4" x2="20" y2="12" gradientUnits="userSpaceOnUse">
+              <stop stop-color="var(--c-aurora-from)" />
+              <stop offset="1" stop-color="var(--c-aurora-to)" />
+            </linearGradient>
+          </defs>
+          <path class="vk-mark-v" pathLength="1" d="M6 7.5 16 26 26 7.5" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="vk-mark-core" d="M16 4.6 19.4 8 16 11.4 12.6 8Z" fill="url(#vk-boot-g)" stroke="url(#vk-boot-g)" stroke-width="1.6" stroke-linejoin="round" />
+        </svg>
+        <div class="vk-boot-name">Vecta <span>KMS</span></div>
+        <div class="vk-boot-track"><div class="vk-boot-fill"></div></div>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

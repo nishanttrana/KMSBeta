@@ -17,11 +17,11 @@ export function PostureBaselineCard({ baseline, error }: { baseline: PostureBase
           </B>
         ) : null}
       </div>
-      {error ? <div style={{ fontSize: 10, color: C.red }}>{`Baseline unavailable: ${error}`}</div> : baseline ? <>
-        <div style={{ fontSize: 9, color: C.muted, marginBottom: 8, lineHeight: 1.5 }}>
+      {error ? <div style={{ fontSize: 10, color: C.redFg }}>{`Baseline unavailable: ${error}`}</div> : baseline ? <>
+        <div style={{ fontSize: 10, color: C.muted, marginBottom: 8, lineHeight: 1.5 }}>
           Each signal is compared with this tenant's own complete days of audit history{baseline.from ? ` since ${fmtTS(baseline.from)}` : ""}. Nothing is judged before {baseline.required_days} days; a failure rate also needs {baseline.signals.find((x: any) => x.kind === "rate")?.required_baseline_events ?? 385} events of its own. A count is unusual when its chance under the baseline is below {baseline.spike_alpha} and it reaches the signal's floor.
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1.6fr 1fr 1.2fr", gap: 8, padding: "4px 0", borderBottom: `1px solid ${C.borderHi}`, fontSize: 9, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1.6fr 1fr 1.2fr", gap: 8, padding: "4px 0", borderBottom: `1px solid ${C.borderHi}`, fontSize: 10, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
           <span>Signal</span><span>Baseline</span><span>Last 24h</span><span>Status</span>
         </div>
         {baseline.signals.map((sig: any) => (

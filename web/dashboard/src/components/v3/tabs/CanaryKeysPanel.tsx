@@ -15,7 +15,7 @@ import { Btn, Inp } from "../legacyPrimitives";
 const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleString() : "-");
 
 const cell = { padding: "7px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid ${C.border}` } as const;
-const head = { ...cell, fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, textAlign: "left" } as const;
+const head = { ...cell, fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, textAlign: "left" } as const;
 
 // Canary keys live with the other keys: create a decoy ID, plant it where an
 // attacker would look, and any use of it through the key API trips it.
@@ -89,7 +89,7 @@ export function CanaryKeysPanel({ session }: { session: AuthSession }) {
           Created <b>{created.name}</b>. Plant this key ID: <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>{created.id}</span>
         </div>
       )}
-      {err && <div style={{ padding: "8px 10px", marginBottom: 12, borderRadius: 6, background: C.redDim, color: C.red, fontSize: 11 }}>{err}</div>}
+      {err && <div style={{ padding: "8px 10px", marginBottom: 12, borderRadius: 6, background: C.redDim, color: C.redFg, fontSize: 11 }}>{err}</div>}
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead><tr>{["Name", "Key ID", "Status", "Trips", "Last tripped", ""].map((h) => <th key={h} style={head}>{h}</th>)}</tr></thead>
         <tbody>
@@ -99,7 +99,7 @@ export function CanaryKeysPanel({ session }: { session: AuthSession }) {
               <td style={cell}>{k.name}</td>
               <td style={{ ...cell, fontFamily: "'JetBrains Mono',monospace" }}>{k.id}</td>
               <td style={cell}>{k.active ? "Active" : "Deactivated"}</td>
-              <td style={{ ...cell, color: k.trip_count > 0 ? C.red : C.text, fontWeight: k.trip_count > 0 ? 700 : 400 }}>{k.trip_count}</td>
+              <td style={{ ...cell, color: k.trip_count > 0 ? C.redFg : C.text, fontWeight: k.trip_count > 0 ? 700 : 400 }}>{k.trip_count}</td>
               <td style={cell}>{fmt(k.last_tripped)}</td>
               <td style={{ ...cell, textAlign: "right", whiteSpace: "nowrap" }}>
                 {k.trip_count > 0 && <Btn small onClick={() => showTrips(k)}>Trips</Btn>}{" "}

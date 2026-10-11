@@ -40,7 +40,7 @@ export const CryptoperiodPanel = ({ session }: { session: any }) => {
 
   return (
     <Section title="Cryptoperiods">
-      {error && <div style={{ fontSize: 11, color: C.red, marginBottom: 8 }}>{error}</div>}
+      {error && <div style={{ fontSize: 11, color: C.redFg, marginBottom: 8 }}>{error}</div>}
       <Card style={{ padding: 0, overflow: "hidden" }}>
         {items.map((r) => (
           <div key={r.category} style={{ display: "grid", gridTemplateColumns: "1.4fr 0.8fr 0.8fr 1.2fr", gap: 8, alignItems: "center", padding: "8px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 11 }}>

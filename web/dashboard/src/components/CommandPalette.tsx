@@ -24,7 +24,7 @@ function highlight(text: string, query: string): React.ReactNode {
       {text.slice(0, idx)}
       <mark
         style={{
-          background: "rgba(123,140,255,0.25)",
+          background: "rgba(76,157,255,0.25)",
           color: "#06d6e0",
           borderRadius: 2,
           fontWeight: 700,
@@ -242,8 +242,8 @@ export function CommandPalette({ open, onClose, items, onSelect }: Props) {
                       width: 28,
                       height: 28,
                       borderRadius: 6,
-                      background: active ? "rgba(123,140,255,0.12)" : "#131d2e",
-                      border: `1px solid ${active ? "rgba(123,140,255,0.3)" : "#1a2944"}`,
+                      background: active ? "rgba(76,157,255,0.12)" : "#131d2e",
+                      border: `1px solid ${active ? "rgba(76,157,255,0.3)" : "#1a2944"}`,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -275,7 +275,7 @@ export function CommandPalette({ open, onClose, items, onSelect }: Props) {
                   </div>
                   <div
                     style={{
-                      fontSize: 9,
+                      fontSize: 10,
                       color: "#334155",
                       textTransform: "uppercase",
                       letterSpacing: 1,
@@ -287,7 +287,7 @@ export function CommandPalette({ open, onClose, items, onSelect }: Props) {
                   {active && (
                     <kbd
                       style={{
-                        fontSize: 9,
+                        fontSize: 10,
                         color: "#475569",
                         background: "#0a0f1a",
                         border: "1px solid #1a2944",

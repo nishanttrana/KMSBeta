@@ -5,6 +5,41 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### The console's own CSP refused its fonts and its theme script (11.1.0-beta)
+- **`index.css` imported Inter and JetBrains Mono from Google Fonts, and
+  `index.html` set the theme with an inline script.** nginx sends
+  `style-src 'self' 'unsafe-inline'; script-src 'self'`, which refuses both.
+  A deployed console never had its fonts and flashed dark for a light-theme
+  user. How it slipped through: `vite dev` and `vite preview` send no CSP, so
+  every local run and every smoke test looked right. Fonts are now the
+  system's; the theme script is `public/theme-boot.js`.
+  Gate: `brandAndLegibility.test.ts` (no remote stylesheet, no inline script).
+- **A label that was true of nothing.** System Health showed "ALL OK" with
+  zero components, because "none degraded and none down" holds for an empty
+  list. The sign-in page carried a fixed "256-bit AES-GCM · FIPS 140-3 ·
+  TLS 1.3" line whatever FIPS mode was chosen. How they slipped through:
+  both were written as decoration, so nobody asked what they measured. A
+  status badge needs a non-empty set; a claim on a page needs a source.
+- **"NaN / undefined" on the Command Center.** The PQC tile trusted any
+  non-null scan summary. The smoke mocks answer `{}` to everything, so the
+  tile rendered NaN in every run and no test looked at it.
+- **Hex colours as text.** `C.green` and the other hues in `theme.ts` are
+  fixed dark-theme hex (kept so `${C.green}33` works); `C.greenFg` follows
+  the theme. About 360 style objects used the hex for text, unreadable on
+  the light theme. The gate reads one line at a time, so a `color:` on its
+  own line inside a multi-line style object is **not** caught yet.
+- **Traps met while drawing the mark and fonts:**
+  - A CSS `transform` animation replaces an SVG element's `transform`
+    attribute: the mark's core lost its 45° turn while animated. The diamond
+    is now drawn as a path.
+  - `@font-face { src: local("Menlo") }` matches nothing. `local()` takes a
+    full or PostScript name ("Menlo Regular", "Menlo-Regular").
+  - Chrome does not resolve `ui-monospace`; the stacks fell to Courier.
+  - Tailwind's preflight makes `svg` a block, so `text-align: center` does
+    not centre an icon; it needs `margin: 0 auto`.
+  - Scoping the dark tokens to one subtree (`data-theme="dark"` on the
+    sidebar) re-themes it without touching its styles.
+
 ### Buttons for something the service could never do (11.0.0-beta)
 - **Restart and Network Interfaces needed the Docker socket; compose never
   mounts it into auth.** The restart call always returned "unavailable" and

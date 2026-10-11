@@ -23,7 +23,7 @@ const copyText=(text:string,onToast?:any)=>{
 /* ── monospace code block ── */
 const CodeBlock=({value,onToast,label}:{value:string,onToast?:any,label?:string})=>(
   <div style={{position:"relative",background:"rgba(0,0,0,.35)",borderRadius:6,padding:"8px 10px",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:C.text,whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.6}}>
-    {label&&<div style={{fontSize:8,color:C.muted,marginBottom:4,textTransform:"uppercase",letterSpacing:1}}>{label}</div>}
+    {label&&<div style={{fontSize: 10,color:C.muted,marginBottom:4,textTransform:"uppercase",letterSpacing:1}}>{label}</div>}
     {value}
     <span onClick={()=>copyText(value,onToast)} style={{position:"absolute",top:6,right:6,cursor:"pointer",color:C.dim,fontSize:10}} title="Copy"><Copy size={12}/></span>
   </div>
@@ -50,7 +50,7 @@ const Step=({n,title,done,active}:{n:number,title:string,done?:boolean,active?:b
       background:done?C.green:active?C.accent:"rgba(255,255,255,.08)",
       color:done||active?C.bg:C.muted
     }}>{done?"✓":n}</span>
-    <span style={{fontSize:11,color:done?C.green:active?C.text:C.muted,fontWeight:active?600:400}}>{title}</span>
+    <span style={{fontSize:11,color:done?C.greenFg:active?C.text:C.muted,fontWeight:active?600:400}}>{title}</span>
   </div>
 );
 
@@ -263,7 +263,7 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
   return <div>
     {/* ── Vendor Header ── */}
     <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
-      <div style={{width:40,height:40,borderRadius:8,background:"rgba(123,140,255,.08)",display:"flex",alignItems:"center",justifyContent:"center"}}><Cpu size={20} style={{color:C.accent}}/></div>
+      <div style={{width:40,height:40,borderRadius:8,background:"rgba(76,157,255,.08)",display:"flex",alignItems:"center",justifyContent:"center"}}><Cpu size={20} style={{color:C.accentFg}}/></div>
       <div>
         <div style={{fontSize:14,fontWeight:700,color:C.text}}>{activeVendor?.label||"Generic PKCS#11 HSM"}</div>
         <div style={{fontSize:10,color:C.muted}}>Hardware Security Module integration via PKCS#11 — {activeVendor?.slotTerm} / {activeVendor?.partitionTerm} / {activeVendor?.tokenTerm}</div>
@@ -276,10 +276,10 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
     <HSMIntegrationCard session={session} onToast={onToast}/>
     <HSMActivityPanel session={session} onToast={onToast}/>
 
-    {activeVendorID==="securosys"&&<Card style={{padding:12,marginBottom:12,background:"rgba(123,140,255,.06)",border:`1px solid ${C.accent}33`}}>
+    {activeVendorID==="securosys"&&<Card style={{padding:12,marginBottom:12,background:"rgba(76,157,255,.06)",border:`1px solid ${C.accent}33`}}>
       <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:6}}>Securosys Primus Setup</div>
       <div style={{fontSize:10,color:C.muted,lineHeight:1.6}}>
-        Upload the Primus PKCS#11 library, discover the published PKCS#11 slot IDs, then bind the selected slot to the target Primus partition user. The default provider profile is <code style={{color:C.accent}}>securosys-primus</code> and the default PIN environment variable is <code style={{color:C.accent}}>SECUROSYS_HSM_PIN</code>.
+        Upload the Primus PKCS#11 library, discover the published PKCS#11 slot IDs, then bind the selected slot to the target Primus partition user. The default provider profile is <code style={{color:C.accentFg}}>securosys-primus</code> and the default PIN environment variable is <code style={{color:C.accentFg}}>SECUROSYS_HSM_PIN</code>.
       </div>
     </Card>}
 
@@ -299,10 +299,10 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
       {/* SSH Session Panel */}
       <Card style={{padding:14}}>
         <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
-          <Terminal size={14} style={{color:C.accent}}/>
+          <Terminal size={14} style={{color:C.accentFg}}/>
           <span style={{fontSize:11,fontWeight:600,color:C.text}}>SSH / SFTP Session</span>
           <Dot ok={cliEnabled}/>
-          <span style={{fontSize:9,color:cliEnabled?C.green:C.red,marginLeft:2}}>{cliEnabled?"CLI Enabled":"CLI Disabled"}</span>
+          <span style={{fontSize: 10,color:cliEnabled?C.greenFg:C.redFg,marginLeft:2}}>{cliEnabled?"CLI Enabled":"CLI Disabled"}</span>
         </div>
         {!cliEnabled&&<div style={{fontSize:10,color:C.muted,padding:"8px 0"}}>
           The CLI user must be enabled in the Admin panel before SSH access is available. Navigate to Admin → CLI to enable the cli-user account.
@@ -314,7 +314,7 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
           </Row2>
           <div style={{display:"flex",gap:6,marginTop:6}}>
             <Btn small primary onClick={()=>void openSSHSession()} disabled={sshOpening||!sshUser.trim()||!sshPass.trim()}>{sshOpening?"Connecting...":"Open SSH Session"}</Btn>
-            {sshSession&&<span style={{fontSize:9,color:C.green,display:"flex",alignItems:"center",gap:3}}><CheckCircle2 size={10}/>Session active — expires {new Date(sshSession.expires_at).toLocaleTimeString()}</span>}
+            {sshSession&&<span style={{fontSize: 10,color:C.greenFg,display:"flex",alignItems:"center",gap:3}}><CheckCircle2 size={10}/>Session active — expires {new Date(sshSession.expires_at).toLocaleTimeString()}</span>}
           </div>
           {sshSession&&<div style={{marginTop:10,display:"grid",gap:6}}>
             <CodeBlock value={sshCmd} onToast={onToast} label="SSH Command"/>
@@ -327,7 +327,7 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
       {/* Connection Info */}
       <Card style={{padding:14}}>
         <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
-          <Server size={14} style={{color:C.accent}}/>
+          <Server size={14} style={{color:C.accentFg}}/>
           <span style={{fontSize:11,fontWeight:600,color:C.text}}>Connection & Status</span>
         </div>
         {[
@@ -353,7 +353,7 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
     </div>}>
       <Card style={{padding:14}}>
         <div style={{fontSize:10,color:C.muted,marginBottom:10}}>
-          Upload the vendor PKCS#11 shared library ({activeVendor?.libraryExamples?.join(" or ")||"libVendorPKCS11.so"}) via SCP/SFTP to the <code style={{color:C.accent}}>incoming/</code> directory, then the install script moves it to the provider directory and verifies the checksum.
+          Upload the vendor PKCS#11 shared library ({activeVendor?.libraryExamples?.join(" or ")||"libVendorPKCS11.so"}) via SCP/SFTP to the <code style={{color:C.accentFg}}>incoming/</code> directory, then the install script moves it to the provider directory and verifies the checksum.
         </div>
         <Row2>
           <FG label={`${activeVendor?.shortName||"Generic"} Provider Name`} required>
@@ -416,11 +416,11 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
         <div style={{display:"grid",gap:4}}>
           {slots.map((slot:any,i:number)=>(
             <div key={i} style={{display:"grid",gridTemplateColumns:"60px 1fr 1fr 1fr 80px",gap:8,fontSize:10,padding:"4px 0",borderBottom:`1px solid ${C.border}`}}>
-              <span style={{color:C.accent,fontFamily:"'JetBrains Mono',monospace"}}>{String(slot?.slot_id||"")}</span>
+              <span style={{color:C.accentFg,fontFamily:"'JetBrains Mono',monospace"}}>{String(slot?.slot_id||"")}</span>
               <span style={{color:C.text}}>{String(slot?.slot_name||"—")}</span>
               <span style={{color:C.muted}}>{String(slot?.token_label||slot?.partition||"—")}</span>
               <span style={{color:C.dim}}>{String(slot?.token_manufacturer||"—")}</span>
-              <span style={{color:slot?.token_present?C.green:C.red,textAlign:"right"}}>{slot?.token_present?"Present":"Absent"}</span>
+              <span style={{color:slot?.token_present?C.greenFg:C.redFg,textAlign:"right"}}>{slot?.token_present?"Present":"Absent"}</span>
             </div>
           ))}
         </div>
@@ -431,7 +431,7 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
         <FG label="Raw pkcs11-tool Output" hint="Captured from list-partitions.sh inside hsm-integration service">
           <Txt rows={8} value={rawOutput} readOnly placeholder="// Slot discovery output"/>
         </FG>
-        <div style={{fontSize:9,color:C.dim,marginTop:4}}>Last discovered: {lastDiscoveredAt?new Date(lastDiscoveredAt).toLocaleString():"—"}</div>
+        <div style={{fontSize: 10,color:C.dim,marginTop:4}}>Last discovered: {lastDiscoveredAt?new Date(lastDiscoveredAt).toLocaleString():"—"}</div>
       </Card>}
     </Section>
 
@@ -451,17 +451,17 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
             { condition: "Approval Workflow (if configured)", field: "approval_required = true", desc: "If quorum policy is attached, M-of-N approvals must be granted before export proceeds.", icon: CheckCircle2 },
           ].map((item) => (
             <div key={item.condition} style={{display:"grid",gridTemplateColumns:"32px 1fr",gap:10,padding:"8px 10px",borderRadius:6,background:"rgba(255,255,255,.02)",border:`1px solid ${C.border}`}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}><item.icon size={16} style={{color:C.accent}}/></div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}><item.icon size={16} style={{color:C.accentFg}}/></div>
               <div>
                 <div style={{fontSize:11,fontWeight:700,color:C.text}}>{item.condition}</div>
-                <div style={{fontSize:9,color:C.accent,fontFamily:"'JetBrains Mono',monospace",marginTop:2}}>{item.field}</div>
+                <div style={{fontSize: 10,color:C.accentFg,fontFamily:"'JetBrains Mono',monospace",marginTop:2}}>{item.field}</div>
                 <div style={{fontSize:10,color:C.dim,marginTop:3}}>{item.desc}</div>
               </div>
             </div>
           ))}
         </div>
         <div style={{marginTop:12,padding:"8px 12px",borderRadius:6,background:`${C.amber}12`,border:`1px solid ${C.amber}33`,fontSize:10,color:C.dim}}>
-          <b style={{color:C.amber}}>Sync behavior:</b> Non-exportable keys sync as <code style={{color:C.accent}}>metadata_only</code> across cluster nodes. Exportable keys sync as <code style={{color:C.accent}}>wrapped_blob_allowed</code>, meaning a wrapped copy can be replicated.
+          <b style={{color:C.amberFg}}>Sync behavior:</b> Non-exportable keys sync as <code style={{color:C.accentFg}}>metadata_only</code> across cluster nodes. Exportable keys sync as <code style={{color:C.accentFg}}>wrapped_blob_allowed</code>, meaning a wrapped copy can be replicated.
         </div>
       </Card>
     </Section>
@@ -475,21 +475,21 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
           <Card style={{padding:10,background:"rgba(255,255,255,.02)"}}>
-            <div style={{fontSize:10,fontWeight:700,color:C.green,marginBottom:6}}>HSM-Backed CA</div>
+            <div style={{fontSize:10,fontWeight:700,color:C.greenFg,marginBottom:6}}>HSM-Backed CA</div>
             <div style={{display:"grid",gap:4,fontSize:10,color:C.dim}}>
-              <div>1. Create CA with <code style={{color:C.accent}}>key_backend: "hsm"</code></div>
-              <div>2. Specify <code style={{color:C.accent}}>key_ref</code> pointing to HSM key ID</div>
+              <div>1. Create CA with <code style={{color:C.accentFg}}>key_backend: "hsm"</code></div>
+              <div>2. Specify <code style={{color:C.accentFg}}>key_ref</code> pointing to HSM key ID</div>
               <div>3. Signing operations use HSM via PKCS#11</div>
               <div>4. Private key never leaves HSM boundary</div>
             </div>
           </Card>
           <Card style={{padding:10,background:"rgba(255,255,255,.02)"}}>
-            <div style={{fontSize:10,fontWeight:700,color:C.blue,marginBottom:6}}>HSM-Backed Certificates</div>
+            <div style={{fontSize:10,fontWeight:700,color:C.blueFg,marginBottom:6}}>HSM-Backed Certificates</div>
             <div style={{display:"grid",gap:4,fontSize:10,color:C.dim}}>
               <div>1. Generate key pair inside HSM</div>
               <div>2. Export CSR from HSM key</div>
               <div>3. Issue certificate via KMS CA</div>
-              <div>4. Store cert object on HSM via PKCS#11 <code style={{color:C.accent}}>C_CreateObject</code></div>
+              <div>4. Store cert object on HSM via PKCS#11 <code style={{color:C.accentFg}}>C_CreateObject</code></div>
             </div>
           </Card>
         </div>
@@ -504,14 +504,14 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
             <div key={item.label} style={{display:"grid",gridTemplateColumns:"160px 1fr",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
               <div style={{fontSize:10,fontWeight:600,color:C.text}}>{item.label}</div>
               <div>
-                <div style={{fontSize:10,color:C.accent,fontFamily:"'JetBrains Mono',monospace"}}>{item.value}</div>
-                <div style={{fontSize:9,color:C.dim}}>{item.desc}</div>
+                <div style={{fontSize:10,color:C.accentFg,fontFamily:"'JetBrains Mono',monospace"}}>{item.value}</div>
+                <div style={{fontSize: 10,color:C.dim}}>{item.desc}</div>
               </div>
             </div>
           ))}
         </div>
         <div style={{marginTop:12,padding:"8px 12px",borderRadius:6,background:`${C.blue}12`,border:`1px solid ${C.blue}33`,fontSize:10,color:C.dim}}>
-          <b style={{color:C.blue}}>Supported HSM vendors:</b> Any PKCS#11 v2.40+ compliant HSM — Securosys Primus, Thales Luna, Entrust nShield, AWS CloudHSM, Marvell LiquidSecurity, Utimaco, YubiHSM, SoftHSM (dev).
+          <b style={{color:C.blueFg}}>Supported HSM vendors:</b> Any PKCS#11 v2.40+ compliant HSM — Securosys Primus, Thales Luna, Entrust nShield, AWS CloudHSM, Marvell LiquidSecurity, Utimaco, YubiHSM, SoftHSM (dev).
         </div>
       </Card>
     </Section>

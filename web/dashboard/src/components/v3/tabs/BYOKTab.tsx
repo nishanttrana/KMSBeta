@@ -340,17 +340,17 @@ export const BYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
                 <span style={{ color: C.muted }}>Regions</span>
                 <span style={{ color: C.dim, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{card.regions.length ? card.regions.join(", ") : "default"}</span>
               </div>
-              {card.probeError && <div style={{ fontSize: 9, color: C.red, marginBottom: 6, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={card.probeError}>{card.probeError}</div>}
+              {card.probeError && <div style={{ fontSize: 10, color: C.redFg, marginBottom: 6, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={card.probeError}>{card.probeError}</div>}
 
               {/* Per-account details (expandable) */}
               {card.accounts.length > 1 && (
-                <button onClick={() => setExpandedProvider(isExpanded ? null : card.provider)} style={{ background: "transparent", border: "none", color: C.accent, cursor: "pointer", fontSize: 9, padding: "4px 0", display: "flex", alignItems: "center", gap: 4 }}>
+                <button onClick={() => setExpandedProvider(isExpanded ? null : card.provider)} style={{ background: "transparent", border: "none", color: C.accentFg, cursor: "pointer", fontSize: 10, padding: "4px 0", display: "flex", alignItems: "center", gap: 4 }}>
                   {isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
                   {card.accounts.length} accounts
                 </button>
               )}
               {isExpanded && card.accounts.map((acct) => (
-                <div key={acct.id} style={{ fontSize: 9, padding: "4px 0", borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div key={acct.id} style={{ fontSize: 10, padding: "4px 0", borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <div style={{ color: C.text, fontWeight: 600 }}>{acct.name}</div>
                     <div style={{ color: C.dim }}>{acct.default_region || "default"} · {String(acct.status || "configured")}</div>
@@ -379,7 +379,7 @@ export const BYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
           })}
         </div>
         : <Card style={{ padding: 0, overflow: "visible" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr .7fr .7fr .7fr .8fr auto", padding: "8px 12px", borderBottom: `1px solid ${C.border}`, fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1.2fr .7fr .7fr .7fr .8fr auto", padding: "8px 12px", borderBottom: `1px solid ${C.border}`, fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>
             <div>Provider</div><div>Status</div><div>Accounts</div><div>Bindings</div><div>Regions</div><div>Actions</div>
           </div>
           <div style={{ overflow: "visible" }}>
@@ -394,13 +394,13 @@ export const BYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
                 <div style={{ color: C.dim }}>{String(card.bindings.length)}</div>
                 <div style={{ color: C.dim, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{card.regions.length ? card.regions.join(", ") : "-"}</div>
                 <div style={{ position: "relative", justifySelf: "end" }}>
-                  <button onClick={() => setConnectorMenu(menuOpen ? "" : String(card.provider))} style={{ border: `1px solid ${C.border}`, background: "transparent", color: C.accent, borderRadius: 8, padding: "4px 6px", cursor: "pointer" }}>
+                  <button onClick={() => setConnectorMenu(menuOpen ? "" : String(card.provider))} style={{ border: `1px solid ${C.border}`, background: "transparent", color: C.accentFg, borderRadius: 8, padding: "4px 6px", cursor: "pointer" }}>
                     <MoreVertical size={13} strokeWidth={2} />
                   </button>
                   {menuOpen && <div style={{ position: "absolute", right: 0, top: 30, zIndex: 20, minWidth: 150, background: C.surface, border: `1px solid ${C.borderHi}`, borderRadius: 8, padding: 6, display: "grid", gap: 4 }}>
                     <button onClick={() => { setConnectorMenu(""); void runSync(card.provider, accountId); }} disabled={!accountId || syncingAccount === accountId} style={{ textAlign: "left", background: "transparent", border: "none", color: C.text, cursor: "pointer", padding: "6px 8px", borderRadius: 6 }}>Sync Now</button>
                     <button onClick={() => { setConnectorMenu(""); if (accountId) void openInventory(card.provider, accountId); }} disabled={!accountId} style={{ textAlign: "left", background: "transparent", border: "none", color: C.text, cursor: "pointer", padding: "6px 8px", borderRadius: 6 }}>Browse Inventory</button>
-                    <button onClick={() => { void deleteConnector(card.provider, activeAccount); }} disabled={!accountId || deletingAccount === accountId} style={{ textAlign: "left", background: "transparent", border: "none", color: C.red, cursor: "pointer", padding: "6px 8px", borderRadius: 6 }}>Delete Connector</button>
+                    <button onClick={() => { void deleteConnector(card.provider, activeAccount); }} disabled={!accountId || deletingAccount === accountId} style={{ textAlign: "left", background: "transparent", border: "none", color: C.redFg, cursor: "pointer", padding: "6px 8px", borderRadius: 6 }}>Delete Connector</button>
                   </div>}
                 </div>
               </div>;
@@ -419,12 +419,12 @@ export const BYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
     {(Array.isArray(regionMappings) ? regionMappings : []).length > 0 && (
       <Section title="Region Mappings">
         <Card style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", padding: "8px 12px", borderBottom: `1px solid ${C.border}`, fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", padding: "8px 12px", borderBottom: `1px solid ${C.border}`, fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>
             <div>Provider</div><div>Vecta Region</div><div>Cloud Region</div><div>Updated</div>
           </div>
           {(Array.isArray(regionMappings) ? regionMappings : []).map((m, i) => (
             <div key={`${m.provider}-${m.vecta_region}-${i}`} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", padding: "6px 12px", borderBottom: `1px solid ${C.border}`, fontSize: 10, alignItems: "center" }}>
-              <div style={{ color: C.accent }}>{CLOUD_PROVIDER_LABELS[m.provider] || m.provider}</div>
+              <div style={{ color: C.accentFg }}>{CLOUD_PROVIDER_LABELS[m.provider] || m.provider}</div>
               <div style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{m.vecta_region}</div>
               <div style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{m.cloud_region}</div>
               <div style={{ color: C.dim }}>{formatAgo(String(m.updated_at || ""))}</div>
@@ -477,7 +477,7 @@ export const BYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
           <div style={{ display: "grid", gap: 4 }}>
             {(Array.isArray(regionMappings) ? regionMappings : []).map((m, i) => (
               <div key={`${m.provider}-${m.vecta_region}-${i}`} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, padding: "4px 8px", background: C.bg, borderRadius: 4, fontSize: 10 }}>
-                <span style={{ color: C.accent }}>{CLOUD_PROVIDER_LABELS[m.provider] || m.provider}</span>
+                <span style={{ color: C.accentFg }}>{CLOUD_PROVIDER_LABELS[m.provider] || m.provider}</span>
                 <span style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{m.vecta_region} →</span>
                 <span style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{m.cloud_region}</span>
               </div>
@@ -524,7 +524,7 @@ export const BYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
         <div style={{ padding: 20, textAlign: "center", fontSize: 11, color: C.dim }}>Discovering cloud keys...</div>
       ) : (
         <div>
-          <div style={{ display: "grid", gridTemplateColumns: ".8fr 1.2fr .6fr .6fr .6fr .6fr", padding: "8px 12px", borderBottom: `1px solid ${C.border}`, fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>
+          <div style={{ display: "grid", gridTemplateColumns: ".8fr 1.2fr .6fr .6fr .6fr .6fr", padding: "8px 12px", borderBottom: `1px solid ${C.border}`, fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>
             <div>Cloud Key ID</div><div>Reference / ARN</div><div>Region</div><div>Algorithm</div><div>State</div><div>Managed</div>
           </div>
           <div style={{ maxHeight: 350, overflowY: "auto" }}>
@@ -540,7 +540,7 @@ export const BYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
             ))}
             {!inventoryItems.length && <div style={{ padding: 12, fontSize: 10, color: C.dim }}>No keys discovered in this cloud account.</div>}
           </div>
-          <div style={{ padding: "8px 12px", fontSize: 9, color: C.muted, borderTop: `1px solid ${C.border}` }}>
+          <div style={{ padding: "8px 12px", fontSize: 10, color: C.muted, borderTop: `1px solid ${C.border}` }}>
             {inventoryItems.length} keys discovered · {inventoryItems.filter((i) => i.managed_by_vecta).length} managed by Vecta
           </div>
         </div>

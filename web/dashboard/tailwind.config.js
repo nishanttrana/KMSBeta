@@ -57,9 +57,9 @@ export default {
         },
       },
       fontFamily: {
-        heading: ["Rajdhani", "sans-serif"],
-        body:    ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
-        mono:    ["JetBrains Mono", "IBM Plex Mono", "monospace"],
+        heading: ["var(--font-sans)"],
+        body:    ["var(--font-sans)"],
+        mono:    ["var(--font-mono)"],
       },
       borderRadius: {
         sm: "var(--radius-sm)",

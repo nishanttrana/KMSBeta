@@ -48,7 +48,7 @@ export function HSMPartitionTable({ session, kind, onToast }: { session: AuthSes
           <Btn small onClick={() => void load()} disabled={loading}>{loading ? "Reading HSM..." : "Refresh"}</Btn>
         </div>
       </div>
-      {error && <div style={{ fontSize: 10, color: C.red, marginBottom: 6 }}>{error}</div>}
+      {error && <div style={{ fontSize: 10, color: C.redFg, marginBottom: 6 }}>{error}</div>}
       {!error && objects.length === 0 && <div style={{ fontSize: 10, color: C.muted }}>{loading ? "Reading HSM..." : `No ${kind} in the partition.`}</div>}
       {objects.length > 0 && (
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
@@ -76,10 +76,10 @@ export function HSMPartitionTable({ session, kind, onToast }: { session: AuthSes
                     <td style={td}>{[o.key_type, o.curve || (o.size_bits ? `${o.size_bits}-bit` : "")].filter(Boolean).join(" ") || "-"}</td>
                     <td style={td}>{flag(o.local)}</td>
                     <td style={td}>{flag(o.sensitive)}</td>
-                    <td style={{ ...td, color: o.extractable ? C.amber : C.text }}>{flag(o.extractable)}</td>
+                    <td style={{ ...td, color: o.extractable ? C.amberFg : C.text }}>{flag(o.extractable)}</td>
                   </>
                 )}
-                <td style={{ ...td, color: o.managed ? C.accent : C.muted }}>
+                <td style={{ ...td, color: o.managed ? C.accentFg : C.muted }}>
                   {o.managed ? (o.kms_role === "tenant_key" ? "KMS tenant key" : o.key_id ? `KMS key ${o.key_id} v${o.version}` : "KMS") : "found in HSM"}
                 </td>
               </tr>

@@ -492,7 +492,7 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
                 <B c={t.status === "active" ? "green" : t.status === "disabled" ? "orange" : "blue"}>{t.status}</B>
               </div>
               <div style={{ fontSize: 10, color: C.muted, fontFamily: "'JetBrains Mono',monospace", marginBottom: 6 }}>{t.id}</div>
-              {t.created_at && <div style={{ fontSize: 9, color: C.muted }}>Created {relativeTime(t.created_at)}</div>}
+              {t.created_at && <div style={{ fontSize: 10, color: C.muted }}>Created {relativeTime(t.created_at)}</div>}
             </div>
           );
         })}
@@ -511,16 +511,16 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
             <div style={{ background: C.surface, borderRadius: 8, padding: "10px 12px", border: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Users</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: C.blue, marginTop: 2 }}>{tenantUsers.length}</div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Users</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.blueFg, marginTop: 2 }}>{tenantUsers.length}</div>
             </div>
             <div style={{ background: C.surface, borderRadius: 8, padding: "10px 12px", border: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Active Users</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: C.green, marginTop: 2 }}>{tenantUsers.filter((u) => u.status === "active").length}</div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Active Users</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.greenFg, marginTop: 2 }}>{tenantUsers.filter((u) => u.status === "active").length}</div>
             </div>
             <div style={{ background: C.surface, borderRadius: 8, padding: "10px 12px", border: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Admin Users</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: C.purple, marginTop: 2 }}>{tenantUsers.filter((u) => u.role?.includes("admin")).length}</div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Admin Users</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.purpleFg, marginTop: 2 }}>{tenantUsers.filter((u) => u.role?.includes("admin")).length}</div>
             </div>
           </div>
 
@@ -531,12 +531,12 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
               <div style={{ display: "grid", gap: 4, maxHeight: 200, overflowY: "auto" }}>
                 {tenantUsers.slice(0, 20).map((u) => (
                   <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: C.surface, borderRadius: 6, border: `1px solid ${C.border}` }}>
-                    <div style={{ width: 24, height: 24, borderRadius: 6, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color: C.accent, flexShrink: 0 }}>
+                    <div style={{ width: 24, height: 24, borderRadius: 6, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: C.accentFg, flexShrink: 0 }}>
                       {(u.username || "?").slice(0, 2).toUpperCase()}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 11, color: C.text, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.username}</div>
-                      <div style={{ fontSize: 9, color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</div>
+                      <div style={{ fontSize: 10, color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</div>
                     </div>
                     <B c={u.role?.includes("admin") ? "purple" : "blue"}>{u.role}</B>
                     <B c={u.status === "active" ? "green" : "orange"}>{u.status}</B>
@@ -582,7 +582,7 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
             <Chk label="Deny username in password" checked={passwordPolicy.deny_username} onChange={() => setPasswordPolicy((p) => ({ ...p, deny_username: !p.deny_username }))} />
             <Chk label="Deny email local part" checked={passwordPolicy.deny_email_local_part} onChange={() => setPasswordPolicy((p) => ({ ...p, deny_email_local_part: !p.deny_email_local_part }))} />
           </div>
-          {passwordPolicy.updated_at && <div style={{ fontSize: 9, color: C.muted, marginTop: 10 }}>Last updated: {relativeTime(passwordPolicy.updated_at)}{passwordPolicy.updated_by ? ` by ${passwordPolicy.updated_by}` : ""}</div>}
+          {passwordPolicy.updated_at && <div style={{ fontSize: 10, color: C.muted, marginTop: 10 }}>Last updated: {relativeTime(passwordPolicy.updated_at)}{passwordPolicy.updated_by ? ` by ${passwordPolicy.updated_by}` : ""}</div>}
         </Card>
 
         {/* Security / Lockout Policy */}
@@ -608,15 +608,15 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10 }}>
                 <span style={{ color: C.dim }}>Locked for</span>
-                <span style={{ color: C.amber, fontWeight: 600 }}>{securityPolicy.lockout_minutes} min</span>
+                <span style={{ color: C.amberFg, fontWeight: 600 }}>{securityPolicy.lockout_minutes} min</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10 }}>
                 <span style={{ color: C.dim }}>Idle timeout</span>
-                <span style={{ color: C.blue, fontWeight: 600 }}>{securityPolicy.idle_timeout_minutes} min</span>
+                <span style={{ color: C.blueFg, fontWeight: 600 }}>{securityPolicy.idle_timeout_minutes} min</span>
               </div>
             </div>
           </div>
-          {securityPolicy.updated_at && <div style={{ fontSize: 9, color: C.muted, marginTop: 10 }}>Last updated: {relativeTime(securityPolicy.updated_at)}{securityPolicy.updated_by ? ` by ${securityPolicy.updated_by}` : ""}</div>}
+          {securityPolicy.updated_at && <div style={{ fontSize: 10, color: C.muted, marginTop: 10 }}>Last updated: {relativeTime(securityPolicy.updated_at)}{securityPolicy.updated_by ? ` by ${securityPolicy.updated_by}` : ""}</div>}
         </Card>
       </div>
 
@@ -682,12 +682,12 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
           <div style={{ display: "grid", gap: 6 }}>
             {hsmPartitions.map((p, i) => (
               <div key={p.slot_id || i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: C.surface, borderRadius: 6, border: `1px solid ${C.border}` }}>
-                <div style={{ width: 28, height: 28, borderRadius: 6, background: C.blueDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: C.blue, flexShrink: 0 }}>
+                <div style={{ width: 28, height: 28, borderRadius: 6, background: C.blueDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: C.blueFg, flexShrink: 0 }}>
                   S{p.slot_id}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 11, color: C.text, fontWeight: 600 }}>{p.slot_name || p.token_label || `Slot ${p.slot_id}`}</div>
-                  <div style={{ fontSize: 9, color: C.muted }}>{[p.token_model, p.token_manufacturer, p.serial_number].filter(Boolean).join(" · ")}</div>
+                  <div style={{ fontSize: 10, color: C.muted }}>{[p.token_model, p.token_manufacturer, p.serial_number].filter(Boolean).join(" · ")}</div>
                 </div>
                 <B c={p.token_present ? "green" : "orange"}>{p.token_present ? "Present" : "Empty"}</B>
                 <Btn small onClick={() => setHsmConfig((c) => ({ ...c, slot_id: p.slot_id, partition_label: p.partition || c.partition_label, token_label: p.token_label || c.token_label }))}>Select</Btn>
@@ -744,14 +744,14 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
                   <B c={b.status === "completed" ? "green" : b.status === "failed" ? "red" : "amber"}>{b.status}</B>
                   {b.hsm_bound && <B c="purple">HSM</B>}
                 </div>
-                <div style={{ display: "flex", gap: 16, fontSize: 9, color: C.muted }}>
+                <div style={{ display: "flex", gap: 16, fontSize: 10, color: C.muted }}>
                   <span>Scope: {b.scope}</span>
                   <span>Rows: {b.row_count_total || 0}</span>
                   <span>Tables: {b.table_count || 0}</span>
                   <span>Size: {formatBytes(b.artifact_size_bytes || 0)}</span>
                   <span>Encryption: {b.encryption_algorithm || "AES-256-GCM"}</span>
                 </div>
-                {b.created_at && <div style={{ fontSize: 9, color: C.muted, marginTop: 4 }}>Created: {relativeTime(b.created_at)}{b.created_by ? ` by ${b.created_by}` : ""}</div>}
+                {b.created_at && <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>Created: {relativeTime(b.created_at)}{b.created_by ? ` by ${b.created_by}` : ""}</div>}
               </div>
               <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                 {b.status === "completed" && (
@@ -778,20 +778,20 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
       {/* Status Card */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10, marginBottom: 18 }}>
         <div style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: "12px 14px" }}>
-          <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Tenant Status</div>
+          <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Tenant Status</div>
           <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginTop: 4 }}>{readiness.tenant_status?.toUpperCase() || "UNKNOWN"}</div>
         </div>
         <div style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: "12px 14px" }}>
-          <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>UI Sessions</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: C.blue, marginTop: 4 }}>{Number(readiness.active_ui_session_count || 0)}</div>
+          <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>UI Sessions</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: C.blueFg, marginTop: 4 }}>{Number(readiness.active_ui_session_count || 0)}</div>
         </div>
         <div style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: "12px 14px" }}>
-          <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Service Links</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: C.purple, marginTop: 4 }}>{Number(readiness.active_service_link_count || 0)}</div>
+          <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Service Links</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: C.purpleFg, marginTop: 4 }}>{Number(readiness.active_service_link_count || 0)}</div>
         </div>
         <div style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: "12px 14px" }}>
-          <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Blockers</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: blockerRows.length > 0 ? C.red : C.green, marginTop: 4 }}>{blockerRows.length}</div>
+          <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Blockers</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: blockerRows.length > 0 ? C.redFg : C.greenFg, marginTop: 4 }}>{blockerRows.length}</div>
         </div>
       </div>
 
@@ -801,7 +801,7 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>Disable Ready</div>
-              <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>Tenant can be safely disabled</div>
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>Tenant can be safely disabled</div>
             </div>
             <B c={readiness.can_disable ? "green" : "amber"} pulse={Boolean(readiness.can_disable)}>{readiness.can_disable ? "YES" : "NO"}</B>
           </div>
@@ -810,7 +810,7 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>Delete Ready</div>
-              <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>Tenant can be permanently removed</div>
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>Tenant can be permanently removed</div>
             </div>
             <B c={readiness.can_delete ? "green" : "red"} pulse={Boolean(readiness.can_delete)}>{readiness.can_delete ? "YES" : "NO"}</B>
           </div>
@@ -830,9 +830,9 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
                   <span style={{ fontSize: 11, color: C.text, fontWeight: 600 }}>{String(blocker.label || blocker.code || "Blocker")}</span>
                   <B c="red">{Number(blocker.count || 0)} active</B>
                 </div>
-                {blocker.remediation && <div style={{ fontSize: 9, color: C.dim, marginTop: 4 }}>{blocker.remediation}</div>}
+                {blocker.remediation && <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{blocker.remediation}</div>}
                 {Array.isArray(blocker.details) && blocker.details.length > 0 && (
-                  <div style={{ fontSize: 9, color: C.muted, marginTop: 4, fontFamily: "'JetBrains Mono',monospace" }}>
+                  <div style={{ fontSize: 10, color: C.muted, marginTop: 4, fontFamily: "'JetBrains Mono',monospace" }}>
                     {blocker.details.slice(0, 5).join(", ")}
                     {blocker.details.length > 5 && ` +${blocker.details.length - 5} more`}
                   </div>
@@ -849,8 +849,8 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
 
         {selectedTenant?.status === "disabled" && (
           <div style={{ marginBottom: 14, padding: "10px 12px", background: C.surface, borderRadius: 8, border: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 11, color: C.green, fontWeight: 600, marginBottom: 4 }}>Re-enable Tenant</div>
-            <div style={{ fontSize: 9, color: C.dim, marginBottom: 8 }}>Restore this tenant to active status.</div>
+            <div style={{ fontSize: 11, color: C.greenFg, fontWeight: 600, marginBottom: 4 }}>Re-enable Tenant</div>
+            <div style={{ fontSize: 10, color: C.dim, marginBottom: 8 }}>Restore this tenant to active status.</div>
             <Btn small onClick={() => void handleEnable()} disabled={enableBusy}>{enableBusy ? "Enabling..." : "Enable Tenant"}</Btn>
           </div>
         )}
@@ -881,8 +881,8 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
     <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Create New Tenant" wide>
       <div style={{ display: "grid", gap: 12 }}>
         <div style={{ padding: "10px 12px", background: C.surface, borderRadius: 8, border: `1px solid ${C.border}`, marginBottom: 4 }}>
-          <div style={{ fontSize: 10, color: C.accent, fontWeight: 600 }}>New Tenant Setup</div>
-          <div style={{ fontSize: 9, color: C.dim, marginTop: 2 }}>Creates an isolated tenant with its own data segregation, admin user, and security policies.</div>
+          <div style={{ fontSize: 10, color: C.accentFg, fontWeight: 600 }}>New Tenant Setup</div>
+          <div style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>Creates an isolated tenant with its own data segregation, admin user, and security policies.</div>
         </div>
 
         <div style={{ fontSize: 11, fontWeight: 700, color: C.dim, textTransform: "uppercase", letterSpacing: 0.8 }}>Tenant Details</div>

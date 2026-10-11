@@ -25,7 +25,7 @@ export const S = {
   empty: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 28, textAlign: "center", color: C.muted, fontSize: 13 } as CSSProperties,
   th: { textAlign: "left", fontSize: 10, color: C.muted, fontWeight: 600, padding: "8px 12px", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" } as CSSProperties,
   td: { padding: "10px 12px", fontSize: 12, color: C.text, verticalAlign: "middle" } as CSSProperties,
-  mono: { fontFamily: "IBM Plex Mono, monospace", fontSize: 12 } as CSSProperties,
+  mono: { fontFamily: "'JetBrains Mono',monospace", fontSize: 12 } as CSSProperties,
   smallBtn: { background: "transparent", border: `1px solid ${C.border}`, borderRadius: 5, color: C.dim, padding: "3px 7px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11 } as CSSProperties,
   button: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 7, color: C.dim, padding: "7px 13px", cursor: "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6 } as CSSProperties,
   primary: { background: C.accent, border: "none", borderRadius: 7, color: C.bg, padding: "7px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6 } as CSSProperties,

@@ -31,7 +31,7 @@ export function UserManagementSection({ model }: Props) {
         <Card>
           <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1.4fr 0.9fr 0.9fr 1.2fr", gap: 8, borderBottom: `1px solid ${C.border}`, paddingBottom: 8 }}>
             {["User", "Email", "Role", "Status", "Actions"].map((header) => (
-              <div key={header} style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>{header}</div>
+              <div key={header} style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>{header}</div>
             ))}
           </div>
           {model.users.map((user) => {

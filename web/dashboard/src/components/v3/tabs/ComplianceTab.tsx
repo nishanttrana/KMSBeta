@@ -518,7 +518,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       <div>
         <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
           <Btn small onClick={() => setView("assessment")} style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}>Assessment</Btn>
-          <Btn small onClick={() => setView("reporting")} style={{ background: C.accentDim, borderColor: C.accent, color: C.accent, height: 28 }}>Reports</Btn>
+          <Btn small onClick={() => setView("reporting")} style={{ background: C.accentDim, borderColor: C.accent, color: C.accentFg, height: 28 }}>Reports</Btn>
         </div>
 
         <Section title="Compliance Reports" actions={<Btn small onClick={() => void loadReporting()} disabled={reportBusy}>{reportBusy ? "Working..." : "Refresh"}</Btn>}>
@@ -584,7 +584,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                     <div key={String(job?.id || Math.random())} style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
                       <div>
                         <div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{String(job?.template_id || "report")}</div>
-                        <div style={{ fontSize: 9, color: C.dim }}>{String(job?.format || "").toUpperCase()} • {job?.created_at ? new Date(String(job.created_at)).toLocaleString() : "-"}</div>
+                        <div style={{ fontSize: 10, color: C.dim }}>{String(job?.format || "").toUpperCase()} • {job?.created_at ? new Date(String(job.created_at)).toLocaleString() : "-"}</div>
                       </div>
                       <B c={tone}>{status}</B>
                       <Btn small onClick={() => void downloadJob(job)} disabled={status !== "completed"}>Download</Btn>
@@ -604,8 +604,8 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                       <div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{String(item?.name || item?.id || "-")}</div>
                       <B c={Boolean(item?.enabled) ? "green" : "red"}>{Boolean(item?.enabled) ? "Enabled" : "Disabled"}</B>
                     </div>
-                    <div style={{ fontSize: 9, color: C.dim, marginTop: 2 }}>{`${String(item?.template_id || "-")} • ${String(item?.format || "").toUpperCase()} • ${String(item?.schedule || "").toUpperCase()}`}</div>
-                    <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>{`Next run: ${item?.next_run_at ? new Date(String(item.next_run_at)).toLocaleString() : "-"}`}</div>
+                    <div style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>{`${String(item?.template_id || "-")} • ${String(item?.format || "").toUpperCase()} • ${String(item?.schedule || "").toUpperCase()}`}</div>
+                    <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{`Next run: ${item?.next_run_at ? new Date(String(item.next_run_at)).toLocaleString() : "-"}`}</div>
                   </div>
                 ))}
                 {!Array.isArray(scheduledReports) || !scheduledReports.length ? <div style={{ fontSize: 10, color: C.muted }}>No scheduled reports configured.</div> : null}
@@ -622,7 +622,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   return (
     <div>
       <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-        <Btn small onClick={() => setView("assessment")} style={{ background: C.accentDim, borderColor: C.accent, color: C.accent, height: 28 }}>Assessment</Btn>
+        <Btn small onClick={() => setView("assessment")} style={{ background: C.accentDim, borderColor: C.accent, color: C.accentFg, height: 28 }}>Assessment</Btn>
         <Btn small onClick={() => setView("reporting")} style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}>Reports</Btn>
       </div>
       <Section
@@ -693,7 +693,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                       <div key={String(ctrl?.id || Math.random())} style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px", gap: 8, alignItems: "center", padding: "6px 0", borderTop: `1px solid ${C.border}` }}>
                         <div>
                           <Chk label={String(ctrl?.title || ctrl?.id || "Control")} checked={Boolean(ctrl?.enabled)} onChange={() => patchControl(String(fw?.framework_id || ""), String(ctrl?.id || ""), { enabled: !ctrl?.enabled })} />
-                          <div style={{ fontSize: 9, color: C.dim, marginTop: 2 }}>{String(ctrl?.requirement || ctrl?.category || "")}</div>
+                          <div style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>{String(ctrl?.requirement || ctrl?.category || "")}</div>
                         </div>
                         <FG label="Weight"><Inp type="number" value={String(ctrl?.weight ?? 1)} onChange={(e) => patchControl(String(fw?.framework_id || ""), String(ctrl?.id || ""), { weight: Math.max(0.1, Number(e.target.value) || 1) })} /></FG>
                         <FG label="Threshold"><Inp type="number" value={String(ctrl?.threshold ?? 80)} onChange={(e) => patchControl(String(fw?.framework_id || ""), String(ctrl?.id || ""), { threshold: Math.max(1, Math.min(100, Number(e.target.value) || 80)) })} /></FG>
@@ -729,7 +729,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                           <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{String(item?.title || "-")}</div>
                           <B c="red">+{Number(item?.delta || 0)}</B>
                         </div>
-                        <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>{String(item?.severity || "").toUpperCase()} • {Number(item?.current_count || 0)} current</div>
+                        <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{String(item?.severity || "").toUpperCase()} • {Number(item?.current_count || 0)} current</div>
                       </div>
                     ))}
                     {(!assessmentDelta?.added_findings || !assessmentDelta.added_findings.length) && <div style={{ fontSize: 10, color: C.muted }}>No new findings.</div>}
@@ -745,7 +745,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                           <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{String(item?.title || "-")}</div>
                           <B c="green">{Number(item?.delta || 0)}</B>
                         </div>
-                        <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>{String(item?.severity || "").toUpperCase()} • {Number(item?.previous_count || 0)} previous</div>
+                        <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{String(item?.severity || "").toUpperCase()} • {Number(item?.previous_count || 0)} previous</div>
                       </div>
                     ))}
                     {(!assessmentDelta?.resolved_findings || !assessmentDelta.resolved_findings.length) && <div style={{ fontSize: 10, color: C.muted }}>No resolved findings.</div>}
@@ -764,7 +764,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                           <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{String(item?.label || item?.domain || "-")}</div>
                           <B c="green">+{Number(item?.delta || 0)}</B>
                         </div>
-                        <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>{Number(item?.previous_score || 0)} → {Number(item?.current_score || 0)} • {String(item?.status || "")}</div>
+                        <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{Number(item?.previous_score || 0)} → {Number(item?.current_score || 0)} • {String(item?.status || "")}</div>
                       </div>
                     ))}
                     {(!assessmentDelta?.recovered_domains || !assessmentDelta.recovered_domains.length) && <div style={{ fontSize: 10, color: C.muted }}>No recovered domains.</div>}
@@ -780,7 +780,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                           <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{String(item?.label || item?.connector || "-")}</div>
                           <B c="red">+{Number(item?.delta || 0)}</B>
                         </div>
-                        <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>{Number(item?.previous_fails || 0)} → {Number(item?.current_fails || 0)} failures</div>
+                        <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{Number(item?.previous_fails || 0)} → {Number(item?.current_fails || 0)} failures</div>
                       </div>
                     ))}
                     {(!assessmentDelta?.new_failing_connectors || !assessmentDelta.new_failing_connectors.length) && <div style={{ fontSize: 10, color: C.muted }}>No newly failing connectors.</div>}
@@ -805,7 +805,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
               </RadialBarChart>
             </ResponsiveContainer>
             <div style={{ textAlign: "center", fontSize: 28, fontWeight: 800, color: scoreColor, marginTop: -8 }}>{score}</div>
-            <div style={{ textAlign: "center", fontSize: 9, color: C.muted }}>Compliance Score</div>
+            <div style={{ textAlign: "center", fontSize: 10, color: C.muted }}>Compliance Score</div>
           </Card>
 
           {/* Framework Radar */}
@@ -818,8 +818,8 @@ export const ComplianceTab = ({ session, onToast }: any) => {
               <ResponsiveContainer width="100%" height={180}>
                 <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="65%">
                   <PolarGrid stroke={C.border} />
-                  <PolarAngleAxis dataKey="framework" tick={{ fill: C.dim, fontSize: 9 }} />
-                  <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: C.muted, fontSize: 8 }} tickCount={4} />
+                  <PolarAngleAxis dataKey="framework" tick={{ fill: C.dim, fontSize: 10 }} />
+                  <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: C.muted, fontSize: 10 }} tickCount={4} />
                   <Radar dataKey="score" stroke={C.accent} fill={C.accent} fillOpacity={0.2} strokeWidth={2} />
                 </RadarChart>
               </ResponsiveContainer>
@@ -846,7 +846,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
               {[["ML-KEM", Number(pqc?.ml_kem_migrated || 0)], ["ML-DSA", Number(pqc?.ml_dsa_migrated || 0)], ["Pending", Number(pqc?.pending || 0)]].map(([k, v]) => (
                 <div key={String(k)} style={{ textAlign: "center" }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{Number(v).toLocaleString()}</div>
-                  <div style={{ fontSize: 8, color: C.muted }}>{k}</div>
+                  <div style={{ fontSize: 10, color: C.muted }}>{k}</div>
                 </div>
               ))}
             </div>
@@ -879,9 +879,9 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                 <div key={`${item.asset_type}-${item.asset_id}`} style={{ padding: "7px 0", borderBottom: `1px solid ${C.border}` }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                     <span style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{item.name}</span>
-                    <span style={{ fontSize: 10, color: C.red }}>{item.algorithm}</span>
+                    <span style={{ fontSize: 10, color: C.redFg }}>{item.algorithm}</span>
                   </div>
-                  <div style={{ fontSize: 9, color: C.dim }}>{item.asset_type}</div>
+                  <div style={{ fontSize: 10, color: C.dim }}>{item.asset_type}</div>
                 </div>
               ))}
               {!(pqcInventory?.classical_usage || []).length && <div style={{ fontSize: 10, color: C.muted }}>No classical RSA / ECC keys or certificates.</div>}
@@ -892,15 +892,15 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                 <div key={item.cert_id} style={{ padding: "7px 0", borderBottom: `1px solid ${C.border}` }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                     <span style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{item.subject_cn}</span>
-                    <span style={{ fontSize: 10, color: C.red }}>{item.algorithm}</span>
+                    <span style={{ fontSize: 10, color: C.redFg }}>{item.algorithm}</span>
                   </div>
-                  <div style={{ fontSize: 9, color: C.dim }}>{item.status || "active"}</div>
+                  <div style={{ fontSize: 10, color: C.dim }}>{item.status || "active"}</div>
                 </div>
               ))}
               {!(pqcInventory?.non_migrated_certificates || []).length && <div style={{ fontSize: 10, color: C.muted }}>No certificate migration gaps.</div>}
             </div>
           </div>
-          </> : <div style={{ fontSize: 10, color: C.red }}>{`PQC inventory unavailable${pqcError ? `: ${pqcError}` : "."}`}</div>}
+          </> : <div style={{ fontSize: 10, color: C.redFg }}>{`PQC inventory unavailable${pqcError ? `: ${pqcError}` : "."}`}</div>}
         </Card>
 
         <div style={{ height: 10 }} />
@@ -917,7 +917,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
             {breakdownBars.length > 0 ? (
               <ResponsiveContainer width="100%" height={160}>
                 <BarChart data={breakdownBars} layout="vertical">
-                  <XAxis type="number" domain={[0, 100]} tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} />
+                  <XAxis type="number" domain={[0, 100]} tick={{ fill: C.muted, fontSize: 10 }} axisLine={false} tickLine={false} />
                   <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={false} tickLine={false} width={55} />
                   <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: payload[0]?.payload?.fill }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value}/100</ChartTip> : null} cursor={{ fill: C.accentDim }} />
                   <RBar dataKey="value" radius={[0, 4, 4, 0]}>
@@ -940,9 +940,9 @@ export const ComplianceTab = ({ session, onToast }: any) => {
               <>
                 <ResponsiveContainer width="100%" height={110}>
                   <BarChart data={algoDistribution}>
-                    <XAxis dataKey="name" tick={{ fill: C.dim, fontSize: 8 }} axisLine={{ stroke: C.border }} tickLine={false} />
-                    <YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} width={25} allowDecimals={false} />
-                    <Tooltip content={({ active, payload, label }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: C.accent }}>{label}</span>: {payload[0]?.value} keys</ChartTip> : null} cursor={{ fill: C.accentDim }} />
+                    <XAxis dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={{ stroke: C.border }} tickLine={false} />
+                    <YAxis tick={{ fill: C.muted, fontSize: 10 }} axisLine={false} tickLine={false} width={25} allowDecimals={false} />
+                    <Tooltip content={({ active, payload, label }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: C.accentFg }}>{label}</span>: {payload[0]?.value} keys</ChartTip> : null} cursor={{ fill: C.accentDim }} />
                     <RBar dataKey="count" fill={C.accent} radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -954,7 +954,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                   ].map(([label, value, color]) => (
                     <div key={String(label)} style={{ textAlign: "center", padding: "6px 0", border: `1px solid ${C.border}`, borderRadius: 8 }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: color as string }}>{value}</div>
-                      <div style={{ fontSize: 8, color: C.muted }}>{label}</div>
+                      <div style={{ fontSize: 10, color: C.muted }}>{label}</div>
                     </div>
                   ))}
                 </div>
@@ -982,9 +982,9 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                     <stop offset="95%" stopColor={C.accent} stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="name" tick={{ fill: C.muted, fontSize: 8 }} axisLine={{ stroke: C.border }} tickLine={false} interval="preserveStartEnd" />
-                <YAxis domain={[0, 100]} tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} width={30} />
-                <Tooltip content={({ active, payload, label }) => active && payload?.length ? <ChartTip><div style={{ fontWeight: 700, color: C.accent, marginBottom: 2 }}>{label}</div>Score: <span style={{ fontWeight: 700 }}>{payload[0]?.value}</span></ChartTip> : null} cursor={{ stroke: C.borderHi, strokeDasharray: "3 3" }} />
+                <XAxis dataKey="name" tick={{ fill: C.muted, fontSize: 10 }} axisLine={{ stroke: C.border }} tickLine={false} interval="preserveStartEnd" />
+                <YAxis domain={[0, 100]} tick={{ fill: C.muted, fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
+                <Tooltip content={({ active, payload, label }) => active && payload?.length ? <ChartTip><div style={{ fontWeight: 700, color: C.accentFg, marginBottom: 2 }}>{label}</div>Score: <span style={{ fontWeight: 700 }}>{payload[0]?.value}</span></ChartTip> : null} cursor={{ stroke: C.borderHi, strokeDasharray: "3 3" }} />
                 <Area type="monotone" dataKey="score" stroke={C.accent} strokeWidth={2} fill="url(#scoreGrad)" dot={{ fill: C.accent, r: 2, strokeWidth: 0 }} activeDot={{ fill: C.accent, r: 4, stroke: C.bg, strokeWidth: 2 }} />
               </AreaChart>
             </ResponsiveContainer>
@@ -1010,7 +1010,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
               </div>
               <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
                 {[["Critical", findingSeverityCounts.critical, C.red], ["High", findingSeverityCounts.high, C.amber], ["Warning", findingSeverityCounts.warning, C.amber], ["Info", findingSeverityCounts.info, C.blue]].filter(([,c]) => (c as number) > 0).map(([label, count, color]) => (
-                  <div key={String(label)} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: C.dim }}>
+                  <div key={String(label)} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.dim }}>
                     <div style={{ width: 8, height: 8, borderRadius: 2, background: color as string }} />
                     {label} ({count})
                   </div>
@@ -1059,7 +1059,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                     <tr key={String(gap?.id || idx)} style={{ borderBottom: `1px solid ${C.border}` }}>
                       <td style={{ padding: "8px 10px", fontSize: 11, color: C.text }}>
                         <div style={{ fontWeight: 600 }}>{String(gap?.title || "-")}</div>
-                        <div style={{ fontSize: 9, color: C.muted }}>{String(gap?.description || "").slice(0, 100)}</div>
+                        <div style={{ fontSize: 10, color: C.muted }}>{String(gap?.description || "").slice(0, 100)}</div>
                       </td>
                       <td style={{ padding: "8px 10px", fontSize: 10 }}>
                         <B c={toneForFinding(String(gap?.severity || ""))}>{String(gap?.severity || "-")}</B>
@@ -1086,10 +1086,10 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                 <div key={String(a?.id || idx)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
                   <div>
                     <div style={{ fontSize: 11, color: C.text, fontWeight: 600 }}>{String(a?.type || "-")}</div>
-                    <div style={{ fontSize: 9, color: C.dim }}>{String(a?.description || "")}</div>
+                    <div style={{ fontSize: 10, color: C.dim }}>{String(a?.description || "")}</div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 9, color: C.muted }}>{a?.detected_at ? new Date(String(a.detected_at)).toLocaleDateString() : "-"}</span>
+                    <span style={{ fontSize: 10, color: C.muted }}>{a?.detected_at ? new Date(String(a.detected_at)).toLocaleDateString() : "-"}</span>
                     <B c={toneForFinding(String(a?.severity || ""))}>{String(a?.severity || "info")}</B>
                   </div>
                 </div>

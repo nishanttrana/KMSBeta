@@ -489,7 +489,7 @@ export const RestAPITab=({session,keyCatalog,onToast}: RestAPITabProps)=>{
           {`Catalog endpoints available: ${REST_API_CATALOG_FULL.length}`}
         </div>
         <div style={{fontSize:10,color:C.muted,marginTop:6}}>
-          Product label: <span style={{color:C.accent,fontWeight:700}}>REST API</span>.
+          Product label: <span style={{color:C.accentFg,fontWeight:700}}>REST API</span>.
         </div>
       </Card>
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:10,marginBottom:10}}>
@@ -536,9 +536,9 @@ export const RestAPITab=({session,keyCatalog,onToast}: RestAPITabProps)=>{
                     <B c={Boolean(item?.replay_protection_enabled)?"blue":"amber"}>{Boolean(item?.replay_protection_enabled)?"Replay on":"Replay off"}</B>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:6,marginTop:8}}>
-                    <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase"}}>Verified</div><div style={{fontSize:10,color:C.text}}>{Number(item?.verified_request_count||0)}</div></div>
-                    <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase"}}>Replay</div><div style={{fontSize:10,color:Number(item?.replay_violation_count||0)>0?C.red:C.text}}>{Number(item?.replay_violation_count||0)}</div></div>
-                    <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase"}}>Signature</div><div style={{fontSize:10,color:Number(item?.signature_failure_count||0)>0?C.amber:C.text}}>{Number(item?.signature_failure_count||0)}</div></div>
+                    <div><div style={{fontSize: 10,color:C.muted,textTransform:"uppercase"}}>Verified</div><div style={{fontSize:10,color:C.text}}>{Number(item?.verified_request_count||0)}</div></div>
+                    <div><div style={{fontSize: 10,color:C.muted,textTransform:"uppercase"}}>Replay</div><div style={{fontSize:10,color:Number(item?.replay_violation_count||0)>0?C.redFg:C.text}}>{Number(item?.replay_violation_count||0)}</div></div>
+                    <div><div style={{fontSize: 10,color:C.muted,textTransform:"uppercase"}}>Signature</div><div style={{fontSize:10,color:Number(item?.signature_failure_count||0)>0?C.amberFg:C.text}}>{Number(item?.signature_failure_count||0)}</div></div>
                   </div>
                 </button>;
               })}
@@ -623,15 +623,15 @@ export const RestAPITab=({session,keyCatalog,onToast}: RestAPITabProps)=>{
           <div style={{display:"grid",gap:8}}>
             <div style={{padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:10,background:C.surface}}>
               <div style={{fontSize:10,color:C.text,fontWeight:700}}>OAuth mTLS</div>
-              <div style={{fontSize:9,color:C.dim,marginTop:4}}>Binds the access token to the client certificate thumbprint so a stolen bearer token cannot be replayed without the certificate.</div>
+              <div style={{fontSize: 10,color:C.dim,marginTop:4}}>Binds the access token to the client certificate thumbprint so a stolen bearer token cannot be replayed without the certificate.</div>
             </div>
             <div style={{padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:10,background:C.surface}}>
               <div style={{fontSize:10,color:C.text,fontWeight:700}}>DPoP</div>
-              <div style={{fontSize:9,color:C.dim,marginTop:4}}>Adds a per-request proof JWT tied to the HTTP method, URL, access token hash, and a one-time nonce window.</div>
+              <div style={{fontSize: 10,color:C.dim,marginTop:4}}>Adds a per-request proof JWT tied to the HTTP method, URL, access token hash, and a one-time nonce window.</div>
             </div>
             <div style={{padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:10,background:C.surface}}>
               <div style={{fontSize:10,color:C.text,fontWeight:700}}>HTTP Message Signatures</div>
-              <div style={{fontSize:9,color:C.dim,marginTop:4}}>Signs request components and body digests using the client public key so automation and SDK calls become tamper-evident and replay-aware.</div>
+              <div style={{fontSize: 10,color:C.dim,marginTop:4}}>Signs request components and body digests using the client public key so automation and SDK calls become tamper-evident and replay-aware.</div>
             </div>
           </div>
         </Card>

@@ -76,7 +76,7 @@ export function KeySchedulingTab({ session }: any) {
     <div style={{ padding: 24, maxWidth: 1100 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <CalendarClock size={20} style={{ color: C.accent }} />
+          <CalendarClock size={20} style={{ color: C.accentFg }} />
           <span style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Scheduled Maintenance Jobs</span>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -85,7 +85,7 @@ export function KeySchedulingTab({ session }: any) {
         </div>
       </div>
 
-      {err && <div style={{ padding: 12, borderRadius: 6, background: C.redDim, color: C.red, fontSize: 12, marginBottom: 16 }}>{err}</div>}
+      {err && <div style={{ padding: 12, borderRadius: 6, background: C.redDim, color: C.redFg, fontSize: 12, marginBottom: 16 }}>{err}</div>}
 
       {showForm && (
         <Card style={{ marginBottom: 20 }}>
@@ -127,7 +127,7 @@ export function KeySchedulingTab({ session }: any) {
                     <TD c={<Badge color={C.accent}>{j.action}</Badge>} />
                     <TD c={j.schedule_type} />
                     <TD c={j.cron_expr ?? `Every ${j.interval_seconds}s`} mono />
-                    <TD c={<Btn small variant="ghost" onClick={() => handleToggle(j)}>{j.enabled ? <ToggleRight size={14} style={{ color: C.green }} /> : <ToggleLeft size={14} style={{ color: C.muted }} />}{j.enabled ? "On" : "Off"}</Btn>} />
+                    <TD c={<Btn small variant="ghost" onClick={() => handleToggle(j)}>{j.enabled ? <ToggleRight size={14} style={{ color: C.greenFg }} /> : <ToggleLeft size={14} style={{ color: C.muted }} />}{j.enabled ? "On" : "Off"}</Btn>} />
                     <TD c={fmtDate(j.last_run_at)} />
                     <TD c={fmtDate(j.next_run_at)} />
                     <TD c={<Btn small variant="danger" onClick={() => handleDelete(j.id)}><Trash2 size={11} /></Btn>} />

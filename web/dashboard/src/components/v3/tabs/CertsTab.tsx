@@ -1429,11 +1429,11 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
           <div style={{fontSize:11,color:C.text,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(crt.subject_cn||crt.id||"certificate")}</div>
           <div style={{display:"flex",gap:8,marginTop:3,alignItems:"center",flexWrap:"wrap"}}>
             <div style={{display:"inline-flex",alignItems:"center",gap:3}}>{statusIcon}<B c={status==="active"?"green":status==="revoked"||status==="deleted"?"red":"amber"}>{statusRaw||"unknown"}</B></div>
-            <span style={{fontSize:9,color:C.accent,fontFamily:"'JetBrains Mono',monospace",background:C.accentDim,padding:"1px 5px",borderRadius:3}}>{String(crt.algorithm||"-")}</span>
-            <span style={{fontSize:9,color:C.dim}}>{formatDestroyAt(String(crt.not_after||"-"))}</span>
+            <span style={{fontSize: 10,color:C.accentFg,fontFamily:"'JetBrains Mono',monospace",background:C.accentDim,padding:"1px 5px",borderRadius:3}}>{String(crt.algorithm||"-")}</span>
+            <span style={{fontSize: 10,color:C.dim}}>{formatDestroyAt(String(crt.not_after||"-"))}</span>
           </div>
         </div>
-        <div style={{fontSize:8,color:C.muted,fontFamily:"'JetBrains Mono',monospace",maxWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{certID.slice(0,12)}...</div>
+        <div style={{fontSize: 10,color:C.muted,fontFamily:"'JetBrains Mono',monospace",maxWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{certID.slice(0,12)}...</div>
       </div>
     </div>;
   };
@@ -1461,15 +1461,15 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
     return <Card key={caID} style={{padding:10,marginLeft:depth*20,background:depth===0?`linear-gradient(135deg,${C.accentDim} 0%,${C.card} 100%)`:`linear-gradient(135deg,${C.dimTint} 0%,${C.card} 100%)`,borderColor:depth===0?C.accentDim:C.border}}>
       <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"flex-start"}}>
         <div style={{minWidth:0,flex:1}}>
-          <button onClick={()=>toggleCA(caID)} style={{background:"transparent",border:"none",padding:0,margin:0,color:depth===0?C.accent:C.text,cursor:"pointer",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+          <button onClick={()=>toggleCA(caID)} style={{background:"transparent",border:"none",padding:0,margin:0,color:depth===0?C.accentFg:C.text,cursor:"pointer",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
             {open?<ChevronDown size={14}/>:<ChevronRight size={14}/>}
             <Shield size={14} color={depth===0?C.accent:C.dim}/>
             <span>{depth===0?"Root CA":"Intermediate CA"}: {String(ca.name||caID)}</span>
           </button>
           <div style={{display:"flex",gap:10,marginTop:5,marginLeft:34,flexWrap:"wrap",alignItems:"center"}}>
-            <span style={{fontSize:9,color:C.accent,fontFamily:"'JetBrains Mono',monospace",background:C.accentDim,padding:"2px 6px",borderRadius:4}}>{String(ca.algorithm||"-")}</span>
-            <span style={{fontSize:9,color:String(ca.key_backend)==="hsm"?C.accent:C.dim}}>{String(ca.key_backend)==="hsm"?"Key in HSM":String(ca.key_backend)==="keycore"?"Software key, keycore co-signed":"Software vault"}</span>
-            <span style={{fontSize:9,color:C.muted}}>Created: {formatDestroyAt(String(ca.created_at||""))}</span>
+            <span style={{fontSize: 10,color:C.accentFg,fontFamily:"'JetBrains Mono',monospace",background:C.accentDim,padding:"2px 6px",borderRadius:4}}>{String(ca.algorithm||"-")}</span>
+            <span style={{fontSize: 10,color:String(ca.key_backend)==="hsm"?C.accentFg:C.dim}}>{String(ca.key_backend)==="hsm"?"Key in HSM":String(ca.key_backend)==="keycore"?"Software key, keycore co-signed":"Software vault"}</span>
+            <span style={{fontSize: 10,color:C.muted}}>Created: {formatDestroyAt(String(ca.created_at||""))}</span>
           </div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",justifyContent:"flex-end",flexShrink:0}}>
@@ -1482,7 +1482,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
       {open?<>
         {children.length?<div style={{display:"grid",gap:8,marginTop:10}}>{children.map((child)=>renderCANode(child,depth+1))}</div>:null}
         <div style={{marginTop:10,paddingTop:8,borderTop:`1px solid ${C.border}`}}>
-          <button onClick={()=>toggleIssued(caID)} style={{background:"transparent",border:"none",padding:0,color:C.blue,cursor:"pointer",fontSize:10,fontWeight:700,display:"flex",alignItems:"center",gap:5}}>
+          <button onClick={()=>toggleIssued(caID)} style={{background:"transparent",border:"none",padding:0,color:C.blueFg,cursor:"pointer",fontSize:10,fontWeight:700,display:"flex",alignItems:"center",gap:5}}>
             {issuedOpen?<ChevronDown size={12}/>:<ChevronRight size={12}/>}
             <FileText size={12}/>
             Issued Certificates ({certList.length})
@@ -1506,49 +1506,49 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
         <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${C.greenTint} 100%)`}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <ShieldCheck size={14} color={C.green}/>
-            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Active</span>
+            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Active</span>
           </div>
-          <div style={{fontSize:22,fontWeight:800,color:C.green,lineHeight:1}}>{String(stats.active)}</div>
-          <div style={{fontSize:9,color:C.muted,marginTop:4}}>{stats.total?`${Math.round((stats.active*100)/stats.total)}% of total`:"—"}</div>
+          <div style={{fontSize:22,fontWeight:800,color:C.greenFg,lineHeight:1}}>{String(stats.active)}</div>
+          <div style={{fontSize: 10,color:C.muted,marginTop:4}}>{stats.total?`${Math.round((stats.active*100)/stats.total)}% of total`:"—"}</div>
         </Card>
         <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${C.redTint} 100%)`}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <ShieldX size={14} color={C.red}/>
-            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Revoked</span>
+            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Revoked</span>
           </div>
-          <div style={{fontSize:22,fontWeight:800,color:C.red,lineHeight:1}}>{String(stats.revoked)}</div>
+          <div style={{fontSize:22,fontWeight:800,color:C.redFg,lineHeight:1}}>{String(stats.revoked)}</div>
         </Card>
         <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${C.accentTint} 100%)`}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <Shield size={14} color={C.accent}/>
-            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>CAs</span>
+            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>CAs</span>
           </div>
-          <div style={{fontSize:22,fontWeight:800,color:C.accent,lineHeight:1}}>{String(stats.cas)}</div>
-          <div style={{fontSize:9,color:C.muted,marginTop:4}}>{roots.length} root</div>
+          <div style={{fontSize:22,fontWeight:800,color:C.accentFg,lineHeight:1}}>{String(stats.cas)}</div>
+          <div style={{fontSize: 10,color:C.muted,marginTop:4}}>{roots.length} root</div>
         </Card>
         <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${stats.expiring>0?C.amberTint:C.greenTint} 100%)`}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <Clock size={14} color={stats.expiring>0?C.amber:C.green}/>
-            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Expiring</span>
+            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Expiring</span>
           </div>
-          <div style={{fontSize:22,fontWeight:800,color:stats.expiring>0?C.amber:C.green,lineHeight:1}}>{String(stats.expiring)}</div>
-          <div style={{fontSize:9,color:C.muted,marginTop:4}}>within {alertPolicyDaysBefore}d</div>
+          <div style={{fontSize:22,fontWeight:800,color:stats.expiring>0?C.amberFg:C.greenFg,lineHeight:1}}>{String(stats.expiring)}</div>
+          <div style={{fontSize: 10,color:C.muted,marginTop:4}}>within {alertPolicyDaysBefore}d</div>
         </Card>
         <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${stats.missedWindows>0?C.redTint:C.blueTint} 100%)`}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <AlertTriangle size={14} color={stats.missedWindows>0?C.red:C.blue}/>
-            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Missed Windows</span>
+            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Missed Windows</span>
           </div>
-          <div style={{fontSize:22,fontWeight:800,color:stats.missedWindows>0?C.red:C.blue,lineHeight:1}}>{String(stats.missedWindows)}</div>
-          <div style={{fontSize:9,color:C.muted,marginTop:4}}>RFC 9773 renewal windows</div>
+          <div style={{fontSize:22,fontWeight:800,color:stats.missedWindows>0?C.redFg:C.blueFg,lineHeight:1}}>{String(stats.missedWindows)}</div>
+          <div style={{fontSize: 10,color:C.muted,marginTop:4}}>RFC 9773 renewal windows</div>
         </Card>
         <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${stats.emergencyRotations>0?C.redTint:C.accentTint} 100%)`}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <ShieldAlert size={14} color={stats.emergencyRotations>0?C.red:C.accent}/>
-            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Emergency Rotation</span>
+            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Emergency Rotation</span>
           </div>
-          <div style={{fontSize:22,fontWeight:800,color:stats.emergencyRotations>0?C.red:C.accent,lineHeight:1}}>{String(stats.emergencyRotations)}</div>
-          <div style={{fontSize:9,color:C.muted,marginTop:4}}>{renewalSummary?.ari_enabled===false?"Local coordinated policy":"CA-directed schedule active"}</div>
+          <div style={{fontSize:22,fontWeight:800,color:stats.emergencyRotations>0?C.redFg:C.accentFg,lineHeight:1}}>{String(stats.emergencyRotations)}</div>
+          <div style={{fontSize: 10,color:C.muted,marginTop:4}}>{renewalSummary?.ari_enabled===false?"Local coordinated policy":"CA-directed schedule active"}</div>
         </Card>
       </div>
     </>}
@@ -1558,48 +1558,48 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
         <Card style={{padding:"12px 14px"}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <Server size={14} color={C.accent}/>
-            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Protocols</span>
+            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Protocols</span>
           </div>
-          <div style={{fontSize:22,fontWeight:800,color:C.accent,lineHeight:1}}>{protocolMeta.length}</div>
-          <div style={{fontSize:9,color:C.muted,marginTop:4}}>configured</div>
+          <div style={{fontSize:22,fontWeight:800,color:C.accentFg,lineHeight:1}}>{protocolMeta.length}</div>
+          <div style={{fontSize: 10,color:C.muted,marginTop:4}}>configured</div>
         </Card>
         <Card style={{padding:"12px 14px"}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <CheckCircle2 size={14} color={C.green}/>
-            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Enabled</span>
+            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Enabled</span>
           </div>
-          <div style={{fontSize:22,fontWeight:800,color:C.green,lineHeight:1}}>{protocolMeta.filter((m)=>{const cfg=protocolByName[m.name];return cfg?Boolean(cfg.enabled):true;}).length}</div>
+          <div style={{fontSize:22,fontWeight:800,color:C.greenFg,lineHeight:1}}>{protocolMeta.filter((m)=>{const cfg=protocolByName[m.name];return cfg?Boolean(cfg.enabled):true;}).length}</div>
         </Card>
         <Card style={{padding:"12px 14px"}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <XCircle size={14} color={C.red}/>
-            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Disabled</span>
+            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Disabled</span>
           </div>
-          <div style={{fontSize:22,fontWeight:800,color:C.red,lineHeight:1}}>{protocolMeta.filter((m)=>{const cfg=protocolByName[m.name];return cfg?!Boolean(cfg.enabled):false;}).length}</div>
+          <div style={{fontSize:22,fontWeight:800,color:C.redFg,lineHeight:1}}>{protocolMeta.filter((m)=>{const cfg=protocolByName[m.name];return cfg?!Boolean(cfg.enabled):false;}).length}</div>
         </Card>
         <Card style={{padding:"12px 14px"}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <Globe size={14} color={C.blue}/>
-            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>ACME</span>
+            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>ACME</span>
           </div>
-          <div style={{fontSize:11,fontWeight:700,color:protocolByName["acme"]?Boolean(protocolByName["acme"].enabled)?C.green:C.red:C.green,lineHeight:1.4}}>{protocolByName["acme"]?Boolean(protocolByName["acme"].enabled)?"Active":"Off":"Active"}</div>
-          <div style={{fontSize:9,color:C.muted}}>RFC 8555</div>
+          <div style={{fontSize:11,fontWeight:700,color:protocolByName["acme"]?Boolean(protocolByName["acme"].enabled)?C.greenFg:C.redFg:C.greenFg,lineHeight:1.4}}>{protocolByName["acme"]?Boolean(protocolByName["acme"].enabled)?"Active":"Off":"Active"}</div>
+          <div style={{fontSize: 10,color:C.muted}}>RFC 8555</div>
         </Card>
         <Card style={{padding:"12px 14px"}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <Lock size={14} color={C.purple}/>
-            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>EST</span>
+            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>EST</span>
           </div>
-          <div style={{fontSize:11,fontWeight:700,color:protocolByName["est"]?Boolean(protocolByName["est"].enabled)?C.green:C.red:C.green,lineHeight:1.4}}>{protocolByName["est"]?Boolean(protocolByName["est"].enabled)?"Active":"Off":"Active"}</div>
-          <div style={{fontSize:9,color:C.muted}}>RFC 7030</div>
+          <div style={{fontSize:11,fontWeight:700,color:protocolByName["est"]?Boolean(protocolByName["est"].enabled)?C.greenFg:C.redFg:C.greenFg,lineHeight:1.4}}>{protocolByName["est"]?Boolean(protocolByName["est"].enabled)?"Active":"Off":"Active"}</div>
+          <div style={{fontSize: 10,color:C.muted}}>RFC 7030</div>
         </Card>
         <Card style={{padding:"12px 14px"}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <KeyRound size={14} color={C.amber}/>
-            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>SCEP</span>
+            <span style={{fontSize: 10,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>SCEP</span>
           </div>
-          <div style={{fontSize:11,fontWeight:700,color:protocolByName["scep"]?Boolean(protocolByName["scep"].enabled)?C.green:C.red:C.green,lineHeight:1.4}}>{protocolByName["scep"]?Boolean(protocolByName["scep"].enabled)?"Active":"Off":"Active"}</div>
-          <div style={{fontSize:9,color:C.muted}}>RFC 8894</div>
+          <div style={{fontSize:11,fontWeight:700,color:protocolByName["scep"]?Boolean(protocolByName["scep"].enabled)?C.greenFg:C.redFg:C.greenFg,lineHeight:1.4}}>{protocolByName["scep"]?Boolean(protocolByName["scep"].enabled)?"Active":"Off":"Active"}</div>
+          <div style={{fontSize: 10,color:C.muted}}>RFC 8894</div>
         </Card>
       </div>
       <Section title="Enrollment Protocols">
@@ -1681,29 +1681,29 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
                 <div style={{width:36,height:36,borderRadius:8,background:enabled?C.greenDim:C.redDim,display:"flex",alignItems:"center",justifyContent:"center"}}>{protocolIcon}</div>
                 <div>
                   <div style={{fontSize:15,fontWeight:700,color:C.text}}>{meta.title}</div>
-                  <div style={{fontSize:9,color:C.accent,fontFamily:"'JetBrains Mono',monospace"}}>{meta.rfc}</div>
+                  <div style={{fontSize: 10,color:C.accentFg,fontFamily:"'JetBrains Mono',monospace"}}>{meta.rfc}</div>
                 </div>
               </div>
               <B c={enabled?"green":"red"}>{enabled?"Active":"Disabled"}</B>
             </div>
             <div style={{fontSize:11,color:C.dim,marginBottom:6,lineHeight:1.5}}>{meta.desc}</div>
-            {impl?<div style={{fontSize:9,color:C.muted,marginBottom:6}}>Engine: {impl.engine} | {(impl.sdks||[]).join(", ")}</div>:null}
+            {impl?<div style={{fontSize: 10,color:C.muted,marginBottom:6}}>Engine: {impl.engine} | {(impl.sdks||[]).join(", ")}</div>:null}
             {features.length>0?<div style={{marginBottom:8}}>
-              <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>Capabilities</div>
+              <div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>Capabilities</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                {features.map((f,i)=><span key={i} style={{fontSize:9,padding:"2px 6px",borderRadius:4,background:C.accentDim,color:C.text,border:`1px solid ${C.border}`}}>{f}</span>)}
+                {features.map((f,i)=><span key={i} style={{fontSize: 10,padding:"2px 6px",borderRadius:4,background:C.accentDim,color:C.text,border:`1px solid ${C.border}`}}>{f}</span>)}
               </div>
             </div>:null}
             {endpoints.length>0?<div style={{marginBottom:8}}>
-              <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>Endpoints</div>
+              <div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>Endpoints</div>
               <div style={{display:"grid",gap:2}}>
-                {endpoints.map((ep,i)=><div key={i} style={{display:"flex",gap:6,fontSize:9,alignItems:"center"}}>
-                  <span style={{color:C.green,fontWeight:600,minWidth:90}}>{ep.label}</span>
-                  <code style={{color:C.accent,fontFamily:"'JetBrains Mono',monospace",fontSize:8}}>{ep.path}</code>
+                {endpoints.map((ep,i)=><div key={i} style={{display:"flex",gap:6,fontSize: 10,alignItems:"center"}}>
+                  <span style={{color:C.greenFg,fontWeight:600,minWidth:90}}>{ep.label}</span>
+                  <code style={{color:C.accentFg,fontFamily:"'JetBrains Mono',monospace",fontSize: 10}}>{ep.path}</code>
                 </div>)}
               </div>
             </div>:null}
-            {cfg?.updated_at?<div style={{fontSize:9,color:C.muted,marginBottom:8}}>Last updated: {formatDestroyAt(String(cfg.updated_at||""))} by {String(cfg.updated_by||"system")}</div>:null}
+            {cfg?.updated_at?<div style={{fontSize: 10,color:C.muted,marginBottom:8}}>Last updated: {formatDestroyAt(String(cfg.updated_at||""))} by {String(cfg.updated_by||"system")}</div>:null}
             <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
               <Btn small onClick={()=>openProtocolModal(meta.name)}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><Settings size={10}/>Configure</span></Btn>
               <Btn
@@ -1734,9 +1734,9 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
             <div style={{fontSize:13,fontWeight:700,color:C.text}}>CA Hierarchy</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
-            <Btn small onClick={()=>setCAStatusView("all")} style={{background:caStatusView==="all"?C.accentDim:"transparent",color:caStatusView==="all"?C.accent:C.text}}>{`All ${caStatusCounts.all}`}</Btn>
-            <Btn small onClick={()=>setCAStatusView("active")} style={{background:caStatusView==="active"?C.greenDim:"transparent",color:caStatusView==="active"?C.green:C.text}}>{`Active ${caStatusCounts.active}`}</Btn>
-            <Btn small onClick={()=>setCAStatusView("revoked")} style={{background:caStatusView==="revoked"?C.redDim:"transparent",color:caStatusView==="revoked"?C.red:C.text}}>{`Revoked ${caStatusCounts.revoked}`}</Btn>
+            <Btn small onClick={()=>setCAStatusView("all")} style={{background:caStatusView==="all"?C.accentDim:"transparent",color:caStatusView==="all"?C.accentFg:C.text}}>{`All ${caStatusCounts.all}`}</Btn>
+            <Btn small onClick={()=>setCAStatusView("active")} style={{background:caStatusView==="active"?C.greenDim:"transparent",color:caStatusView==="active"?C.greenFg:C.text}}>{`Active ${caStatusCounts.active}`}</Btn>
+            <Btn small onClick={()=>setCAStatusView("revoked")} style={{background:caStatusView==="revoked"?C.redDim:"transparent",color:caStatusView==="revoked"?C.redFg:C.text}}>{`Revoked ${caStatusCounts.revoked}`}</Btn>
             <Btn small onClick={()=>void refreshCAs()} disabled={caLoading}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>{caLoading?"...":"Refresh"}</span></Btn>
             <Btn small primary onClick={()=>setModal("create-ca")}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><Shield size={11}/>Create CA</span></Btn>
           </div>
@@ -1758,7 +1758,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
             <Clock size={14} color={C.amber}/>
             <div style={{fontSize:13,fontWeight:700,color:C.text}}>Expiry Calendar</div>
           </div>
-          <div style={{fontSize:9,color:C.muted,marginBottom:8}}>{`Alert window: ${alertPolicyDaysBefore} day(s)${alertPolicyIncludeExternal?" including":" excluding"} external certs`}</div>
+          <div style={{fontSize: 10,color:C.muted,marginBottom:8}}>{`Alert window: ${alertPolicyDaysBefore} day(s)${alertPolicyIncludeExternal?" including":" excluding"} external certs`}</div>
           <div style={{display:"grid",gap:8}}>
             {expiryItems.map((it)=>{
               const c=it.daysLeft<=15?"red":it.daysLeft<=60?"amber":"green";
@@ -1782,7 +1782,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
             </div>
             <B c={renewalSummary?.ari_enabled===false?"amber":"green"}>{renewalSummary?.ari_enabled===false?"Local":"ARI"}</B>
           </div>
-          <div style={{fontSize:9,color:C.muted,marginBottom:8}}>
+          <div style={{fontSize: 10,color:C.muted,marginBottom:8}}>
             {`Poll every ${Number(renewalSummary?.recommended_poll_hours||24)}h • Missed ${Number(renewalSummary?.missed_window_count||0)} • Emergency ${Number(renewalSummary?.emergency_rotation_count||0)}`}
           </div>
           <div style={{display:"grid",gap:8}}>
@@ -1794,7 +1794,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
                   <div style={{fontSize:11,color:C.text,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(item.subject_cn||item.cert_id)}</div>
                   <B c={tone}>{String(item.renewal_state||"scheduled").replaceAll("_"," ")}</B>
                 </div>
-                <div style={{fontSize:9,color:C.dim,marginTop:3}}>
+                <div style={{fontSize: 10,color:C.dim,marginTop:3}}>
                   {`${String(item.ca_name||item.ca_id||"CA")} • ${formatDestroyAt(String(item.window_start||""))} -> ${formatDestroyAt(String(item.window_end||""))}`}
                 </div>
               </div>;
@@ -1816,7 +1816,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
                   <div style={{fontSize:11,color:C.text}}>{String(item.ca_name||item.ca_id||"CA")}</div>
                   <B c={tone}>{`${item.count} certs`}</B>
                 </div>
-                <div style={{fontSize:9,color:C.dim,marginTop:3}}>
+                <div style={{fontSize: 10,color:C.dim,marginTop:3}}>
                   {`${String(item.bucket||"-")} • ${formatDestroyAt(String(item.scheduled_start||""))} -> ${formatDestroyAt(String(item.scheduled_end||""))}`}
                 </div>
               </div>;
@@ -1841,7 +1841,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
                   <div style={{fontSize:11,color:C.text}}>{String(item.ca_name||item.ca_id||"CA")}</div>
                   <B c="amber">{`${item.count} in bucket`}</B>
                 </div>
-                <div style={{fontSize:9,color:C.dim,marginTop:3}}>
+                <div style={{fontSize: 10,color:C.dim,marginTop:3}}>
                   {`${String(item.bucket||"-")} • stagger certificates or widen renewal bias if this becomes an operational hotspot.`}
                 </div>
               </div>
@@ -1860,7 +1860,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
               <Btn small primary onClick={()=>setModal("acme-star")}>New</Btn>
             </div>
           </div>
-          <div style={{fontSize:9,color:C.muted,marginBottom:8}}>
+          <div style={{fontSize: 10,color:C.muted,marginBottom:8}}>
             {starSummary?.enabled===false
               ?"ACME STAR is disabled in the ACME protocol policy for this tenant."
               :`Subscriptions ${Number(starSummary?.subscription_count||renewalSummary?.star_subscription_count||0)} • Delegated ${Number(starSummary?.delegated_count||renewalSummary?.star_delegated_count||0)} • Due soon ${Number(starSummary?.due_soon_count||renewalSummary?.star_due_soon_count||0)}`}
@@ -1874,14 +1874,14 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
                 <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center"}}>
                   <div style={{minWidth:0}}>
                     <div style={{fontSize:11,color:C.text,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(item.name||item.subject_cn||item.id)}</div>
-                    <div style={{fontSize:9,color:C.dim,marginTop:3}}>
+                    <div style={{fontSize: 10,color:C.dim,marginTop:3}}>
                       {`${String(item.subject_cn||"-")} • ${item.validity_hours||24}h • renew ${item.renew_before_minutes||120}m early`}
                     </div>
                   </div>
                   <B c={status==="active"?"green":status==="error"?"red":"amber"}>{status}</B>
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",marginTop:6}}>
-                  <div style={{fontSize:9,color:C.dim}}>
+                  <div style={{fontSize: 10,color:C.dim}}>
                     {`${item.delegated_subscriber?`Delegated to ${item.delegated_subscriber}`:"Tenant-managed"} • next ${formatDestroyAt(String(item.next_renewal_at||""))}`}
                   </div>
                   <div style={{display:"flex",gap:6}}>
@@ -1889,7 +1889,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
                     <Btn small danger onClick={()=>void actDeleteSTARSubscription(item)} disabled={rowActionBusy===`star-delete-${item.id}`}>Delete</Btn>
                   </div>
                 </div>
-                {item.last_error?<div style={{fontSize:9,color:C.red,marginTop:4}}>{String(item.last_error||"")}</div>:null}
+                {item.last_error?<div style={{fontSize: 10,color:C.redFg,marginTop:4}}>{String(item.last_error||"")}</div>:null}
               </div>;
             })}
             {!starSubscriptions.length?<div style={{fontSize:10,color:C.muted}}>No ACME STAR subscriptions yet. Create one for short-lived edge, mesh, or delegated subscriber certificates.</div>:null}
@@ -1899,7 +1899,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
                   <div style={{fontSize:10,color:C.text,fontWeight:700}}>{`STAR rollout ${String(risk.rollout_group||"-")}`}</div>
                   <B c={String(risk.risk_level||"medium").toLowerCase()==="high"?"red":"amber"}>{`${risk.count} subs`}</B>
                 </div>
-                <div style={{fontSize:9,color:C.dim,marginTop:3}}>
+                <div style={{fontSize: 10,color:C.dim,marginTop:3}}>
                   {`${formatDestroyAt(String(risk.scheduled_start||""))} -> ${formatDestroyAt(String(risk.scheduled_end||""))}${Array.isArray(risk.delegated_targets)&&risk.delegated_targets.length?` • delegated: ${risk.delegated_targets.join(", ")}`:""}`}
                 </div>
               </div>
@@ -1932,20 +1932,20 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
             onChange={(e)=>setCertSearch(e.target.value)}
             style={{height:34,borderRadius:9,fontSize:11}}
           />
-        <Btn small onClick={()=>setCertStatusView("all")} style={{background:certStatusView==="all"?C.accentDim:"transparent",color:certStatusView==="all"?C.accent:C.text,borderColor:certStatusView==="all"?C.accent:"transparent"}}>
+        <Btn small onClick={()=>setCertStatusView("all")} style={{background:certStatusView==="all"?C.accentDim:"transparent",color:certStatusView==="all"?C.accentFg:C.text,borderColor:certStatusView==="all"?C.accent:"transparent"}}>
           <span style={{display:"inline-flex",alignItems:"center",gap:4}}><FileText size={10}/>{`All (${certStatusCounts.all})`}</span>
         </Btn>
-        <Btn small onClick={()=>setCertStatusView("active")} style={{background:certStatusView==="active"?C.greenDim:"transparent",color:certStatusView==="active"?C.green:C.text,borderColor:certStatusView==="active"?C.green:"transparent"}}>
+        <Btn small onClick={()=>setCertStatusView("active")} style={{background:certStatusView==="active"?C.greenDim:"transparent",color:certStatusView==="active"?C.greenFg:C.text,borderColor:certStatusView==="active"?C.green:"transparent"}}>
           <span style={{display:"inline-flex",alignItems:"center",gap:4}}><CheckCircle2 size={10}/>{`Active (${certStatusCounts.active})`}</span>
         </Btn>
-        <Btn small onClick={()=>setCertStatusView("revoked")} style={{background:certStatusView==="revoked"?C.redDim:"transparent",color:certStatusView==="revoked"?C.red:C.text,borderColor:certStatusView==="revoked"?C.red:"transparent"}}>
+        <Btn small onClick={()=>setCertStatusView("revoked")} style={{background:certStatusView==="revoked"?C.redDim:"transparent",color:certStatusView==="revoked"?C.redFg:C.text,borderColor:certStatusView==="revoked"?C.red:"transparent"}}>
           <span style={{display:"inline-flex",alignItems:"center",gap:4}}><XCircle size={10}/>{`Revoked (${certStatusCounts.revoked})`}</span>
         </Btn>
         </div>
         <Btn small onClick={()=>void refreshCerts()} disabled={certLoading}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>{certLoading?"Refreshing...":"Refresh"}</span></Btn>
       </div>
       <Card style={{padding:0,overflow:"hidden"}}>
-        <div style={{display:"grid",gridTemplateColumns:"1.3fr 1fr .8fr .8fr .9fr .55fr",gap:0,padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+        <div style={{display:"grid",gridTemplateColumns:"1.3fr 1fr .8fr .8fr .9fr .55fr",gap:0,padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
           <div>Common Name</div><div>Algorithm</div><div>Class</div><div>Status</div><div>Expires</div><div style={{textAlign:"right"}}>Actions</div>
         </div>
         <div style={{maxHeight:220,overflowY:"auto"}}>
@@ -1953,9 +1953,9 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
             <div key={c.id} style={{display:"grid",gridTemplateColumns:"1.3fr 1fr .8fr .8fr .9fr .55fr",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:11,alignItems:"center"}}>
               <div>
                 <div style={{color:C.text,fontWeight:600}}>{c.subject_cn||c.id}</div>
-                <div style={{fontSize:9,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{c.id}</div>
+                <div style={{fontSize: 10,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{c.id}</div>
               </div>
-              <div style={{color:C.accent}}>{c.algorithm}</div>
+              <div style={{color:C.accentFg}}>{c.algorithm}</div>
               <div style={{color:C.dim,textTransform:"uppercase"}}>{c.cert_class}</div>
               <div style={{display:"flex",alignItems:"center",gap:4}}>{String(c.status).toLowerCase()==="active"?<CheckCircle2 size={11} color={C.green}/>:String(c.status).toLowerCase()==="revoked"?<XCircle size={11} color={C.red}/>:String(c.status).toLowerCase()==="deleted"?<Trash2 size={11} color={C.blue}/>:<ShieldAlert size={11} color={C.amber}/>}<B c={String(c.status).toLowerCase()==="active"?"green":String(c.status).toLowerCase()==="revoked"||String(c.status).toLowerCase()==="deleted"?"red":"amber"}>{c.status}</B></div>
               <div style={{color:C.dim}}>{formatDestroyAt(String(c.not_after||"-"))}</div>
@@ -2069,7 +2069,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
                     disabled={busy===`delete-${certID}`}
                     onMouseEnter={(e)=>{(e.currentTarget as any).style.background=C.redDim;}}
                     onMouseLeave={(e)=>{(e.currentTarget as any).style.background="transparent";}}
-                    style={{background:"transparent",border:"none",color:C.red,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`delete-${certID}`?"not-allowed":"pointer",borderRadius:6,display:"flex",alignItems:"center",gap:6}}
+                    style={{background:"transparent",border:"none",color:C.redFg,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`delete-${certID}`?"not-allowed":"pointer",borderRadius:6,display:"flex",alignItems:"center",gap:6}}
                   >
                     <Trash2 size={12} color={C.red}/> {busy===`delete-${certID}`?"Deleting...":"Delete Permanently"}
                   </button>
@@ -2316,7 +2316,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
     </Modal>
 
     <Modal open={modal==="upload-3p"} onClose={()=>setModal(null)} title="Upload 3rd-Party Web Certificate" wide>
-      <div style={{background:C.blueDim,border:`1px solid ${C.blue}`,borderRadius:8,padding:10,marginBottom:12,fontSize:10,color:C.blue}}>
+      <div style={{background:C.blueDim,border:`1px solid ${C.blue}`,borderRadius:8,padding:10,marginBottom:12,fontSize:10,color:C.blueFg}}>
         Upload certificates from external CAs (DigiCert, Let's Encrypt, etc.) for KMS interface or service endpoints.
       </div>
       <FG label="Purpose" required>
@@ -2519,12 +2519,12 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
               {["1. Account","2. Order","3. Challenge","4. Finalize"].map((step,i)=>
                 <div key={i} style={{textAlign:"center",padding:"8px 4px",borderRadius:8,background:C.accentDim,border:`1px solid ${C.border}`}}>
-                  <div style={{fontSize:10,fontWeight:700,color:C.accent}}>{step}</div>
+                  <div style={{fontSize:10,fontWeight:700,color:C.accentFg}}>{step}</div>
                 </div>
               )}
             </div>
           </div>
-          {!activeCA?<div style={{fontSize:11,color:C.red,marginBottom:8}}>No active CA found. Create a CA first.</div>:null}
+          {!activeCA?<div style={{fontSize:11,color:C.redFg,marginBottom:8}}>No active CA found. Create a CA first.</div>:null}
           <FG label="Account Email">
             <Inp placeholder="admin@example.com" w="100%" id="acme-wiz-email"/>
           </FG>
@@ -2586,14 +2586,14 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
             <Card style={{padding:10}}>
               <div style={{fontSize:10,fontWeight:700,color:C.text,marginBottom:4}}>Simple Enroll</div>
-              <div style={{fontSize:9,color:C.dim}}>Submit a CSR for certificate issuance</div>
+              <div style={{fontSize: 10,color:C.dim}}>Submit a CSR for certificate issuance</div>
             </Card>
             <Card style={{padding:10}}>
               <div style={{fontSize:10,fontWeight:700,color:C.text,marginBottom:4}}>Server Keygen</div>
-              <div style={{fontSize:9,color:C.dim}}>Server generates key pair + certificate</div>
+              <div style={{fontSize: 10,color:C.dim}}>Server generates key pair + certificate</div>
             </Card>
           </div>
-          {!activeCA?<div style={{fontSize:11,color:C.red,marginBottom:8}}>No active CA found.</div>:null}
+          {!activeCA?<div style={{fontSize:11,color:C.redFg,marginBottom:8}}>No active CA found.</div>:null}
           <FG label="Subject CN">
             <Inp placeholder="device-001.iot.local" w="100%" id="est-wiz-cn"/>
           </FG>
@@ -2649,11 +2649,11 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
             {[{t:"PKCSReq",d:"Initial enrollment"},{t:"RenewalReq",d:"Certificate renewal"},{t:"GetCert",d:"Retrieve by serial"}].map((op)=>
               <Card key={op.t} style={{padding:10}}>
                 <div style={{fontSize:10,fontWeight:700,color:C.text}}>{op.t}</div>
-                <div style={{fontSize:9,color:C.dim}}>{op.d}</div>
+                <div style={{fontSize: 10,color:C.dim}}>{op.d}</div>
               </Card>
             )}
           </div>
-          {!activeCA?<div style={{fontSize:11,color:C.red,marginBottom:8}}>No active CA found.</div>:null}
+          {!activeCA?<div style={{fontSize:11,color:C.redFg,marginBottom:8}}>No active CA found.</div>:null}
           <FG label="Message Type">
             <Sel id="scep-wiz-msgtype" style={{width:"100%"}}>
               <option value="pkcsreq">PKCSReq (Initial Enrollment)</option>
@@ -2707,12 +2707,12 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,marginBottom:12}}>
             {[{t:"IR",d:"Initial Registration"},{t:"CR",d:"Certification Request"},{t:"KUR",d:"Key Update"},{t:"RR",d:"Revocation"}].map((op)=>
               <Card key={op.t} style={{padding:10,textAlign:"center"}}>
-                <div style={{fontSize:12,fontWeight:700,color:C.accent}}>{op.t}</div>
-                <div style={{fontSize:9,color:C.dim}}>{op.d}</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.accentFg}}>{op.t}</div>
+                <div style={{fontSize: 10,color:C.dim}}>{op.d}</div>
               </Card>
             )}
           </div>
-          {!activeCA?<div style={{fontSize:11,color:C.red,marginBottom:8}}>No active CA found.</div>:null}
+          {!activeCA?<div style={{fontSize:11,color:C.redFg,marginBottom:8}}>No active CA found.</div>:null}
           <FG label="Message Type">
             <Sel id="cmpv2-wiz-type" style={{width:"100%"}}>
               <option value="ir">IR -- Initial Registration (new cert)</option>

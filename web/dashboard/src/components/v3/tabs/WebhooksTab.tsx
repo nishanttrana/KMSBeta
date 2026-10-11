@@ -139,7 +139,7 @@ function StreamModal({ initial, connections, typeLabel, onClose, onSave }: {
               {connections.map(c => <option key={c.id} value={c.id}>{c.name} — {typeLabel(c.type)} ({c.endpoint})</option>)}
             </select>
             {initial?.legacy && (
-              <div style={{ fontSize: 10, color: C.amber, marginTop: 4 }}>
+              <div style={{ fontSize: 10, color: C.amberFg, marginTop: 4 }}>
                 This stream still uses the URL and credentials an earlier release stored with it. Choosing a connection drops them.
               </div>
             )}
@@ -154,7 +154,7 @@ function StreamModal({ initial, connections, typeLabel, onClose, onSave }: {
                 return (
                   <label key={pattern} title={label} style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", userSelect: "none" }}>
                     <input type="checkbox" checked={checked} onChange={() => toggleEvent(pattern)} style={{ accentColor: C.accent }} />
-                    <span style={{ fontSize: 11, color: checked ? C.text : C.dim, fontFamily: "IBM Plex Mono, monospace" }}>{pattern}</span>
+                    <span style={{ fontSize: 11, color: checked ? C.text : C.dim, fontFamily: "'JetBrains Mono',monospace" }}>{pattern}</span>
                   </label>
                 );
               })}
@@ -164,16 +164,16 @@ function StreamModal({ initial, connections, typeLabel, onClose, onSave }: {
               <button onClick={addCustom} disabled={!custom.trim()} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 5, color: C.dim, fontSize: 11, padding: "3px 10px", cursor: "pointer" }}>Add</button>
             </div>
             {Array.from(events).filter(e => !EVENT_PATTERNS.some(p => p.pattern === e)).map(e => (
-              <span key={e} style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 6, marginRight: 6, fontSize: 11, fontFamily: "IBM Plex Mono, monospace", color: PATTERN_RE.test(e) ? C.text : C.red }}>
+              <span key={e} style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 6, marginRight: 6, fontSize: 11, fontFamily: "'JetBrains Mono',monospace", color: PATTERN_RE.test(e) ? C.text : C.redFg }}>
                 {e}{!PATTERN_RE.test(e) && " (not an audit action; removed on save)"}
                 <button onClick={() => toggleEvent(e)} style={{ background: "none", border: "none", color: C.dim, cursor: "pointer", padding: 0 }}><X size={11} /></button>
               </span>
             ))}
-            {stale.length > 0 && <div style={{ fontSize: 10, color: C.amber, marginTop: 6 }}>Older event names never matched a real audit action; choose audit prefixes instead.</div>}
+            {stale.length > 0 && <div style={{ fontSize: 10, color: C.amberFg, marginTop: 6 }}>Older event names never matched a real audit action; choose audit prefixes instead.</div>}
           </div>
         </div>
 
-        {error && <div style={{ fontSize: 12, color: C.red, marginTop: 14 }}>Not saved: {error}</div>}
+        {error && <div style={{ fontSize: 12, color: C.redFg, marginTop: 14 }}>Not saved: {error}</div>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
           <button onClick={onClose} style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.dim, padding: "8px 16px", cursor: "pointer", fontSize: 12 }}>Cancel</button>
           <button
@@ -215,7 +215,7 @@ function DeliveryLog({ webhook, session, onClose }: { webhook: Webhook; session:
       {loading ? (
         <div style={{ padding: 24, textAlign: "center", color: C.dim, fontSize: 12 }}>Loading deliveries…</div>
       ) : error ? (
-        <div style={{ padding: 24, textAlign: "center", color: C.red, fontSize: 12 }}>Delivery log unavailable: {error}</div>
+        <div style={{ padding: 24, textAlign: "center", color: C.redFg, fontSize: 12 }}>Delivery log unavailable: {error}</div>
       ) : deliveries.length === 0 ? (
         <div style={{ padding: 24, textAlign: "center", color: C.muted, fontSize: 12 }}>No deliveries recorded.</div>
       ) : (
@@ -231,16 +231,16 @@ function DeliveryLog({ webhook, session, onClose }: { webhook: Webhook; session:
             <tbody>
               {deliveries.map((d, i) => (
                 <tr key={d.id} style={{ borderBottom: i < deliveries.length - 1 ? `1px solid ${C.border}` : "none" }}>
-                  <td style={td}><span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: 11, color: C.accent }}>{d.event_type}</span></td>
+                  <td style={td}><span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: C.accentFg }}>{d.event_type}</span></td>
                   <td style={td}>
                     {d.status === "success"
-                      ? <span style={{ display: "flex", alignItems: "center", gap: 4, color: C.green, fontSize: 11 }}><CheckCircle size={11} /> Success</span>
-                      : <span style={{ display: "flex", alignItems: "center", gap: 4, color: C.red, fontSize: 11 }}><XCircle size={11} /> Failed</span>}
+                      ? <span style={{ display: "flex", alignItems: "center", gap: 4, color: C.greenFg, fontSize: 11 }}><CheckCircle size={11} /> Success</span>
+                      : <span style={{ display: "flex", alignItems: "center", gap: 4, color: C.redFg, fontSize: 11 }}><XCircle size={11} /> Failed</span>}
                   </td>
-                  <td style={{ ...td, fontFamily: "IBM Plex Mono, monospace", color: d.http_status && d.http_status < 300 ? C.green : C.red }}>{d.http_status || "—"}</td>
-                  <td style={{ ...td, fontFamily: "IBM Plex Mono, monospace", color: C.dim }}>{d.latency_ms}ms · {d.attempt}×</td>
-                  <td style={{ ...td, fontFamily: "IBM Plex Mono, monospace", fontSize: 11, color: C.dim }}>{relTime(d.delivered_at)}</td>
-                  <td style={{ ...td, color: C.red, fontSize: 11 }}>{d.error || <span style={{ color: C.muted }}>—</span>}</td>
+                  <td style={{ ...td, fontFamily: "'JetBrains Mono',monospace", color: d.http_status && d.http_status < 300 ? C.greenFg : C.redFg }}>{d.http_status || "—"}</td>
+                  <td style={{ ...td, fontFamily: "'JetBrains Mono',monospace", color: C.dim }}>{d.latency_ms}ms · {d.attempt}×</td>
+                  <td style={{ ...td, fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: C.dim }}>{relTime(d.delivered_at)}</td>
+                  <td style={{ ...td, color: C.redFg, fontSize: 11 }}>{d.error || <span style={{ color: C.muted }}>—</span>}</td>
                 </tr>
               ))}
             </tbody>
@@ -280,16 +280,16 @@ function StreamCard({ wh, conn, typeLabel, category, onToggle, onEdit, onDelete,
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{wh.name}</span>
             <span style={{ background: `${fmtColor}18`, color: fmtColor, border: `1px solid ${fmtColor}33`, borderRadius: 5, fontSize: 10, padding: "1px 7px", fontWeight: 600 }}>{typeLabel}</span>
-            {wh.legacy && <span title="Stored with its own URL and credentials by an earlier release; the migration moves them into a connection, or choose one with Edit." style={{ background: C.amberDim, color: C.amber, borderRadius: 5, fontSize: 10, padding: "1px 7px", fontWeight: 600 }}>Legacy: pick a connection</span>}
-            {!wh.legacy && !conn && <span title="The connection this stream names is not in this tenant's list; deliveries fail until the stream names another." style={{ background: C.redDim, color: C.red, borderRadius: 5, fontSize: 10, padding: "1px 7px", fontWeight: 600 }}>Connection missing</span>}
-            {!wh.enabled && <span style={{ background: C.amberDim, color: C.amber, borderRadius: 5, fontSize: 10, padding: "1px 7px", fontWeight: 600 }}>Disabled</span>}
-            {wh.failure_count > 0 && <span style={{ background: C.redDim, color: C.red, borderRadius: 5, fontSize: 10, padding: "1px 7px" }}>{wh.failure_count} failure{wh.failure_count > 1 ? "s" : ""}</span>}
+            {wh.legacy && <span title="Stored with its own URL and credentials by an earlier release; the migration moves them into a connection, or choose one with Edit." style={{ background: C.amberDim, color: C.amberFg, borderRadius: 5, fontSize: 10, padding: "1px 7px", fontWeight: 600 }}>Legacy: pick a connection</span>}
+            {!wh.legacy && !conn && <span title="The connection this stream names is not in this tenant's list; deliveries fail until the stream names another." style={{ background: C.redDim, color: C.redFg, borderRadius: 5, fontSize: 10, padding: "1px 7px", fontWeight: 600 }}>Connection missing</span>}
+            {!wh.enabled && <span style={{ background: C.amberDim, color: C.amberFg, borderRadius: 5, fontSize: 10, padding: "1px 7px", fontWeight: 600 }}>Disabled</span>}
+            {wh.failure_count > 0 && <span style={{ background: C.redDim, color: C.redFg, borderRadius: 5, fontSize: 10, padding: "1px 7px" }}>{wh.failure_count} failure{wh.failure_count > 1 ? "s" : ""}</span>}
           </div>
-          <div style={{ fontSize: 11, color: C.dim, marginTop: 4, fontFamily: "IBM Plex Mono, monospace" }}>
+          <div style={{ fontSize: 11, color: C.dim, marginTop: 4, fontFamily: "'JetBrains Mono',monospace" }}>
             {wh.legacy ? `legacy ${LEGACY_FORMATS[wh.format || ""] || wh.format} stream` : conn ? `${conn.name} → ${conn.endpoint}` : wh.connection_id}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 11, color: C.muted, fontFamily: "IBM Plex Mono, monospace" }} title={wh.events.join(", ")}>{wh.events.slice(0, 3).join(", ")}{wh.events.length > 3 ? ` +${wh.events.length - 3}` : ""}</span>
+            <span style={{ fontSize: 11, color: C.muted, fontFamily: "'JetBrains Mono',monospace" }} title={wh.events.join(", ")}>{wh.events.slice(0, 3).join(", ")}{wh.events.length > 3 ? ` +${wh.events.length - 3}` : ""}</span>
             {wh.last_delivery_at && (
               <span style={{ fontSize: 11, color: C.muted, display: "flex", alignItems: "center", gap: 4 }}>
                 {wh.last_delivery_status === "success"
@@ -302,14 +302,14 @@ function StreamCard({ wh, conn, typeLabel, category, onToggle, onEdit, onDelete,
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          <button onClick={onToggle} title={wh.enabled ? "Disable" : "Enable"} style={{ background: "none", border: "none", cursor: "pointer", color: wh.enabled ? C.green : C.muted, padding: 2 }}>
+          <button onClick={onToggle} title={wh.enabled ? "Disable" : "Enable"} style={{ background: "none", border: "none", cursor: "pointer", color: wh.enabled ? C.greenFg : C.muted, padding: 2 }}>
             {wh.enabled ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
           </button>
-          <button onClick={handleTest} disabled={testing} title="Test" style={{ background: C.accentDim, border: `1px solid ${C.accent}22`, borderRadius: 6, color: C.accent, padding: "5px 9px", cursor: "pointer", fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}>
+          <button onClick={handleTest} disabled={testing} title="Test" style={{ background: C.accentDim, border: `1px solid ${C.accent}22`, borderRadius: 6, color: C.accentFg, padding: "5px 9px", cursor: "pointer", fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}>
             <Zap size={11} />{testing ? "…" : "Test"}
           </button>
           <button onClick={onEdit} title="Edit" style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 6, color: C.dim, padding: 6, cursor: "pointer" }}><Edit2 size={12} /></button>
-          <button onClick={onDelete} title="Delete" style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 6, color: C.red, padding: 6, cursor: "pointer" }}><Trash2 size={12} /></button>
+          <button onClick={onDelete} title="Delete" style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 6, color: C.redFg, padding: 6, cursor: "pointer" }}><Trash2 size={12} /></button>
           <button onClick={onViewLog} title="View log" style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 6, color: C.dim, padding: 6, cursor: "pointer" }}>
             {logOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </button>
@@ -421,11 +421,11 @@ export function EventStreams({ session, connections, connectionTypes }: Props) {
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 24, marginBottom: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Not assessed: event streams are unavailable</div>
           <div style={{ fontSize: 12, color: C.dim, marginTop: 6 }}>The audit service did not return its streams, so none are shown.</div>
-          <div style={{ fontSize: 11, color: C.red, marginTop: 8, fontFamily: "IBM Plex Mono, monospace", wordBreak: "break-word" }}>{unavailable}</div>
+          <div style={{ fontSize: 11, color: C.redFg, marginTop: 8, fontFamily: "'JetBrains Mono',monospace", wordBreak: "break-word" }}>{unavailable}</div>
         </div>
       )}
-      {error && <div style={{ background: C.redDim, border: `1px solid ${C.red}`, borderRadius: 8, padding: "8px 12px", fontSize: 12, color: C.red, marginBottom: 14 }}>{error}</div>}
-      {notice && <div style={{ background: C.greenDim, border: `1px solid ${C.green}`, borderRadius: 8, padding: "8px 12px", fontSize: 12, color: C.green, marginBottom: 14 }}>{notice}</div>}
+      {error && <div style={{ background: C.redDim, border: `1px solid ${C.red}`, borderRadius: 8, padding: "8px 12px", fontSize: 12, color: C.redFg, marginBottom: 14 }}>{error}</div>}
+      {notice && <div style={{ background: C.greenDim, border: `1px solid ${C.green}`, borderRadius: 8, padding: "8px 12px", fontSize: 12, color: C.greenFg, marginBottom: 14 }}>{notice}</div>}
 
       {!unavailable && <>
       {/* Stat cards */}

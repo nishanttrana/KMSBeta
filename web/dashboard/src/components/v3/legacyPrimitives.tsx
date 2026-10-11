@@ -49,10 +49,10 @@ type ModalProps = {
 
 export const Modal = ({ open, onClose, title, wide = false, width, children }: ModalProps) => !open ? null : (
   <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
-    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.7)", backdropFilter: "blur(4px)" }} />
-    <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", background: C.surface, border: `1px solid ${C.borderHi}`, borderRadius: 14, padding: 0, width: width || (wide ? 780 : 540), maxHeight: "88vh", overflow: "auto", boxShadow: "0 24px 60px rgba(0,0,0,.5)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: `1px solid ${C.border}`, position: "sticky", top: 0, background: C.surface, zIndex: 1, borderRadius: "14px 14px 0 0" }}>
-        <span style={{ fontSize: 15, fontWeight: 700, color: C.text, letterSpacing: -0.3 }}>{title}</span>
+    <div style={{ position: "absolute", inset: 0, background: "var(--c-scrim)" }} />
+    <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", background: C.surface, border: `1px solid ${C.borderHi}`, borderRadius: "var(--radius-lg)", padding: 0, width: width || (wide ? 780 : 540), maxWidth: "calc(100vw - 32px)", maxHeight: "88vh", overflow: "auto", boxShadow: "var(--shadow-lg)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: `1px solid ${C.border}`, position: "sticky", top: 0, background: C.surface, zIndex: 1, borderRadius: "var(--radius-lg) var(--radius-lg) 0 0" }}>
+        <span style={{ fontSize: 15, fontWeight: 600, color: C.text, letterSpacing: -0.2 }}>{title}</span>
         <button onClick={onClose} aria-label="Close" style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", padding: 4, lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
           <X size={14} strokeWidth={2} />
         </button>
@@ -159,7 +159,7 @@ export function usePromptDialog() {
         }}
       />
     </div> : null}
-    {String(dialog?.error || "").trim() ? <div style={{ fontSize: 10, color: C.red, marginBottom: 8 }}>{dialog.error}</div> : null}
+    {String(dialog?.error || "").trim() ? <div style={{ fontSize: 10, color: C.redFg, marginBottom: 8 }}>{dialog.error}</div> : null}
     <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
       <Btn onClick={cancel}>{String(dialog?.cancelLabel || "Cancel")}</Btn>
       <Btn primary={!dialog?.danger} danger={Boolean(dialog?.danger)} onClick={submit}>{String(dialog?.confirmLabel || "Confirm")}</Btn>
@@ -178,12 +178,12 @@ type FieldGroupProps = {
 
 export const FG = ({ label, children, hint, required = false }: FieldGroupProps) => (
   <div style={{ marginBottom: 12 }}>
-    <label style={{ display: "block", fontSize: 10, fontWeight: 600, color: C.dim, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.8 }}>
+    <label style={{ display: "block", fontSize: 11.5, fontWeight: 500, color: C.dim, marginBottom: 5 }}>
       {label}
-      {required && <span style={{ color: C.red }}> *</span>}
+      {required && <span style={{ color: C.redFg }}> *</span>}
     </label>
     {children}
-    {hint && <div style={{ fontSize: 9, color: C.muted, marginTop: 3 }}>{hint}</div>}
+    {hint && <div style={{ fontSize: 11, color: C.muted, marginTop: 4, lineHeight: 1.4 }}>{hint}</div>}
   </div>
 );
 
@@ -193,7 +193,7 @@ type InpProps = InputHTMLAttributes<HTMLInputElement> & {
   style?: CSSProperties;
 };
 
-export const Inp = ({ placeholder, w, mono = false, style, ...p }: InpProps) => <input placeholder={placeholder} style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: 7, padding: "8px 10px", color: C.text, fontSize: 11, width: w || "100%", outline: "none", fontFamily: mono ? "'JetBrains Mono',monospace" : "inherit", boxSizing: "border-box", ...(style || {}) }} {...p} />;
+export const Inp = ({ placeholder, w, mono = false, style, ...p }: InpProps) => <input placeholder={placeholder} style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: "var(--radius-md)", padding: "8px 10px", color: C.text, fontSize: 12.5, width: w || "100%", outline: "none", fontFamily: mono ? "'JetBrains Mono',monospace" : "inherit", boxSizing: "border-box", ...(style || {}) }} {...p} />;
 
 type TxtProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
   rows?: number;
@@ -201,7 +201,7 @@ type TxtProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
   style?: CSSProperties;
 };
 
-export const Txt = ({ placeholder, rows = 3, mono = true, style, ...p }: TxtProps) => <textarea placeholder={placeholder} rows={rows} style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: 7, padding: "8px 10px", color: C.text, fontSize: 11, width: "100%", outline: "none", resize: "vertical", fontFamily: mono ? "'JetBrains Mono',monospace" : "inherit", boxSizing: "border-box", ...(style || {}) }} {...p} />;
+export const Txt = ({ placeholder, rows = 3, mono = true, style, ...p }: TxtProps) => <textarea placeholder={placeholder} rows={rows} style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: "var(--radius-md)", padding: "8px 10px", color: C.text, fontSize: 12.5, width: "100%", outline: "none", resize: "vertical", fontFamily: mono ? "'JetBrains Mono',monospace" : "inherit", boxSizing: "border-box", ...(style || {}) }} {...p} />;
 
 type SelProps = SelectHTMLAttributes<HTMLSelectElement> & {
   children?: ReactNode;
@@ -477,7 +477,7 @@ export const Sel = ({ children, w, style, value, defaultValue, onChange, disable
       {optionGroups.map(([groupLabel, groupOptions]) => (
         <div key={groupLabel || "ungrouped"} style={{ display: "grid", gap: 4 }}>
           {groupLabel ? (
-            <div style={{ padding: "6px 10px 2px", fontSize: 9, fontWeight: 700, letterSpacing: 1, color: C.muted, textTransform: "uppercase" }}>
+            <div style={{ padding: "6px 10px 2px", fontSize: 10, fontWeight: 700, letterSpacing: 1, color: C.muted, textTransform: "uppercase" }}>
               {groupLabel}
             </div>
           ) : null}
@@ -647,7 +647,7 @@ type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 export const Btn = ({ children, primary = false, danger = false, small = false, onClick, disabled = false, full = false, style, ...p }: BtnProps) => (
-  <button onClick={onClick} disabled={disabled} {...p} style={{ background: danger ? C.redFg : primary ? C.accentFg : "transparent", color: danger || primary ? "var(--c-bg)" : C.text, border: `1px solid ${danger ? C.redFg : primary ? C.accentFg : C.borderHi}`, borderRadius: 7, padding: small ? "5px 10px" : "8px 14px", fontSize: small ? 11 : 12, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, width: full ? "100%" : "auto", letterSpacing: 0.2, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, boxShadow: "none", transition: "opacity 0.15s, background 0.15s, border-color 0.15s", ...(style || {}) }}>{children}</button>
+  <button onClick={onClick} disabled={disabled} {...p} style={{ background: danger ? C.redFg : primary ? C.accentFg : "transparent", color: danger || primary ? "var(--c-bg)" : C.text, border: `1px solid ${danger ? C.redFg : primary ? C.accentFg : C.borderHi}`, borderRadius: "var(--radius-md)", padding: small ? "5px 10px" : "7px 14px", fontSize: small ? 11.5 : 12.5, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, width: full ? "100%" : "auto", letterSpacing: 0, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, boxShadow: "none", transition: "opacity 0.15s, background 0.15s, border-color 0.15s", ...(style || {}) }}>{children}</button>
 );
 
 type BadgeProps = {
@@ -662,7 +662,7 @@ export const B = ({ children, c = "accent", pulse = false }: BadgeProps) => {
   const textColor = palette[`${c}Fg`] || palette[c] || C.accentFg;
   const bgColor = palette[`${c}Dim`] || C.accentDim;
   return (
-    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 5, fontSize: 10, fontWeight: 600, color: textColor, background: bgColor, letterSpacing: 0.3, border: `1px solid ${bgColor}`, animation: pulse ? "pulse 2s infinite" : "none" }}>{children}</span>
+    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 999, fontSize: 10.5, fontWeight: 600, color: textColor, background: bgColor, letterSpacing: 0.1, whiteSpace: "nowrap", border: `1px solid ${bgColor}`, animation: pulse ? "pulse 2s infinite" : "none" }}>{children}</span>
   );
 };
 
@@ -673,8 +673,8 @@ type TabsProps = {
 };
 
 export const Tabs = ({ tabs, active, onChange }: TabsProps) => (
-  <div style={{ display: "flex", gap: 3, marginBottom: 14, flexWrap: "wrap", padding: "3px", background: C.card, borderRadius: 9, border: `1px solid ${C.border}`, width: "fit-content" }}>
-    {tabs.map((t) => <button key={t} onClick={() => onChange(t)} style={{ background: active === t ? C.accentDim : "transparent", color: active === t ? C.accentFg : C.muted, border: `1px solid ${active === t ? C.accentFg : "transparent"}`, borderRadius: 6, padding: "5px 12px", fontSize: 11.5, fontWeight: active === t ? 600 : 500, cursor: "pointer", letterSpacing: 0, transition: "all .15s", boxShadow: "none" }}>{t}</button>)}
+  <div style={{ display: "flex", gap: 2, marginBottom: 14, flexWrap: "wrap", borderBottom: `1px solid ${C.border}` }}>
+    {tabs.map((t) => <button key={t} aria-current={active === t ? "page" : undefined} onClick={() => onChange(t)} style={{ background: "transparent", color: active === t ? C.text : C.muted, border: "none", borderBottom: `2px solid ${active === t ? C.accentFg : "transparent"}`, marginBottom: -1, borderRadius: 0, padding: "7px 12px", fontSize: 12.5, fontWeight: active === t ? 600 : 500, cursor: "pointer", letterSpacing: 0, transition: "color .15s, border-color .15s", boxShadow: "none" }}>{t}</button>)}
   </div>
 );
 
@@ -713,10 +713,10 @@ export const Stat = ({ l, v, s, c = "accent", i }: StatProps) => {
   return (
     <div className="vecta-stat-card" style={{ flex: 1, background: C.card, borderRadius: "var(--radius-md)", border: `1px solid ${C.border}`, padding: "14px 16px", boxShadow: "var(--shadow-sm)", position: "relative", overflow: "hidden" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 11, fontWeight: 500, color: C.muted, letterSpacing: 0 }}>{l}</span>
+        <span style={{ fontSize: 12, fontWeight: 500, color: C.dim, letterSpacing: 0 }}>{l}</span>
         <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 8, background: dimColor, color: accentColor }}><Icon size={13} strokeWidth={2.2} /></span>
       </div>
-      <div className="vk-num" style={{ fontSize: 24, fontWeight: 650, color: C.text, marginTop: 6, letterSpacing: -0.5 }}>{v}</div>
+      <div className="vk-num" style={{ fontSize: 26, fontWeight: 600, color: C.text, marginTop: 6, letterSpacing: -0.6 }}>{v}</div>
       {s && <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{s}</div>}
     </div>
   );

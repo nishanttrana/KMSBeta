@@ -118,7 +118,7 @@ export function Inventory({ session, sources, filters, setFilters, onOpen, reloa
                   </td>
                   <td style={{ ...TD, fontFamily: MONO, fontSize: 11, whiteSpace: "nowrap" }}>
                     {a.algorithm || "-"}
-                    {a.pqc_ready && <span style={{ marginLeft: 6, fontFamily: "inherit", fontSize: 9.5, fontWeight: 700, color: C.greenFg, background: C.greenDim, borderRadius: 4, padding: "1px 5px" }}>PQC</span>}
+                    {a.pqc_ready && <span style={{ marginLeft: 6, fontFamily: "inherit", fontSize: 10, fontWeight: 700, color: C.greenFg, background: C.greenDim, borderRadius: 4, padding: "1px 5px" }}>PQC</span>}
                   </td>
                   <td style={{ ...TD, whiteSpace: "nowrap", color: a.strength_bits > 0 ? C.text : C.muted }}>{a.strength_bits > 0 ? `${a.strength_bits}-bit` : "not assessed"}</td>
                   <td style={TD}><ClassPill cls={a.classification} /></td>

@@ -4,6 +4,51 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [11.1.0-beta] — 2026-10-11
+
+### A new look for the console
+- **New identity.** A new mark (a V holding a keyed core) and wordmark in
+  the sidebar, on sign-in and on the loading screens, and a browser-tab icon
+  (the console had none). The old shield logo is removed.
+- **New themes: Ink (dark) and Frost (light)**, with one azure accent and
+  colour kept for status. The sidebar stays ink in both themes.
+- **New sidebar icons**, one per module; two pairs of modules shared an icon.
+- **Loading.** The brand screen paints with the page, before the app loads,
+  and is the same screen shown while the session is restored. The in-flight
+  indicator is a small pill, not a blurred full-page card.
+- **System fonts.** The console no longer asks a font host for Inter and
+  JetBrains Mono. Its own Content-Security-Policy refused that request, so a
+  deployed console never had them; text now renders in the operating
+  system's interface and coding fonts on the first frame.
+- **Shared controls.** Underlined tabs, sentence-case field labels, larger
+  field text, a focus ring on every field, pill badges.
+- **Less text.** Removed: the sign-in tagline, subtitle, default-admin note
+  and a fixed "256-bit AES-GCM · FIPS 140-3 · TLS 1.3" footer (shown whatever
+  FIPS mode was in effect); the group name and "Tenant" caption in the top
+  bar; two Command Center subtitles.
+
+### Fixed
+- **Theme flash on load.** The script that set the saved theme was inline,
+  which the console's CSP refuses, so a light-theme user saw the dark theme
+  first. It is now a file.
+- **Top bar ran off the screen** at 1280px wide (the bell and theme switch
+  were unreachable) and its title wrapped onto two lines. Search folds to an
+  icon at 1440px and below.
+- **Text below 10px** in about 370 places is now 10px.
+- **Status and accent text on the light theme** used fixed dark-theme
+  colours in about 360 places and was hard to read. It now follows the theme.
+- **Command Center showed "NaN / undefined"** for PQC assets when the scan
+  summary had no counts. It shows "no scan on record".
+- **System Health showed "ALL OK" with no components listed.** The badge
+  appears only when there are components to judge.
+- Monospace text fell back to Courier; empty-state icons in Secret Vault and
+  Operations sat left of their centred text; the Vault tiles wrapped one tile
+  onto a second row; sign-in errors used fixed colours.
+
+Enforced by `web/dashboard/tests/unit/brandAndLegibility.test.ts`. Decision
+in [docs/DECISIONS.md](docs/DECISIONS.md). Not done: explanatory paragraphs
+inside individual modules are unchanged.
+
 ## [11.0.0-beta] — 2026-10-11
 
 ### System Administration no longer offers what it could not do

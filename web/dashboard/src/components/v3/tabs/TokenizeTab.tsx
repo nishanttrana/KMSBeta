@@ -466,8 +466,8 @@ export const TokenizeTab=({session,keyCatalog,onToast})=>{
     </div>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,alignItems:"start"}}>
       <Card style={{padding:18}}>
-        <div style={{fontSize:30,fontWeight:700,color:C.text,marginBottom:8,fontFamily:"'Inter',sans-serif",lineHeight:1}}>{panelTitle}</div>
-        <div style={{fontSize:11,color:C.muted,marginBottom:12}}>All operations execute against the <span style={{color:C.accent}}>dataprotect</span> backend with real cryptography.</div>
+        <div style={{fontSize:30,fontWeight:700,color:C.text,marginBottom:8,fontFamily:"inherit",lineHeight:1}}>{panelTitle}</div>
+        <div style={{fontSize:11,color:C.muted,marginBottom:12}}>All operations execute against the <span style={{color:C.accentFg}}>dataprotect</span> backend with real cryptography.</div>
         {op==="Tokenize"&&<>
           <FG label="Tokenization Mode" required>
             <Sel value={tokenMode} onChange={(e)=>setTokenMode((e.target.value==="vaultless"?"vaultless":"vault") as "vault"|"vaultless")}>
@@ -555,15 +555,15 @@ export const TokenizeTab=({session,keyCatalog,onToast})=>{
         <Btn primary full style={{marginTop:12,padding:"10px 14px",fontSize:12}} onClick={()=>void submitCurrent()} disabled={submitting||loading}>{submitting?"Working...":op}</Btn>
       </Card>
       <Card style={{padding:18}}>
-        <div style={{fontSize:30,fontWeight:700,color:C.text,marginBottom:8,fontFamily:"'Inter',sans-serif",lineHeight:1}}>Result</div>
+        <div style={{fontSize:30,fontWeight:700,color:C.text,marginBottom:8,fontFamily:"inherit",lineHeight:1}}>Result</div>
         <Txt value={resultText} rows={24} readOnly style={{minHeight:420}}/>
       </Card>
     </div>
 
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
       <Card style={{padding:16}}>
-        <div style={{fontSize:22,fontWeight:700,color:C.text,marginBottom:6,fontFamily:"'Inter',sans-serif"}}>Data Masking</div>
-        <div style={{fontSize:11,color:C.dim,marginBottom:8}}>Pattern: <span style={{color:C.accent}}>{maskPattern}</span> - Role: <span style={{color:C.accent}}>{maskRole}</span></div>
+        <div style={{fontSize:22,fontWeight:700,color:C.text,marginBottom:6,fontFamily:"inherit"}}>Data Masking</div>
+        <div style={{fontSize:11,color:C.dim,marginBottom:8}}>Pattern: <span style={{color:C.accentFg}}>{maskPattern}</span> - Role: <span style={{color:C.accentFg}}>{maskRole}</span></div>
         <div style={{fontSize:12,color:C.text,background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,padding:10,marginBottom:10}}>
           <div style={{color:C.dim,marginBottom:4}}>Input:</div>
           <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,wordBreak:"break-word"}}>{maskInput||"-"}</div>
@@ -571,8 +571,8 @@ export const TokenizeTab=({session,keyCatalog,onToast})=>{
         <Btn small onClick={()=>setOp("Mask")}>Open Mask Operation</Btn>
       </Card>
       <Card style={{padding:16}}>
-        <div style={{fontSize:22,fontWeight:700,color:C.text,marginBottom:6,fontFamily:"'Inter',sans-serif"}}>PII Redaction</div>
-        <div style={{fontSize:11,color:C.dim,marginBottom:8}}>Action: <span style={{color:C.accent}}>{redactAction}</span> {redactDetectOnly?"(detect-only)":"(apply)"}</div>
+        <div style={{fontSize:22,fontWeight:700,color:C.text,marginBottom:6,fontFamily:"inherit"}}>PII Redaction</div>
+        <div style={{fontSize:11,color:C.dim,marginBottom:8}}>Action: <span style={{color:C.accentFg}}>{redactAction}</span> {redactDetectOnly?"(detect-only)":"(apply)"}</div>
         <div style={{fontSize:12,color:C.text,background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,padding:10,marginBottom:10,maxHeight:90,overflow:"hidden"}}>
           <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,wordBreak:"break-word"}}>{redactInput||"-"}</div>
         </div>
@@ -752,7 +752,7 @@ export const DataEncryptionTab=({session,keyCatalog,onToast})=>{
   const tabs=["Field-Level (FLE)","Envelope","Searchable (AES-SIV)","FPE (FF1/FF3-1)"];
   return <div style={{display:"grid",gap:12}}>
     <Card style={{padding:16}}>
-      <div style={{fontSize:28,fontWeight:700,color:C.text,marginBottom:10,fontFamily:"'Inter',sans-serif",lineHeight:1}}>Data Encryption</div>
+      <div style={{fontSize:28,fontWeight:700,color:C.text,marginBottom:10,fontFamily:"inherit",lineHeight:1}}>Data Encryption</div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
         {tabs.map((name)=>(
           <button
@@ -1180,7 +1180,7 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
       <Card>
         <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Execution Model</div>
         <div style={{fontSize:10,color:C.dim,lineHeight:1.5}}>
-          Wrapper registration is mandatory when <code style={{color:C.accent}}>require_registered_wrapper</code> is enabled. Lease issuance enforces nonce/timestamp/signature checks and policy gates (cache/local crypto).
+          Wrapper registration is mandatory when <code style={{color:C.accentFg}}>require_registered_wrapper</code> is enabled. Lease issuance enforces nonce/timestamp/signature checks and policy gates (cache/local crypto).
         </div>
       </Card>
     </Section>
@@ -1283,7 +1283,7 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
                     <div>
                       <div style={{fontSize:11,color:C.text,fontWeight:700}}>{String(item?.display_name||item?.wrapper_id||"")}</div>
-                      <div style={{fontSize:9,color:C.muted}}>{String(item?.wrapper_id||"")} � {String(item?.app_id||"")}</div>
+                      <div style={{fontSize: 10,color:C.muted}}>{String(item?.wrapper_id||"")} � {String(item?.app_id||"")}</div>
                     </div>
                     <B c={badgeColor as any}>{status||"pending"}</B>
                   </div>
@@ -1303,7 +1303,7 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
                     <div>
                       <div style={{fontSize:11,color:C.text,fontWeight:700}}>{String(item?.lease_id||"")}</div>
-                      <div style={{fontSize:9,color:C.muted}}>{`${String(item?.wrapper_id||"")} � ${String(item?.operation||"")} � used ${Number(item?.used_ops||0)}/${Number(item?.max_ops||0)}`}</div>
+                      <div style={{fontSize: 10,color:C.muted}}>{`${String(item?.wrapper_id||"")} � ${String(item?.operation||"")} � used ${Number(item?.used_ops||0)}/${Number(item?.max_ops||0)}`}</div>
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <B c={revoked?"red":"green"}>{revoked?"revoked":"active"}</B>
@@ -2381,13 +2381,13 @@ const AuditLogViewer=({session,onToast})=>{
               <div>
                 <div style={{display:"flex",gap:6,alignItems:"center"}}>
                   <span style={{fontSize:11,fontWeight:700,color:C.text}}>{e?.operation||""}</span>
-                  <B c={e?.category==="policy"?"yellow":e?.category==="encryption"?"blue":"accent"} style={{fontSize:9}}>{e?.category||""}</B>
+                  <B c={e?.category==="policy"?"yellow":e?.category==="encryption"?"blue":"accent"} style={{fontSize: 10}}>{e?.category||""}</B>
                 </div>
                 <div style={{fontSize:10,color:C.dim}}>{e?.detail||""}</div>
               </div>
               <div style={{textAlign:"right",flexShrink:0}}>
-                <div style={{fontSize:9,color:C.muted}}>{e?.actor||""}</div>
-                <div style={{fontSize:9,color:C.dim}}>{ts}</div>
+                <div style={{fontSize: 10,color:C.muted}}>{e?.actor||""}</div>
+                <div style={{fontSize: 10,color:C.dim}}>{ts}</div>
               </div>
             </div>
           </div>;
@@ -2434,8 +2434,8 @@ export const DataProtectionTab=({session,keyCatalog,onToast,subView,onSubViewCha
         return <Card key={i} style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
           <Icon size={18} style={{color:s.color,flexShrink:0}}/>
           <div>
-            <div style={{fontSize:20,fontWeight:800,color:C.text,fontFamily:"'Inter',sans-serif",lineHeight:1}}>{s.v??"-"}</div>
-            <div style={{fontSize:9,color:C.muted,letterSpacing:0.5,textTransform:"uppercase"}}>{s.l}</div>
+            <div style={{fontSize:20,fontWeight:800,color:C.text,fontFamily:"inherit",lineHeight:1}}>{s.v??"-"}</div>
+            <div style={{fontSize: 10,color:C.muted,letterSpacing:0.5,textTransform:"uppercase"}}>{s.l}</div>
           </div>
         </Card>;
       })}

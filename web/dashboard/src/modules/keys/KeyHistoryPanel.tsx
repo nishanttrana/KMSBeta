@@ -76,20 +76,20 @@ export function KeyHistoryPanel({ session, keyID }: { session: AuthSession | nul
           <Btn small onClick={() => void verify()} disabled={verifying || !events.length}>{verifying ? "Verifying..." : "Verify integrity"}</Btn>
         </div>
       </div>
-      {proofError && <div style={{ fontSize: 10, color: C.red, marginTop: 4 }}>Verification unavailable: {proofError}</div>}
+      {proofError && <div style={{ fontSize: 10, color: C.redFg, marginTop: 4 }}>Verification unavailable: {proofError}</div>}
       {proof && (
-        <div style={{ fontSize: 10, marginTop: 4, color: proof.verdict === "tampered" ? C.red : C.green }}>
+        <div style={{ fontSize: 10, marginTop: 4, color: proof.verdict === "tampered" ? C.redFg : C.greenFg }}>
           {proof.verdict === "tampered"
             ? `Tampering detected: ${proof.failed} of ${proof.events_checked} events failed verification. A critical chain_broken audit event was raised.`
             : proof.verdict === "no_events"
               ? "No audit events name this key."
               : `Intact: ${proof.events_checked} events recomputed from storage and chained; ${proof.sealed} proven against signed checkpoints, ${proof.pending} awaiting the next checkpoint.`}
-          {!proof.signing_key_configured && <span style={{ color: C.amber }}> HMAC signatures not checked: this node holds no audit signing key.</span>}
-          {proof.unsigned > 0 && <span style={{ color: C.amber }}> {proof.unsigned} events carry no HMAC.</span>}
-          {proof.truncated && <span style={{ color: C.amber }}> Only the newest {proof.events_checked} events were checked.</span>}
+          {!proof.signing_key_configured && <span style={{ color: C.amberFg }}> HMAC signatures not checked: this node holds no audit signing key.</span>}
+          {proof.unsigned > 0 && <span style={{ color: C.amberFg }}> {proof.unsigned} events carry no HMAC.</span>}
+          {proof.truncated && <span style={{ color: C.amberFg }}> Only the newest {proof.events_checked} events were checked.</span>}
         </div>
       )}
-      {eventsError && <div style={{ fontSize: 10, color: C.red, marginTop: 4 }}>Timeline unavailable: {eventsError}</div>}
+      {eventsError && <div style={{ fontSize: 10, color: C.redFg, marginTop: 4 }}>Timeline unavailable: {eventsError}</div>}
       <div style={{ maxHeight: 220, overflowY: "auto", marginTop: 4 }}>
         {events.map((e) => {
           const note = integrityNote(byEvent.get(e.id));
@@ -98,7 +98,7 @@ export function KeyHistoryPanel({ session, keyID }: { session: AuthSession | nul
               <span style={{ fontFamily: "'JetBrains Mono',monospace", color: C.muted }}>{when(e.timestamp)}</span>{" "}
               <span style={{ color: C.text }}>{shortAction(e.action)}</span>{" "}
               by {e.actor_id || "-"}{" "}
-              <span style={{ color: e.result === "success" ? C.green : e.result === "refused" ? C.amber : C.red }}>{e.result}</span>
+              <span style={{ color: e.result === "success" ? C.greenFg : e.result === "refused" ? C.amberFg : C.redFg }}>{e.result}</span>
               {note && <div style={{ color: note.color }}>{note.text}</div>}
             </div>
           );
@@ -107,10 +107,10 @@ export function KeyHistoryPanel({ session, keyID }: { session: AuthSession | nul
       </div>
 
       <div style={{ ...h, marginTop: 12 }}>Used by</div>
-      {usageError && <div style={{ fontSize: 10, color: C.red, marginTop: 4 }}>Usage unavailable: {usageError}</div>}
+      {usageError && <div style={{ fontSize: 10, color: C.redFg, marginTop: 4 }}>Usage unavailable: {usageError}</div>}
       {usage && (
         <>
-          <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>
             Crypto operations recorded on this node in the last {usage.window_days} days.
           </div>
           {usage.consumers.map((c) => (
@@ -137,7 +137,7 @@ export function KeyHistoryPanel({ session, keyID }: { session: AuthSession | nul
           <div>
             Rotate: new operations use v{impact.current_version + 1}. By default v{impact.current_version} is deactivated; the rotate dialog can keep it active or destroy it.
           </div>
-          <div style={{ color: impact.active_callers ? C.amber : C.text }}>
+          <div style={{ color: impact.active_callers ? C.amberFg : C.text }}>
             Delete: {impact.active_callers ? "every caller above loses this key." : "no recorded caller is affected on this node; other nodes keep their own usage trail."}
           </div>
           {versions && <div style={{ color: C.muted }}>Versions: {versions}.</div>}

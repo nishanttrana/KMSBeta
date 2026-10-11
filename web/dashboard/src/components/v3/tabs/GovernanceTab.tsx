@@ -335,7 +335,7 @@ export const GovernanceTab = ({ session, onToast, onNavigate }: any) => {
       {/* Request list */}
       <Card style={{ padding: 0, overflow: "hidden" }}>
         {/* Table header */}
-        <div style={{ display: "grid", gridTemplateColumns: "28px 1.5fr 0.8fr 0.6fr 0.6fr 0.5fr 0.7fr auto", padding: "10px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, background: C.surface }}>
+        <div style={{ display: "grid", gridTemplateColumns: "28px 1.5fr 0.8fr 0.6fr 0.6fr 0.5fr 0.7fr auto", padding: "10px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, background: C.surface }}>
           <div></div><div>Action / Target</div><div>Requester</div><div>Required</div><div>Progress</div><div>Status</div><div>Time</div><div style={{ textAlign: "right" }}>Actions</div>
         </div>
 
@@ -431,7 +431,7 @@ export const GovernanceTab = ({ session, onToast, onNavigate }: any) => {
     {/* ════════════ POLICIES TAB ════════════ */}
     {tab === "policies" && <Section title="Approval Policies" actions={<Btn small primary onClick={() => openPolicyModal()}>Create Policy</Btn>}>
       <Card style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.6fr 0.6fr 0.5fr 0.5fr 0.6fr 0.4fr auto", padding: "10px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, background: C.surface }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.6fr 0.6fr 0.5fr 0.5fr 0.6fr 0.4fr auto", padding: "10px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, background: C.surface }}>
           <div>Policy</div><div>Scope</div><div>Quorum</div><div>Req</div><div>Total</div><div>Timeout</div><div>Status</div><div></div>
         </div>
         <div style={{ maxHeight: 400, overflowY: "auto" }}>
@@ -441,7 +441,7 @@ export const GovernanceTab = ({ session, onToast, onNavigate }: any) => {
                 <div style={{ color: C.text, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
                 <div style={{ fontSize: 10, color: C.dim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{(p.trigger_actions || []).join(", ") || "—"}</div>
               </div>
-              <div style={{ color: C.accent }}>{p.scope}</div>
+              <div style={{ color: C.accentFg }}>{p.scope}</div>
               <div style={{ color: C.text }}>{p.quorum_mode || "threshold"}</div>
               <div style={{ color: C.text, fontWeight: 700 }}>{p.required_approvals}</div>
               <div style={{ color: C.dim }}>{p.total_approvers}</div>
@@ -557,7 +557,7 @@ export const GovernanceTab = ({ session, onToast, onNavigate }: any) => {
           >
             <div style={{ width: 16, height: 16, borderRadius: 8, background: C.white, position: "absolute", top: 3, left: deliveryMode === "notify" ? 21 : 3, transition: "left .2s", boxShadow: "0 1px 3px rgba(0,0,0,.3)" }} />
           </div>
-          <span style={{ fontSize: 11, color: deliveryMode === "notify" ? C.accent : C.dim, fontWeight: 600 }}>
+          <span style={{ fontSize: 11, color: deliveryMode === "notify" ? C.accentFg : C.dim, fontWeight: 600 }}>
             {deliveryMode === "notify" ? "Enabled — External + Dashboard" : "Disabled — Dashboard Only"}
           </span>
         </div>
@@ -586,7 +586,7 @@ export const GovernanceTab = ({ session, onToast, onNavigate }: any) => {
         }}>Test SMTP</Btn>
       </>}
 
-      {(notifySlack || notifyTeams) && notifyConnsErr && <div style={{ fontSize: 11, color: C.red, marginBottom: 8 }}>Connections unavailable: {notifyConnsErr}</div>}
+      {(notifySlack || notifyTeams) && notifyConnsErr && <div style={{ fontSize: 11, color: C.redFg, marginBottom: 8 }}>Connections unavailable: {notifyConnsErr}</div>}
       {([["slack", "Slack", notifySlack, slackConn, setSlackConn], ["teams", "Teams", notifyTeams, teamsConn, setTeamsConn]] as const).map(([ch, label, on, value, set]) => on && (
         <FG key={ch} label={`${label} connection`} hint="Approval notices are sent through this connection; its webhook URL is sealed under Playbooks → Connections">
           <div style={{ display: "flex", gap: 6 }}>
@@ -618,7 +618,7 @@ export const GovernanceTab = ({ session, onToast, onNavigate }: any) => {
 
 const MiniField = ({ label, value, mono }: { label: string; value: string; mono?: boolean }) => (
   <div>
-    <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>{label}</div>
+    <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>{label}</div>
     <div style={{ fontSize: 11, color: C.text, fontFamily: mono ? "'JetBrains Mono',monospace" : "inherit", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</div>
   </div>
 );

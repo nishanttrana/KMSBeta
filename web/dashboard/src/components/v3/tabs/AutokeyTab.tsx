@@ -438,10 +438,10 @@ export const AutokeyTab = ({ session, onToast }: any) => {
                 ["4", "Provision & bind", "After approval, KeyCore creates the key and Autokey records a managed handle binding."]
               ].map(([step, title, text]) => (
                 <div key={String(step)} style={{ display: "grid", gridTemplateColumns: "28px 1fr", gap: 10, alignItems: "start" }}>
-                  <div style={{ width: 24, height: 24, borderRadius: 12, background: C.accentDim, color: C.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800 }}>{step}</div>
+                  <div style={{ width: 24, height: 24, borderRadius: 12, background: C.accentDim, color: C.accentFg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800 }}>{step}</div>
                   <div>
                     <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{title}</div>
-                    <div style={{ fontSize: 9, color: C.dim, marginTop: 3 }}>{text}</div>
+                    <div style={{ fontSize: 10, color: C.dim, marginTop: 3 }}>{text}</div>
                   </div>
                 </div>
               ))}
@@ -472,7 +472,7 @@ export const AutokeyTab = ({ session, onToast }: any) => {
             </Row2>
             <FG label="Default Approval Policy ID"><Inp value={String(settingsDraft?.default_policy_id || "")} onChange={(e) => setSettingsDraft((p: any) => ({ ...p, default_policy_id: e.target.value }))} placeholder="policy-approval-root" /></FG>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 4 }}>
-              <div style={{ fontSize: 9, color: C.dim }}>Updated: {fmtTS(settings?.updated_at)}</div>
+              <div style={{ fontSize: 10, color: C.dim }}>Updated: {fmtTS(settings?.updated_at)}</div>
               <Btn primary onClick={saveSettings} disabled={busy}>Save Settings</Btn>
             </div>
           </Card>
@@ -527,13 +527,13 @@ export const AutokeyTab = ({ session, onToast }: any) => {
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
                     <div>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>{String(item?.name || item?.id || "-")}</div>
-                      <div style={{ fontSize: 9, color: C.dim }}>{String(item?.service_name || "-")} • {String(item?.resource_type || "-")} • {String(item?.algorithm || "-")}</div>
+                      <div style={{ fontSize: 10, color: C.dim }}>{String(item?.service_name || "-")} • {String(item?.resource_type || "-")} • {String(item?.algorithm || "-")}</div>
                     </div>
                     <B c={item?.enabled ? "green" : "amber"}>{item?.enabled ? "Enabled" : "Disabled"}</B>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
-                    <div style={{ fontSize: 9, color: C.dim }}>Handle: {String(item?.handle_name_pattern || "-")}</div>
-                    <div style={{ fontSize: 9, color: C.dim }}>Key: {String(item?.key_name_pattern || "-")}</div>
+                    <div style={{ fontSize: 10, color: C.dim }}>Handle: {String(item?.handle_name_pattern || "-")}</div>
+                    <div style={{ fontSize: 10, color: C.dim }}>Key: {String(item?.key_name_pattern || "-")}</div>
                   </div>
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }}>
                     <Btn small onClick={() => setTemplateDraft({
@@ -602,7 +602,7 @@ export const AutokeyTab = ({ session, onToast }: any) => {
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
                     <div>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>{String(item?.display_name || item?.service_name || "-")}</div>
-                      <div style={{ fontSize: 9, color: C.dim }}>{String(item?.service_name || "-")} • {String(item?.algorithm || "inherit")} • {String(item?.purpose || "inherit")}</div>
+                      <div style={{ fontSize: 10, color: C.dim }}>{String(item?.service_name || "-")} • {String(item?.algorithm || "inherit")} • {String(item?.purpose || "inherit")}</div>
                     </div>
                     <B c={item?.enabled ? "green" : "amber"}>{item?.enabled ? "Enabled" : "Disabled"}</B>
                   </div>
@@ -658,7 +658,7 @@ export const AutokeyTab = ({ session, onToast }: any) => {
             <FG label="Labels JSON"><Txt rows={4} value={requestDraft?.labels_json} onChange={(e) => setRequestDraft((p: any) => ({ ...p, labels_json: e.target.value }))} /></FG>
             <FG label="Justification"><Txt rows={4} mono={false} value={requestDraft?.justification} onChange={(e) => setRequestDraft((p: any) => ({ ...p, justification: e.target.value }))} placeholder="Why does this service/resource need a managed handle?" /></FG>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-              <div style={{ fontSize: 9, color: C.dim }}>Approval-required requests continue in the Governance tab. Autokey will provision the key after approval.</div>
+              <div style={{ fontSize: 10, color: C.dim }}>Approval-required requests continue in the Governance tab. Autokey will provision the key after approval.</div>
               <Btn primary onClick={submitRequest} disabled={busy}>Submit Request</Btn>
             </div>
           </Card>
@@ -672,7 +672,7 @@ export const AutokeyTab = ({ session, onToast }: any) => {
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
                       <div>
                         <div style={{ fontSize: 10, fontWeight: 700, color: C.text }}>{String(item?.service_name || "-")} • {String(item?.resource_ref || "-")}</div>
-                        <div style={{ fontSize: 9, color: C.dim }}>{String(item?.resource_type || "-")} • {String(item?.handle_name || "-")}</div>
+                        <div style={{ fontSize: 10, color: C.dim }}>{String(item?.resource_type || "-")} • {String(item?.handle_name || "-")}</div>
                       </div>
                       <B c={requestTone(String(item?.status || ""))}>{String(item?.status || "unknown")}</B>
                     </div>
@@ -681,8 +681,8 @@ export const AutokeyTab = ({ session, onToast }: any) => {
                       <Stat l="Approval" v={Boolean(item?.approval_required) ? "Required" : "Direct"} c={Boolean(item?.approval_required) ? "amber" : "green"} />
                       <Stat l="Created" v={fmtTS(item?.created_at)} c="blue" />
                     </div>
-                    {item?.policy_mismatch_reason ? <div style={{ fontSize: 9, color: C.amber, marginTop: 6 }}>{String(item.policy_mismatch_reason)}</div> : null}
-                    {item?.failure_reason ? <div style={{ fontSize: 9, color: C.red, marginTop: 6 }}>{String(item.failure_reason)}</div> : null}
+                    {item?.policy_mismatch_reason ? <div style={{ fontSize: 10, color: C.amberFg, marginTop: 6 }}>{String(item.policy_mismatch_reason)}</div> : null}
+                    {item?.failure_reason ? <div style={{ fontSize: 10, color: C.redFg, marginTop: 6 }}>{String(item.failure_reason)}</div> : null}
                   </div>
                 ))}
                 {!requests.length && <div style={{ fontSize: 10, color: C.muted }}>No Autokey requests yet.</div>}
@@ -697,11 +697,11 @@ export const AutokeyTab = ({ session, onToast }: any) => {
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
                       <div>
                         <div style={{ fontSize: 10, fontWeight: 700, color: C.text }}>{String(item?.handle_name || "-")}</div>
-                        <div style={{ fontSize: 9, color: C.dim }}>{String(item?.service_name || "-")} • {String(item?.resource_ref || "-")}</div>
+                        <div style={{ fontSize: 10, color: C.dim }}>{String(item?.service_name || "-")} • {String(item?.resource_ref || "-")}</div>
                       </div>
                       <B c={Boolean(item?.policy_matched) ? "green" : "amber"}>{Boolean(item?.policy_matched) ? "Policy matched" : "Review"}</B>
                     </div>
-                    <div style={{ fontSize: 9, color: C.dim, marginTop: 6 }}>Key ID: {String(item?.key_id || "-")}</div>
+                    <div style={{ fontSize: 10, color: C.dim, marginTop: 6 }}>Key ID: {String(item?.key_id || "-")}</div>
                   </div>
                 ))}
                 {!handles.length && <div style={{ fontSize: 10, color: C.muted }}>No managed handles yet.</div>}

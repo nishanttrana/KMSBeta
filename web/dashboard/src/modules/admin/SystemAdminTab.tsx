@@ -119,7 +119,7 @@ const settleHealthList=<T,>(r:PromiseSettledResult<T[]>):HealthList<T>=>
 
 function HealthListBody<T>({list,empty,children}:{list:HealthList<T>;empty:string;children:React.ReactNode}){
   if(!list.loaded) return <div style={{fontSize:10,color:C.muted}}>Loading...</div>;
-  if(list.error) return <div style={{fontSize:10,color:C.red}}>{`Unavailable: ${list.error}`}</div>;
+  if(list.error) return <div style={{fontSize:10,color:C.redFg}}>{`Unavailable: ${list.error}`}</div>;
   if(!list.items.length) return <div style={{fontSize:10,color:C.muted}}>{empty}</div>;
   return <>{children}</>;
 }
@@ -289,7 +289,7 @@ const BackupRestoreFilePicker = ({
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
             <B c={hasFile ? "accent" : "blue"}>{hasFile ? formatBackupFileSize(file?.size || 0) : accept}</B>
-            <span style={{ fontSize: 9, color: C.muted }}>{hint}</span>
+            <span style={{ fontSize: 10, color: C.muted }}>{hint}</span>
           </div>
         </div>
       </div>
@@ -1254,12 +1254,12 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     >
       <Card style={{padding:10,borderRadius:8}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
-          <span style={{fontSize:11,color:C.blue,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999}}>{`${totalServices} Total`}</span>
-          <span style={{fontSize:11,color:C.green,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999}}>{`${Number(health.summary?.running||0)} Running`}</span>
-          <span style={{fontSize:11,color:C.amber,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999}}>{`${Number(health.summary?.degraded||0)} Degraded`}</span>
-          <span style={{fontSize:11,color:C.red,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999}}>{`${Number(health.summary?.down||0)} Down`}</span>
-          <span style={{fontSize:11,color:C.blue,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999}}>{`${Number(health.summary?.unknown||0)} Unknown`}</span>
-          <span style={{fontSize:11,color:runtimeAllOk?C.green:C.amber,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999,fontWeight:700}}>{runtimeAllOk?"ALL OK":"ATTN"}</span>
+          <span style={{fontSize:11,color:C.blueFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999}}>{`${totalServices} Total`}</span>
+          <span style={{fontSize:11,color:C.greenFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999}}>{`${Number(health.summary?.running||0)} Running`}</span>
+          <span style={{fontSize:11,color:C.amberFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999}}>{`${Number(health.summary?.degraded||0)} Degraded`}</span>
+          <span style={{fontSize:11,color:C.redFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999}}>{`${Number(health.summary?.down||0)} Down`}</span>
+          <span style={{fontSize:11,color:C.blueFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999}}>{`${Number(health.summary?.unknown||0)} Unknown`}</span>
+          {totalServices>0 && <span style={{fontSize:11,color:runtimeAllOk?C.greenFg:C.amberFg,background:C.bg,border:`1px solid ${C.border}`,padding:"3px 8px",borderRadius:999,fontWeight:700}}>{runtimeAllOk?"ALL OK":"ATTN"}</span>}
         </div>
         <div style={{maxHeight:420,overflowY:"auto",paddingRight:2}}>
           {(health.services||[]).map((svc)=>{
@@ -1319,7 +1319,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
             return <div key={r.name} style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"center",borderBottom:`1px solid ${C.border}`,padding:"6px 0"}}>
               <div style={{minWidth:0}}>
                 <div style={{fontSize:11,color:C.text,fontWeight:700}}>{r.name}</div>
-                <div style={{fontSize:10,color:r.last_error?C.red:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={r.last_error||""}>{r.last_error?`error: ${r.last_error}`:r.last_run_at?`last pass ${new Date(r.last_run_at).toLocaleString()}`:"not run yet"}</div>
+                <div style={{fontSize:10,color:r.last_error?C.redFg:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={r.last_error||""}>{r.last_error?`error: ${r.last_error}`:r.last_run_at?`last pass ${new Date(r.last_run_at).toLocaleString()}`:"not run yet"}</div>
               </div>
               <span style={{fontSize:10,color:C[tone(status)],fontWeight:700}}><span className={`vecta-hb-dot ${heartbeatToneClass(status)}`} />{r.last_error?"error":r.last_run_at?"ok":"pending"}</span>
             </div>;
@@ -1348,7 +1348,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}>
           <Btn small primary={fipsMode!=="enabled"} onClick={()=>{setSystemState((p)=>({...p,fips_mode:"enabled"}));onFipsModeChange("enabled");}}>Enable FIPS</Btn>
           <Btn small primary={fipsMode!=="disabled"} onClick={()=>{setSystemState((p)=>({...p,fips_mode:"disabled"}));onFipsModeChange("disabled");}}>Disable FIPS</Btn>
-          <span style={{fontSize:11,color:C.green,fontWeight:700,border:`1px solid ${C.border}`,background:C.bg,borderRadius:999,padding:"4px 9px",alignSelf:"center"}}>
+          <span style={{fontSize:11,color:C.greenFg,fontWeight:700,border:`1px solid ${C.border}`,background:C.bg,borderRadius:999,padding:"4px 9px",alignSelf:"center"}}>
             <span className={`vecta-hb-dot ${heartbeatToneClass(fipsMode==="enabled"?"running":"unknown")}`} />
             OK
           </span>
@@ -1510,7 +1510,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span style={{display:"inline-block",width:12,height:12,borderRadius:999,background:color,border:`1px solid ${C.border}`}} />
                 <span style={{fontSize:12,color:C.text,fontWeight:700}}>{name}</span>
-                <span style={{fontSize:10,color:usageCount>0?C.amber:C.muted}}>
+                <span style={{fontSize:10,color:usageCount>0?C.amberFg:C.muted}}>
                   {usageCount>0?`${usageCount} active key(s)`:"unused"}
                 </span>
               </div>
@@ -1726,7 +1726,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
             <Btn small onClick={async()=>{if(!session?.token) return; const lib=String(hsm.library_path||"").trim(); if(!lib){onToast("PKCS#11 library path is required before partition fetch."); return;} setSlotsLoading(true); try{const listing=await listAuthCLIHSMPartitions(session,lib,String(slotHint||"").trim()); setSlots(Array.isArray(listing.items)?listing.items:[]); setSlotRaw(String(listing.raw_output||"")); onToast("HSM partitions fetched.");}catch(error){if(!sessionGuard(error)) onToast(`Partition fetch failed: ${errMsg(error)}`);} finally{setSlotsLoading(false);}}} disabled={slotsLoading}>{slotsLoading?"Fetching...":"Fetch Partitions"}</Btn>
           </div>
           <div style={{marginTop:8,display:"flex",gap:8}}><Inp w={180} placeholder="slot filter (optional)" value={slotHint} onChange={(e)=>setSlotHint(e.target.value)}/></div>
-          <div style={{display:"grid",gap:8,marginTop:8}}>{slots.map((slot:CLIHSMPartitionSlot)=>{const key=`${String(slot.slot_id||"")}:${String(slot.partition||slot.token_label||slot.slot_name||"")}`; return <div key={key} style={{borderBottom:`1px solid ${C.border}`,paddingBottom:8}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><div style={{fontSize:12,color:C.text,fontWeight:700}}>{`${String(slot.slot_name||"slot")} (${String(slot.slot_id||"-")})`}</div><div style={{fontSize:10,color:C.dim}}>{`partition: ${String(slot.partition||"-")} | token: ${String(slot.token_label||"-")} | serial: ${String(slot.serial_number||"-")}`}</div></div><Btn small onClick={()=>setHsm((p)=>({...p,slot_id:String(slot.slot_id||""),partition_label:String(slot.partition||slot.slot_name||""),token_label:String(slot.token_label||slot.slot_name||"")}))}>Use</Btn></div></div>;})}{!slots.length?<div style={{fontSize:10,color:C.muted}}>No partitions loaded yet.</div>:null}{String(slotRaw||"").trim()?<div style={{fontSize:9,color:C.muted,fontFamily:"'JetBrains Mono', monospace",whiteSpace:"pre-wrap"}}>{slotRaw}</div>:null}</div>
+          <div style={{display:"grid",gap:8,marginTop:8}}>{slots.map((slot:CLIHSMPartitionSlot)=>{const key=`${String(slot.slot_id||"")}:${String(slot.partition||slot.token_label||slot.slot_name||"")}`; return <div key={key} style={{borderBottom:`1px solid ${C.border}`,paddingBottom:8}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><div style={{fontSize:12,color:C.text,fontWeight:700}}>{`${String(slot.slot_name||"slot")} (${String(slot.slot_id||"-")})`}</div><div style={{fontSize:10,color:C.dim}}>{`partition: ${String(slot.partition||"-")} | token: ${String(slot.token_label||"-")} | serial: ${String(slot.serial_number||"-")}`}</div></div><Btn small onClick={()=>setHsm((p)=>({...p,slot_id:String(slot.slot_id||""),partition_label:String(slot.partition||slot.slot_name||""),token_label:String(slot.token_label||slot.slot_name||"")}))}>Use</Btn></div></div>;})}{!slots.length?<div style={{fontSize:10,color:C.muted}}>No partitions loaded yet.</div>:null}{String(slotRaw||"").trim()?<div style={{fontSize: 10,color:C.muted,fontFamily:"'JetBrains Mono', monospace",whiteSpace:"pre-wrap"}}>{slotRaw}</div>:null}</div>
         </Card>
       </Row2>
     </Section>
@@ -1739,7 +1739,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}><Chk label="Dashboard approvals" checked={Boolean(gov.notify_dashboard)} onChange={()=>setGov((p)=>({...p,notify_dashboard:!p.notify_dashboard}))}/><Chk label="Email notifications" checked={Boolean(gov.notify_email)} onChange={()=>setGov((p)=>({...p,notify_email:!p.notify_email}))}/><Chk label="Slack notifications" checked={Boolean(gov.notify_slack)} onChange={()=>setGov((p)=>({...p,notify_slack:!p.notify_slack}))}/><Chk label="Teams notifications" checked={Boolean(gov.notify_teams)} onChange={()=>setGov((p)=>({...p,notify_teams:!p.notify_teams}))}/></div>
       <FG label="Mail relay (SMTP credential)" hint={!gov.smtp_connection_id&&gov.smtp_host?`Now using ${String(gov.smtp_host)}, stored here by an earlier release; it is moved into Credentials automatically.`:"Mail is always sent over TLS."}><CredentialPicker session={session} type="smtp" value={String(gov.smtp_connection_id||"")} onChange={(id:string)=>setGov((p)=>({...p,smtp_connection_id:id}))}/></FG>
       <Row2><FG label="SMTP Test Recipient"><div style={{display:"flex",gap:8}}><Inp value={smtpTo} onChange={(e)=>setSmtpTo(e.target.value)} placeholder="admin@domain.tld"/><Btn small onClick={async()=>{if(!session?.token||!String(smtpTo||"").trim()){onToast("Provide SMTP test recipient email."); return;} setSmtpTesting(true); try{await testGovernanceSMTP(session,String(smtpTo||"").trim()); onToast("SMTP test sent.");}catch(error){if(!sessionGuard(error)) onToast(`SMTP test failed: ${errMsg(error)}`);} finally{setSmtpTesting(false);}}} disabled={smtpTesting}>{smtpTesting?"Testing...":"Send"}</Btn></div></FG></Row2>
-      {govConnsErr&&<div style={{fontSize:11,color:C.red,marginBottom:8}}>Connections unavailable: {govConnsErr}</div>}
+      {govConnsErr&&<div style={{fontSize:11,color:C.redFg,marginBottom:8}}>Connections unavailable: {govConnsErr}</div>}
       {([["slack","Slack","slack_connection_id"],["teams","Teams","teams_connection_id"]] as const).map(([ch,label,field])=>(
         <FG key={ch} label={`${label} connection`} hint="Approval notices go through this connection; its webhook URL is sealed under Playbooks → Connections"><div style={{display:"flex",gap:8}}>
           <Sel value={String((gov as any)[field]||"")} onChange={(e)=>setGov((p)=>({...p,[field]:e.target.value}))}>
@@ -1842,7 +1842,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         </div>}
       </Card>
       <Card style={{marginTop:8,padding:10,borderRadius:8}}>
-        <div style={{display:"grid",gridTemplateColumns:"1.2fr 0.8fr 0.8fr 0.8fr 1fr",gap:8,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>{["Backup","Scope","Status","Rows","Actions"].map((h)=><div key={h} style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>{h}</div>)}</div>
+        <div style={{display:"grid",gridTemplateColumns:"1.2fr 0.8fr 0.8fr 0.8fr 1fr",gap:8,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>{["Backup","Scope","Status","Rows","Actions"].map((h)=><div key={h} style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>{h}</div>)}</div>
         {sortedJobs.map((job)=>{const id=String(job.id||""); const st=String(job.status||"unknown"); return <div key={id} style={{display:"grid",gridTemplateColumns:"1.2fr 0.8fr 0.8fr 0.8fr 1fr",gap:8,alignItems:"center",borderBottom:`1px solid ${C.border}`,padding:"9px 0"}}><div style={{minWidth:0}}><div style={{fontSize:12,color:C.text,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{id}</div><div style={{fontSize:10,color:C.dim}}>{String(job.created_at||"-")}</div></div><div style={{fontSize:11,color:C.text}}>{String(job.scope||"-")}</div><div style={{fontSize:11,color:C[tone(st)]}}>{st}</div><div style={{fontSize:11,color:C.text}}>{Number(job.row_count_total||0)}</div><div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}><Btn small onClick={async()=>{if(!session?.token||!id) return; setBackupDownloading(`${id}:artifact`); try{const p=await downloadGovernanceBackupArtifact(session,id); dl(p.file_name,p.content_base64,p.content_type); onToast("Backup artifact downloaded.");}catch(error){if(!sessionGuard(error)) onToast(`Backup download failed: ${errMsg(error)}`);} finally{setBackupDownloading("");}}} disabled={backupDownloading===`${id}:artifact`}>Artifact</Btn>{governanceBackupKeyRetained(job)&&<Btn small onClick={async()=>{if(!session?.token||!id) return; setBackupDownloading(`${id}:key`); try{const p=await downloadGovernanceBackupKey(session,id); dl(p.file_name,p.content_base64,p.content_type); onToast("Backup key package downloaded.");}catch(error){if(!sessionGuard(error)) onToast(`Backup download failed: ${errMsg(error)}`);} finally{setBackupDownloading("");}}} disabled={backupDownloading===`${id}:key`}>Key</Btn>}<Btn small danger onClick={async()=>{if(!session?.token||!id) return; setBackupDeleting(id); try{await deleteGovernanceBackup(session,id,session.username); onToast("Backup deleted."); await loadJobs();}catch(error){if(!sessionGuard(error)) onToast(`Backup delete failed: ${errMsg(error)}`);} finally{setBackupDeleting("");}}} disabled={backupDeleting===id}>Delete</Btn></div></div>;})}
         {!sortedJobs.length?<div style={{fontSize:10,color:C.muted,paddingTop:10}}>No backups found.</div>:null}
       </Card>
@@ -1860,9 +1860,9 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
                 :<span>Pattern: <span style={{fontFamily:"'JetBrains Mono', monospace",color:C.text}}>{rule.event_pattern||"*"}</span> | Threshold: {rule.threshold||1} in {rule.window_seconds||300}s</span>}
             </div>
             <div style={{display:"flex",gap:8,marginTop:4,fontSize:10}}>
-              <span style={{color:rule.severity==="critical"?C.red:rule.severity==="high"?C.orange:rule.severity==="warning"?C.amber:C.blue}}>{rule.severity||"warning"}</span>
+              <span style={{color:rule.severity==="critical"?C.redFg:rule.severity==="high"?C.orangeFg:rule.severity==="warning"?C.amberFg:C.blueFg}}>{rule.severity||"warning"}</span>
               <span style={{color:C.muted}}>channels: {(rule.channels||[]).join(", ")||"none"}</span>
-              <span style={{color:rule.enabled!==false?C.green:C.muted}}>{rule.enabled!==false?"enabled":"disabled"}</span>
+              <span style={{color:rule.enabled!==false?C.greenFg:C.muted}}>{rule.enabled!==false?"enabled":"disabled"}</span>
             </div>
           </div>
           <div style={{display:"flex",gap:6,flexShrink:0,marginLeft:8}}>
@@ -1896,7 +1896,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         <FG label="Expression">
           <Inp value={ruleExpression} onChange={(e)=>setRuleExpression(e.target.value)} placeholder={'e.g. action == "audit.key.export" AND actor_id != "backup-svc"'}/>
         </FG>
-        <div style={{fontSize:9,color:C.muted,marginTop:4,lineHeight:1.5,fontFamily:"'JetBrains Mono', monospace"}}>
+        <div style={{fontSize: 10,color:C.muted,marginTop:4,lineHeight:1.5,fontFamily:"'JetBrains Mono', monospace"}}>
           <div><B>Fields:</B> action, severity, actor_id, source_ip, service, target_type, target_id</div>
           <div><B>Operators:</B> == != contains startsWith matches</div>
           <div><B>Combinators:</B> AND OR ( )</div>
@@ -1928,9 +1928,9 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           <Btn small onClick={()=>void handleTestRule()} disabled={ruleChecking}>{ruleChecking?"Testing...":"Test rule"}</Btn>
         </div>
         {ruleCheck&&(!ruleCheck.valid
-          ?<div style={{fontSize:11,color:C.red,marginTop:8}}>Not valid: {ruleCheck.error}</div>
+          ?<div style={{fontSize:11,color:C.redFg,marginTop:8}}>Not valid: {ruleCheck.error}</div>
           :ruleCheck.replay_error
-            ?<div style={{fontSize:11,color:C.amber,marginTop:8}}>Valid. Replay not assessed: {ruleCheck.replay_error}</div>
+            ?<div style={{fontSize:11,color:C.amberFg,marginTop:8}}>Valid. Replay not assessed: {ruleCheck.replay_error}</div>
             :ruleCheck.replay&&<div style={{fontSize:11,color:C.text,marginTop:8,lineHeight:1.6}}>
               <div>Valid. Over {ruleCheck.replay.events_scanned} audit events{ruleCheck.replay.truncated?` (only since ${new Date(ruleCheck.replay.from).toLocaleString()}: the audit service returned its maximum)`:""}: <B>{ruleCheck.replay.matched}</B> matched, the rule would have fired <B>{ruleCheck.replay.fired}</B> time{ruleCheck.replay.fired===1?"":"s"}.</div>
               {ruleCheck.replay.samples.map((s)=><div key={s.event_id} style={{fontFamily:"'JetBrains Mono', monospace",fontSize:10,color:C.dim}}>{new Date(s.timestamp).toLocaleString()} · {s.action} · {s.actor_id||"—"}</div>)}
@@ -1984,22 +1984,22 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
                 </div>
                 <div style={{display:"flex",gap:6}}>
                   <button onClick={()=>openGovPolicyModal(policy)} style={{fontSize:10,padding:"3px 8px",borderRadius:5,border:`1px solid ${C.border}`,background:C.surface,color:C.text,cursor:"pointer"}}>Edit</button>
-                  <button onClick={async()=>{if(!session?.token) return; try{await updateGovernancePolicy(session,policy.id,{status:policy.status==="active"?"inactive":"active"}); onToast(policy.status==="active"?"Policy disabled.":"Policy activated."); await loadGovPolicies();}catch(e){onToast(`Toggle failed: ${errMsg(e)}`);}}} style={{fontSize:10,padding:"3px 8px",borderRadius:5,border:`1px solid ${policy.status==="active"?C.amber:C.green}44`,background:policy.status==="active"?`${C.amber}11`:`${C.green}11`,color:policy.status==="active"?C.amber:C.green,cursor:"pointer"}}>{policy.status==="active"?"Disable":"Enable"}</button>
+                  <button onClick={async()=>{if(!session?.token) return; try{await updateGovernancePolicy(session,policy.id,{status:policy.status==="active"?"inactive":"active"}); onToast(policy.status==="active"?"Policy disabled.":"Policy activated."); await loadGovPolicies();}catch(e){onToast(`Toggle failed: ${errMsg(e)}`);}}} style={{fontSize:10,padding:"3px 8px",borderRadius:5,border:`1px solid ${policy.status==="active"?C.amber:C.green}44`,background:policy.status==="active"?`${C.amber}11`:`${C.green}11`,color:policy.status==="active"?C.amberFg:C.greenFg,cursor:"pointer"}}>{policy.status==="active"?"Disable":"Enable"}</button>
                 </div>
               </div>
 
               <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:8}}>
-                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Quorum Mode</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{qLabel}</div></div>
-                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Timeout</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{policy.timeout_hours||48}h</div></div>
-                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Channels</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{channels.join(", ")||"dashboard"}</div></div>
-                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Hold State</div><div style={{fontSize:10,color:C.green,fontWeight:600,marginTop:2}}>Enforced</div></div>
+                <div><div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Quorum Mode</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{qLabel}</div></div>
+                <div><div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Timeout</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{policy.timeout_hours||48}h</div></div>
+                <div><div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Channels</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{channels.join(", ")||"dashboard"}</div></div>
+                <div><div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Hold State</div><div style={{fontSize:10,color:C.greenFg,fontWeight:600,marginTop:2}}>Enforced</div></div>
               </div>
 
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {triggers.slice(0,8).map((t:string)=><span key={t} style={{fontSize:9,padding:"2px 6px",background:`${C.blue}18`,border:`1px solid ${C.blue}33`,borderRadius:4,color:C.blue}}>{t}</span>)}
-                {triggers.length>8&&<span style={{fontSize:9,color:C.muted}}>+{triggers.length-8} more</span>}
+                {triggers.slice(0,8).map((t:string)=><span key={t} style={{fontSize: 10,padding:"2px 6px",background:`${C.blue}18`,border:`1px solid ${C.blue}33`,borderRadius:4,color:C.blueFg}}>{t}</span>)}
+                {triggers.length>8&&<span style={{fontSize: 10,color:C.muted}}>+{triggers.length-8} more</span>}
               </div>
-              {approvers.length>0&&<div style={{marginTop:6,fontSize:9,color:C.dim}}>Approvers: {approvers.join(", ")}</div>}
+              {approvers.length>0&&<div style={{marginTop:6,fontSize: 10,color:C.dim}}>Approvers: {approvers.join(", ")}</div>}
             </Card>
           );
         })}
@@ -2045,13 +2045,13 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         <div>
           <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:8}}>Trigger Actions — Operations requiring approval</div>
           {(gpScope==="keys"||gpScope==="secrets"||gpScope==="certs"||gpScope==="all")&&<>
-            <div style={{fontSize:9,color:C.muted,marginBottom:4,textTransform:"uppercase",letterSpacing:0.6}}>Key / Secret / Certificate Operations</div>
+            <div style={{fontSize: 10,color:C.muted,marginBottom:4,textTransform:"uppercase",letterSpacing:0.6}}>Key / Secret / Certificate Operations</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:10}}>
               {KEY_OPS.map((op)=><Chk key={op} label={op.replace("key.","").replace("secret.","").replace("cert.","")} checked={gpTriggers.includes(op)} onChange={()=>toggleGpTrigger(op)}/>)}
             </div>
           </>}
           {(gpScope==="system"||gpScope==="users"||gpScope==="all")&&<>
-            <div style={{fontSize:9,color:C.muted,marginBottom:4,textTransform:"uppercase",letterSpacing:0.6}}>Administrative Operations</div>
+            <div style={{fontSize: 10,color:C.muted,marginBottom:4,textTransform:"uppercase",letterSpacing:0.6}}>Administrative Operations</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:10}}>
               {ADMIN_OPS.map((op)=><Chk key={op} label={op.replace("user.","").replace("tenant.","").replace("system.","").replace("governance.","").replace("hsm.","").replace("license.","")} checked={gpTriggers.includes(op)} onChange={()=>toggleGpTrigger(op)}/>)}
             </div>
@@ -2088,7 +2088,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         {/* Hold State Enforcement */}
         <div style={{padding:"10px 14px",background:`${C.green}12`,border:`1px solid ${C.green}33`,borderRadius:8}}>
           <Chk label="Enforce Hold State — Operations are held (queued) until approval is granted or timeout expires. Denied or timed-out operations are rejected." checked={gpEnforceHold} onChange={()=>setGpEnforceHold((v)=>!v)}/>
-          <div style={{fontSize:9,color:C.dim,marginTop:4,marginLeft:24}}>
+          <div style={{fontSize: 10,color:C.dim,marginTop:4,marginLeft:24}}>
             When enabled: the KMS suspends the operation, notifies all approvers via configured channels, and waits for quorum. The operation proceeds only after sufficient approvals. If the timeout expires without quorum, the operation is automatically denied.
           </div>
         </div>

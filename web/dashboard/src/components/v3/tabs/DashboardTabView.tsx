@@ -135,7 +135,7 @@ export const DashboardTabView = (props: any) => {
         background: `linear-gradient(120deg, ${C.surface} 0%, ${C.card} 55%, ${C.surface} 100%)`,
         padding: "20px 24px",
       }}>
-        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: `radial-gradient(900px 240px at 8% -40%, ${C.glowStrong || "rgba(123,140,255,.18)"}, transparent 60%), radial-gradient(700px 220px at 95% 140%, ${C.glow || "rgba(99,102,241,.14)"}, transparent 60%)` }} />
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: `radial-gradient(900px 240px at 8% -40%, ${C.glowStrong || "rgba(76,157,255,.18)"}, transparent 60%), radial-gradient(700px 220px at 95% 140%, ${C.glow || "rgba(99,102,241,.14)"}, transparent 60%)` }} />
         <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div>
             <div style={{ fontSize: 20, fontWeight: 800, color: C.text, letterSpacing: -0.4, lineHeight: 1.2 }}>
@@ -231,7 +231,7 @@ export const DashboardTabView = (props: any) => {
           <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
             <Lock size={10} color={C.muted} />
             Pinned Views
-            <span style={{ marginLeft: "auto", fontSize: 9, color: C.dim }}>{`${pinnedList.length} pinned`}</span>
+            <span style={{ marginLeft: "auto", fontSize: 10, color: C.dim }}>{`${pinnedList.length} pinned`}</span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(190px,1fr))", gap: 10 }}>
             {pinnedList.map((tabId: string) => {
@@ -259,7 +259,7 @@ export const DashboardTabView = (props: any) => {
                   <div style={{ fontSize: 10, color: C.dim, marginBottom: 12 }}>{secondary}</div>
                   <button
                     onClick={() => onNavigate?.(tabId)}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, padding: "4px 10px", cursor: "pointer", color: C.accent, fontSize: 10, fontWeight: 600, transition: "border-color .15s" }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, padding: "4px 10px", cursor: "pointer", color: C.accentFg, fontSize: 10, fontWeight: 600, transition: "border-color .15s" }}
                   >
                     Open <ArrowRight size={10} strokeWidth={2} />
                   </button>
@@ -284,7 +284,7 @@ export const DashboardTabView = (props: any) => {
             <div>
               <div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>Go Crypto</div>
               <div style={{ fontSize: 11, fontWeight: 700, color: C.text, lineHeight: 1.3, wordBreak: "break-word" }}>{cryptoLibraryLabel}</div>
-              <div style={{ fontSize: 10, color: cryptoLibraryValidated ? C.green : C.amber, marginTop: 3 }}>{cryptoLibraryValidated ? "FIPS validated build" : "Non-validated build"}</div>
+              <div style={{ fontSize: 10, color: cryptoLibraryValidated ? C.greenFg : C.amberFg, marginTop: 3 }}>{cryptoLibraryValidated ? "FIPS validated build" : "Non-validated build"}</div>
             </div>
             <div>
               <div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>TLS</div>
@@ -312,7 +312,7 @@ export const DashboardTabView = (props: any) => {
                   <div style={{ height: 10, borderRadius: 999, background: C.border, overflow: "hidden" }}>
                     <div style={{ height: "100%", width: `${pct}%`, background: String(item?.color || C.accent), borderRadius: 999, transition: "width .4s" }} />
                   </div>
-                  <div style={{ fontSize: 11, color: String(item?.color || C.accent), fontWeight: 700, textAlign: "right" }}>{`${pct}%`}</div>
+                  <div style={{ fontSize: 11, color: String(item?.color || C.accentFg), fontWeight: 700, textAlign: "right" }}>{`${pct}%`}</div>
                 </div>
               );
             })}
@@ -326,7 +326,7 @@ export const DashboardTabView = (props: any) => {
               <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>Cluster</div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 {Number(clusterSummary?.degraded_nodes || 0) > 0 && (
-                  <span style={{ padding: "2px 6px", borderRadius: 999, background: C.amberDim, color: C.amber, fontSize: 9, fontWeight: 700 }}>
+                  <span style={{ padding: "2px 6px", borderRadius: 999, background: C.amberDim, color: C.amberFg, fontSize: 10, fontWeight: 700 }}>
                     {`${fmtInt(clusterSummary.degraded_nodes)} degraded`}
                   </span>
                 )}
@@ -348,9 +348,9 @@ export const DashboardTabView = (props: any) => {
                       <div style={{ fontSize: 12, color: C.text, display: "inline-flex", alignItems: "center", gap: 8 }}>
                         <span style={{ width: 9, height: 9, borderRadius: 999, background: dotColor, display: "inline-block", flexShrink: 0, animation: tone === "red" ? "none" : "pulse 1.8s infinite" }} />
                         <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 130 }}>{String(node?.name || node?.id || "node")}</span>
-                        <span style={{ padding: "2px 6px", borderRadius: 999, background: pillBg, color: dotColor, fontSize: 9, fontWeight: 700, textTransform: "uppercase", whiteSpace: "nowrap" }}>{String(node?.status || "unknown")}</span>
+                        <span style={{ padding: "2px 6px", borderRadius: 999, background: pillBg, color: dotColor, fontSize: 10, fontWeight: 700, textTransform: "uppercase", whiteSpace: "nowrap" }}>{String(node?.status || "unknown")}</span>
                       </div>
-                      <div style={{ fontSize: 9, color: C.dim, fontFamily: "'JetBrains Mono',monospace", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <div style={{ fontSize: 10, color: C.dim, fontFamily: "'JetBrains Mono',monospace", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {String(node?.address || node?.endpoint || "n/a")}
                       </div>
                     </div>
@@ -382,7 +382,7 @@ export const DashboardTabView = (props: any) => {
                     <div style={{ fontSize: 10, color: C.text, fontWeight: 700, marginBottom: 3 }}>
                       {String(item?.action || "approval").replace(/^key\./, "").replaceAll("_", " ")}
                     </div>
-                    <div style={{ fontSize: 9, color: C.dim, marginBottom: 6 }}>
+                    <div style={{ fontSize: 10, color: C.dim, marginBottom: 6 }}>
                       {`Target: ${String(item?.target_id || "-")} | Votes ${Number(item?.current_approvals || 0)}/${Number(item?.required_approvals || 1)}`}
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>

@@ -704,7 +704,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
       </div>
 
       {loading&&!agents.length?(<div style={{color:C.textDim,padding:20,textAlign:"center",fontSize:12}}>Loading agents...</div>):(
-        filteredAgents.length===0?(<Card><div style={{textAlign:"center",color:C.textDim,padding:32,fontSize:12}}>No EKM agents registered.{" "}<span style={{color:C.accent,cursor:"pointer"}} onClick={openDeploy}>Deploy your first agent</span></div></Card>):(
+        filteredAgents.length===0?(<Card><div style={{textAlign:"center",color:C.textDim,padding:32,fontSize:12}}>No EKM agents registered.{" "}<span style={{color:C.accentFg,cursor:"pointer"}} onClick={openDeploy}>Deploy your first agent</span></div></Card>):(
           dbView==="cards"?(
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:12}}>
               {filteredAgents.map((agent)=>{
@@ -723,7 +723,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
                       <div style={{padding:"5px 10px",cursor:"pointer",fontSize:12}} onClick={()=>{setDbMenu("");openLogs(agent);}}>View Logs</div>
                       <div style={{padding:"5px 10px",cursor:"pointer",fontSize:12}} onClick={()=>{setDbMenu("");openHealthDetail(agent);}}>Health Details</div>
                       <div style={{padding:"5px 10px",cursor:"pointer",fontSize:12}} onClick={()=>{setDbMenu("");runRotate(agent);}}>Rotate Key</div>
-                      <div style={{padding:"5px 10px",cursor:"pointer",fontSize:12,color:C.red}} onClick={()=>{setDbMenu("");runDelete(agent);}}>Delete</div>
+                      <div style={{padding:"5px 10px",cursor:"pointer",fontSize:12,color:C.redFg}} onClick={()=>{setDbMenu("");runDelete(agent);}}>Delete</div>
                     </div>)}
                   </div>
 
@@ -819,18 +819,18 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
                           <div style={{color:C.textDim}}>OS: {h.metrics.os_name} {h.metrics.os_version}</div>
                           <div style={{color:C.textDim}}>CPU: {h.metrics.cpu_usage_pct?.toFixed(1)}% | MEM: {h.metrics.memory_usage_pct?.toFixed(1)}% | DISK: {h.metrics.disk_usage_pct?.toFixed(1)}%</div>
                         </>):(<div style={{color:C.textDim}}>No metrics</div>)}
-                        {Array.isArray(h?.warnings)&&h.warnings.length>0&&(<div style={{color:C.amber,marginTop:4}}>{h.warnings.join("; ")}</div>)}
+                        {Array.isArray(h?.warnings)&&h.warnings.length>0&&(<div style={{color:C.amberFg,marginTop:4}}>{h.warnings.join("; ")}</div>)}
                       </div>
                     </div>
                     {agentDBs.length>0&&(<div style={{marginTop:8}}>
                       <div style={{fontWeight:600,marginBottom:4}}>Managed Databases ({agentDBs.length})</div>
                       {agentDBs.map(db=>(<div key={db.id} style={{fontSize:11,color:C.textDim,padding:"2px 0"}}>
-                        {db.name} ({db.engine.toUpperCase()}) on {db.host}:{db.port} - TDE: <span style={{color:db.tde_enabled?C.green:C.red,fontWeight:500}}>{db.tde_state||"unknown"}</span>
+                        {db.name} ({db.engine.toUpperCase()}) on {db.host}:{db.port} - TDE: <span style={{color:db.tde_enabled?C.greenFg:C.redFg,fontWeight:500}}>{db.tde_state||"unknown"}</span>
                       </div>))}
                     </div>)}
                     <div style={{display:"flex",gap:6,marginTop:8}}>
                       <Btn onClick={()=>openHealthDetail(agent)} style={{fontSize:11,padding:"3px 8px"}}>Full Health</Btn>
-                      <Btn onClick={()=>runDelete(agent)} disabled={deletingAgentID===agent.id} style={{fontSize:11,padding:"3px 8px",color:C.red}}>{deletingAgentID===agent.id?"Deleting...":"Delete"}</Btn>
+                      <Btn onClick={()=>runDelete(agent)} disabled={deletingAgentID===agent.id} style={{fontSize:11,padding:"3px 8px",color:C.redFg}}>{deletingAgentID===agent.id?"Deleting...":"Delete"}</Btn>
                     </div>
                   </div>)}
                 </div>);
@@ -861,14 +861,14 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
                 <span style={{color:C.textDim}}>{formatAgo(db.last_seen_at)}</span>
                 <span style={{display:"flex",gap:4}}>
                   <Btn onClick={()=>setExpandedTdeGuide(prev=>({...prev,[db.id]:!prev[db.id]}))} style={{fontSize:10,padding:"2px 6px"}}>Guide</Btn>
-                  <Btn onClick={()=>runRevokeTDE(db)} disabled={revokingDbId===db.id||badge.label==="Key Revoked"} style={{fontSize:10,padding:"2px 6px",color:C.red}}>{revokingDbId===db.id?"...":"Revoke"}</Btn>
+                  <Btn onClick={()=>runRevokeTDE(db)} disabled={revokingDbId===db.id||badge.label==="Key Revoked"} style={{fontSize:10,padding:"2px 6px",color:C.redFg}}>{revokingDbId===db.id?"...":"Revoke"}</Btn>
                 </span>
               </div>
               {/* Collapsible TDE Setup Guide */}
               {expandedTdeGuide[db.id]&&(<div style={{padding:"12px 16px",background:C.surface+"44",borderBottom:"1px solid "+C.border,fontSize:12}}>
                 <B style={{fontSize:12,marginBottom:6,display:"block"}}>TDE Setup Guide for {db.engine.toUpperCase()}</B>
                 {SETUP_GUIDES[db.engine]?(
-                  <div>{SETUP_GUIDES[db.engine].steps.map((step,i)=>(<div key={i} style={{fontSize:11,marginBottom:6,whiteSpace:"pre-wrap",fontFamily:step.includes("  ")?"monospace":"inherit",color:step.includes("  ")?C.accent:C.text,background:step.includes("  ")?C.surface:"transparent",padding:step.includes("  ")?"4px 8px":0,borderRadius:4}}>{step}</div>))}</div>
+                  <div>{SETUP_GUIDES[db.engine].steps.map((step,i)=>(<div key={i} style={{fontSize:11,marginBottom:6,whiteSpace:"pre-wrap",fontFamily:step.includes("  ")?"monospace":"inherit",color:step.includes("  ")?C.accentFg:C.text,background:step.includes("  ")?C.surface:"transparent",padding:step.includes("  ")?"4px 8px":0,borderRadius:4}}>{step}</div>))}</div>
                 ):(<div style={{color:C.textDim}}>No setup guide available for {db.engine.toUpperCase()}.</div>)}
               </div>)}
             </div>);
@@ -890,7 +890,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
             {agentLogsPanel[expandedAgent].slice(0,20).map((log,i)=>(<div key={log.id||i} style={{display:"grid",gridTemplateColumns:"130px 90px 80px 1fr 1fr 80px",padding:"4px 10px",fontSize:11,borderBottom:"1px solid "+C.border}}>
               <span style={{color:C.textDim}}>{formatAgo(log.created_at)}</span>
               <span style={{fontWeight:500}}>{log.operation}</span>
-              <span style={{color:log.status==="success"?C.green:C.red}}>{log.status}</span>
+              <span style={{color:log.status==="success"?C.greenFg:C.redFg}}>{log.status}</span>
               <span style={{fontFamily:"monospace",fontSize:10,color:C.textDim}}>{String(log.key_id||"").slice(0,16)}</span>
               <span style={{fontSize:10,color:C.textDim}}>{databases.find(d=>d.id===log.database_id)?.name||String(log.database_id||"").slice(0,16)||"n/a"}</span>
               <span style={{color:C.textDim}}>{log.error_message||"--"}</span>
@@ -924,7 +924,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
         <Btn onClick={()=>refresh(false)} disabled={loading}><RefreshCcw size={14}/></Btn>
       </div>
 
-      {filteredBitLocker.length===0?(<Card><div style={{textAlign:"center",color:C.textDim,padding:32,fontSize:12}}>No BitLocker clients registered.{" "}<span style={{color:C.accent,cursor:"pointer"}} onClick={openBitLockerDeploy}>Register a client</span> or <span style={{color:C.accent,cursor:"pointer"}} onClick={openBitLockerScan}>scan your network</span></div></Card>):(
+      {filteredBitLocker.length===0?(<Card><div style={{textAlign:"center",color:C.textDim,padding:32,fontSize:12}}>No BitLocker clients registered.{" "}<span style={{color:C.accentFg,cursor:"pointer"}} onClick={openBitLockerDeploy}>Register a client</span> or <span style={{color:C.accentFg,cursor:"pointer"}} onClick={openBitLockerScan}>scan your network</span></div></Card>):(
         bitLockerView==="cards"?(
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:12}}>
             {filteredBitLocker.map((client)=>{
@@ -947,7 +947,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                   {["enable","disable","pause","resume","rotate","fetch_recovery"].map((op)=>(<Btn key={op} onClick={()=>runBitLockerOperation(client,op)} disabled={bitLockerOpClientID===`${client.id}:${op}`} style={{fontSize:10,padding:"2px 6px",textTransform:"capitalize"}}>{bitLockerOpClientID===`${client.id}:${op}`?"...":op.replace("_"," ")}</Btn>))}
                   <Btn onClick={()=>openBitLockerActivity(client)} style={{fontSize:10,padding:"2px 6px"}}>Activity</Btn>
-                  <Btn onClick={()=>openBitLockerDelete(client)} style={{fontSize:10,padding:"2px 6px",color:C.red}}>Delete</Btn>
+                  <Btn onClick={()=>openBitLockerDelete(client)} style={{fontSize:10,padding:"2px 6px",color:C.redFg}}>Delete</Btn>
                 </div>
               </Card>);
             })}
@@ -970,7 +970,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
                 <span style={{display:"flex",gap:4}}>
                   <Btn onClick={()=>openBitLockerActivity(client)} style={{fontSize:10,padding:"2px 6px"}}>Activity</Btn>
                   <Btn onClick={()=>openBitLockerOptions(client)} style={{fontSize:10,padding:"2px 6px"}}>Ops</Btn>
-                  <Btn onClick={()=>openBitLockerDelete(client)} style={{fontSize:10,padding:"2px 6px",color:C.red}}>Del</Btn>
+                  <Btn onClick={()=>openBitLockerDelete(client)} style={{fontSize:10,padding:"2px 6px",color:C.redFg}}>Del</Btn>
                 </span>
               </div>);
             })}
@@ -1013,12 +1013,12 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
             <div>
               <div style={{fontWeight:600}}>{cfg.vault_name}</div>
               <div style={{fontSize:10,color:C.textDim,fontFamily:"monospace"}}>{cfg.vault_url}</div>
-              {cfg.managed_hsm_name&&(<div style={{fontSize:10,color:C.accent}}>HSM: {cfg.managed_hsm_name}</div>)}
+              {cfg.managed_hsm_name&&(<div style={{fontSize:10,color:C.accentFg}}>HSM: {cfg.managed_hsm_name}</div>)}
             </div>
             <span style={{fontFamily:"monospace",fontSize:10,color:C.textDim}}>{cfg.azure_tenant_id}</span>
             <span>{cfg.auth_mode}</span>
             <span>{cfg.key_mappings}</span>
-            <span style={{color:cfg.status==="active"?C.green:C.red}}>{cfg.status}</span>
+            <span style={{color:cfg.status==="active"?C.greenFg:C.redFg}}>{cfg.status}</span>
             <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
               <Btn onClick={async()=>{
                 setAzureTestResults(prev=>({...prev,[cfg.id]:{connected:false}}));
@@ -1039,7 +1039,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
               <Btn onClick={async()=>{
                 if(!confirm("Delete this Azure vault configuration?")) return;
                 try{await deleteAzureEKMConfig(session,cfg.id);onToast?.("Config deleted");await refresh(true);}catch(e){onToast?.(`Delete failed: ${errMsg(e)}`);}
-              }} style={{fontSize:10,padding:"3px 8px",color:C.red}}>Delete</Btn>
+              }} style={{fontSize:10,padding:"3px 8px",color:C.redFg}}>Delete</Btn>
             </div>
           </div>))}
         </div>
@@ -1051,8 +1051,8 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
           const cfg=azureConfigs.find(c=>c.id===cfgId);
           return (<div key={cfgId} style={{fontSize:12,padding:"6px 10px",background:res.connected?C.green+"15":C.red+"15",borderRadius:6,marginBottom:4}}>
             <span style={{fontWeight:600}}>{cfg?.vault_name||cfgId}:</span>{" "}
-            <span style={{color:res.connected?C.green:C.red}}>{res.connected?"Connected":"Failed"}</span>
-            {res.error&&(<span style={{color:C.red,marginLeft:8,fontSize:11}}>{res.error}</span>)}
+            <span style={{color:res.connected?C.greenFg:C.redFg}}>{res.connected?"Connected":"Failed"}</span>
+            {res.error&&(<span style={{color:C.redFg,marginLeft:8,fontSize:11}}>{res.error}</span>)}
           </div>);
         })}
       </div>)}
@@ -1069,7 +1069,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
             <span style={{fontFamily:"monospace",fontSize:10,color:C.textDim}}>{m.vecta_key_id.slice(0,20)}</span>
             <span style={{fontFamily:"monospace",fontSize:10,color:C.textDim}}>{m.azure_key_id?m.azure_key_id.split("/").slice(-2).join("/"):"(not imported)"}</span>
             <span style={{textTransform:"uppercase",fontSize:10}}>{m.purpose}</span>
-            <span style={{color:m.sync_status==="synced"?C.green:m.sync_status==="error"?C.red:C.amber,fontSize:11}}>{m.sync_status}</span>
+            <span style={{color:m.sync_status==="synced"?C.greenFg:m.sync_status==="error"?C.redFg:C.amberFg,fontSize:11}}>{m.sync_status}</span>
             <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
               <Btn onClick={async()=>{
                 setAzureOpLoading(`import-${m.id}`);
@@ -1084,7 +1084,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
               <Btn onClick={async()=>{
                 if(!confirm("Delete this key mapping?")) return;
                 try{await deleteAzureKeyMapping(session,m.id);onToast?.("Mapping deleted");await refresh(true);}catch(e){onToast?.(`Delete failed: ${errMsg(e)}`);}
-              }} style={{fontSize:10,padding:"3px 6px",color:C.red}}>Del</Btn>
+              }} style={{fontSize:10,padding:"3px 6px",color:C.redFg}}>Del</Btn>
             </div>
           </div>))}
         </div>
@@ -1146,8 +1146,8 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
               <div>
                 <div style={{fontSize:12,fontWeight:600}}>{cfg.google_workspace_customer_id}</div>
                 <div style={{fontSize:10,color:C.textMuted}}>{cfg.service_account_email||"No service account"} &middot; {(cfg.allowed_domains||[]).join(", ")}</div>
-                <div style={{fontSize:10,color:(cfg.authentication_client_ids||[]).length?C.textMuted:C.red}}>Client IDs: {(cfg.authentication_client_ids||[]).join(", ")||"None: every authentication token is refused until set"}</div>
-                <div style={{fontSize:10,color:C.textMuted}}>KACLS: {cfg.kacls_endpoint||"Not configured"} &middot; Keys: {cfg.key_count||0} &middot; Status: <span style={{color:cfg.status==="active"?C.green||"#4ade80":C.red}}>{cfg.status}</span></div>
+                <div style={{fontSize:10,color:(cfg.authentication_client_ids||[]).length?C.textMuted:C.redFg}}>Client IDs: {(cfg.authentication_client_ids||[]).join(", ")||"None: every authentication token is refused until set"}</div>
+                <div style={{fontSize:10,color:C.textMuted}}>KACLS: {cfg.kacls_endpoint||"Not configured"} &middot; Keys: {cfg.key_count||0} &middot; Status: <span style={{color:cfg.status==="active"?C.greenFg||"#4ade80":C.redFg}}>{cfg.status}</span></div>
                 {cfg.last_activity_at&&(<div style={{fontSize:10,color:C.textMuted}}>Last activity: {formatAgo(cfg.last_activity_at)}</div>)}
               </div>
               <div style={{display:"flex",gap:4}}>
@@ -1159,7 +1159,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
                 <Btn onClick={async()=>{
                   if(!confirm("Delete this Google CSE config?")) return;
                   try{await deleteGoogleCSEConfig(session,cfg.id);onToast?.("Config deleted");await refresh(true);}catch(e){onToast?.(`Delete failed: ${errMsg(e)}`);}
-                }} style={{fontSize:10,padding:"3px 6px",color:C.red}}>Delete</Btn>
+                }} style={{fontSize:10,padding:"3px 6px",color:C.redFg}}>Delete</Btn>
               </div>
             </div>
           </div>))}
@@ -1208,15 +1208,15 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
           {googleCSEKeys.map(k=>(<div key={k.id} style={{background:C.surface,borderRadius:8,padding:10,border:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div>
               <div style={{fontSize:12,fontWeight:600}}>{k.key_name} <span style={{fontSize:10,fontWeight:400,color:C.textMuted}}>({k.purpose})</span></div>
-              <div style={{fontSize:10,color:C.textMuted}}>Vecta Key: {k.vecta_key_id} &middot; Status: <span style={{color:k.status==="active"?C.green||"#4ade80":C.red}}>{k.status}</span></div>
+              <div style={{fontSize:10,color:C.textMuted}}>Vecta Key: {k.vecta_key_id} &middot; Status: <span style={{color:k.status==="active"?C.greenFg||"#4ade80":C.redFg}}>{k.status}</span></div>
               <div style={{fontSize:10,color:C.textMuted}}>Wraps: {k.wrap_count||0} &middot; Unwraps: {k.unwrap_count||0}{k.last_used_at?` \u00b7 Last used: ${formatAgo(k.last_used_at)}`:""}</div>
-              <div style={{fontSize:9,color:C.textMuted,fontFamily:"monospace",marginTop:2}}>URI: {k.google_key_uri}</div>
+              <div style={{fontSize: 10,color:C.textMuted,fontFamily:"monospace",marginTop:2}}>URI: {k.google_key_uri}</div>
             </div>
             <div style={{display:"flex",gap:4}}>
               <Btn onClick={async()=>{
                 if(!confirm("Delete this CSE key?")) return;
                 try{await deleteGoogleCSEKey(session,k.id);onToast?.("Key deleted");await refresh(true);}catch(e){onToast?.(`Delete failed: ${errMsg(e)}`);}
-              }} style={{fontSize:10,padding:"3px 6px",color:C.red}}>Delete</Btn>
+              }} style={{fontSize:10,padding:"3px 6px",color:C.redFg}}>Delete</Btn>
             </div>
           </div>))}
         </div>
@@ -1247,11 +1247,11 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
     {/* ── Setup Guide Modal ── */}
     {modal==="setup-guide"&&(<Modal open={true} title="EKM Setup Guide" onClose={()=>setModal(null)}>
       <div style={{display:"flex",gap:8,marginBottom:12}}>
-        {Object.keys(SETUP_GUIDES).map(eng=>(<Btn key={eng} onClick={()=>setGuideEngine(eng)} style={{fontSize:12,padding:"4px 12px",background:guideEngine===eng?C.accent+"22":"transparent",color:guideEngine===eng?C.accent:C.text}}>{eng.toUpperCase()}</Btn>))}
+        {Object.keys(SETUP_GUIDES).map(eng=>(<Btn key={eng} onClick={()=>setGuideEngine(eng)} style={{fontSize:12,padding:"4px 12px",background:guideEngine===eng?C.accent+"22":"transparent",color:guideEngine===eng?C.accentFg:C.text}}>{eng.toUpperCase()}</Btn>))}
       </div>
       <B>{SETUP_GUIDES[guideEngine]?.title}</B>
       <div style={{marginTop:12}}>
-        {SETUP_GUIDES[guideEngine]?.steps.map((step,i)=>(<div key={i} style={{fontSize:12,marginBottom:10,whiteSpace:"pre-wrap",fontFamily:step.includes("  ")?"monospace":"inherit",color:step.includes("  ")?C.accent:C.text,background:step.includes("  ")?C.surface:"transparent",padding:step.includes("  ")?"6px 10px":0,borderRadius:4}}>{step}</div>))}
+        {SETUP_GUIDES[guideEngine]?.steps.map((step,i)=>(<div key={i} style={{fontSize:12,marginBottom:10,whiteSpace:"pre-wrap",fontFamily:step.includes("  ")?"monospace":"inherit",color:step.includes("  ")?C.accentFg:C.text,background:step.includes("  ")?C.surface:"transparent",padding:step.includes("  ")?"6px 10px":0,borderRadius:4}}>{step}</div>))}
       </div>
     </Modal>)}
 
@@ -1282,9 +1282,9 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
           </div>
         </div>
         <div style={{marginTop:16}}>
-          <B style={{fontSize:13,marginBottom:6,display:"block"}}>Health Status: <span style={{color:String(h.health||"")=="healthy"?C.green:String(h.health||"")=="degraded"?C.amber:C.red}}>{String(h.health||"unknown")}</span></B>
+          <B style={{fontSize:13,marginBottom:6,display:"block"}}>Health Status: <span style={{color:String(h.health||"")=="healthy"?C.greenFg:String(h.health||"")=="degraded"?C.amberFg:C.redFg}}>{String(h.health||"unknown")}</span></B>
           {Array.isArray(h.warnings)&&h.warnings.length>0&&(<div style={{fontSize:12}}>
-            {h.warnings.map((w,i)=>(<div key={i} style={{color:C.amber,marginBottom:2}}>- {w}</div>))}
+            {h.warnings.map((w,i)=>(<div key={i} style={{color:C.amberFg,marginBottom:2}}>- {w}</div>))}
           </div>)}
         </div>
       </Modal>);
@@ -1363,12 +1363,12 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
         {/* Tabbed deploy modal */}
         <div style={{display:"flex",gap:0,marginBottom:12,borderBottom:"1px solid "+C.border}}>
           {([["download","Download Scripts"],["guide","Setup Guide"],["verify","Verify Connection"]] as const).map(([key,label])=>(
-            <div key={key} onClick={()=>setDeployModalTab(key)} style={{padding:"8px 16px",cursor:"pointer",fontSize:12,fontWeight:deployModalTab===key?600:400,color:deployModalTab===key?C.accent:C.textDim,borderBottom:deployModalTab===key?`2px solid ${C.accent}`:"2px solid transparent"}}>{label}</div>
+            <div key={key} onClick={()=>setDeployModalTab(key)} style={{padding:"8px 16px",cursor:"pointer",fontSize:12,fontWeight:deployModalTab===key?600:400,color:deployModalTab===key?C.accentFg:C.textDim,borderBottom:deployModalTab===key?`2px solid ${C.accent}`:"2px solid transparent"}}>{label}</div>
           ))}
         </div>
 
         {deployModalTab==="download"&&(<>
-          <div style={{color:C.green,marginBottom:8,fontSize:12}}>Agent registered. Download and deploy these files on the target host:</div>
+          <div style={{color:C.greenFg,marginBottom:8,fontSize:12}}>Agent registered. Download and deploy these files on the target host:</div>
           {visibleDeployFiles.map((file,i)=>(<Card key={i} style={{marginBottom:8}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
               <B style={{fontSize:13}}>{file.path}</B>
@@ -1381,7 +1381,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
         {deployModalTab==="guide"&&(<>
           <B style={{marginBottom:8,display:"block"}}>{SETUP_GUIDES[deployForm.db_engine]?.title||"Setup Guide"}</B>
           {SETUP_GUIDES[deployForm.db_engine]?(
-            <div>{SETUP_GUIDES[deployForm.db_engine].steps.map((step,i)=>(<div key={i} style={{fontSize:12,marginBottom:8,whiteSpace:"pre-wrap",fontFamily:step.includes("  ")?"monospace":"inherit",color:step.includes("  ")?C.accent:C.text,background:step.includes("  ")?C.surface:"transparent",padding:step.includes("  ")?"6px 10px":0,borderRadius:4}}>{step}</div>))}</div>
+            <div>{SETUP_GUIDES[deployForm.db_engine].steps.map((step,i)=>(<div key={i} style={{fontSize:12,marginBottom:8,whiteSpace:"pre-wrap",fontFamily:step.includes("  ")?"monospace":"inherit",color:step.includes("  ")?C.accentFg:C.text,background:step.includes("  ")?C.surface:"transparent",padding:step.includes("  ")?"6px 10px":0,borderRadius:4}}>{step}</div>))}</div>
           ):(<div style={{color:C.textDim,fontSize:12}}>No setup guide available for this engine. Please refer to vendor documentation.</div>)}
         </>)}
 
@@ -1398,8 +1398,8 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
             }catch(e){ setVerifyResult({valid:false,error:errMsg(e)}); onToast?.(`Verify failed: ${errMsg(e)}`); }finally{ setVerifyingAgentId(""); }
           }} disabled={!!verifyingAgentId}>{verifyingAgentId?"Verifying...":"Verify Connection"}</Btn>
           {verifyResult&&(<div style={{marginTop:12,padding:10,borderRadius:6,background:verifyResult.valid?C.green+"15":C.red+"15",border:`1px solid ${verifyResult.valid?C.green:C.red}44`}}>
-            <div style={{fontSize:12,fontWeight:600,color:verifyResult.valid?C.green:C.red,marginBottom:4}}>{verifyResult.valid?"Verification Successful":"Verification Failed"}</div>
-            {verifyResult.error&&(<div style={{fontSize:11,color:C.red}}>{verifyResult.error}</div>)}
+            <div style={{fontSize:12,fontWeight:600,color:verifyResult.valid?C.greenFg:C.redFg,marginBottom:4}}>{verifyResult.valid?"Verification Successful":"Verification Failed"}</div>
+            {verifyResult.error&&(<div style={{fontSize:11,color:C.redFg}}>{verifyResult.error}</div>)}
             {verifyResult.agent_status&&(<div style={{fontSize:11,color:C.textDim}}>Agent Status: {verifyResult.agent_status}</div>)}
             {verifyResult.heartbeat_age_sec!=null&&(<div style={{fontSize:11,color:C.textDim}}>Last Heartbeat: {verifyResult.heartbeat_age_sec}s ago</div>)}
           </div>)}
@@ -1418,9 +1418,9 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
             {logs.map((log,i)=>(<div key={log.id||i} style={{display:"grid",gridTemplateColumns:"120px 80px 80px 1fr 1fr",padding:"4px 8px",fontSize:11,borderBottom:"1px solid "+C.border}}>
               <span style={{color:C.textDim}}>{formatAgo(log.created_at)}</span>
               <span>{log.operation}</span>
-              <span style={{color:log.status==="success"?C.green:C.red}}>{log.status}</span>
+              <span style={{color:log.status==="success"?C.greenFg:C.redFg}}>{log.status}</span>
               <span style={{fontFamily:"monospace",fontSize:10,color:C.textDim}}>{String(log.key_id||"").slice(0,16)}</span>
-              <span style={{color:C.red,fontSize:10}}>{log.error_message||""}</span>
+              <span style={{color:C.redFg,fontSize:10}}>{log.error_message||""}</span>
             </div>))}
           </div>
         )
@@ -1444,7 +1444,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
           <Btn onClick={()=>setModal(null)}>Cancel</Btn>
         </div>
       </>):(<>
-        <div style={{color:C.green,marginBottom:8,fontSize:12}}>Client registered. Download and deploy on the Windows host:</div>
+        <div style={{color:C.greenFg,marginBottom:8,fontSize:12}}>Client registered. Download and deploy on the Windows host:</div>
         {Array.isArray(bitLockerDeployPackage.files)&&bitLockerDeployPackage.files.map((file,i)=>(<Card key={i} style={{marginBottom:8}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
             <B style={{fontSize:13}}>{file.path}</B>
@@ -1461,12 +1461,12 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
         {bitLockerDeletePreview&&(<div style={{marginBottom:12}}>
           <div style={{fontSize:12,color:C.textDim}}>Host: {bitLockerDeletePreview.host}</div>
           <div style={{fontSize:12,color:C.textDim}}>Recovery keys available: {bitLockerDeletePreview.recovery_keys_available}</div>
-          {bitLockerDeletePreview.latest_recovery_key_masked&&(<div style={{fontSize:12,color:C.amber}}>Latest recovery key (masked): {bitLockerDeletePreview.latest_recovery_key_masked}</div>)}
-          {bitLockerDeletePreview.latest_recovery_key&&(<div style={{fontSize:12,color:C.red,fontFamily:"monospace",background:C.surface,padding:6,borderRadius:4,marginTop:4}}>Full key: {bitLockerDeletePreview.latest_recovery_key}</div>)}
+          {bitLockerDeletePreview.latest_recovery_key_masked&&(<div style={{fontSize:12,color:C.amberFg}}>Latest recovery key (masked): {bitLockerDeletePreview.latest_recovery_key_masked}</div>)}
+          {bitLockerDeletePreview.latest_recovery_key&&(<div style={{fontSize:12,color:C.redFg,fontFamily:"monospace",background:C.surface,padding:6,borderRadius:4,marginTop:4}}>Full key: {bitLockerDeletePreview.latest_recovery_key}</div>)}
         </div>)}
         <Chk label="I confirm that the recovery key has been backed up securely" checked={bitLockerDeleteConfirmBackup} onChange={(e)=>setBitLockerDeleteConfirmBackup(e.target.checked)}/>
         <div style={{display:"flex",gap:8,marginTop:12}}>
-          <Btn onClick={submitBitLockerDelete} disabled={bitLockerDeleteSubmitting||!bitLockerDeleteConfirmBackup} style={{color:C.red}}>{bitLockerDeleteSubmitting?"Deleting...":"Delete Client"}</Btn>
+          <Btn onClick={submitBitLockerDelete} disabled={bitLockerDeleteSubmitting||!bitLockerDeleteConfirmBackup} style={{color:C.redFg}}>{bitLockerDeleteSubmitting?"Deleting...":"Delete Client"}</Btn>
           <Btn onClick={()=>setModal(null)}>Cancel</Btn>
         </div>
       </>)}
@@ -1496,7 +1496,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
               <span style={{fontFamily:"monospace",minWidth:120}}>{row.ip}</span>
               <span style={{flex:1,color:C.textDim}}>{row.host}</span>
               <span style={{fontSize:11}}>{row.os_guess}</span>
-              <span style={{fontSize:11,color:row.confidence==="high"?C.green:C.amber}}>{row.confidence}</span>
+              <span style={{fontSize:11,color:row.confidence==="high"?C.greenFg:C.amberFg}}>{row.confidence}</span>
             </div>))}
           </div>
           <div style={{display:"flex",gap:8,marginTop:8}}>
@@ -1514,9 +1514,9 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
         {bitLockerJobs.length===0?(<div style={{color:C.textDim,fontSize:12}}>No jobs found.</div>):(
           <div style={{maxHeight:250,overflow:"auto",marginBottom:16}}>
             {bitLockerJobs.map((job,i)=>(<div key={job.id||i} style={{padding:"6px 0",borderBottom:"1px solid "+C.border,fontSize:12}}>
-              <div><B>{job.operation}</B> - <span style={{color:job.status==="succeeded"?C.green:job.status==="failed"?C.red:C.amber}}>{job.status}</span></div>
+              <div><B>{job.operation}</B> - <span style={{color:job.status==="succeeded"?C.greenFg:job.status==="failed"?C.redFg:C.amberFg}}>{job.status}</span></div>
               <div style={{color:C.textDim,fontSize:11}}>Requested: {formatAgo(job.requested_at)} by {job.requested_by}</div>
-              {job.error_message&&(<div style={{color:C.red,fontSize:11}}>{job.error_message}</div>)}
+              {job.error_message&&(<div style={{color:C.redFg,fontSize:11}}>{job.error_message}</div>)}
             </div>))}
           </div>
         )}

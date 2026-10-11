@@ -1,4 +1,4 @@
-import vectaLogo from "../assets/vecta-logo.svg";
+import { BrandMark } from "./BrandMark";
 
 type BrandedLoadingOverlayProps = {
   visible: boolean;
@@ -9,53 +9,28 @@ export function BrandedLoadingOverlay({ visible, message }: BrandedLoadingOverla
   if (!visible) {
     return null;
   }
-  const showMessage = String(message || "").trim().length > 0;
+  const text = String(message || "").trim();
 
   return (
     <div className="vecta-loading-overlay" aria-live="polite" aria-busy="true">
-      <div className={`vecta-loading-card${showMessage ? "" : " vecta-loading-card--compact"}`} role="status">
-        <div className="vecta-loading-logo-wrap">
-          <svg className="vecta-loading-spinner" viewBox="0 0 56 56">
-            <circle className="vecta-loading-spinner-track" cx="28" cy="28" r="24" />
-            <circle className="vecta-loading-spinner-arc" cx="28" cy="28" r="24" />
-          </svg>
-          <img className="vecta-loading-logo" src={vectaLogo} alt="Vecta KMS" />
-        </div>
-        {showMessage ? <div className="vecta-loading-text">{message}</div> : null}
+      <div className="vecta-loading-card" role="status" aria-label={text || "Loading"}>
+        <BrandMark size={22} live />
+        {text ? <div className="vecta-loading-text">{text}</div> : null}
       </div>
     </div>
   );
 }
 
 /**
- * Full-page loading screen shown during initial authentication bootstrap.
- * Enterprise-grade — minimal, professional, no layout shift.
+ * Full-page screen shown while the session is restored. It has the same
+ * markup as the first-paint splash in index.html, so the two don't jump.
  */
 export function InitialLoadingScreen() {
   return (
-    <main
-      className="vecta-initial-loading"
-      role="status"
-      aria-live="polite"
-      aria-busy="true"
-    >
-      <div className="vecta-initial-loading-inner">
-        <div className="vecta-loading-logo-wrap vecta-loading-logo-wrap--xl">
-          <svg className="vecta-loading-spinner vecta-loading-spinner--xl" viewBox="0 0 120 120">
-            <circle className="vecta-loading-spinner-track" cx="60" cy="60" r="54" />
-            <circle className="vecta-loading-spinner-arc" cx="60" cy="60" r="54" />
-          </svg>
-          <img className="vecta-loading-logo vecta-loading-logo--xl" src={vectaLogo} alt="Vecta KMS" />
-        </div>
-        <div className="vecta-initial-loading-label">
-          <span>Vecta KMS</span>
-        </div>
-        <div className="vecta-initial-loading-subtitle">Enterprise Key Management System</div>
-        <div className="vecta-initial-loading-bar-track">
-          <div className="vecta-initial-loading-bar-fill" />
-        </div>
-        <div className="vecta-initial-loading-hint">Establishing secure session&hellip;</div>
-      </div>
+    <main className="vk-boot" role="status" aria-live="polite" aria-busy="true" aria-label="Loading Vecta KMS">
+      <BrandMark size={56} live />
+      <div className="vk-boot-name">Vecta <span>KMS</span></div>
+      <div className="vk-boot-track"><div className="vk-boot-fill" /></div>
     </main>
   );
 }

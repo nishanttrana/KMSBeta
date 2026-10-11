@@ -583,11 +583,11 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12 }}>
                     <Card style={{ padding: 10 }}>
                       <div style={{ fontSize: 10, fontWeight: 700, color: C.text, marginBottom: 6 }}>Matched Claims</div>
-                      {(decision.matched_claims || []).length ? decision.matched_claims.map((item: string) => <div key={item} style={{ fontSize: 10, color: C.green, marginBottom: 4 }}>{item}</div>) : <div style={{ fontSize: 10, color: C.dim }}>None</div>}
+                      {(decision.matched_claims || []).length ? decision.matched_claims.map((item: string) => <div key={item} style={{ fontSize: 10, color: C.greenFg, marginBottom: 4 }}>{item}</div>) : <div style={{ fontSize: 10, color: C.dim }}>None</div>}
                     </Card>
                     <Card style={{ padding: 10 }}>
                       <div style={{ fontSize: 10, fontWeight: 700, color: C.text, marginBottom: 6 }}>Matched Measurements</div>
-                      {(decision.matched_measurements || []).length ? decision.matched_measurements.map((item: string) => <div key={item} style={{ fontSize: 10, color: C.green, marginBottom: 4 }}>{item}</div>) : <div style={{ fontSize: 10, color: C.dim }}>None</div>}
+                      {(decision.matched_measurements || []).length ? decision.matched_measurements.map((item: string) => <div key={item} style={{ fontSize: 10, color: C.greenFg, marginBottom: 4 }}>{item}</div>) : <div style={{ fontSize: 10, color: C.dim }}>None</div>}
                     </Card>
                   </div>
                 </>

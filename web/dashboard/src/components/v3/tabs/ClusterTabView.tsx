@@ -87,7 +87,7 @@ function roleBadge(role: string, status: string, statusMeta: (s: string) => any)
 function componentPill(component: string, label: string, color: string) {
   const dimColor = color + "18";
   return <span key={component} style={{
-    padding: "3px 8px", borderRadius: 999, fontSize: 9, fontWeight: 700,
+    padding: "3px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700,
     color, background: dimColor, border: `1px solid ${color}22`
   }}>{label}</span>;
 }
@@ -138,7 +138,7 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
 
         {/* Leader node */}
         {leaderNode ? <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Leader Node</div>
+          <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Leader Node</div>
           <div style={{
             background: `linear-gradient(135deg, ${C.card} 0%, ${C.accentTint} 100%)`,
             border: `1px solid ${C.accent}`, borderRadius: 14, padding: 18,
@@ -153,21 +153,21 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 16, marginTop: 14 }}>
               <div>
-                <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>CPU</div>
+                <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>CPU</div>
                 <div style={{ fontSize: 18, color: C.white, fontWeight: 700, marginTop: 2 }}>{Number(leaderNode.cpu_percent || 0).toFixed(1)}%</div>
                 <Bar pct={Number(leaderNode.cpu_percent || 0)} color={C.accent} />
               </div>
               <div>
-                <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>RAM</div>
+                <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>RAM</div>
                 <div style={{ fontSize: 18, color: C.white, fontWeight: 700, marginTop: 2 }}>{Number(leaderNode.ram_gb || 0).toFixed(1)} GB</div>
                 <Bar pct={Math.min(Number(leaderNode.ram_gb || 0) / 32 * 100, 100)} color={C.green} />
               </div>
               <div>
-                <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Heartbeat</div>
+                <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Heartbeat</div>
                 <div style={{ fontSize: 14, color: C.text, fontWeight: 600, marginTop: 4 }}>{relativeTime(leaderNode.last_heartbeat_at)}</div>
               </div>
               <div>
-                <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Last Sync</div>
+                <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Last Sync</div>
                 <div style={{ fontSize: 14, color: C.text, fontWeight: 600, marginTop: 4 }}>{relativeTime(leaderNode.last_sync_at)}</div>
               </div>
             </div>
@@ -187,7 +187,7 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
 
         {/* Follower nodes */}
         {followers.length > 0 ? <>
-          <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>
+          <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>
             Follower Nodes <span style={{ color: C.dim }}>({followers.length})</span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 10 }}>
@@ -202,23 +202,23 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                   <div>
                     <div style={{ fontSize: 14, color: C.white, fontWeight: 700 }}>{String(node?.name || node?.id || "-")}</div>
-                    <div style={{ fontSize: 9, color: C.muted, fontFamily: "'JetBrains Mono',monospace", marginTop: 2 }}>{String(node?.endpoint || "unknown")}</div>
+                    <div style={{ fontSize: 10, color: C.muted, fontFamily: "'JetBrains Mono',monospace", marginTop: 2 }}>{String(node?.endpoint || "unknown")}</div>
                   </div>
                   {roleBadge("follower", status, statusMeta)}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginTop: 10 }}>
                   <div>
-                    <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: .7 }}>CPU</div>
+                    <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: .7 }}>CPU</div>
                     <div style={{ fontSize: 14, color: C.text, fontWeight: 700 }}>{Number(node?.cpu_percent || 0).toFixed(1)}%</div>
                     <Bar pct={Number(node?.cpu_percent || 0)} color={C.accent} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: .7 }}>RAM</div>
+                    <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: .7 }}>RAM</div>
                     <div style={{ fontSize: 14, color: C.text, fontWeight: 700 }}>{Number(node?.ram_gb || 0).toFixed(1)} GB</div>
                     <Bar pct={Math.min(Number(node?.ram_gb || 0) / 32 * 100, 100)} color={C.green} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: .7 }}>Heartbeat</div>
+                    <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: .7 }}>Heartbeat</div>
                     <div style={{ fontSize: 12, color: C.text, fontWeight: 600, marginTop: 4 }}>{relativeTime(node?.last_heartbeat_at)}</div>
                   </div>
                 </div>
@@ -242,18 +242,18 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
           marginTop: 14, border: `1px solid ${C.borderHi}`, borderRadius: 10,
           background: C.card, padding: "12px 16px", display: "flex", alignItems: "center", gap: 8
         }}>
-          <span style={{ fontSize: 11, color: C.accent, fontWeight: 700 }}>Replication</span>
+          <span style={{ fontSize: 11, color: C.accentFg, fontWeight: 700 }}>Replication</span>
           <span style={{ fontSize: 11, color: C.dim }}>{selectiveNote}</span>
         </div>
         {replication?.forwards_to && (
-          <div style={{ marginTop: 8, fontSize: 11, color: C.amber }}>
+          <div style={{ marginTop: 8, fontSize: 11, color: C.amberFg }}>
             Member node: key, policy and configuration changes are forwarded to primary {replication.forwards_to}. Crypto operations, logins and audit run on this node.
           </div>
         )}
         {replication && replication.subscriptions.length > 0 && (
           <div style={{ marginTop: 8, display: "grid", gap: 4 }}>
             {replication.subscriptions.map((s) => (
-              <div key={s.subscription} style={{ fontSize: 11, color: s.ready ? C.dim : C.amber }}>
+              <div key={s.subscription} style={{ fontSize: 11, color: s.ready ? C.dim : C.amberFg }}>
                 {s.component}: {s.ready ? "synchronized" : s.worker_running ? "copying" : "stopped"}
                 {` · ${s.tables.filter((t) => t.state === "ready").length}/${s.tables.length} tables · lag ${Math.round(s.lag_seconds)}s`}
               </div>
@@ -299,21 +299,21 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
                 <div>
-                  <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: .7 }}>CPU</div>
+                  <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: .7 }}>CPU</div>
                   <div style={{ fontSize: 16, color: C.text, fontWeight: 700 }}>{Number(node?.cpu_percent || 0).toFixed(1)}%</div>
                   <Bar pct={Number(node?.cpu_percent || 0)} color={C.accent} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: .7 }}>RAM</div>
+                  <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: .7 }}>RAM</div>
                   <div style={{ fontSize: 16, color: C.text, fontWeight: 700 }}>{Number(node?.ram_gb || 0).toFixed(1)} GB</div>
                   <Bar pct={Math.min(Number(node?.ram_gb || 0) / 32 * 100, 100)} color={C.green} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: .7 }}>Heartbeat</div>
+                  <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: .7 }}>Heartbeat</div>
                   <div style={{ fontSize: 12, color: C.text, fontWeight: 600, marginTop: 4 }}>{relativeTime(node?.last_heartbeat_at)}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: .7 }}>Last Sync</div>
+                  <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: .7 }}>Last Sync</div>
                   <div style={{ fontSize: 12, color: C.text, fontWeight: 600, marginTop: 4 }}>{relativeTime(node?.last_sync_at)}</div>
                 </div>
               </div>
@@ -369,7 +369,7 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
     return <div>
       <Section title="Deployment Profiles" actions={headerActions}>
         {/* Tier presets */}
-        <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Quick Start Tiers</div>
+        <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Quick Start Tiers</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 10, marginBottom: 16 }}>
           {deploymentTiers.map((tier) => {
             const isActive = selectedTier === tier.id;
@@ -383,7 +383,7 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: isActive ? tier.color : C.text }}>{tier.label}</div>
                 <span style={{
-                  fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 999,
+                  fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999,
                   background: dimColor, color: tier.color
                 }}>{tier.components.length} services</span>
               </div>
@@ -399,22 +399,22 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
             <FG label="Profile Name" required><Inp value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder="production-replication" /></FG>
             <FG label="Description"><Inp value={profileDescription} onChange={(e) => setProfileDescription(e.target.value)} placeholder="Full platform sync for production nodes" /></FG>
 
-            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginTop: 8, marginBottom: 6 }}>Core (required)</div>
+            <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginTop: 8, marginBottom: 6 }}>Core (required)</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 5, marginBottom: 8 }}>
               {coreChoices.map((c) => <Chk key={c.id} label={c.label} checked disabled />)}
             </div>
 
-            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Standard Services</div>
+            <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Standard Services</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 5, marginBottom: 8 }}>
               {standardChoices.map((c) => <Chk key={c.id} label={c.label} checked={profileComponents.includes(c.id)} onChange={() => toggleProfileComponent(c.id)} />)}
             </div>
 
-            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Security & Compliance</div>
+            <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Security & Compliance</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 5, marginBottom: 8 }}>
               {securityChoices.map((c) => <Chk key={c.id} label={c.label} checked={profileComponents.includes(c.id)} onChange={() => toggleProfileComponent(c.id)} />)}
             </div>
 
-            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Specialized</div>
+            <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Specialized</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 5, marginBottom: 8 }}>
               {specializedChoices.map((c) => <Chk key={c.id} label={c.label} checked={profileComponents.includes(c.id)} onChange={() => toggleProfileComponent(c.id)} />)}
             </div>
@@ -436,7 +436,7 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                     <div>
                       <div style={{ fontSize: 12, color: C.text, fontWeight: 700 }}>{String(profile?.name || profile?.id || "-")}</div>
-                      <div style={{ fontSize: 9, color: C.dim, fontFamily: "'JetBrains Mono',monospace" }}>{String(profile?.id || "-")}</div>
+                      <div style={{ fontSize: 10, color: C.dim, fontFamily: "'JetBrains Mono',monospace" }}>{String(profile?.id || "-")}</div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       {profile?.is_default ? <B c="green">Default</B> : null}
@@ -447,7 +447,7 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                     {comps.map((c: string) => componentPill(c, clusterComponentLabel(c), componentCategoryColor(c)))}
                   </div>
-                  <div style={{ fontSize: 9, color: C.muted, marginTop: 6 }}>{comps.length} components</div>
+                  <div style={{ fontSize: 10, color: C.muted, marginTop: 6 }}>{comps.length} components</div>
                 </Card>;
               })}
               {!profiles.length ? <Card style={{ padding: 16 }}>
@@ -483,7 +483,7 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
 
         {/* Per-node checkpoints */}
         {nodes.length > 0 ? <>
-          <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Node Sync Checkpoints</div>
+          <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Node Sync Checkpoints</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 8, marginBottom: 16 }}>
             {nodes.map((node: any) => {
               const nodeID = String(node?.id || "");
@@ -498,15 +498,15 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                   <div>
-                    <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase" }}>Last Synced</div>
+                    <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase" }}>Last Synced</div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{lastEventId || "—"}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase" }}>Lag</div>
+                    <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase" }}>Lag</div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: lagColor }}>{lag} events</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase" }}>Updated</div>
+                    <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase" }}>Updated</div>
                     <div style={{ fontSize: 11, color: C.text, marginTop: 2 }}>{relativeTime(cp?.updated_at)}</div>
                   </div>
                 </div>
@@ -516,13 +516,13 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
         </> : null}
 
         {/* Sync event log */}
-        <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Recent Sync Events</div>
+        <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Recent Sync Events</div>
         <div style={{ maxHeight: 400, overflow: "auto", borderRadius: 10, border: `1px solid ${C.border}` }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
             <thead>
               <tr style={{ background: C.surface, position: "sticky", top: 0 }}>
                 {["ID", "Component", "Entity", "Operation", "Source", "Time"].map((h) =>
-                  <th key={h} style={{ padding: "8px 10px", textAlign: "left", color: C.muted, fontSize: 9, textTransform: "uppercase", letterSpacing: .7, borderBottom: `1px solid ${C.border}` }}>{h}</th>
+                  <th key={h} style={{ padding: "8px 10px", textAlign: "left", color: C.muted, fontSize: 10, textTransform: "uppercase", letterSpacing: .7, borderBottom: `1px solid ${C.border}` }}>{h}</th>
                 )}
               </tr>
             </thead>
@@ -584,15 +584,15 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
             display: "flex", gap: 10, alignItems: "flex-start"
           }}>
             <span style={{
-              padding: "2px 8px", borderRadius: 5, fontSize: 9, fontWeight: 700,
+              padding: "2px 8px", borderRadius: 5, fontSize: 10, fontWeight: 700,
               color: levelColor(log.level), background: levelBg(log.level),
               flexShrink: 0, minWidth: 44, textAlign: "center", textTransform: "uppercase"
             }}>{String(log.level || "info").toUpperCase()}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 3 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: C.text }}>{log.event_type || "event"}</span>
-                {log.node_id ? <span style={{ fontSize: 9, color: C.dim }}>{log.node_id}</span> : null}
-                <span style={{ fontSize: 9, color: C.muted, marginLeft: "auto" }}>{relativeTime(log.created_at)}</span>
+                {log.node_id ? <span style={{ fontSize: 10, color: C.dim }}>{log.node_id}</span> : null}
+                <span style={{ fontSize: 10, color: C.muted, marginLeft: "auto" }}>{relativeTime(log.created_at)}</span>
               </div>
               <div style={{ fontSize: 11, color: C.dim, lineHeight: 1.4 }}>{log.message}</div>
             </div>
@@ -600,7 +600,7 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
           {clusterLogs.length === 0 ? <div style={{ padding: 24, textAlign: "center", color: C.dim }}>No cluster logs found.</div> : null}
         </div>
 
-        <div style={{ fontSize: 9, color: C.muted, marginTop: 8 }}>Showing {clusterLogs.length} log entries</div>
+        <div style={{ fontSize: 10, color: C.muted, marginTop: 8 }}>Showing {clusterLogs.length} log entries</div>
       </Section>
     </div>;
   }

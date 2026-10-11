@@ -78,7 +78,7 @@ export function clickedIndex(state: { activeIndex?: unknown } | null | undefined
 }
 
 export const DrillHint = () => (
-  <div style={{ fontSize: 9, color: C.muted, marginBottom: 8 }}>Click a bar, slice or point to list the entries it counts.</div>
+  <div style={{ fontSize: 10, color: C.muted, marginBottom: 8 }}>Click a bar, slice or point to list the entries it counts.</div>
 );
 
 const PAGE = 100;
@@ -132,7 +132,7 @@ export function DrillPanel({ label, count, onClear, children, loaded, loading, e
         </span>
         <Btn small onClick={onClear}>Clear</Btn>
       </div>
-      {error ? <div style={{ fontSize: 10, color: C.red, marginBottom: 8 }}>{`Entries unavailable: ${error}`}</div> : null}
+      {error ? <div style={{ fontSize: 10, color: C.redFg, marginBottom: 8 }}>{`Entries unavailable: ${error}`}</div> : null}
       <div style={{ maxHeight: 420, overflow: "auto" }}>
         {(known ? count === 0 : shown === 0 && !loading && !hasMore) ? <div style={{ fontSize: 10, color: C.muted, padding: 12 }}>No entries.</div> : children}
       </div>

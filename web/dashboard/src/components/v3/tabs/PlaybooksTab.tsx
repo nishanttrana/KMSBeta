@@ -164,7 +164,7 @@ const Card = ({ title, icon, right, children }: any) => (
   </div>
 );
 
-const Err = ({ children }: any) => children ? <div style={{ fontSize: 12, color: C.red, margin: "0 0 12px" }}>{children}</div> : null;
+const Err = ({ children }: any) => children ? <div style={{ fontSize: 12, color: C.redFg, margin: "0 0 12px" }}>{children}</div> : null;
 
 // FiltersEditor edits [{field, op, value}]: triggers and action conditions.
 function FiltersEditor({ filters, onChange, catalog, label }: any) {
@@ -182,7 +182,7 @@ function FiltersEditor({ filters, onChange, catalog, label }: any) {
           </select>
           <input value={f.value} placeholder="value (comma list for in)" onChange={(e: any) => set(i, "value", e.target.value)}
             style={{ flex: 2, background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, padding: "6px 8px", color: C.text, fontSize: 11 }} />
-          <button onClick={() => onChange(filters.filter((_: any, idx: number) => idx !== i))} style={{ background: "none", border: "none", color: C.red, cursor: "pointer" }}><Trash2 size={12} /></button>
+          <button onClick={() => onChange(filters.filter((_: any, idx: number) => idx !== i))} style={{ background: "none", border: "none", color: C.redFg, cursor: "pointer" }}><Trash2 size={12} /></button>
         </div>
       ))}
       <datalist id="pb-event-fields">{fields.map((f: string) => <option key={f} value={f} />)}</datalist>
@@ -464,7 +464,7 @@ export function PlaybooksTab({ session, onNavigate }: { session: any; onNavigate
                       {g.items.map((t: any) => (
                         <div key={t.type} style={{ background: covered.has(t.type) ? C.greenDim : C.card, border: `1px solid ${covered.has(t.type) ? C.green + "33" : C.border}`, borderRadius: 6, padding: "6px 10px", minWidth: 170 }}>
                           <div style={{ fontSize: 10, fontWeight: 600, color: C.text }}>{covered.has(t.type) ? <CheckCircle2 size={10} color={C.green} /> : <XCircle size={10} color={C.muted} />} {t.label}</div>
-                          <div style={{ fontSize: 9, color: C.muted, fontFamily: "'JetBrains Mono', monospace" }}>{(t.subjects || []).join(", ") || "any subject you name"}</div>
+                          <div style={{ fontSize: 10, color: C.muted, fontFamily: "'JetBrains Mono', monospace" }}>{(t.subjects || []).join(", ") || "any subject you name"}</div>
                         </div>
                       ))}
                     </div>
@@ -485,7 +485,7 @@ export function PlaybooksTab({ session, onNavigate }: { session: any; onNavigate
                 <span style={{ fontSize: 10, color: C.muted }}>nothing was changed; targets were read from their services</span>
                 <button onClick={() => setDryRun(null)} style={{ marginLeft: "auto", background: "none", border: "none", color: C.muted, cursor: "pointer" }}><XCircle size={13} /></button>
               </div>
-              <div style={{ fontSize: 11, color: dryRun.trigger_matches ? C.green : C.amber, marginBottom: 6 }}>Trigger filters {dryRun.trigger_matches ? "match" : "do not match"} this event.</div>
+              <div style={{ fontSize: 11, color: dryRun.trigger_matches ? C.greenFg : C.amberFg, marginBottom: 6 }}>Trigger filters {dryRun.trigger_matches ? "match" : "do not match"} this event.</div>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead><tr><TH>#</TH><TH>Action</TH><TH>Would run</TH><TH>Parameters</TH><TH>Permission</TH><TH>Approval</TH><TH>Target</TH></tr></thead>
                 <tbody>{dryRun.steps.map((s: any) => (
@@ -508,13 +508,13 @@ export function PlaybooksTab({ session, onNavigate }: { session: any; onNavigate
                   <TD><span style={{ fontWeight: 600 }}>{pb.name}</span><div style={{ fontSize: 10, color: C.muted }}>{prettify(pb.category)}{pb.description ? ` · ${pb.description}` : ""}</div></TD>
                   <TD>
                     <Badge color={groupColor(triggerSpec(pb.trigger?.type)?.group)}>{triggerSpec(pb.trigger?.type)?.label || pb.trigger?.type}</Badge>
-                    <div style={{ fontSize: 9, color: C.muted }}>
+                    <div style={{ fontSize: 10, color: C.muted }}>
                       {pb.trigger?.subject || ""}{(pb.trigger?.filters || []).length ? ` · ${pb.trigger.filters.length} filter(s)` : ""}
                       {pb.trigger?.threshold > 1 ? ` · ${pb.trigger.threshold} in ${pb.trigger.window_seconds}s${pb.trigger.group_by ? ` per ${pb.trigger.group_by}` : ""}` : ""}
                     </div>
                   </TD>
                   <TD><span style={{ color: C.dim }}>{(pb.actions || []).map((a: any) => actionSpec(a.type)?.label || a.type).join(" → ")}</span></TD>
-                  <TD><button onClick={() => handleToggle(pb)} style={{ background: "none", border: "none", cursor: "pointer", color: pb.enabled ? C.green : C.muted }}>{pb.enabled ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}</button></TD>
+                  <TD><button onClick={() => handleToggle(pb)} style={{ background: "none", border: "none", cursor: "pointer", color: pb.enabled ? C.greenFg : C.muted }}>{pb.enabled ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}</button></TD>
                   <TD>{authBadge(pb)}</TD>
                   <TD>{pb.run_count}</TD>
                   <TD>{pb.last_run_at ? fmtAgo(pb.last_run_at) : "Never"}</TD>
@@ -559,13 +559,13 @@ export function PlaybooksTab({ session, onNavigate }: { session: any; onNavigate
               <thead><tr><TH>Incident</TH><TH>Severity</TH><TH>Status</TH><TH>Alerts</TH><TH>Assigned</TH><TH>Playbook runs</TH></tr></thead>
               <tbody>{incidents.map((inc: any) => (
                 <tr key={inc.id}>
-                  <TD><span style={{ fontWeight: 600 }}>{inc.title}</span><div style={{ fontSize: 9, color: C.muted, fontFamily: "'JetBrains Mono', monospace" }}>{inc.id}</div></TD>
+                  <TD><span style={{ fontWeight: 600 }}>{inc.title}</span><div style={{ fontSize: 10, color: C.muted, fontFamily: "'JetBrains Mono', monospace" }}>{inc.id}</div></TD>
                   <TD><Badge color={statusColor(inc.severity === "critical" ? "failed" : "running")}>{inc.severity}</Badge></TD>
                   <TD>{prettify(inc.status)}</TD><TD>{inc.alert_count}</TD><TD>{inc.assigned_to || "—"}</TD>
                   <TD>{(incidentRuns[inc.id] || []).length === 0 ? <span style={{ color: C.muted }}>none</span> :
                     (incidentRuns[inc.id] || []).map((r: any) => (
                       <div key={r.id} style={{ fontSize: 10 }}>
-                        <button onClick={() => { setRunFilter({ status: "", incident_id: inc.id }); setView("runs"); }} style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", padding: 0 }}>
+                        <button onClick={() => { setRunFilter({ status: "", incident_id: inc.id }); setView("runs"); }} style={{ background: "none", border: "none", color: C.accentFg, cursor: "pointer", padding: 0 }}>
                           {playbooks.find((p: any) => p.id === r.playbook_id)?.name || r.playbook_id}
                         </button> <Badge color={statusColor(r.status)}>{prettify(r.status)}</Badge>
                       </div>
@@ -626,7 +626,7 @@ export function PlaybooksTab({ session, onNavigate }: { session: any; onNavigate
                 <div key={i} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                     <span style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>Action {i + 1}</span>
-                    {form.actions.length > 1 && <button onClick={() => setForm((p: any) => ({ ...p, actions: p.actions.filter((_: any, idx: number) => idx !== i) }))} style={{ background: "none", border: "none", color: C.red, cursor: "pointer" }}><Trash2 size={13} /></button>}
+                    {form.actions.length > 1 && <button onClick={() => setForm((p: any) => ({ ...p, actions: p.actions.filter((_: any, idx: number) => idx !== i) }))} style={{ background: "none", border: "none", color: C.redFg, cursor: "pointer" }}><Trash2 size={13} /></button>}
                   </div>
                   <Sel value={a.type} onChange={(e: any) => setAction(i, "type", e.target.value)}>
                     {!spec && <option value={a.type}>{a.type} (no longer supported)</option>}

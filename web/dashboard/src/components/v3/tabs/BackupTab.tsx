@@ -98,7 +98,7 @@ export function BackupTab({ session }: { session: any }) {
 
   const statCard = (icon: React.ReactNode, label: string, value: string, sub?: string, color?: string) => (
     <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px", flex: 1, display: "flex", gap: 12, alignItems: "flex-start" }}>
-      <div style={{ color: color || C.accent, marginTop: 2 }}>{icon}</div>
+      <div style={{ color: color || C.accentFg, marginTop: 2 }}>{icon}</div>
       <div>
         <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
         <div style={{ fontSize: 20, fontWeight: 700, color: color || C.text }}>{value}</div>
@@ -111,7 +111,7 @@ export function BackupTab({ session }: { session: any }) {
     <div style={{ padding: 24, fontFamily: '"IBM Plex Sans", sans-serif', color: C.text, minHeight: "100%" }}>
       {PREVIEW && (
         <div role="note" style={{ border: `1px solid ${C.amber}`, borderRadius: 8, padding: "10px 12px", marginBottom: 16, fontSize: 12, color: C.text }}>
-          <b style={{ color: C.amber }}>Preview.</b> {PREVIEW.limitation} Runs recorded before 2026-09-25 were simulated and are marked "simulated".
+          <b style={{ color: C.amberFg }}>Preview.</b> {PREVIEW.limitation} Runs recorded before 2026-09-25 were simulated and are marked "simulated".
         </div>
       )}
       {/* Header */}
@@ -174,7 +174,7 @@ export function BackupTab({ session }: { session: any }) {
                       {p.description && <div style={{ fontSize: 10, color: C.muted, marginTop: 1 }}>{p.description}</div>}
                     </td>
                     <td style={CELL}>
-                      <span style={{ padding: "2px 7px", borderRadius: 4, background: C.accentDim, color: C.accent, fontSize: 10, fontWeight: 600 }}>
+                      <span style={{ padding: "2px 7px", borderRadius: 4, background: C.accentDim, color: C.accentFg, fontSize: 10, fontWeight: 600 }}>
                         {p.scope === "tagged" ? `tag:${p.tag_filter}` : p.scope.replace("_", " ")}
                       </span>
                     </td>
@@ -187,7 +187,7 @@ export function BackupTab({ session }: { session: any }) {
                       </div>
                     </td>
                     <td style={CELL}>
-                      <span style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: p.enabled ? C.greenDim : C.redDim, color: p.enabled ? C.green : C.red }}>
+                      <span style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: p.enabled ? C.greenDim : C.redDim, color: p.enabled ? C.greenFg : C.redFg }}>
                         {p.enabled ? "Enabled" : "Disabled"}
                       </span>
                     </td>
@@ -197,7 +197,7 @@ export function BackupTab({ session }: { session: any }) {
                         <button onClick={() => handleTrigger(p.id)} disabled title={PREVIEW?.limitation} style={{ padding: "4px 8px", borderRadius: 4, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "not-allowed", display: "flex", alignItems: "center", gap: 3, fontSize: 11 }}>
                           <Play size={10} />{triggering === p.id ? "Running..." : "Run"}
                         </button>
-                        <button onClick={() => deletePolicy(session, p.id).then(load)} style={{ padding: "4px 6px", borderRadius: 4, border: `1px solid ${C.border}`, background: "transparent", color: C.red, cursor: "pointer" }}>
+                        <button onClick={() => deletePolicy(session, p.id).then(load)} style={{ padding: "4px 6px", borderRadius: 4, border: `1px solid ${C.border}`, background: "transparent", color: C.redFg, cursor: "pointer" }}>
                           <Trash2 size={11} />
                         </button>
                       </div>
@@ -267,11 +267,11 @@ export function BackupTab({ session }: { session: any }) {
                       {p.checksum.replace("sha256:", "").slice(0, 16)}…
                     </td>
                     <td style={{ ...CELL, fontSize: 11 }}>{fmtDate(p.created_at)}</td>
-                    <td style={{ ...CELL, fontSize: 11, color: p.expires_at && new Date(p.expires_at) < new Date() ? C.red : C.dim }}>
+                    <td style={{ ...CELL, fontSize: 11, color: p.expires_at && new Date(p.expires_at) < new Date() ? C.redFg : C.dim }}>
                       {p.expires_at ? fmtDate(p.expires_at) : "Never"}
                     </td>
                     <td style={CELL}>
-                      <span style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: p.status === "available" ? C.greenDim : C.amberDim, color: p.status === "available" ? C.green : C.amber }}>
+                      <span style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: p.status === "available" ? C.greenDim : C.amberDim, color: p.status === "available" ? C.greenFg : C.amberFg }}>
                         {p.status}
                       </span>
                     </td>

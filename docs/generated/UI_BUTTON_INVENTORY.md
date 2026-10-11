@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-11T17:16:44Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-11T17:36:37Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -10,20 +10,20 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/AppErrorBoundary.tsx | 96 | - | button | window.location.reload()} style={ } > Reload page |  |
 | web/dashboard/src/components/IdleWarningModal.tsx | 95 | - | Btn | Logout Now | onLogout |
 | web/dashboard/src/components/IdleWarningModal.tsx | 98 | - | Btn | Stay Active | onStayActive |
-| web/dashboard/src/components/LoginScreen.tsx | 369 | - | button | {loading ? ( <> Authenticating… ) : ( <> Sign In )} | handleLogin |
-| web/dashboard/src/components/LoginScreen.tsx | 405 | - | button | handleSSOLogin(sp.provider)} disabled= className="w-full rounded-lg border bo... |  |
-| web/dashboard/src/components/LoginScreen.tsx | 441 | - | button | setShowPolicyHint((v) => !v)} className="text-cyber-accent transition-colors... |  |
-| web/dashboard/src/components/LoginScreen.tsx | 473 | - | button | {savingPassword ? ( <> Applying… ) : ( <> Update Password and Continue )} | handlePasswordChange |
+| web/dashboard/src/components/LoginScreen.tsx | 325 | - | button | {loading ? ( <> Authenticating… ) : ( <> Sign In )} | handleLogin |
+| web/dashboard/src/components/LoginScreen.tsx | 355 | - | button | handleSSOLogin(sp.provider)} disabled= className="w-full rounded-lg border bo... |  |
+| web/dashboard/src/components/LoginScreen.tsx | 391 | - | button | setShowPolicyHint((v) => !v)} className="text-cyber-accent transition-colors... |  |
+| web/dashboard/src/components/LoginScreen.tsx | 423 | - | button | {savingPassword ? ( <> Applying… ) : ( <> Update Password and Continue )} | handlePasswordChange |
 | web/dashboard/src/components/ThemeToggle.tsx | 17 | - | button | {isDark ? : } | toggle |
 | web/dashboard/src/components/ThemeToggle.tsx | 31 | - | button | } onMouseLeave={(e) => } > {isDark ? : } | toggle |
 | web/dashboard/src/components/ToastStack.tsx | 84 | - | button | dismiss(toast.id)} aria-label="Dismiss notification" style={ } > × |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 636 | - | button | setCollapsed((v) => !v)} title= className="vk-icon-btn" style={{ width: 22, h... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 820 | - | button | Sign out | onLogout |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 873 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 896 | - | button | setPaletteOpen(true)} title="Command palette (⌘K)" className="vk-search-btn"... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 946 | - | Btn | selectTab("admin")} style={cliEnabled ? : }> |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 983 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1018 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 626 | - | button | setCollapsed((v) => !v)} title= className="vk-icon-btn" style={{ width: 22, h... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 812 | - | button | Sign out | onLogout |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 864 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 887 | - | button | setPaletteOpen(true)} title="Command palette (⌘K)" className="vk-search-btn"... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 936 | - | Btn | selectTab("admin")} style={cliEnabled ? : }> |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 973 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1008 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
 | web/dashboard/src/components/primitives.tsx | 23 | - | button | (icon or dynamic label) | onClick |
 | web/dashboard/src/components/v3/SidebarSubNav.tsx | 95 | - | button | onSelect(item.id)} style={ } > |  |
 | web/dashboard/src/components/v3/chartDrill.tsx | 133 | - | Btn | Clear | onClear |
@@ -33,7 +33,7 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 165 | - | Btn | (icon or dynamic label) | submit |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 537 | - | button | { if (!disabled) }} onFocus= onBlur= onMouseDown= onKeyDown= style={{ backgro... |  |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 650 | - | button | (icon or dynamic label) | onClick} disabled={disabled |
-| web/dashboard/src/components/v3/legacyPrimitives.tsx | 677 | - | button | onChange(t)} style={{ background: active === t ? C.accentDim : "transparent",... |  |
+| web/dashboard/src/components/v3/legacyPrimitives.tsx | 677 | - | button | onChange(t)} style={{ background: "transparent", color: active === t ? C.text... |  |
 | web/dashboard/src/components/v3/runtimeUtils.tsx | 66 | - | button | Retry | reset} style={{ border: "1px solid #243656", borderRadius: 6, padding: "4px 10px", background: "transparent", color:... |
 | web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 99 | - | Btn | void load()}>Retry |  |
 | web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 107 | - | Btn | void load()} disabled= > |  |
@@ -192,7 +192,7 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 180 | home, recommendations | button | onNavigate(r.action.tab)} style={ } > |  |
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 187 | home, recommendations | button | setOpen((v) => !v)} aria-label="Details" style={ }> |  |
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 202 | home, recommendations | button | onSnooze(r.id)} style={{ marginTop: 10, fontSize: 12, color: C.muted, backgro... |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 307 | home, recommendations | button | void refresh()} disabled= style={{ display: "inline-flex", alignItems: "cente... |  |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 308 | home, recommendations | button | void refresh()} disabled= style={{ display: "inline-flex", alignItems: "cente... |  |
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 347 | home, recommendations | button | onNavigate("recommendations")} style={ }>View all → |  |
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 362 | home, recommendations | button | onNavigate("ops")} style={ }> Operations dashboard |  |
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 393 | home, recommendations | button | void refresh()} disabled= style={ }> |  |

@@ -416,13 +416,13 @@ export const SBOMTab = ({ session, onToast }: any) => {
                   <stop offset="95%" stopColor={C.accent} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="label" tick={{ fill: C.muted, fontSize: 8 }} axisLine={{ stroke: C.border }} tickLine={false} interval="preserveStartEnd" />
-              <YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
-              <Tooltip content={({ active, payload, label }) => active && payload?.length ? <ChartTip><div style={{ fontWeight: 700, color: C.accent, marginBottom: 2 }}>{label}</div>Total: <span style={{ fontWeight: 700 }}>{payload[0]?.value}</span></ChartTip> : null} cursor={{ stroke: C.borderHi, strokeDasharray: "3 3" }} />
+              <XAxis dataKey="label" tick={{ fill: C.muted, fontSize: 10 }} axisLine={{ stroke: C.border }} tickLine={false} interval="preserveStartEnd" />
+              <YAxis tick={{ fill: C.muted, fontSize: 10 }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
+              <Tooltip content={({ active, payload, label }) => active && payload?.length ? <ChartTip><div style={{ fontWeight: 700, color: C.accentFg, marginBottom: 2 }}>{label}</div>Total: <span style={{ fontWeight: 700 }}>{payload[0]?.value}</span></ChartTip> : null} cursor={{ stroke: C.borderHi, strokeDasharray: "3 3" }} />
               <Area type="monotone" dataKey="total" stroke={C.accent} strokeWidth={2} fill="url(#depGrad)" dot={{ fill: C.accent, r: 2, strokeWidth: 0 }} activeDot={{ fill: C.accent, r: 4, stroke: C.bg, strokeWidth: 2 }} />
             </AreaChart>
           </ResponsiveContainer> : <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: C.muted }}>No historical SBOM snapshots yet.</div>}
-          <div style={{ fontSize: 9, color: C.muted, marginTop: 4 }}>{`${sbomTrend.length} snapshots — total dependency count per scan`}</div>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>{`${sbomTrend.length} snapshots — total dependency count per scan`}</div>
         </Card>
 
         {/* Dependency categories */}
@@ -434,7 +434,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
               <span style={{ fontSize: 11, color: C.dim }}>{row.count}</span>
             </div>)}
           </div>
-          <div style={{ fontSize: 9, color: C.muted, marginTop: 10 }}>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 10 }}>
             Export the SBOM (CycloneDX or SPDX) to your vulnerability-management tool for CVE tracking.
           </div>
         </Card>
@@ -484,10 +484,10 @@ export const SBOMTab = ({ session, onToast }: any) => {
           <Inp value={componentSearch} onChange={(e: any) => setComponentSearch(e.target.value)} placeholder="Search components..." style={{ height: 30, fontSize: 11, width: 200 }} />
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <Btn small onClick={() => void exportSBOMFile("cyclonedx")} disabled={Boolean(exportingSBOM)} style={{ height: 30, fontSize: 11, background: activeSBOMFormat === "cyclonedx" ? C.accentDim : "transparent", borderColor: activeSBOMFormat === "cyclonedx" ? C.accent : C.border, color: activeSBOMFormat === "cyclonedx" ? C.accent : C.dim }}>
+          <Btn small onClick={() => void exportSBOMFile("cyclonedx")} disabled={Boolean(exportingSBOM)} style={{ height: 30, fontSize: 11, background: activeSBOMFormat === "cyclonedx" ? C.accentDim : "transparent", borderColor: activeSBOMFormat === "cyclonedx" ? C.accent : C.border, color: activeSBOMFormat === "cyclonedx" ? C.accentFg : C.dim }}>
             {exportingSBOM === "cyclonedx" ? "..." : "CycloneDX"}
           </Btn>
-          <Btn small onClick={() => void exportSBOMFile("spdx")} disabled={Boolean(exportingSBOM)} style={{ height: 30, fontSize: 11, background: activeSBOMFormat === "spdx" ? C.accentDim : "transparent", borderColor: activeSBOMFormat === "spdx" ? C.accent : C.border, color: activeSBOMFormat === "spdx" ? C.accent : C.dim }}>
+          <Btn small onClick={() => void exportSBOMFile("spdx")} disabled={Boolean(exportingSBOM)} style={{ height: 30, fontSize: 11, background: activeSBOMFormat === "spdx" ? C.accentDim : "transparent", borderColor: activeSBOMFormat === "spdx" ? C.accent : C.border, color: activeSBOMFormat === "spdx" ? C.accentFg : C.dim }}>
             {exportingSBOM === "spdx" ? "..." : "SPDX"}
           </Btn>
           <div style={{ position: "relative" }}>
@@ -509,7 +509,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
         {sbomRows.map((row) => <Card key={row.label} style={{ padding: "10px 14px", cursor: "pointer" }} onClick={() => openDependencyList(row)}>
           <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{row.label}</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: C.accent, marginTop: 2 }}>{row.count}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: C.accentFg, marginTop: 2 }}>{row.count}</div>
         </Card>)}
       </div>
 
@@ -520,7 +520,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
         </div>
         <div style={{ maxHeight: 400, overflowY: "auto" }}>
           {/* Table header */}
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.borderHi}`, fontSize: 9, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, position: "sticky", top: 0, background: C.card, zIndex: 1 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.borderHi}`, fontSize: 10, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, position: "sticky", top: 0, background: C.card, zIndex: 1 }}>
             <span>Name</span><span>Version</span><span>Type</span><span>Ecosystem</span>
           </div>
           {filteredComponents.map((c: any, idx: number) => {
@@ -546,13 +546,13 @@ export const SBOMTab = ({ session, onToast }: any) => {
                 <stop offset="95%" stopColor={C.accent} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <XAxis dataKey="label" tick={{ fill: C.muted, fontSize: 8 }} axisLine={{ stroke: C.border }} tickLine={false} interval="preserveStartEnd" />
-            <YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
-            <Tooltip content={({ active, payload, label }) => active && payload?.length ? <ChartTip><div style={{ fontWeight: 700, color: C.accent, marginBottom: 2 }}>{label}</div>Total: <span style={{ fontWeight: 700 }}>{payload[0]?.value}</span></ChartTip> : null} cursor={{ stroke: C.borderHi, strokeDasharray: "3 3" }} />
+            <XAxis dataKey="label" tick={{ fill: C.muted, fontSize: 10 }} axisLine={{ stroke: C.border }} tickLine={false} interval="preserveStartEnd" />
+            <YAxis tick={{ fill: C.muted, fontSize: 10 }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
+            <Tooltip content={({ active, payload, label }) => active && payload?.length ? <ChartTip><div style={{ fontWeight: 700, color: C.accentFg, marginBottom: 2 }}>{label}</div>Total: <span style={{ fontWeight: 700 }}>{payload[0]?.value}</span></ChartTip> : null} cursor={{ stroke: C.borderHi, strokeDasharray: "3 3" }} />
             <Area type="monotone" dataKey="total" stroke={C.accent} strokeWidth={2} fill="url(#depGrad2)" dot={{ fill: C.accent, r: 2, strokeWidth: 0 }} activeDot={{ fill: C.accent, r: 4, stroke: C.bg, strokeWidth: 2 }} />
           </AreaChart>
         </ResponsiveContainer> : <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: C.muted }}>No historical SBOM snapshots yet.</div>}
-        <div style={{ fontSize: 9, color: C.muted, marginTop: 4 }}>{`Generated ${sbomGenerated ? new Date(sbomGenerated).toLocaleString() : "-"}`}</div>
+        <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>{`Generated ${sbomGenerated ? new Date(sbomGenerated).toLocaleString() : "-"}`}</div>
       </Card>
     </>}
 
@@ -576,7 +576,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
                 {distItems.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
               </Pie>
               <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ color: payload[0]?.payload?.fill, fontWeight: 700 }}>{payload[0]?.name}</span>: {payload[0]?.value} assets</ChartTip> : null} />
-              <Legend verticalAlign="bottom" height={28} iconType="circle" iconSize={8} formatter={(v: string) => <span style={{ color: C.dim, fontSize: 9 }}>{v}</span>} />
+              <Legend verticalAlign="bottom" height={28} iconType="circle" iconSize={8} formatter={(v: string) => <span style={{ color: C.dim, fontSize: 10 }}>{v}</span>} />
             </PieChart>
           </ResponsiveContainer> : <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: C.muted }}>No algorithm data available.</div>}
           <div style={{ textAlign: "center", fontSize: 20, fontWeight: 800, color: C.text, marginTop: 4 }}>{totalAssets.toLocaleString()} <span style={{ fontSize: 10, fontWeight: 400, color: C.muted }}>total assets</span></div>
@@ -587,9 +587,9 @@ export const SBOMTab = ({ session, onToast }: any) => {
           <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 10 }}>Key Strength Distribution</div>
           {strengthBars.length > 0 ? <ResponsiveContainer width="100%" height={160}>
             <BarChart data={strengthBars} layout="vertical">
-              <XAxis type="number" tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} />
+              <XAxis type="number" tick={{ fill: C.muted, fontSize: 10 }} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={false} tickLine={false} width={60} />
-              <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: C.accent }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value} assets</ChartTip> : null} cursor={{ fill: "rgba(123,140,255,.04)" }} />
+              <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: C.accentFg }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value} assets</ChartTip> : null} cursor={{ fill: "rgba(76,157,255,.04)" }} />
               <RBar dataKey="value" radius={[0, 4, 4, 0]} fill={C.accent} />
             </BarChart>
           </ResponsiveContainer> : <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: C.muted }}>No strength data available.</div>}
@@ -605,8 +605,8 @@ export const SBOMTab = ({ session, onToast }: any) => {
                 </ResponsiveContainer>
               </div>
               <div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: pqcPct >= 75 ? C.green : pqcPct >= 40 ? C.amber : C.red }}>{pqcPct}%</div>
-                <div style={{ fontSize: 9, color: C.muted }}>{Number(pqcReadiness?.pqc_ready_count ?? cbomLatest?.document?.pqc_ready_count ?? 0)} of {totalAssets} assets PQC-ready</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: pqcPct >= 75 ? C.greenFg : pqcPct >= 40 ? C.amberFg : C.redFg }}>{pqcPct}%</div>
+                <div style={{ fontSize: 10, color: C.muted }}>{Number(pqcReadiness?.pqc_ready_count ?? cbomLatest?.document?.pqc_ready_count ?? 0)} of {totalAssets} assets PQC-ready</div>
               </div>
             </div>
           </div>
@@ -622,12 +622,12 @@ export const SBOMTab = ({ session, onToast }: any) => {
               <span style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{String(row.label)}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 18, fontWeight: 700, color: C[row.tone as keyof typeof C] || C.accent }}>{Number(row.count || 0).toLocaleString()}</span>
-              <span style={{ fontSize: 9, color: C.muted }}>assets</span>
+              <span style={{ fontSize: 18, fontWeight: 700, color: C[row.tone as keyof typeof C] || C.accentFg }}>{Number(row.count || 0).toLocaleString()}</span>
+              <span style={{ fontSize: 10, color: C.muted }}>assets</span>
             </div>
           </div>)}
         </div>
-        <div style={{ marginTop: 10, fontSize: 9, color: C.muted }}>
+        <div style={{ marginTop: 10, fontSize: 10, color: C.muted }}>
           {`Generated ${cbomGenerated ? new Date(cbomGenerated).toLocaleString() : "-"} — Auto-scheduled daily and refreshed from live inventory.`}
         </div>
       </Card>
@@ -641,16 +641,16 @@ export const SBOMTab = ({ session, onToast }: any) => {
         Changes between the latest two CBOM snapshots for tenant {String(session?.tenantId || "-")}.
       </div>
       <Row3>
-        <Card><div style={{ fontSize: 10, color: C.muted }}>Added</div><div style={{ fontSize: 20, color: C.green, fontWeight: 700 }}>{Number(diffData?.metrics?.added || 0)}</div></Card>
-        <Card><div style={{ fontSize: 10, color: C.muted }}>Removed</div><div style={{ fontSize: 20, color: C.red, fontWeight: 700 }}>{Number(diffData?.metrics?.removed || 0)}</div></Card>
-        <Card><div style={{ fontSize: 10, color: C.muted }}>Changed</div><div style={{ fontSize: 20, color: C.amber, fontWeight: 700 }}>{Number(diffData?.metrics?.changed || 0)}</div></Card>
+        <Card><div style={{ fontSize: 10, color: C.muted }}>Added</div><div style={{ fontSize: 20, color: C.greenFg, fontWeight: 700 }}>{Number(diffData?.metrics?.added || 0)}</div></Card>
+        <Card><div style={{ fontSize: 10, color: C.muted }}>Removed</div><div style={{ fontSize: 20, color: C.redFg, fontWeight: 700 }}>{Number(diffData?.metrics?.removed || 0)}</div></Card>
+        <Card><div style={{ fontSize: 10, color: C.muted }}>Changed</div><div style={{ fontSize: 20, color: C.amberFg, fontWeight: 700 }}>{Number(diffData?.metrics?.changed || 0)}</div></Card>
       </Row3>
       <div style={{ height: 8 }} />
       <Card style={{ maxHeight: 260, overflowY: "auto" }}>
         <div style={{ fontSize: 11, color: C.text, fontWeight: 700, marginBottom: 6 }}>Algorithm delta</div>
         {Object.entries(diffData?.metrics?.algorithm_delta || {}).map(([alg, val]) => <div key={alg} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, padding: "3px 0", borderBottom: `1px solid ${C.border}` }}>
           <span style={{ color: C.dim }}>{alg}</span>
-          <span style={{ color: Number(val) >= 0 ? C.green : C.red, fontWeight: 700 }}>{`${Number(val) >= 0 ? "+" : ""}${Number(val || 0)}`}</span>
+          <span style={{ color: Number(val) >= 0 ? C.greenFg : C.redFg, fontWeight: 700 }}>{`${Number(val) >= 0 ? "+" : ""}${Number(val || 0)}`}</span>
         </div>)}
         {!Object.keys(diffData?.metrics?.algorithm_delta || {}).length ? <div style={{ fontSize: 10, color: C.muted }}>No algorithm distribution changes detected.</div> : null}
       </Card>
@@ -665,25 +665,25 @@ export const SBOMTab = ({ session, onToast }: any) => {
         Changes between the latest two SBOM snapshots.
       </div>
       <Row3>
-        <Card><div style={{ fontSize: 10, color: C.muted }}>Added</div><div style={{ fontSize: 20, color: C.green, fontWeight: 700 }}>{Number(sbomDiffData?.metrics?.added || 0)}</div></Card>
-        <Card><div style={{ fontSize: 10, color: C.muted }}>Removed</div><div style={{ fontSize: 20, color: C.red, fontWeight: 700 }}>{Number(sbomDiffData?.metrics?.removed || 0)}</div></Card>
-        <Card><div style={{ fontSize: 10, color: C.muted }}>Changed</div><div style={{ fontSize: 20, color: C.amber, fontWeight: 700 }}>{Number(sbomDiffData?.metrics?.changed || 0)}</div></Card>
+        <Card><div style={{ fontSize: 10, color: C.muted }}>Added</div><div style={{ fontSize: 20, color: C.greenFg, fontWeight: 700 }}>{Number(sbomDiffData?.metrics?.added || 0)}</div></Card>
+        <Card><div style={{ fontSize: 10, color: C.muted }}>Removed</div><div style={{ fontSize: 20, color: C.redFg, fontWeight: 700 }}>{Number(sbomDiffData?.metrics?.removed || 0)}</div></Card>
+        <Card><div style={{ fontSize: 10, color: C.muted }}>Changed</div><div style={{ fontSize: 20, color: C.amberFg, fontWeight: 700 }}>{Number(sbomDiffData?.metrics?.changed || 0)}</div></Card>
       </Row3>
       <div style={{ height: 8 }} />
       {Array.isArray(sbomDiffData?.added) && sbomDiffData.added.length > 0 && <Card style={{ maxHeight: 180, overflowY: "auto", marginBottom: 8 }}>
-        <div style={{ fontSize: 11, color: C.green, fontWeight: 700, marginBottom: 6 }}>Added components</div>
+        <div style={{ fontSize: 11, color: C.greenFg, fontWeight: 700, marginBottom: 6 }}>Added components</div>
         {sbomDiffData.added.map((item: any, idx: number) => <div key={idx} style={{ fontSize: 10, padding: "3px 0", borderBottom: `1px solid ${C.border}`, color: C.dim }}>
           {String(item?.name || item?.component || JSON.stringify(item))} {item?.version ? `v${item.version}` : ""}
         </div>)}
       </Card>}
       {Array.isArray(sbomDiffData?.removed) && sbomDiffData.removed.length > 0 && <Card style={{ maxHeight: 180, overflowY: "auto", marginBottom: 8 }}>
-        <div style={{ fontSize: 11, color: C.red, fontWeight: 700, marginBottom: 6 }}>Removed components</div>
+        <div style={{ fontSize: 11, color: C.redFg, fontWeight: 700, marginBottom: 6 }}>Removed components</div>
         {sbomDiffData.removed.map((item: any, idx: number) => <div key={idx} style={{ fontSize: 10, padding: "3px 0", borderBottom: `1px solid ${C.border}`, color: C.dim }}>
           {String(item?.name || item?.component || JSON.stringify(item))} {item?.version ? `v${item.version}` : ""}
         </div>)}
       </Card>}
       {Array.isArray(sbomDiffData?.changed) && sbomDiffData.changed.length > 0 && <Card style={{ maxHeight: 180, overflowY: "auto", marginBottom: 8 }}>
-        <div style={{ fontSize: 11, color: C.amber, fontWeight: 700, marginBottom: 6 }}>Changed components</div>
+        <div style={{ fontSize: 11, color: C.amberFg, fontWeight: 700, marginBottom: 6 }}>Changed components</div>
         {sbomDiffData.changed.map((item: any, idx: number) => <div key={idx} style={{ fontSize: 10, padding: "3px 0", borderBottom: `1px solid ${C.border}`, color: C.dim }}>
           {String(item?.name || item?.component || JSON.stringify(item))} {item?.from_version ? `${item.from_version} → ${item.to_version || "?"}` : ""}
         </div>)}

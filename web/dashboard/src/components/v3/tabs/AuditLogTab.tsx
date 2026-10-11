@@ -121,7 +121,7 @@ function timeRangeToFrom(range: string): string {
 /* ── table header style ── */
 
 const TH: React.CSSProperties = {
-  fontSize: 9, fontWeight: 600, color: C.muted, textTransform: "uppercase",
+  fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase",
   letterSpacing: 0.6, padding: "6px 6px", textAlign: "left",
   borderBottom: `1px solid ${C.border}`, whiteSpace: "nowrap"
 };
@@ -178,7 +178,7 @@ const CheckpointsSection = ({ session }: { session: any }) => {
             also reach your event streams. Listing re-verifies each signature and the stored head.
           </div>
           {error ? (
-            <div style={{ color: C.red, padding: 12 }}>Checkpoints unavailable: {error}</div>
+            <div style={{ color: C.redFg, padding: 12 }}>Checkpoints unavailable: {error}</div>
           ) : items.length === 0 && !loading ? (
             <div style={{ color: C.dim, padding: 16, textAlign: "center" }}>
               No checkpoints yet. The first is signed within 10 minutes of audit activity.
@@ -186,7 +186,7 @@ const CheckpointsSection = ({ session }: { session: any }) => {
           ) : (
             <>
               {failed > 0 && (
-                <div style={{ color: C.red, fontSize: 11, marginBottom: 8 }}>
+                <div style={{ color: C.redFg, fontSize: 11, marginBottom: 8 }}>
                   {failed} checkpoint(s) failed verification. A critical chain_broken audit event was raised.
                 </div>
               )}
@@ -207,7 +207,7 @@ const CheckpointsSection = ({ session }: { session: any }) => {
                     return (
                       <tr key={c.event_id} style={{ borderBottom: `1px solid ${C.border}10`, cursor: "pointer" }} onClick={() => setOpen(c)}>
                         <td style={{ padding: "6px", color: st.color, fontWeight: 600 }}>{st.label}</td>
-                        <td style={{ padding: "6px", color: C.cyan }}>#{c.sequence}</td>
+                        <td style={{ padding: "6px", color: C.cyanFg }}>#{c.sequence}</td>
                         <td style={{ padding: "6px" }}>{c.chain_node || "local"}</td>
                         <td style={{ padding: "6px", ...mono, color: C.fg }}>{c.chain_hash.slice(0, 16)}…</td>
                         <td style={{ padding: "6px", ...mono, color: C.dim }}>{c.key_id.slice(0, 12)}…</td>
@@ -238,7 +238,7 @@ const CheckpointsSection = ({ session }: { session: any }) => {
             ["Public key", open.public_key_pem || "not available: the key is not trusted"],
           ].map(([k, v]) => (
             <div key={k} style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6 }}>{k}</div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6 }}>{k}</div>
               <div style={{ ...mono, color: C.fg, wordBreak: "break-all", whiteSpace: "pre-wrap" }}>{v}</div>
             </div>
           ))}
@@ -451,7 +451,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
       {/* chain breaks display */}
       {chainBreaks.length > 0 && (
         <Card style={{ marginBottom: 10, borderColor: C.red }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.red, marginBottom: 6 }}>Chain Integrity Breaks Detected</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.redFg, marginBottom: 6 }}>Chain Integrity Breaks Detected</div>
           <div style={{ fontSize: 10, color: C.muted, marginBottom: 6 }}>
             {chainBreaks.length} issue(s) found. Showing {previewBreaks.length} most recent.
           </div>
@@ -507,7 +507,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
                   <td style={TD}>{ev.actor_id || "-"}</td>
                   <td style={TD}>{(() => { const o = eventOrigin(ev); return o.origin === "agent"
                     ? <span title={o.agentId ? `agent: ${o.agentId}` : "agent-originated"}><B c="amber">agent</B></span>
-                    : <span style={{ color: C.muted, fontSize: 9 }}>service</span>; })()}</td>
+                    : <span style={{ color: C.muted, fontSize: 10 }}>service</span>; })()}</td>
                   <td style={TD}>{ev.target_id || "-"}</td>
                   <td style={TD}><B c={resultTone(ev.result)}>{ev.result}</B></td>
                   <td style={TD}>
@@ -516,11 +516,11 @@ export const AuditLogTab = ({ session, onToast }: any) => {
                     </span>
                   </td>
                   <td style={TD}>
-                    <span style={{ color: ev.fips_compliant ? C.green : C.muted }}>
+                    <span style={{ color: ev.fips_compliant ? C.greenFg : C.muted }}>
                       {ev.fips_compliant ? "\u2713" : "-"}
                     </span>
                   </td>
-                  <td style={{ ...TD, fontFamily: "'JetBrains Mono',monospace", fontSize: 9 }}>
+                  <td style={{ ...TD, fontFamily: "'JetBrains Mono',monospace", fontSize: 10 }}>
                     {abbrevHash(ev.chain_hash)}
                   </td>
                 </tr>
@@ -596,14 +596,14 @@ export const AuditLogTab = ({ session, onToast }: any) => {
                   onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = C.accent; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = C.border; }}>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 4 }}>
-                    <span style={{ fontSize: 9, color: C.muted }}>{fmtTS(ev.timestamp)}</span>
+                    <span style={{ fontSize: 10, color: C.muted }}>{fmtTS(ev.timestamp)}</span>
                     <B c="blue">{(ev.service || "").replace("kms-", "")}</B>
                     <B c={resultTone(ev.result)}>{ev.result}</B>
                     <span style={{ fontSize: 10, color: C.text, fontWeight: 600 }} title={ev.action}>
                       {formatAction(ev.action)}
                     </span>
                   </div>
-                  <div style={{ fontSize: 9, color: C.dim }}>
+                  <div style={{ fontSize: 10, color: C.dim }}>
                     Actor: {ev.actor_id || "-"} &bull; Target: {ev.target_id || "-"} &bull;
                     Risk: <span style={{ color: riskColor(Number(ev.risk_score || 0)) }}>{ev.risk_score ?? 0}</span> &bull;
                     Seq: {ev.sequence} &bull; Hash: <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>{abbrevHash(ev.chain_hash)}</span>
@@ -660,7 +660,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px", marginBottom: 14 }}>
           {fields.map(([label, value]) => (
             <div key={String(label)}>
-              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</div>
               <div style={{ fontSize: 10, color: C.text, wordBreak: "break-all", fontFamily: String(label).includes("Hash") ? "'JetBrains Mono',monospace" : "inherit" }}>
                 {String(value ?? "-") || "-"}
               </div>
@@ -690,10 +690,10 @@ export const AuditLogTab = ({ session, onToast }: any) => {
         {/* metadata JSON */}
         {ev.details && Object.keys(ev.details).length > 0 && (
           <>
-            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Metadata</div>
+            <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Metadata</div>
             <pre style={{
               background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, padding: 10,
-              fontSize: 9, color: C.dim, overflow: "auto", maxHeight: 160,
+              fontSize: 10, color: C.dim, overflow: "auto", maxHeight: 160,
               fontFamily: "'JetBrains Mono',monospace"
             }}>
               {JSON.stringify(ev.details, null, 2)}
@@ -704,7 +704,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
         {/* tags */}
         {Array.isArray(ev.tags) && ev.tags.length > 0 && (
           <div style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Tags</div>
+            <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Tags</div>
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
               {ev.tags.map((t, i) => <B key={i} c="purple">{t}</B>)}
             </div>
@@ -729,7 +729,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
       {renderEventModal()}
 
       {/* audit integration note */}
-      <div style={{ marginTop: 16, padding: "8px 12px", borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, fontSize: 9, color: C.muted }}>
+      <div style={{ marginTop: 16, padding: "8px 12px", borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, fontSize: 10, color: C.muted }}>
         Every service publishes to the single audit stream. Events are hash-chained (SHA-256), HMAC-signed, covered
         by signed checkpoints (ECDSA-P384) and stored append-only; a fail-closed WAL covers outages. Charts are under Activity, where
         clicking a chart lists the events it counts; alerts raised from these events are triaged in the Alert Center.

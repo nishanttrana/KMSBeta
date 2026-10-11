@@ -299,7 +299,7 @@ export function ScimProvisioningSection({ session, onToast, tenantID }: Props) {
 function MetricCard({ label, value, tone }: { label: string; value: string; tone: "green" | "amber" | "blue" }) {
   return (
     <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 12, background: "rgba(15, 24, 40, 0.75)" }}>
-      <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>{label}</div>
+      <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>{label}</div>
       <B c={tone}>{value}</B>
     </div>
   );

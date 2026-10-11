@@ -705,7 +705,7 @@ export const CryptoTab=({session,keyCatalog,onToast,fipsMode})=>{
       <div style={{display:"grid",gap:10}}>
         {cryptoAlgorithms.map((section)=>(
           <div key={section.group}>
-            <div style={{fontSize:10,fontWeight:700,color:C.accent,textTransform:"uppercase",letterSpacing:.9,marginBottom:4}}>{section.group}</div>
+            <div style={{fontSize:10,fontWeight:700,color:C.accentFg,textTransform:"uppercase",letterSpacing:.9,marginBottom:4}}>{section.group}</div>
             <div style={{display:"grid",gap:2}}>
               {section.items.map(([name,ok])=>{
                 const fipsApproved=Boolean(ok);
@@ -729,7 +729,7 @@ export const CryptoTab=({session,keyCatalog,onToast,fipsMode})=>{
                   }}
                 >
                   <span style={{fontSize:10,color:C.text}}>{name}</span>
-                  <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:4,border:`1px solid ${allowedByMode?C.green:C.red}`,background:allowedByMode?C.greenDim:C.redDim,color:allowedByMode?C.green:C.red}}>
+                  <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:4,border:`1px solid ${allowedByMode?C.green:C.red}`,background:allowedByMode?C.greenDim:C.redDim,color:allowedByMode?C.greenFg:C.redFg}}>
                     {allowedByMode?<Check size={10} strokeWidth={2.5}/>:<X size={10} strokeWidth={2.5}/>}
                   </span>
                 </button>
@@ -884,8 +884,8 @@ export const CryptoTab=({session,keyCatalog,onToast,fipsMode})=>{
             >
               {busy?`Execute ${opButtonLabel}...`:`Execute ${opButtonLabel}`}
             </button>
-            {fipsExecutionBlocked&&<div style={{fontSize:10,color:C.red}}>This action is blocked by global FIPS mode.</div>}
-            {keyRequired&&!opAllowedForKey&&<div style={{fontSize:10,color:C.red}}>{`${op} is not valid for key algorithm ${activeAlgo || "-"}.`}</div>}
+            {fipsExecutionBlocked&&<div style={{fontSize:10,color:C.redFg}}>This action is blocked by global FIPS mode.</div>}
+            {keyRequired&&!opAllowedForKey&&<div style={{fontSize:10,color:C.redFg}}>{`${op} is not valid for key algorithm ${activeAlgo || "-"}.`}</div>}
           </div>
         </div>
 
@@ -893,14 +893,14 @@ export const CryptoTab=({session,keyCatalog,onToast,fipsMode})=>{
           <div style={{fontSize:10,fontWeight:700,color:C.dim,textTransform:"uppercase",letterSpacing:.9}}>Output</div>
           <Txt rows={16} value={resultText} readOnly style={{minHeight:300}}/>
           <div style={{display:"flex",justifyContent:"space-between",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-            <div style={{fontSize:10,color:errorText?C.red:C.green,fontFamily:"'JetBrains Mono',monospace"}}>{auditEvent} - {durationMs}</div>
+            <div style={{fontSize:10,color:errorText?C.redFg:C.greenFg,fontFamily:"'JetBrains Mono',monospace"}}>{auditEvent} - {durationMs}</div>
             <div style={{display:"flex",gap:6}}>
               <Btn small onClick={renderResultAsHex}>Hex</Btn>
               <Btn small onClick={renderResultAsBase64}>Base64</Btn>
               <Btn small onClick={downloadResult}>Download</Btn>
             </div>
           </div>
-          {errorText&&<div style={{fontSize:10,color:C.red}}>{errorText}</div>}
+          {errorText&&<div style={{fontSize:10,color:C.redFg}}>{errorText}</div>}
         </div>
       </div>
     </div>

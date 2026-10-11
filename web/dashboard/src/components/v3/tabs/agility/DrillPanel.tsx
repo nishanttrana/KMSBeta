@@ -57,7 +57,7 @@ export function DrillPanel({ session, suggestions }: { session: any; suggestions
           <FlaskConical size={13} /> {running ? "Running…" : "Run drill"}
         </button>
       </div>
-      {notice && <div style={{ fontSize: 12, color: notice.startsWith("Drill passed") ? C.green : C.red, marginTop: 10 }}>{notice}</div>}
+      {notice && <div style={{ fontSize: 12, color: notice.startsWith("Drill passed") ? C.greenFg : C.redFg, marginTop: 10 }}>{notice}</div>}
 
       {latest && latest.result === "passed" && (
         <div style={{ ...S.panel, padding: "12px 16px", marginTop: 16, fontSize: 12, color: C.dim }} data-testid="drill-latest">
@@ -69,7 +69,7 @@ export function DrillPanel({ session, suggestions }: { session: any; suggestions
       <div style={S.sectionTitle}>Drill history</div>
       <div style={S.sectionHint}>Medians over the round trips run, measured on the keycore node that served the request. Each algorithm gets 20 seconds; slow ones may run fewer round trips than asked.</div>
       {loading ? <div style={{ ...S.empty, display: "flex", gap: 8, justifyContent: "center" }}><RefreshCw size={14} /> Loading drills…</div>
-      : error ? <div style={{ ...S.empty, color: C.red }}>Drill history unavailable: {error}</div>
+      : error ? <div style={{ ...S.empty, color: C.redFg }}>Drill history unavailable: {error}</div>
       : drills.length === 0 ? <div style={S.empty}>No drills run yet.</div> : (
         <div style={S.panel}><div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>

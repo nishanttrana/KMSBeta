@@ -273,7 +273,7 @@ export function IdentityProvidersSection({ model }: Props) {
                   return (
                     <div key={groupID} style={{ border: `1px solid ${selected ? C.accent : C.border}`, borderRadius: 8, padding: "8px 10px" }}>
                       <div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{String(group.name || groupID)}</div>
-                      <div style={{ fontSize: 9, color: C.dim }}>{groupID}</div>
+                      <div style={{ fontSize: 10, color: C.dim }}>{groupID}</div>
                       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
                         <B c="blue">{`${Number(group.member_count || 0)} members`}</B>
                         <Btn
@@ -308,7 +308,7 @@ export function IdentityProvidersSection({ model }: Props) {
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                         <div>
                           <div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{String(user.display_name || user.username || userID)}</div>
-                          <div style={{ fontSize: 9, color: C.dim }}>{String(user.email || user.username || userID)}</div>
+                          <div style={{ fontSize: 10, color: C.dim }}>{String(user.email || user.username || userID)}</div>
                         </div>
                         <Chk label="" checked={selected} onChange={() => model.toggleIdpUserSelection(userID)} />
                       </div>

@@ -93,7 +93,7 @@ function Unavailable({ error, onRetry }: { error: string; onRetry: () => void })
         <div style={{ fontSize: 12, color: C.dim, marginTop: 6 }}>
           keycore did not return the key inventory or migration policy, so no status, schedule or migration progress is shown.
         </div>
-        <div style={{ fontSize: 11, color: C.red, marginTop: 8, fontFamily: "IBM Plex Mono, monospace", wordBreak: "break-word" }}>{error}</div>
+        <div style={{ fontSize: 11, color: C.redFg, marginTop: 8, fontFamily: "'JetBrains Mono',monospace", wordBreak: "break-word" }}>{error}</div>
         <button onClick={onRetry} style={{ marginTop: 14, background: C.card, border: `1px solid ${C.border}`, borderRadius: 7, color: C.dim, padding: "7px 13px", cursor: "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6 }}>
           <RefreshCw size={13} /> Retry
         </button>
@@ -197,7 +197,7 @@ function RuleModal({ rule, algorithms, onClose, onSave }: {
       </div>
       <div style={{ fontSize: 11, color: C.muted }}>{ACTION_HELP[action]}</div>
       {immediate && (
-        <div style={{ fontSize: 11, color: C.red }}>
+        <div style={{ fontSize: 11, color: C.redFg }}>
           This takes effect immediately: operations on the {coveredKeys.toLocaleString()} covered {coveredKeys === 1 ? "key" : "keys"} will be refused as soon as the rule is saved.
         </div>
       )}
@@ -210,7 +210,7 @@ function RuleModal({ rule, algorithms, onClose, onSave }: {
         <div style={labelStyle}>Note (optional)</div>
         <input style={inputStyle} value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. per security board decision 2026-09" />
       </div>
-      {error && <div style={{ fontSize: 12, color: C.red }}>Rule not saved: {error}</div>}
+      {error && <div style={{ fontSize: 12, color: C.redFg }}>Rule not saved: {error}</div>}
     </Modal>
   );
 }
@@ -285,7 +285,7 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
   const empty: CSSProperties = { ...panel, padding: 28, textAlign: "center", color: C.muted, fontSize: 13 };
   const th: CSSProperties = { textAlign: "left", fontSize: 10, color: C.muted, fontWeight: 600, padding: "8px 12px", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" };
   const td: CSSProperties = { padding: "10px 12px", fontSize: 12, color: C.text, verticalAlign: "middle" };
-  const mono: CSSProperties = { fontFamily: "IBM Plex Mono, monospace", fontSize: 12 };
+  const mono: CSSProperties = { fontFamily: "'JetBrains Mono',monospace", fontSize: 12 };
   const smallBtn: CSSProperties = { background: "transparent", border: `1px solid ${C.border}`, borderRadius: 5, color: C.dim, padding: "3px 7px", cursor: "pointer", display: "inline-flex", alignItems: "center" };
 
   if (loading) {
@@ -313,7 +313,7 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
           <button onClick={() => load(true)} disabled={refreshing} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 7, color: C.dim, padding: "7px 13px", cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
             <RefreshCw size={13} style={refreshing ? { animation: "spin 1s linear infinite" } : {}} /> Refresh
           </button>
-          <button onClick={() => setRuleModal({ rule: null })} disabled={Boolean(error)} style={{ background: C.card, border: `1px solid ${C.accent}`, borderRadius: 7, color: C.accent, padding: "7px 13px", cursor: error ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, opacity: error ? 0.5 : 1 }}>
+          <button onClick={() => setRuleModal({ rule: null })} disabled={Boolean(error)} style={{ background: C.card, border: `1px solid ${C.accent}`, borderRadius: 7, color: C.accentFg, padding: "7px 13px", cursor: error ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, opacity: error ? 0.5 : 1 }}>
             <ListChecks size={13} /> Add Migration Rule
           </button>
         </div>}
@@ -357,7 +357,7 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
             </>
           )}
 
-          {actionError && <div style={{ fontSize: 12, color: C.red, marginTop: 14 }}>Not changed: {actionError}</div>}
+          {actionError && <div style={{ fontSize: 12, color: C.redFg, marginTop: 14 }}>Not changed: {actionError}</div>}
           <div style={divider} />
 
           {/* Policy */}
@@ -389,7 +389,7 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
                           <td style={td}><StatusBadge status={r.action} /></td>
                           <td style={{ ...td, whiteSpace: "nowrap" }}>
                             <span style={mono}>{r.effective_date.slice(0, 10)}</span>
-                            <div style={{ fontSize: 10, color: d <= 0 ? C.red : C.muted, marginTop: 2 }}>{d <= 0 ? "in force" : `in ${d.toLocaleString()} days`}</div>
+                            <div style={{ fontSize: 10, color: d <= 0 ? C.redFg : C.muted, marginTop: 2 }}>{d <= 0 ? "in force" : `in ${d.toLocaleString()} days`}</div>
                           </td>
                           <td style={{ ...td, ...mono, fontSize: 11 }}>{r.target_algorithm || "—"}</td>
                           <td style={{ ...td, ...mono }}>{coveredCount(r).toLocaleString()}</td>
@@ -462,7 +462,7 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
                         <tr key={a.algorithm} style={{ borderBottom: i < algorithms.length - 1 ? `1px solid ${C.border}` : "none" }}>
                           <td style={td}>
                             <span style={{ ...mono, fontWeight: 600 }}>{a.algorithm}</span>
-                            {a.weak && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: C.red }}>WEAK</span>}
+                            {a.weak && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: C.redFg }}>WEAK</span>}
                             {!a.assessed && <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>not assessed: no parameter set in the name</div>}
                             {a.note && <div style={{ fontSize: 10, color: C.muted, marginTop: 2, maxWidth: 260 }}>{a.note}</div>}
                           </td>
@@ -472,8 +472,8 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
                           <td style={{ ...td, ...mono }}>{a.pqc_category ? a.pqc_category : "—"}</td>
                           <td style={{ ...td, whiteSpace: "nowrap" }}>
                             {!a.assessed ? <span style={{ color: C.muted, fontSize: 11 }}>—</span>
-                              : a.quantum_vulnerable ? <span style={{ color: C.amber, fontSize: 11, fontWeight: 600 }}>Vulnerable</span>
-                                : a.post_quantum ? <span style={{ color: C.green, fontSize: 11, fontWeight: 600 }}>Post-quantum</span>
+                              : a.quantum_vulnerable ? <span style={{ color: C.amberFg, fontSize: 11, fontWeight: 600 }}>Vulnerable</span>
+                                : a.post_quantum ? <span style={{ color: C.greenFg, fontSize: 11, fontWeight: 600 }}>Post-quantum</span>
                                   : a.pqc_category ? <span style={{ color: C.dim, fontSize: 11 }}>Resistant</span>
                                     : <span style={{ color: C.muted, fontSize: 11 }}>—</span>}
                           </td>
@@ -497,7 +497,7 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
           <div style={divider} />
 
           <div style={sectionHint}>
-            Keys move to a rule's target in <button onClick={() => setView("execution")} style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", padding: 0, fontSize: 11 }}>Readiness &amp; execution</button>:
+            Keys move to a rule's target in <button onClick={() => setView("execution")} style={{ background: "none", border: "none", color: C.accentFg, cursor: "pointer", padding: 0, fontSize: 11 }}>Readiness &amp; execution</button>:
             keycore keys rotate onto the target under the same key ID; older versions keep decrypting and verifying what they protected.
           </div>
         </>

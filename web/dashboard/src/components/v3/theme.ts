@@ -1,6 +1,6 @@
 // Two-tier color strategy:
 //   C.*       = hex literals → safe for `${C.color}33` alpha-suffix interpolation.
-//                These are the *base* hue (Aurora dark palette); they do NOT
+//                These are the *base* hue (Ink dark palette); they do NOT
 //                react to theme switches. Used for borders, faint backgrounds,
 //                and decorative tints that don't need contrast guarantees.
 //   C.*Fg     = CSS vars → theme-reactive text/icon colors. Use these whenever
@@ -24,15 +24,15 @@ export const C = {
   glowStrong:"var(--c-glow-strong)",
   dimTint:   "var(--c-dim-tint)",
 
-  // ── Aurora gradient stops (theme-reactive) ───────────────────────────
+  // ── Brand gradient stops (theme-reactive) ───────────────────────────
   auroraFrom: "var(--c-aurora-from)",
   auroraMid:  "var(--c-aurora-mid)",
   auroraTo:   "var(--c-aurora-to)",
 
-  // ── Semantic hex (Aurora palette — safe for `${C.color}NN` alpha) ────
+  // ── Semantic hex (Ink palette — safe for `${C.color}NN` alpha) ────
   white:     "#ffffff",
-  accent:    "#7b8cff",  // Graphite indigo (single accent)
-  accentMid: "rgba(123,140,255,0.16)",
+  accent:    "#4c9dff",  // Azure (single accent)
+  accentMid: "rgba(76,157,255,0.16)",
   teal:      "#3cc9b4",
   green:     "#45c987",
   red:       "#f07474",
@@ -78,14 +78,14 @@ export const C = {
   orangeTint:  "rgba(251,146,60,.04)",
   purpleTint:  "rgba(167,139,250,.04)",
   blueTint:    "rgba(96,165,250,.04)",
-  accentTint:  "rgba(123,140,255,.05)",
+  accentTint:  "rgba(76,157,255,.05)",
   pinkTint:    "rgba(244,114,182,.04)",
   cyanTint:    "rgba(34,211,238,.04)",
   tealTint:    "rgba(45,212,191,.04)",
   yellowTint:  "rgba(253,224,71,.04)",
   greenTint3:  "rgba(52,211,153,.03)",
   redTint3:    "rgba(248,113,113,.03)",
-  accentTint3: "rgba(123,140,255,.04)",
+  accentTint3: "rgba(76,157,255,.04)",
 };
 
 // Status -> theme-reactive foreground color

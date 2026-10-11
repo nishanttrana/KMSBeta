@@ -262,7 +262,7 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
           </div>
           <div style={{fontSize:10,color:C.muted,marginBottom:4}}>{`Alert For: ${actionLabel}`}</div>
           <div style={{fontSize:11,color:C.dim,marginBottom:5}}>{alertReason(item)}</div>
-          <div style={{fontSize:9,color:C.muted}}>
+          <div style={{fontSize: 10,color:C.muted}}>
             {alertContext(item)}
           </div>
         </div>
@@ -285,11 +285,11 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
     <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:6,marginBottom:10}}>
       {alertCards.map((card)=><Card key={card.label} style={{padding:"8px 10px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:.8,fontWeight:600}}>{card.label}</div>
+          <div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:.8,fontWeight:600}}>{card.label}</div>
           <card.icon size={11} strokeWidth={2} color={palette[card.tone]||C.dim}/>
         </div>
-        <div style={{fontSize:18,fontWeight:700,letterSpacing:-.3,color:palette[card.tone]||C.accent,marginTop:2,lineHeight:1.1}}>{card.value}</div>
-        <div style={{fontSize:9,color:C.dim,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.sub}</div>
+        <div style={{fontSize:18,fontWeight:700,letterSpacing:-.3,color:palette[card.tone]||C.accentFg,marginTop:2,lineHeight:1.1}}>{card.value}</div>
+        <div style={{fontSize: 10,color:C.dim,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.sub}</div>
       </Card>)}
     </div>
 

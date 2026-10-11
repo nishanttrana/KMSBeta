@@ -78,7 +78,7 @@ export const ExposurePanel = ({ session, onToast }: Props) => {
           <div key={r.service} style={{ borderTop: `1px solid ${C.border}`, paddingTop: 6 }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10 }}>
               <b style={{ color: C.text }}>{r.label}</b>
-              <span style={{ color: r.status === "ok" ? (open.length ? C.red : C.green) : C.dim }}>
+              <span style={{ color: r.status === "ok" ? (open.length ? C.redFg : C.greenFg) : C.dim }}>
                 {r.status === "ok" ? `${open.length} open · ${closed.length} closed` : r.status === "no_access" ? "no access" : "not deployed or unreachable"}
               </span>
             </div>
@@ -102,7 +102,7 @@ export const ExposurePanel = ({ session, onToast }: Props) => {
       )}
       {ack && (
         <div style={{ border: `1px solid ${C.amber}`, borderRadius: 8, padding: 8, display: "grid", gap: 6 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.amber }}>Acknowledge {ack.item.item_type} {ack.item.item_id}</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.amberFg }}>Acknowledge {ack.item.item_type} {ack.item.item_id}</div>
           <div style={{ fontSize: 10, color: C.dim }}>
             Only when the material is not in use or its exposure is accepted. The reason is recorded in the audit log.
           </div>

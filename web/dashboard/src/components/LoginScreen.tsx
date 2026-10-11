@@ -1,49 +1,10 @@
-import { ArrowRight, Check, Info, KeyRound, Lock, X } from "lucide-react";
+import { ArrowRight, Check, Info, KeyRound, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { AuthSession, UIAuthConfig } from "../lib/auth";
 import { changePassword, login } from "../lib/auth";
 import type { SSOProviderInfo } from "../lib/authAdmin";
 import { getSSOLoginURL, listSSOProviders } from "../lib/authAdmin";
-
-/* ────────────────────────────────────────────────────────────────────
-   Static brand mark — shield + keyhole. No animation; a single subtle
-   gradient stroke for depth ("better graphics" without motion).
-   ──────────────────────────────────────────────────────────────────── */
-
-function BrandMark({ size = 56 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 64 64"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id="vk-shield" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="var(--s-accent)" />
-          <stop offset="100%" stopColor="var(--s-purple)" />
-        </linearGradient>
-      </defs>
-      {/* Shield body */}
-      <path
-        d="M32 6 L54 15 L54 33 C54 46 44 55 32 59 C20 55 10 46 10 33 L10 15 Z"
-        fill="var(--s-accent-dim)"
-        stroke="url(#vk-shield)"
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-      />
-      {/* Keyhole */}
-      <circle cx="32" cy="29" r="7" fill="none" stroke="var(--s-accent)" strokeWidth="2.5" />
-      <path
-        d="M32 35 L32 44"
-        stroke="var(--s-accent)"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
+import { BrandMark, Wordmark } from "./BrandMark";
 
 /* ────────────────────────────────────────────────────────────────────
    Simple labelled input (no floating-label motion)
@@ -62,7 +23,7 @@ function Field(props: {
   return (
     <label className="block space-y-1.5">
       {label && (
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-cyber-muted">
+        <span className="text-xs font-medium text-dim">
           {label}
         </span>
       )}
@@ -114,11 +75,11 @@ function PasswordPolicyChecklist({ checks }: { checks: PolicyChecks }) {
           return (
             <li key={key} className="flex items-center gap-2 text-xs">
               {passed ? (
-                <Check size={12} className="shrink-0 text-emerald-400" />
+                <Check size={12} className="shrink-0 text-cyber-success" />
               ) : (
                 <X size={12} className="shrink-0 text-cyber-muted/50" />
               )}
-              <span className={passed ? "text-emerald-400" : "text-cyber-muted"}>{label}</span>
+              <span className={passed ? "text-cyber-success" : "text-cyber-muted"}>{label}</span>
             </li>
           );
         })}
@@ -289,26 +250,21 @@ export function LoginScreen(props: LoginScreenProps) {
     >
       <section
         onKeyDown={onFormKeyDown}
-        className="w-full max-w-[420px] animate-fadeIn rounded-2xl border border-cyber-border bg-cyber-card p-8 shadow-lg"
+        className="w-full max-w-[420px] animate-fadeIn rounded-xl border border-cyber-border bg-cyber-card p-8 shadow-lg"
       >
         {/* Brand */}
-        <div className="mb-7 flex flex-col items-center text-center">
-          <BrandMark />
-          <h1 className="mt-3 font-heading text-2xl font-bold tracking-widest text-cyber-text">
-            Vecta KMS
-          </h1>
-          <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-cyber-accent">
-            Enterprise Key Management
-          </p>
-        </div>
+        <h1 className="mb-7 flex items-center justify-center gap-2.5 text-cyber-text">
+          <BrandMark size={34} />
+          <Wordmark size={20} />
+        </h1>
 
-        <h2 className="mb-1 text-center font-heading text-base font-semibold text-cyber-text">
+        <h2 className="mb-1 text-center text-base font-semibold text-cyber-text">
           {session ? "Set a new password" : "Sign in"}
         </h2>
         <p className="mb-6 text-center text-xs text-cyber-muted">
           {session
             ? "A new administrator password is required before dashboard access."
-            : "Authenticate with tenant administrator credentials."}
+            : null}
         </p>
 
         {!session ? (
@@ -360,7 +316,7 @@ export function LoginScreen(props: LoginScreenProps) {
             />
 
             {authError && (
-              <div className="flex items-start gap-2.5 rounded-lg border border-red-500/25 bg-red-500/[0.08] px-3.5 py-2.5 text-sm text-red-400">
+              <div className="flex items-start gap-2.5 rounded-lg border border-cyber-danger/25 bg-cyber-danger/10 px-3.5 py-2.5 text-sm text-cyber-danger">
                 <X size={14} className="mt-0.5 shrink-0" />
                 <span>{authError}</span>
               </div>
@@ -384,12 +340,6 @@ export function LoginScreen(props: LoginScreenProps) {
                 </>
               )}
             </button>
-
-            <p className="text-center text-[10px] text-cyber-muted/60">
-              Default admin: <strong className="text-cyber-muted">{config.admin_username}</strong>.
-              Password configured in{" "}
-              <code className="rounded bg-cyber-accent/10 px-1 text-cyber-accent/70">ui-auth.json</code>.
-            </p>
 
             {/* SSO providers */}
             {ssoProviders.length > 0 && (
@@ -421,9 +371,9 @@ export function LoginScreen(props: LoginScreenProps) {
             <div
               className="rounded-lg border p-3.5 text-sm"
               style={{
-                background: "var(--s-amber-dim, rgba(246,186,58,0.08))",
-                borderColor: "rgba(246,186,58,0.3)",
-                color: "#f6ba3a",
+                background: "var(--s-amber-dim)",
+                borderColor: "color-mix(in oklab, var(--s-amber) 30%, transparent)",
+                color: "var(--s-amber)",
               }}
             >
               <div className="mb-1 flex items-center gap-2 font-semibold">
@@ -436,7 +386,7 @@ export function LoginScreen(props: LoginScreenProps) {
             </div>
 
             <label className="block space-y-1.5">
-              <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-cyber-muted">
+              <span className="flex items-center gap-2 text-xs font-medium text-dim">
                 New Password
                 <button
                   type="button"
@@ -458,13 +408,13 @@ export function LoginScreen(props: LoginScreenProps) {
             <Field value={confirmPassword} onChange={setConfirmPassword} label="Confirm Password" placeholder="Repeat password" type="password" autoComplete="new-password" />
 
             {confirmPassword.length > 0 && !passwordChecks.matchesConfirm && (
-              <p className="flex items-center gap-1.5 text-xs text-red-400">
+              <p className="flex items-center gap-1.5 text-xs text-cyber-danger">
                 <X size={12} /> Passwords do not match
               </p>
             )}
 
             {authError && (
-              <div className="flex items-start gap-2.5 rounded-lg border border-red-500/25 bg-red-500/[0.08] px-3.5 py-2.5 text-sm text-red-400">
+              <div className="flex items-start gap-2.5 rounded-lg border border-cyber-danger/25 bg-cyber-danger/10 px-3.5 py-2.5 text-sm text-cyber-danger">
                 <X size={14} className="mt-0.5 shrink-0" />
                 <span>{authError}</span>
               </div>
@@ -490,14 +440,6 @@ export function LoginScreen(props: LoginScreenProps) {
             </button>
           </div>
         )}
-
-        {/* Footer */}
-        <div className="mt-7 flex items-center justify-center gap-2 border-t border-cyber-border pt-5 text-center">
-          <Lock size={10} className="text-cyber-muted/40" />
-          <p className="text-[10px] text-cyber-muted/40">
-            256-bit AES-GCM &nbsp;&middot;&nbsp; FIPS 140-3 &nbsp;&middot;&nbsp; TLS 1.3
-          </p>
-        </div>
       </section>
     </main>
   );

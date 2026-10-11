@@ -209,10 +209,10 @@ export const KeyAccessTab = ({ session, onToast }: any) => {
                   </div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 8 }}>
-                  <div><div style={{ fontSize: 9, color: C.muted }}>Allow</div><div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{item.allow_count_24h || 0}</div></div>
-                  <div><div style={{ fontSize: 9, color: C.muted }}>Deny</div><div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{item.deny_count_24h || 0}</div></div>
-                  <div><div style={{ fontSize: 9, color: C.muted }}>Approval</div><div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{item.approval_count_24h || 0}</div></div>
-                  <div><div style={{ fontSize: 9, color: C.muted }}>Bypass</div><div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{item.bypass_count_24h || 0}</div></div>
+                  <div><div style={{ fontSize: 10, color: C.muted }}>Allow</div><div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{item.allow_count_24h || 0}</div></div>
+                  <div><div style={{ fontSize: 10, color: C.muted }}>Deny</div><div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{item.deny_count_24h || 0}</div></div>
+                  <div><div style={{ fontSize: 10, color: C.muted }}>Approval</div><div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{item.approval_count_24h || 0}</div></div>
+                  <div><div style={{ fontSize: 10, color: C.muted }}>Bypass</div><div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{item.bypass_count_24h || 0}</div></div>
                 </div>
               </Card>
             ))}

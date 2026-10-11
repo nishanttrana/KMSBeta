@@ -22,7 +22,7 @@ const SEV_COLORS: Record<string, string> = { critical: C.red, high: C.orange, wa
 const STATUS_COLORS: Record<string, string> = { resolved: C.green, acknowledged: C.blue, new: C.amber, false_positive: C.muted };
 
 const title: React.CSSProperties = { fontSize: 10, fontWeight: 600, color: C.dim, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 };
-const axisTick = { fill: C.muted, fontSize: 9 };
+const axisTick = { fill: C.muted, fontSize: 10 };
 const empty = (text: string) => <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: C.muted }}>{text}</div>;
 
 type Stats = Awaited<ReturnType<typeof getReportingAlertStats>>;
@@ -95,7 +95,7 @@ export function AlertAnalyticsPanel({ session, refreshKey = 0, renderAlert }: Pr
 
   if (err) return (
     <Card>
-      <div style={{ fontSize: 11, color: C.red, marginBottom: 8 }}>{`Alert analytics unavailable: ${err}`}</div>
+      <div style={{ fontSize: 11, color: C.redFg, marginBottom: 8 }}>{`Alert analytics unavailable: ${err}`}</div>
       <Btn small onClick={() => void load()}>Retry</Btn>
     </Card>
   );
@@ -120,7 +120,7 @@ export function AlertAnalyticsPanel({ session, refreshKey = 0, renderAlert }: Pr
                   {bySeverity.map((d) => <Cell key={d.name} fill={d.fill} style={clickable} />)}
                 </Pie>
                 <Tooltip />
-                <Legend verticalAlign="bottom" height={24} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 9, color: C.dim }} />
+                <Legend verticalAlign="bottom" height={24} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 10, color: C.dim }} />
               </PieChart>
             </ResponsiveContainer>
           ) : empty("No alerts.")}
@@ -167,7 +167,7 @@ export function AlertAnalyticsPanel({ session, refreshKey = 0, renderAlert }: Pr
             <Card key={label}>
               <div style={title}>{`${label} (minutes)`}</div>
               {kind === "detect" && mttd.truncated && (
-                <div style={{ fontSize: 9, color: C.amber, marginBottom: 4 }}>{`Measured over the newest ${mttd.measured} linked alerts; the window has more.`}</div>
+                <div style={{ fontSize: 10, color: C.amberFg, marginBottom: 4 }}>{`Measured over the newest ${mttd.measured} linked alerts; the window has more.`}</div>
               )}
               {bars.length ? (
                 <ResponsiveContainer width="100%" height={150}>

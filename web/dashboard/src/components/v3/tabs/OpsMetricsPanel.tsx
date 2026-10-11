@@ -77,7 +77,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
 
   const statCard = (icon: React.ReactNode, label: string, value: string, sub?: string, color?: string) => (
     <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px", flex: 1, display: "flex", gap: 10, alignItems: "flex-start" }}>
-      <div style={{ color: color || C.accent, marginTop: 2 }}>{icon}</div>
+      <div style={{ color: color || C.accentFg, marginTop: 2 }}>{icon}</div>
       <div>
         <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
         <div style={{ fontSize: 20, fontWeight: 700, color: color || C.text }}>{value}</div>
@@ -107,11 +107,11 @@ export function OpsMetricsPanel({ session }: { session: any }) {
         </div>
       </div>
 
-      {loadErr && <div style={{ padding: 12, borderRadius: 6, background: C.redDim, color: C.red, fontSize: 12, marginBottom: 16 }}>Operations metrics unavailable: {loadErr}</div>}
+      {loadErr && <div style={{ padding: 12, borderRadius: 6, background: C.redDim, color: C.redFg, fontSize: 12, marginBottom: 16 }}>Operations metrics unavailable: {loadErr}</div>}
 
       {!loadErr && !loading && overview && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", fontSize: 11, color: C.muted, marginBottom: 12 }}>
-          <span style={{ padding: "2px 8px", borderRadius: 4, border: `1px solid ${C.border}`, color: ov.scope === "node" ? C.amber : C.dim }}>
+          <span style={{ padding: "2px 8px", borderRadius: 4, border: `1px solid ${C.border}`, color: ov.scope === "node" ? C.amberFg : C.dim }}>
             {ov.scope === "cluster" ? "Cluster-wide: every node's operations" : ov.scope === "node" ? "This node only" : "Single node"}
           </span>
           {(ov.by_node ?? []).length > 1 && (ov.by_node ?? []).map((n: any) => (
@@ -157,7 +157,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
           <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 16 }}>Operations by Type — {timeWindow}</div>
           {loading ? <div style={{ color: C.muted, padding: 20, textAlign: "center" }}>Loading...</div> : latency.length === 0 ? (
             <div style={{ textAlign: "center", padding: 40, color: C.muted }}>
-              <Activity size={28} style={{ marginBottom: 8, opacity: 0.4 }} />
+              <Activity size={28} style={{ margin: "0 auto 8px", opacity: 0.4 }} />
               <div style={{ fontSize: 13 }}>No operations in this window. Key operations, tokenization and FPE, and certificate and OCSP signing appear here as they run.</div>
             </div>
           ) : (
@@ -169,7 +169,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
                 return (
                   <div key={row.op_type + row.service} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ width: 36, height: 22, borderRadius: 4, background: color + "22", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <span style={{ fontSize: 8, fontWeight: 800, color, fontFamily: "monospace" }}>{OP_ICONS[row.op_type] ?? row.op_type?.toUpperCase().slice(0, 3)}</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, color, fontFamily: "monospace" }}>{OP_ICONS[row.op_type] ?? row.op_type?.toUpperCase().slice(0, 3)}</span>
                     </div>
                     <div style={{ width: 90, fontSize: 12, fontWeight: 600, color: C.text, textTransform: "capitalize" }}>{row.service ? `${row.service}/${row.op_type}` : row.op_type}</div>
                     <div style={{ flex: 1, background: C.border, borderRadius: 3, height: 6, overflow: "hidden" }}>
@@ -215,9 +215,9 @@ export function OpsMetricsPanel({ session }: { session: any }) {
                         </div>
                       </td>
                       <td style={{ ...CELL, color: C.dim }}>{ms(row.avg_ms ?? 0)}</td>
-                      <td style={{ ...CELL, color: C.green }}>{le(row.p50_ms)}</td>
-                      <td style={{ ...CELL, color: row.p90_ms == null || row.p90_ms > 25 ? C.amber : C.dim }}>{le(row.p90_ms)}</td>
-                      <td style={{ ...CELL, color: row.p99_ms == null || row.p99_ms > 50 ? C.orange : C.dim }}>{le(row.p99_ms)}</td>
+                      <td style={{ ...CELL, color: C.greenFg }}>{le(row.p50_ms)}</td>
+                      <td style={{ ...CELL, color: row.p90_ms == null || row.p90_ms > 25 ? C.amberFg : C.dim }}>{le(row.p90_ms)}</td>
+                      <td style={{ ...CELL, color: row.p99_ms == null || row.p99_ms > 50 ? C.orangeFg : C.dim }}>{le(row.p99_ms)}</td>
                       <td style={{ ...CELL, fontFamily: "monospace" }}>{fmt(row.sample_ops ?? 0)}</td>
                     </tr>
                   );
@@ -246,13 +246,13 @@ export function OpsMetricsPanel({ session }: { session: any }) {
                   <tr key={svc.service} style={{ borderBottom: `1px solid ${C.border}22` }}>
                     <td style={{ ...CELL, color: C.text, fontWeight: 600 }}>{svc.service}</td>
                     <td style={{ ...CELL, fontFamily: "monospace" }}>{fmt(svc.total_ops ?? 0)}</td>
-                    <td style={{ ...CELL, fontFamily: "monospace", color: (svc.total_errors ?? 0) > 0 ? C.amber : C.muted }}>{svc.total_errors ?? 0}</td>
+                    <td style={{ ...CELL, fontFamily: "monospace", color: (svc.total_errors ?? 0) > 0 ? C.amberFg : C.muted }}>{svc.total_errors ?? 0}</td>
                     <td style={CELL}>
-                      <span style={{ color: (svc.error_rate ?? 0) > 0.02 ? C.red : C.green, fontWeight: 600 }}>
+                      <span style={{ color: (svc.error_rate ?? 0) > 0.02 ? C.redFg : C.greenFg, fontWeight: 600 }}>
                         {pct(svc.error_rate ?? 0)}
                       </span>
                     </td>
-                    <td style={{ ...CELL, color: (svc.avg_latency_ms ?? 0) > 10 ? C.amber : C.dim }}>{ms(svc.avg_latency_ms ?? 0)}</td>
+                    <td style={{ ...CELL, color: (svc.avg_latency_ms ?? 0) > 10 ? C.amberFg : C.dim }}>{ms(svc.avg_latency_ms ?? 0)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -268,8 +268,8 @@ export function OpsMetricsPanel({ session }: { session: any }) {
             Error Breakdown <span style={{ fontSize: 11, fontWeight: 400, color: C.muted, marginLeft: 8 }}>by service and operation</span>
           </div>
           {loading ? <div style={{ padding: 24, textAlign: "center", color: C.muted }}>Loading...</div> : errors.length === 0 ? (
-            <div style={{ padding: 40, textAlign: "center", color: C.green }}>
-              <Activity size={32} style={{ marginBottom: 8, opacity: 0.5 }} />
+            <div style={{ padding: 40, textAlign: "center", color: C.greenFg }}>
+              <Activity size={32} style={{ margin: "0 auto 8px", opacity: 0.5 }} />
               <div>No errors recorded in this window</div>
             </div>
           ) : (
@@ -285,11 +285,11 @@ export function OpsMetricsPanel({ session }: { session: any }) {
                   return (
                     <tr key={i} style={{ borderBottom: `1px solid ${C.border}22` }}>
                       <td style={{ ...CELL, fontWeight: 600, color: C.text }}>{err.service}</td>
-                      <td style={{ ...CELL, fontFamily: "monospace", color: C.amber, fontWeight: 600, fontSize: 11, textTransform: "capitalize" }}>{err.op_type}</td>
-                      <td style={{ ...CELL, fontFamily: "monospace", fontWeight: 700, color: C.red }}>{err.error_count ?? 0}</td>
+                      <td style={{ ...CELL, fontFamily: "monospace", color: C.amberFg, fontWeight: 600, fontSize: 11, textTransform: "capitalize" }}>{err.op_type}</td>
+                      <td style={{ ...CELL, fontFamily: "monospace", fontWeight: 700, color: C.redFg }}>{err.error_count ?? 0}</td>
                       <td style={{ ...CELL, fontFamily: "monospace" }}>{fmt(err.total_count ?? 0)}</td>
                       <td style={CELL}>
-                        <span style={{ color: rate > 0.05 ? C.red : rate > 0.01 ? C.amber : C.green, fontWeight: 600 }}>{pct(rate)}</span>
+                        <span style={{ color: rate > 0.05 ? C.redFg : rate > 0.01 ? C.amberFg : C.greenFg, fontWeight: 600 }}>{pct(rate)}</span>
                       </td>
                     </tr>
                   );

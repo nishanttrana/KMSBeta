@@ -52,7 +52,7 @@ function PlanModal({ onClose, onSave }: { onClose: () => void; onSave: (p: { nam
         <Field label="Deadline (optional, yours)"><input type="date" style={inputStyle} value={deadline} onChange={e => setDeadline(e.target.value)} /></Field>
         <Field label="Label (optional)"><input style={inputStyle} value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. board policy 2026" /></Field>
       </Grid2>
-      {error && <div style={{ fontSize: 12, color: C.red }}>Plan not built: {error}</div>}
+      {error && <div style={{ fontSize: 12, color: C.redFg }}>Plan not built: {error}</div>}
     </Modal>
   );
 }
@@ -85,7 +85,7 @@ export function PqcExecutionPanel({ session }: { session: any }) {
   }
 
   if (loading) return <div style={{ ...S.empty, display: "flex", gap: 8, justifyContent: "center" }}><RefreshCw size={14} /> Loading readiness…</div>;
-  if (error || !scan) return <div style={{ ...S.empty, color: C.red }}>Not assessed: the readiness service is unavailable. {error}</div>;
+  if (error || !scan) return <div style={{ ...S.empty, color: C.redFg }}>Not assessed: the readiness service is unavailable. {error}</div>;
   const risks = scan.risk_items ?? [];
 
   return (
@@ -108,7 +108,7 @@ export function PqcExecutionPanel({ session }: { session: any }) {
         <StatCard icon={<Atom size={16} />} label="Hybrid" value={scan.hybrid_assets} color={C.accent} bg={C.accentTint} />
         <StatCard icon={<ShieldAlert size={16} />} label="To migrate" value={risks.length} sub="weak, quantum-vulnerable or not assessed" color={C.red} bg={C.redTint} />
       </div>
-      {notice && <div style={{ fontSize: 12, color: notice.startsWith("Failed") ? C.red : C.green, marginTop: 12 }}>{notice}</div>}
+      {notice && <div style={{ fontSize: 12, color: notice.startsWith("Failed") ? C.redFg : C.greenFg, marginTop: 12 }}>{notice}</div>}
 
       <div style={S.divider} />
       <div style={S.sectionTitle}>Assets to migrate</div>

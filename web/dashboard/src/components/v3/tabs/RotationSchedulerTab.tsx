@@ -200,7 +200,7 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Not assessed: rotation data is unavailable</div>
             <div style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>keycore did not return rotation policies, schedule or history, so none are shown.</div>
-            <div style={{ fontSize: 10, color: C.red, marginTop: 6, fontFamily: "'JetBrains Mono', monospace", wordBreak: "break-word" }}>{unavailable}</div>
+            <div style={{ fontSize: 10, color: C.redFg, marginTop: 6, fontFamily: "'JetBrains Mono', monospace", wordBreak: "break-word" }}>{unavailable}</div>
             <div style={{ marginTop: 10 }}><Btn small onClick={() => void refresh()}><RefreshCw size={11} /> Retry</Btn></div>
           </div>
         </div>
@@ -221,12 +221,12 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
 
       {/* ── Error ── */}
       {error && (
-        <div style={{ padding: "8px 12px", borderRadius: 7, background: C.redDim, border: `1px solid ${C.red}`, fontSize: 11, color: C.red }}>
+        <div style={{ padding: "8px 12px", borderRadius: 7, background: C.redDim, border: `1px solid ${C.red}`, fontSize: 11, color: C.redFg }}>
           {error}
         </div>
       )}
       {notice && (
-        <div style={{ padding: "8px 12px", borderRadius: 7, background: C.greenDim, border: `1px solid ${C.green}`, fontSize: 11, color: C.green }}>
+        <div style={{ padding: "8px 12px", borderRadius: 7, background: C.greenDim, border: `1px solid ${C.green}`, fontSize: 11, color: C.greenFg }}>
           {notice}
         </div>
       )}
@@ -250,7 +250,7 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
       {section === "policies" && (
         <Section title="Rotation Policies">
           <Card style={{ padding: 0, overflow: "hidden" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1.8fr 0.8fr 1fr 0.8fr 0.9fr 0.7fr auto", padding: "9px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, background: C.surface }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1.8fr 0.8fr 1fr 0.8fr 0.9fr 0.7fr auto", padding: "9px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, background: C.surface }}>
               <div>Name</div>
               <div>Target Type</div>
               <div>Filter</div>
@@ -281,7 +281,7 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
                 >
                   <div style={{ minWidth: 0 }}>
                     <div style={{ color: C.text, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
-                    <div style={{ fontSize: 9, color: C.dim }}>Next: {fmtDate(p.next_rotation_at)} · Last: {fmtDate(p.last_rotation_at)} · {p.total_rotations} keys rotated</div>
+                    <div style={{ fontSize: 10, color: C.dim }}>Next: {fmtDate(p.next_rotation_at)} · Last: {fmtDate(p.last_rotation_at)} · {p.total_rotations} keys rotated</div>
                   </div>
                   <div>
                     <B c="accent">{p.target_type}</B>
@@ -316,7 +316,7 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
       {section === "schedule" && (
         <Section title="Upcoming Rotations">
           <Card style={{ padding: 0, overflow: "hidden" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1.5fr 0.7fr 1fr 0.8fr auto", padding: "9px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, background: C.surface }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1.5fr 0.7fr 1fr 0.8fr auto", padding: "9px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, background: C.surface }}>
               <div>Policy</div>
               <div>Target</div>
               <div>Mode</div>
@@ -352,8 +352,8 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
                   <div style={{ color: C.dim, fontSize: 10 }}>{fmtDateTime(u.scheduled_at)}</div>
                   <div>
                     {u.overdue
-                      ? <span style={{ color: C.red, fontWeight: 700, fontSize: 11 }}>{daysOverdue(u.scheduled_at)}d overdue</span>
-                      : <span style={{ color: u.days_until <= 3 ? C.amber : C.text, fontWeight: 600 }}>{u.days_until}d</span>
+                      ? <span style={{ color: C.redFg, fontWeight: 700, fontSize: 11 }}>{daysOverdue(u.scheduled_at)}d overdue</span>
+                      : <span style={{ color: u.days_until <= 3 ? C.amberFg : C.text, fontWeight: 600 }}>{u.days_until}d</span>
                     }
                   </div>
                   <div style={{ textAlign: "right" }}>
@@ -374,7 +374,7 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
       {section === "history" && (
         <Section title="Rotation History">
           <Card style={{ padding: 0, overflow: "hidden" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1.5fr 0.9fr 0.6fr 0.7fr 0.8fr", padding: "9px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, background: C.surface }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1.5fr 0.9fr 0.6fr 0.7fr 0.8fr", padding: "9px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, background: C.surface }}>
               <div>Policy</div>
               <div>Target</div>
               <div>Started</div>
@@ -405,7 +405,7 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
                   <div style={{ color: C.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.policy_name}</div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ color: C.dim, fontFamily: "'JetBrains Mono', monospace", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.target_name}</div>
-                    {r.error && <div style={{ fontSize: 9, color: C.red, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.error}</div>}
+                    {r.error && <div style={{ fontSize: 10, color: C.redFg, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.error}</div>}
                   </div>
                   <div style={{ color: C.dim, fontSize: 10 }}>{fmtDateTime(r.started_at)}</div>
                   <div style={{ color: C.dim, fontSize: 10 }}>{runDuration(r.started_at, r.completed_at)}</div>
@@ -443,12 +443,12 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
             <div style={{ width: 40, height: 22, borderRadius: 11, background: pAutoRotate ? C.accent : C.border, position: "relative", transition: "background .2s", flexShrink: 0 }}>
               <div style={{ width: 16, height: 16, borderRadius: 8, background: C.white, position: "absolute", top: 3, left: pAutoRotate ? 21 : 3, transition: "left .2s", boxShadow: "0 1px 3px rgba(0,0,0,.3)" }} />
             </div>
-            <span style={{ fontSize: 11, color: pAutoRotate ? C.accent : C.dim, fontWeight: 600 }}>
+            <span style={{ fontSize: 11, color: pAutoRotate ? C.accentFg : C.dim, fontWeight: 600 }}>
               {pAutoRotate ? "Enabled — Automatic" : "Disabled — Manual Trigger Only"}
             </span>
           </div>
         </FG>
-        {pError && <div style={{ fontSize: 10, color: C.red, marginBottom: 8, padding: "6px 10px", background: C.redDim, borderRadius: 6 }}>{pError}</div>}
+        {pError && <div style={{ fontSize: 10, color: C.redFg, marginBottom: 8, padding: "6px 10px", background: C.redDim, borderRadius: 6 }}>{pError}</div>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
           <Btn small onClick={() => setPolicyModal(false)}>Cancel</Btn>
           <Btn small primary onClick={savePolicy} disabled={pSaving || !pName.trim() || !pFilter.trim()}>

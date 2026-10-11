@@ -525,7 +525,7 @@ export const KMIPTab=({session,onToast})=>{
       <Stat l="Active Clients" v={String(stats.active)} c="green"/>
       <Stat l="Expiring <=30d" v={String(stats.expiringSoon)} c={stats.expiringSoon>0?"amber":"blue"}/>
       <div style={{flex:"1 1 140px",background:C.elevated,borderRadius:10,padding:"10px 14px",border:`1px solid ${C.border}`,minWidth:160}}>
-        <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Protocol Version</div>
+        <div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Protocol Version</div>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <div style={{display:"flex",background:C.bg,borderRadius:8,border:`1px solid ${C.border}`,overflow:"hidden"}}>
             {(supportedVersions.length>0?supportedVersions:["3.2","3.1","3.0","2.1"]).slice(0,4).map((v)=>(
@@ -539,7 +539,7 @@ export const KMIPTab=({session,onToast})=>{
           </div>
           <span style={{fontSize:10,color:C.dim}}>{kmipProtocolLabel}:{String(kmipCaps?.port||"5696")}</span>
         </div>
-        <div style={{fontSize:9,color:C.muted,marginTop:4}}>{kmipLibraryLabel}</div>
+        <div style={{fontSize: 10,color:C.muted,marginTop:4}}>{kmipLibraryLabel}</div>
       </div>
     </div>
 
@@ -561,14 +561,14 @@ export const KMIPTab=({session,onToast})=>{
         {/* Protocol & Auth row */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
           <div style={{background:C.elevated,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.border}`}}>
-            <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Protocol Versions</div>
+            <div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Protocol Versions</div>
             <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
               {supportedVersions.map((v)=><B key={`ver-${String(v)}`} c="purple">{String(v)}</B>)}
               {!supportedVersions.length&&<span style={{fontSize:10,color:C.dim}}>-</span>}
             </div>
           </div>
           <div style={{background:C.elevated,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.border}`}}>
-            <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Authentication</div>
+            <div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Authentication</div>
             <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
               {authModes.map((v)=><B key={`auth-${String(v)}`} c="blue">{String(v)}</B>)}
               {!authModes.length&&<span style={{fontSize:10,color:C.dim}}>mTLS client certificate</span>}
@@ -580,21 +580,21 @@ export const KMIPTab=({session,onToast})=>{
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
           <div style={{background:C.elevated,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.border}`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-              <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Implemented Operations</div>
+              <div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Implemented Operations</div>
               <B c="green">{implementedOps.length}</B>
             </div>
             <div style={{display:"flex",gap:4,flexWrap:"wrap",maxHeight:80,overflowY:"auto"}}>
-              {implementedOps.map((op)=><span key={`op-${String(op)}`} style={{fontSize:9,color:C.green,background:`${C.green}15`,padding:"2px 6px",borderRadius:4,fontFamily:"'JetBrains Mono',monospace"}}>{String(op)}</span>)}
+              {implementedOps.map((op)=><span key={`op-${String(op)}`} style={{fontSize: 10,color:C.greenFg,background:`${C.green}15`,padding:"2px 6px",borderRadius:4,fontFamily:"'JetBrains Mono',monospace"}}>{String(op)}</span>)}
               {!implementedOps.length&&<span style={{fontSize:10,color:C.dim}}>-</span>}
             </div>
           </div>
           <div style={{background:C.elevated,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.border}`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-              <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Implemented Object Types</div>
+              <div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Implemented Object Types</div>
               <B c="green">{implementedObjects.length}</B>
             </div>
             <div style={{display:"flex",gap:4,flexWrap:"wrap",maxHeight:80,overflowY:"auto"}}>
-              {implementedObjects.map((ot)=><span key={`ot-${String(ot)}`} style={{fontSize:9,color:C.green,background:`${C.green}15`,padding:"2px 6px",borderRadius:4,fontFamily:"'JetBrains Mono',monospace"}}>{String(ot)}</span>)}
+              {implementedObjects.map((ot)=><span key={`ot-${String(ot)}`} style={{fontSize: 10,color:C.greenFg,background:`${C.green}15`,padding:"2px 6px",borderRadius:4,fontFamily:"'JetBrains Mono',monospace"}}>{String(ot)}</span>)}
               {!implementedObjects.length&&<span style={{fontSize:10,color:C.dim}}>-</span>}
             </div>
           </div>
@@ -602,18 +602,18 @@ export const KMIPTab=({session,onToast})=>{
 
         {/* Missing coverage — only show if there are gaps */}
         {(unimplementedOps.length>0||unimplementedObjects.length>0)&&<div style={{background:`${C.amber}08`,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.amber}25`}}>
-          <div style={{fontSize:9,color:C.amber,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>KMIP 3.2 Coverage Gaps</div>
+          <div style={{fontSize: 10,color:C.amberFg,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>KMIP 3.2 Coverage Gaps</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             {unimplementedOps.length>0&&<div>
-              <div style={{fontSize:9,color:C.muted,marginBottom:4}}>Missing Operations ({unimplementedOps.length})</div>
+              <div style={{fontSize: 10,color:C.muted,marginBottom:4}}>Missing Operations ({unimplementedOps.length})</div>
               <div style={{display:"flex",gap:4,flexWrap:"wrap",maxHeight:60,overflowY:"auto"}}>
-                {unimplementedOps.map((op)=><span key={`miss-${String(op)}`} style={{fontSize:9,color:C.amber,background:`${C.amber}15`,padding:"2px 6px",borderRadius:4,fontFamily:"'JetBrains Mono',monospace"}}>{String(op)}</span>)}
+                {unimplementedOps.map((op)=><span key={`miss-${String(op)}`} style={{fontSize: 10,color:C.amberFg,background:`${C.amber}15`,padding:"2px 6px",borderRadius:4,fontFamily:"'JetBrains Mono',monospace"}}>{String(op)}</span>)}
               </div>
             </div>}
             {unimplementedObjects.length>0&&<div>
-              <div style={{fontSize:9,color:C.muted,marginBottom:4}}>Missing Object Types ({unimplementedObjects.length})</div>
+              <div style={{fontSize: 10,color:C.muted,marginBottom:4}}>Missing Object Types ({unimplementedObjects.length})</div>
               <div style={{display:"flex",gap:4,flexWrap:"wrap",maxHeight:60,overflowY:"auto"}}>
-                {unimplementedObjects.map((ot)=><span key={`missot-${String(ot)}`} style={{fontSize:9,color:C.amber,background:`${C.amber}15`,padding:"2px 6px",borderRadius:4,fontFamily:"'JetBrains Mono',monospace"}}>{String(ot)}</span>)}
+                {unimplementedObjects.map((ot)=><span key={`missot-${String(ot)}`} style={{fontSize: 10,color:C.amberFg,background:`${C.amber}15`,padding:"2px 6px",borderRadius:4,fontFamily:"'JetBrains Mono',monospace"}}>{String(ot)}</span>)}
               </div>
             </div>}
           </div>
@@ -621,10 +621,10 @@ export const KMIPTab=({session,onToast})=>{
 
         {/* Integration targets */}
         {integrationTargets.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <span style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Integration Targets:</span>
+          <span style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Integration Targets:</span>
           {integrationTargets.map((target)=><B key={`interop-${String(target)}`} c="blue">{String(target)}</B>)}
         </div>}
-        {integrationNote&&<div style={{fontSize:9,color:C.dim,fontStyle:"italic"}}>{integrationNote}</div>}
+        {integrationNote&&<div style={{fontSize: 10,color:C.dim,fontStyle:"italic"}}>{integrationNote}</div>}
       </div>}
     </Card>    {issuedBundle?<Card style={{marginBottom:10,borderColor:C.green}}>
       <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",marginBottom:6,flexWrap:"wrap"}}>
@@ -649,17 +649,17 @@ export const KMIPTab=({session,onToast})=>{
         </div>}
       >
         <Card style={{padding:0,overflow:"hidden"}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr .9fr .7fr .7fr .7fr",gap:0,padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr .9fr .7fr .7fr .7fr",gap:0,padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
             <div>Profile</div><div>CA</div><div>Duration</div><div>Role</div><div>Actions</div>
           </div>
           <div style={{maxHeight:260,overflowY:"auto"}}>
             {(profiles||[]).map((p)=><div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr .9fr .7fr .7fr .7fr",padding:"8px 12px",fontSize:10,borderBottom:`1px solid ${C.border}`,gap:8}}>
               <div>
                 <div style={{fontSize:11,color:C.text,fontWeight:600}}>{p.name}</div>
-                <div style={{fontSize:9,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{p.id}</div>
+                <div style={{fontSize: 10,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{p.id}</div>
               </div>
-              <div style={{fontSize:9,color:C.dim}}>{(caItems.find((ca)=>String(ca.id)===String(p.ca_id))?.name)||p.ca_id||"-"}</div>
-              <div style={{fontSize:9,color:C.dim}}>{`${Number(p.certificate_duration_days||0)||365}d`}</div>
+              <div style={{fontSize: 10,color:C.dim}}>{(caItems.find((ca)=>String(ca.id)===String(p.ca_id))?.name)||p.ca_id||"-"}</div>
+              <div style={{fontSize: 10,color:C.dim}}>{`${Number(p.certificate_duration_days||0)||365}d`}</div>
               <div><B c="blue">{p.role||"kmip-client"}</B></div>
               <div style={{display:"flex",alignItems:"center",justifyContent:"flex-start"}}>
                 <Btn small danger onClick={()=>void removeProfile(p)} disabled={deletingProfileID!==""||deletingClientID!==""}>
@@ -680,19 +680,19 @@ export const KMIPTab=({session,onToast})=>{
         </div>}
       >
         <Card style={{padding:0,overflow:"hidden"}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr .6fr .7fr .8fr .8fr .8fr",gap:0,padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr .6fr .7fr .8fr .8fr .8fr",gap:0,padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
             <div>Client</div><div>Status</div><div>Mode</div><div>Fingerprint</div><div>Expires</div><div>Actions</div>
           </div>
           <div style={{maxHeight:260,overflowY:"auto"}}>
             {(clients||[]).map((c)=><div key={c.id} style={{display:"grid",gridTemplateColumns:"1fr .6fr .7fr .8fr .8fr .8fr",padding:"8px 12px",fontSize:10,borderBottom:`1px solid ${C.border}`,gap:8}}>
               <div>
                 <div style={{fontSize:11,color:C.text,fontWeight:600}}>{c.name}</div>
-                <div style={{fontSize:9,color:C.muted}}>{c.role}</div>
+                <div style={{fontSize: 10,color:C.muted}}>{c.role}</div>
               </div>
               <div><B c={String(c.status||"").toLowerCase()==="active"?"green":"red"}>{String(c.status||"-").toUpperCase()}</B></div>
-              <div style={{fontSize:9,color:C.dim}}>{String(c.enrollment_mode||"-")}</div>
-              <div style={{fontSize:9,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>{String(c.cert_fingerprint_sha256||"-").slice(0,16)}...</div>
-              <div style={{fontSize:9,color:C.dim}}>{c.cert_not_after?new Date(String(c.cert_not_after)).toLocaleString():"-"}</div>
+              <div style={{fontSize: 10,color:C.dim}}>{String(c.enrollment_mode||"-")}</div>
+              <div style={{fontSize: 10,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>{String(c.cert_fingerprint_sha256||"-").slice(0,16)}...</div>
+              <div style={{fontSize: 10,color:C.dim}}>{c.cert_not_after?new Date(String(c.cert_not_after)).toLocaleString():"-"}</div>
               <div style={{display:"flex",alignItems:"center",justifyContent:"flex-start"}}>
                 <Btn small danger onClick={()=>void removeClient(c)} disabled={deletingClientID!==""||deletingProfileID!==""}>
                   {deletingClientID===String(c.id)?"Deleting...":"Delete"}
@@ -713,7 +713,7 @@ export const KMIPTab=({session,onToast})=>{
       </div>}
     >
       <Card style={{padding:0,overflow:"hidden"}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr .7fr .8fr .6fr .7fr 1fr",gap:0,padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr .7fr .8fr .6fr .7fr 1fr",gap:0,padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
           <div>Target</div><div>Vendor</div><div>Endpoint</div><div>KMIP Min</div><div>Status</div><div>Actions</div>
         </div>
         <div style={{maxHeight:260,overflowY:"auto"}}>
@@ -723,14 +723,14 @@ export const KMIPTab=({session,onToast})=>{
             return <div key={String(target?.id||"")} style={{display:"grid",gridTemplateColumns:"1fr .7fr .8fr .6fr .7fr 1fr",padding:"8px 12px",fontSize:10,borderBottom:`1px solid ${C.border}`,gap:8}}>
               <div>
                 <div style={{fontSize:11,color:C.text,fontWeight:600}}>{String(target?.name||"-")}</div>
-                <div style={{fontSize:9,color:C.muted}}>Checked: {String(target?.last_checked_at?new Date(String(target.last_checked_at)).toLocaleString():"Never")}</div>
+                <div style={{fontSize: 10,color:C.muted}}>Checked: {String(target?.last_checked_at?new Date(String(target.last_checked_at)).toLocaleString():"Never")}</div>
               </div>
-              <div style={{fontSize:9,color:C.dim}}>{String(target?.vendor||"generic")}</div>
-              <div style={{fontSize:9,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>{String(target?.endpoint||"-")}</div>
-              <div style={{fontSize:9,color:C.dim}}>{String(target?.expected_min_version||"-")}</div>
+              <div style={{fontSize: 10,color:C.dim}}>{String(target?.vendor||"generic")}</div>
+              <div style={{fontSize: 10,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>{String(target?.endpoint||"-")}</div>
+              <div style={{fontSize: 10,color:C.dim}}>{String(target?.expected_min_version||"-")}</div>
               <div>
                 <B c={tone}>{String(target?.last_status||"unknown").toUpperCase()}</B>
-                {String(target?.last_error||"").trim()?<div style={{fontSize:9,color:C.red,marginTop:4,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{String(target.last_error)}</div>:null}
+                {String(target?.last_error||"").trim()?<div style={{fontSize: 10,color:C.redFg,marginTop:4,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{String(target.last_error)}</div>:null}
               </div>
               <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
                 <Btn small onClick={()=>void runInteropValidation(target)} disabled={validatingInteropTargetID!==""||deletingInteropTargetID!==""}>
@@ -756,7 +756,7 @@ export const KMIPTab=({session,onToast})=>{
         <div style={{marginTop:6,fontSize:10,color:C.dim}}>
           Key Op: {interopValidationResult?.key_operation_ok?"ok":"fail"} | Negotiated: {String(interopValidationResult?.negotiated_version||"-")} | Latency: {String(interopValidationResult?.latency_ms||0)} ms
         </div>
-        {String(interopValidationResult?.error||"").trim()?<div style={{marginTop:6,fontSize:10,color:C.red}}>{String(interopValidationResult.error)}</div>:null}
+        {String(interopValidationResult?.error||"").trim()?<div style={{marginTop:6,fontSize:10,color:C.redFg}}>{String(interopValidationResult.error)}</div>:null}
       </Card>:null}
     </Section>
 

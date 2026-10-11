@@ -343,7 +343,7 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
 
       {!listed.length && <div style={{ textAlign: "center", padding: "36px 20px" }}>
         {loading ? <div style={{ fontSize: 12, color: C.muted }}>Loading secrets...</div> : <>
-          <Lock size={36} strokeWidth={1} color={C.muted} style={{ marginBottom: 10 }} />
+          <Lock size={36} strokeWidth={1} color={C.muted} style={{ margin: "0 auto 10px" }} />
           <div style={{ fontSize: 13, fontWeight: 600, color: C.dim, marginBottom: 12 }}>{secrets.length === 0 ? "No secrets stored yet" : "No secrets match"}</div>
           {secrets.length === 0 && <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
             <Btn primary onClick={openCreate}><Plus size={12} /> Store a secret</Btn>

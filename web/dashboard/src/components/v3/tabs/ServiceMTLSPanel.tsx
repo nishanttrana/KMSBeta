@@ -105,7 +105,7 @@ export const ServiceMTLSPanel = ({ session, onToast }: Props) => {
     }
   };
 
-  if (error) return <Card style={{ padding: 12 }}><div style={{ fontSize: 11, color: C.red }}>Service mTLS unavailable: {error}</div></Card>;
+  if (error) return <Card style={{ padding: 12 }}><div style={{ fontSize: 11, color: C.redFg }}>Service mTLS unavailable: {error}</div></Card>;
   if (!inv) return <Card style={{ padding: 12 }}><div style={{ fontSize: 11, color: C.dim }}>Loading internal mTLS inventory...</div></Card>;
 
   const items = inv.items.filter((i) => !filter || i.identity.includes(filter.toLowerCase()) || i.host.includes(filter.toLowerCase()));
@@ -216,7 +216,7 @@ export const ServiceMTLSPanel = ({ session, onToast }: Props) => {
       <Card style={{ padding: 12, marginBottom: 10 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>External edge key exchange</div>
         {edgeError ? (
-          <div style={{ fontSize: 11, color: C.red, marginTop: 4 }}>Edge key exchange unavailable: {edgeError}</div>
+          <div style={{ fontSize: 11, color: C.redFg, marginTop: 4 }}>Edge key exchange unavailable: {edgeError}</div>
         ) : !edge ? (
           <div style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>Loading...</div>
         ) : (

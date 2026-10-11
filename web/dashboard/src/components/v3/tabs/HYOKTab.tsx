@@ -398,9 +398,9 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
         { label: "Policy Mode", value: Boolean(health?.policy_fail_closed) ? "CLOSED" : "OPEN", sub: "fail mode", color: Boolean(health?.policy_fail_closed) ? C.red : C.green },
       ].map((stat) => (
         <Card key={stat.label} style={{ padding: "10px 12px" }}>
-          <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{stat.label}</div>
+          <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{stat.label}</div>
           <div style={{ fontSize: 16, color: stat.color, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{stat.value}</div>
-          {stat.sub && <div style={{ fontSize: 9, color: C.dim }}>{stat.sub}</div>}
+          {stat.sub && <div style={{ fontSize: 10, color: C.dim }}>{stat.sub}</div>}
         </Card>
       ))}
     </div>
@@ -423,10 +423,10 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
               <div>
                 <div style={{ fontSize: 12, color: C.text, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
-                  <Shield size={13} strokeWidth={2} style={{ color: statusMeta.color === "green" ? C.green : statusMeta.color === "red" ? C.red : C.amber }} />
+                  <Shield size={13} strokeWidth={2} style={{ color: statusMeta.color === "green" ? C.greenFg : statusMeta.color === "red" ? C.redFg : C.amberFg }} />
                   {HYOK_PROTOCOL_LABELS[protocol]}
                 </div>
-                <div style={{ fontSize: 9, color: C.dim, marginTop: 2 }}>{HYOK_PROTOCOL_DETAILS[protocol]}</div>
+                <div style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>{HYOK_PROTOCOL_DETAILS[protocol]}</div>
               </div>
               <B c={statusMeta.color}>{statusMeta.label}</B>
             </div>
@@ -438,14 +438,14 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
               <span style={{ color: C.muted }}>Policy</span>
               <span style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{String(item?.policy_id || "default")}</span>
               <span style={{ color: C.muted }}>Governance</span>
-              <span style={{ color: Boolean(item?.governance_required) ? C.amber : C.dim }}>{Boolean(item?.governance_required) ? "Required" : "No"}</span>
+              <span style={{ color: Boolean(item?.governance_required) ? C.amberFg : C.dim }}>{Boolean(item?.governance_required) ? "Required" : "No"}</span>
               <span style={{ color: C.muted }}>Operations</span>
               <span style={{ color: C.dim }}>{(HYOK_OPS_BY_PROTOCOL[protocol] || []).join(", ")}</span>
             </div>
 
-            {statusMeta.reason && <div style={{ fontSize: 9, color: C.muted, marginBottom: 6, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={statusMeta.reason}>{statusMeta.reason}</div>}
+            {statusMeta.reason && <div style={{ fontSize: 10, color: C.muted, marginBottom: 6, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={statusMeta.reason}>{statusMeta.reason}</div>}
 
-            <div style={{ fontSize: 9, color: C.dim, marginBottom: 8, fontStyle: "italic" }}>{HYOK_PROTOCOL_KEY_HINTS[protocol]}</div>
+            <div style={{ fontSize: 10, color: C.dim, marginBottom: 8, fontStyle: "italic" }}>{HYOK_PROTOCOL_KEY_HINTS[protocol]}</div>
 
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               <Btn small primary onClick={() => openConfig(protocol)}>Configure</Btn>
@@ -463,7 +463,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
       <Inp style={{ width: 200 }} value={requestFilter} onChange={(e) => setRequestFilter(e.target.value)} placeholder="Filter protocol/key/status..." />
     }>
       <Card style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "30px 100px 80px 70px 90px 1fr 80px", padding: "8px 12px", borderBottom: `1px solid ${C.border}`, fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "30px 100px 80px 70px 90px 1fr 80px", padding: "8px 12px", borderBottom: `1px solid ${C.border}`, fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>
           <div></div><div>Time</div><div>Protocol</div><div>Operation</div><div>Status</div><div>Key / Requester</div><div>Auth</div>
         </div>
         <div style={{ maxHeight: 360, overflowY: "auto" }}>
@@ -477,12 +477,12 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
               >
                 <div style={{ color: C.dim }}>{isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}</div>
                 <div style={{ color: C.dim, fontFamily: "'JetBrains Mono',monospace" }}>{formatAgo(item.created_at)}</div>
-                <div style={{ color: C.accent }}>{String(item.protocol || "-")}</div>
+                <div style={{ color: C.accentFg }}>{String(item.protocol || "-")}</div>
                 <div style={{ color: C.text }}>{String(item.operation || "-")}</div>
                 <div><B c={statusColor}>{String(item.status || "unknown")}</B></div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{String(item.key_id || "-")}</div>
-                  <div style={{ fontSize: 9, color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{String(item.requester_id || item.auth_subject || "-")}</div>
+                  <div style={{ fontSize: 10, color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{String(item.requester_id || item.auth_subject || "-")}</div>
                 </div>
                 <div style={{ color: C.dim }}>{String(item.auth_mode || "-")}</div>
               </div>
@@ -491,22 +491,22 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", fontSize: 10, marginBottom: 8 }}>
                     <div><span style={{ color: C.muted }}>Request ID:</span> <span style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{item.id}</span></div>
                     <div><span style={{ color: C.muted }}>Endpoint:</span> <span style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{String(item.endpoint || "-")}</span></div>
-                    <div><span style={{ color: C.muted }}>Policy Decision:</span> <span style={{ color: item.policy_decision === "DENY" ? C.red : C.green }}>{String(item.policy_decision || "-")}</span></div>
+                    <div><span style={{ color: C.muted }}>Policy Decision:</span> <span style={{ color: item.policy_decision === "DENY" ? C.redFg : C.greenFg }}>{String(item.policy_decision || "-")}</span></div>
                     <div><span style={{ color: C.muted }}>Governance:</span> <span style={{ color: C.text }}>{Boolean(item.governance_required) ? "Required" : "No"}</span></div>
-                    {item.approval_request_id && <div><span style={{ color: C.muted }}>Approval ID:</span> <span style={{ color: C.amber, fontFamily: "'JetBrains Mono',monospace" }}>{item.approval_request_id}</span></div>}
+                    {item.approval_request_id && <div><span style={{ color: C.muted }}>Approval ID:</span> <span style={{ color: C.amberFg, fontFamily: "'JetBrains Mono',monospace" }}>{item.approval_request_id}</span></div>}
                     <div><span style={{ color: C.muted }}>Requester Email:</span> <span style={{ color: C.text }}>{String(item.requester_email || "-")}</span></div>
                     <div><span style={{ color: C.muted }}>Created:</span> <span style={{ color: C.text }}>{formatDate(item.created_at)}</span></div>
                     <div><span style={{ color: C.muted }}>Completed:</span> <span style={{ color: C.text }}>{formatDate(item.completed_at)}</span></div>
                   </div>
                   {item.error_message && (
-                    <div style={{ fontSize: 10, color: C.red, padding: "6px 8px", background: `${C.red}11`, borderRadius: 4, marginBottom: 6 }}>
+                    <div style={{ fontSize: 10, color: C.redFg, padding: "6px 8px", background: `${C.red}11`, borderRadius: 4, marginBottom: 6 }}>
                       {item.error_message}
                     </div>
                   )}
                   {item.response_json && item.response_json !== "{}" && (
                     <div>
-                      <div style={{ fontSize: 9, color: C.muted, marginBottom: 2 }}>Response:</div>
-                      <pre style={{ fontSize: 9, color: C.dim, fontFamily: "'JetBrains Mono',monospace", background: C.surface, padding: "6px 8px", borderRadius: 4, maxHeight: 100, overflow: "auto", margin: 0, whiteSpace: "pre-wrap" }}>
+                      <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>Response:</div>
+                      <pre style={{ fontSize: 10, color: C.dim, fontFamily: "'JetBrains Mono',monospace", background: C.surface, padding: "6px 8px", borderRadius: 4, maxHeight: 100, overflow: "auto", margin: 0, whiteSpace: "pre-wrap" }}>
                         {(() => { try { return JSON.stringify(JSON.parse(item.response_json), null, 2); } catch { return item.response_json; } })()}
                       </pre>
                     </div>
@@ -555,7 +555,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
       {/* DKE-specific metadata fields */}
       {cfgProtocol === "dke" && (<>
         <div style={{ fontSize: 11, color: C.text, fontWeight: 600, marginTop: 12, marginBottom: 6 }}>Microsoft DKE Configuration</div>
-        <div style={{ fontSize: 9, color: C.muted, marginBottom: 8 }}>
+        <div style={{ fontSize: 10, color: C.muted, marginBottom: 8 }}>
           Office fetches the public key without a token on the Key URI Hostname, and decrypts with an Entra ID token. An Entra token is accepted only when its issuer is listed below, its audience is one of the JWT Audiences, and the user's email or app role is authorized; without audiences and authorized users every Entra token is refused.
         </div>
         <Row2>
@@ -603,7 +603,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
     {/* === Endpoint URLs Modal === */}
     <Modal open={modal === "urls"} onClose={() => setModal(null)} title={`Endpoint URLs — ${HYOK_PROTOCOL_LABELS[urlsProtocol] || urlsProtocol}`} wide>
       <div style={{ fontSize: 10, color: C.muted, marginBottom: 10, padding: "8px 10px", background: C.bg, borderRadius: 6 }}>
-        Configure your cloud service to point to these URLs. Replace <code style={{ color: C.accent, fontFamily: "'JetBrains Mono',monospace" }}>{"{keyId}"}</code> with your actual Vecta key ID.
+        Configure your cloud service to point to these URLs. Replace <code style={{ color: C.accentFg, fontFamily: "'JetBrains Mono',monospace" }}>{"{keyId}"}</code> with your actual Vecta key ID.
       </div>
       <FG label="Protocol">
         <Sel value={urlsProtocol} onChange={(e) => setUrlsProtocol(e.target.value)}>
@@ -623,7 +623,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
               </div>
               <button onClick={() => copyToClipboard(url.path)} style={{ background: "transparent", border: "none", color: C.dim, cursor: "pointer" }} title="Copy URL path"><Copy size={12} /></button>
             </div>
-            <div style={{ fontSize: 11, color: C.accent, fontFamily: "'JetBrains Mono',monospace", padding: "4px 6px", background: C.surface, borderRadius: 4, userSelect: "all" }}>{url.path}</div>
+            <div style={{ fontSize: 11, color: C.accentFg, fontFamily: "'JetBrains Mono',monospace", padding: "4px 6px", background: C.surface, borderRadius: 4, userSelect: "all" }}>{url.path}</div>
           </div>
         ))}
       </div>
@@ -653,7 +653,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
         <div style={{ fontSize: 11, color: C.text, fontWeight: 600, marginTop: 16, marginBottom: 8 }}>Endpoint URLs</div>
         <div style={{ display: "grid", gap: 4 }}>
           {(HYOK_PROTOCOL_URLS[guideProtocol] || []).map((url, idx) => (
-            <div key={idx} style={{ fontSize: 10, fontFamily: "'JetBrains Mono',monospace", color: C.accent, padding: "4px 8px", background: C.surface, borderRadius: 4 }}>
+            <div key={idx} style={{ fontSize: 10, fontFamily: "'JetBrains Mono',monospace", color: C.accentFg, padding: "4px 8px", background: C.surface, borderRadius: 4 }}>
               <B c="blue" style={{ marginRight: 6 }}>{url.methods}</B> {url.path}
             </div>
           ))}
