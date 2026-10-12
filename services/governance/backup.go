@@ -1174,7 +1174,11 @@ func (s *SQLStore) restoreSnapshot(ctx context.Context, scope string, targetTena
 			}
 		}
 		if rawRows != "[]" {
-			insertQuery := fmt.Sprintf(`INSERT INTO %s SELECT * FROM json_populate_recordset(NULL::%s, $1::json)`, quotedTable, quotedTable)
+			columns, err := insertableColumns(ctx, tx, tableName)
+			if err != nil {
+				return 0, 0, skipped, excluded, err
+			}
+			insertQuery := fmt.Sprintf(`INSERT INTO %s (%s) SELECT %s FROM json_populate_recordset(NULL::%s, $1::json)`, quotedTable, columns, columns, quotedTable)
 			result, err := tx.ExecContext(ctx, insertQuery, rawRows)
 			if err != nil {
 				return 0, 0, skipped, excluded, err
@@ -1192,6 +1196,42 @@ func (s *SQLStore) restoreSnapshot(ctx context.Context, scope string, targetTena
 	}
 	rollback = false
 	return rowsRestored, tablesProcessed, skipped, excluded, nil
+}
+
+// insertableColumns lists, quoted and comma-separated, the columns of
+// tableName a restore writes: every column but the generated ones. Postgres
+// computes a generated column itself and refuses any value for it, so a
+// restore that named every column (SELECT *) failed on the first table that
+// had one. auth_users has had one, username_lower, since 2026-03: until
+// 12.2.0-beta no backup of a real database could be restored.
+func insertableColumns(ctx context.Context, tx *sql.Tx, tableName string) (string, error) {
+	rows, err := tx.QueryContext(ctx, `
+SELECT column_name
+FROM information_schema.columns
+WHERE table_schema='public'
+  AND table_name=$1
+  AND is_generated='NEVER'
+ORDER BY ordinal_position
+`, tableName)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close() //nolint:errcheck
+	quoted := make([]string, 0)
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return "", err
+		}
+		quoted = append(quoted, quoteIdentifier(name))
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	if len(quoted) == 0 {
+		return "", fmt.Errorf("table %s has no column a restore can write", tableName)
+	}
+	return strings.Join(quoted, ","), nil
 }
 
 // tableIsPartition reports whether tableName is a partition of another table.

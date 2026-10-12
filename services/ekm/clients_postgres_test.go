@@ -106,7 +106,8 @@ func TestClientEnrolmentPostgres(t *testing.T) {
 		t.Fatalf("last seen two hours ago: %+v", c)
 	}
 
-	base := time.Now().UTC().Add(time.Minute)
+	// Postgres keeps microseconds; Linux's clock has nanoseconds.
+	base := time.Now().UTC().Add(time.Minute).Truncate(time.Microsecond)
 	for i := 0; i < checkInsKept+10; i++ {
 		if err := r.store.RecordClientCheckIn(ctx, ClientCheckIn{TenantID: tenant, ClientID: id, At: base.Add(time.Duration(i) * time.Second), SourceIP: "10.0.0.1", Status: AgentStatusConnected}); err != nil {
 			t.Fatal(err)

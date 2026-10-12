@@ -55,17 +55,13 @@ func secretRowUnder(t *testing.T, db *sql.DB, key []byte) bool {
 func TestBackupReprotectPostgres(t *testing.T) {
 	svc, pub := newIntegrationGovernance(t)
 	db := svc.store.(*SQLStore).db.SQL()
-	for _, stmt := range []string{
-		`CREATE TABLE IF NOT EXISTS secret_values (
-			tenant_id TEXT NOT NULL, secret_id TEXT NOT NULL, version INTEGER NOT NULL,
-			wrapped_dek BYTEA NOT NULL, wrapped_dek_iv BYTEA NOT NULL, ciphertext BYTEA NOT NULL,
-			data_iv BYTEA NOT NULL, value_hash BYTEA NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			PRIMARY KEY (tenant_id, secret_id, version))`,
-		`DELETE FROM secret_values`,
-	} {
-		if _, err := db.Exec(stmt); err != nil {
-			t.Fatal(err)
-		}
+	standInTable(t, db, "secret_values", `
+		tenant_id TEXT NOT NULL, secret_id TEXT NOT NULL, version INTEGER NOT NULL,
+		wrapped_dek BYTEA NOT NULL, wrapped_dek_iv BYTEA NOT NULL, ciphertext BYTEA NOT NULL,
+		data_iv BYTEA NOT NULL, value_hash BYTEA NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		PRIMARY KEY (tenant_id, secret_id, version)`)
+	if _, err := db.Exec(`DELETE FROM secret_values`); err != nil {
+		t.Fatal(err)
 	}
 	dev := mek.Catalog["secrets"].LegacyKeysFromEnv()[0].Key
 	cur, _ := pkgcrypto.RandomBytes(32)

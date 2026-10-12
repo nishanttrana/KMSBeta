@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -45,6 +46,27 @@ func newIntegrationGovernance(t *testing.T) (*Service, *capturePublisher) {
 	// master-key tables may exist; a pass-through stands in for the services.
 	return NewService(NewSQLStore(conn), pub, &mockEmailSender{}, &mockCallbackExecutor{}, "http://localhost:8050",
 		WithBackupRewrapper(passThroughRewrapper{})), pub
+}
+
+// standInTable makes another service's table for a test that needs it, when
+// that service's own migrations have not run in this database, and removes
+// it afterwards. CI runs every package's Postgres tests one after another in
+// one database: a stand-in left behind made the owning service's
+// CREATE TABLE IF NOT EXISTS a no-op, and its tests then ran on a table
+// missing most of its columns (workload, until 12.2.0-beta).
+func standInTable(t *testing.T, db *sql.DB, name, columns string) {
+	t.Helper()
+	var exists bool
+	if err := db.QueryRow(`SELECT to_regclass('public.' || $1) IS NOT NULL`, name).Scan(&exists); err != nil {
+		t.Fatal(err)
+	}
+	if exists {
+		return
+	}
+	if _, err := db.Exec(`CREATE TABLE ` + name + ` (` + columns + `)`); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = db.Exec(`DROP TABLE IF EXISTS ` + name) })
 }
 
 type passThroughRewrapper struct{}
@@ -325,11 +347,17 @@ func TestMigrationScrubsStoredBackupKeysPostgres(t *testing.T) {
 func TestHSMBoundBackupPostgres(t *testing.T) {
 	svc, pub := newIntegrationGovernance(t)
 	db := svc.store.(*SQLStore).db.SQL()
+	standInTable(t, db, "auth_hsm_provider_configs", `
+		tenant_id TEXT PRIMARY KEY, provider_name TEXT NOT NULL DEFAULT '', library_path TEXT NOT NULL DEFAULT '',
+		slot_id TEXT NOT NULL DEFAULT '', partition_label TEXT NOT NULL DEFAULT '', token_label TEXT NOT NULL DEFAULT '',
+		enabled BOOLEAN NOT NULL DEFAULT FALSE`)
 	for _, stmt := range []string{
-		`CREATE TABLE IF NOT EXISTS auth_hsm_provider_configs (
-			tenant_id TEXT PRIMARY KEY, provider_name TEXT NOT NULL DEFAULT '', library_path TEXT NOT NULL DEFAULT '',
-			slot_id TEXT NOT NULL DEFAULT '', partition_label TEXT NOT NULL DEFAULT '', token_label TEXT NOT NULL DEFAULT '',
-			enabled BOOLEAN NOT NULL DEFAULT FALSE)`,
+		// With auth's real table in the shared database, the row needs its tenant.
+		`DO $$ BEGIN
+			IF to_regclass('public.auth_tenants') IS NOT NULL THEN
+				INSERT INTO auth_tenants (id, name, status) VALUES ('root', 'Root', 'active') ON CONFLICT (id) DO NOTHING;
+			END IF;
+		END $$`,
 		`DELETE FROM auth_hsm_provider_configs WHERE tenant_id='root'`,
 		`INSERT INTO auth_hsm_provider_configs (tenant_id, provider_name, token_label, enabled) VALUES ('root','softhsm2','vecta-test',TRUE)`,
 	} {

@@ -33,11 +33,9 @@ func TestBackupRefusesPlaintextSigningKeys(t *testing.T) {
 func TestBackupRefusesPlaintextSigningKeysPostgres(t *testing.T) {
 	svc, pub := newIntegrationGovernance(t)
 	db := svc.store.(*SQLStore).db.SQL()
-	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS workload_identity_settings (
+	standInTable(t, db, "workload_identity_settings", `
 		tenant_id TEXT PRIMARY KEY, trust_domain TEXT NOT NULL,
-		local_ca_key_pem TEXT NOT NULL DEFAULT '', jwt_signer_private_pem TEXT NOT NULL DEFAULT '')`); err != nil {
-		t.Fatal(err)
-	}
+		local_ca_key_pem TEXT NOT NULL DEFAULT '', jwt_signer_private_pem TEXT NOT NULL DEFAULT ''`)
 	const tenant = "t-gov-plaintext-signing"
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM workload_identity_settings WHERE tenant_id = $1`, tenant) })
 	if _, err := db.Exec(`INSERT INTO workload_identity_settings (tenant_id, trust_domain, local_ca_key_pem) VALUES ($1, 'x', 'PLAINTEXT-PEM')

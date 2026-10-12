@@ -4,6 +4,27 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [12.2.0-beta] — 2026-10-12
+
+### Fixed
+- **A backup could not be restored.** Restore failed on the first table
+  holding a column the database computes itself (`cannot insert a
+  non-DEFAULT value into column "username_lower"`). The users table has had
+  such a column since March 2026, so every system backup, and every tenant
+  backup of a tenant with users, failed to restore. A failed restore
+  changed nothing (it runs in one transaction). Restore now writes the
+  stored columns and lets the database compute the rest. Backups already
+  taken restore as they are.
+
+Found by running CI's Postgres integration step as CI runs it: every
+package, in order, in one database, on Linux. Three test faults that kept
+that step and the Linux test job red are fixed with it: governance's tests
+left stand-ins of other services' tables behind, and two tests compared a
+nanosecond clock with stored microseconds.
+
+Enforced by `TestBackupRestoresGeneratedColumnsPostgres` (fails on the
+previous code with the error above) and CI's `integration-postgres` job.
+
 ## [12.1.0-beta] — 2026-10-12
 
 ### Security

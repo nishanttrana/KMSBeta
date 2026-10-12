@@ -24,7 +24,9 @@ func TestKeyConsumersFromUsageTrail(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	now := time.Now().UTC()
+	// Microseconds, as the trail is stored: Linux's clock has nanoseconds, and
+	// the times below are compared with what the store returns.
+	now := time.Now().UTC().Truncate(time.Microsecond)
 	for i, e := range []KeyUsageEvent{
 		{KeyID: key.ID, Operation: "encrypt", ActorID: "alice", Interface: "rest", OccurredAt: now.Add(-2 * time.Hour)},
 		{KeyID: key.ID, Operation: "encrypt", ActorID: "alice", Interface: "rest", OccurredAt: now.Add(-time.Hour)},

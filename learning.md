@@ -5,6 +5,41 @@ Newest entries on top.
 
 ## 2026-10-12
 
+### A backup that never restored, hidden by where its tests ran (12.2.0-beta)
+- **Restore named every column, and one table computes a column itself.**
+  `INSERT INTO t SELECT * FROM json_populate_recordset(NULL::t, …)` supplies
+  a value for a `GENERATED ALWAYS` column, which Postgres refuses.
+  `auth_users.username_lower` is one, since 2026-03. So for seven months no
+  backup of a real database could be restored, and the product's own
+  backup tests said otherwise.
+- **How it slipped through: the tests pass alone.** Run by itself,
+  governance's package migrates only governance's tables, and none has a
+  generated column. The failure needs auth's tables in the same database,
+  which is what a real stack has and what CI's `integration-postgres` job
+  builds by running every package in turn in one database. CI can't be read
+  from this machine (private repository, no `gh`), and the local habit was
+  `go test -run Postgres ./services/<the one I touched>`. **Rule: run the
+  CI step as CI runs it: one command, its package order, one fresh
+  database.** A test of something that acts on "every table" must put a
+  foreign table in front of it; `TestBackupRestoresGeneratedColumnsPostgres`
+  makes its own.
+- **A stand-in table left behind breaks the service that owns it.** Three
+  governance tests ran `CREATE TABLE IF NOT EXISTS` for another service's
+  table with only the columns they needed. Governance runs before workload
+  in CI, so workload's own `CREATE TABLE IF NOT EXISTS` was then a no-op and
+  its test failed on a missing column. `standInTable` makes the table only
+  when it is absent and drops it afterwards.
+- **macOS's clock hides a precision bug.** `time.Now()` has microseconds on
+  macOS and nanoseconds on Linux; Postgres stores microseconds. Two tests
+  compared a stored time with an untruncated `time.Now()`: green here, red
+  in CI. One was mine, written the day before. **Rule: truncate to
+  microseconds whatever is compared with a stored time, and run the touched
+  packages in a Linux container before pushing** (the SoftHSM container in
+  the local test notes does both).
+- **Not fixed:** `TestBackupReprotectPostgres` needs its own shape of
+  `secret_values`, so it fails if the secrets package ran first in the same
+  database. CI runs governance first.
+
 ### "Where from" and "who" were read from what the caller wrote (12.1.0-beta)
 - **Nine readers of one header, each with its own copy of the same
   mistake.** `X-Forwarded-For` is a list; Envoy appends the address it saw,
