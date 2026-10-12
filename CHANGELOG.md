@@ -4,6 +4,58 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [12.1.0-beta] — 2026-10-12
+
+### Security
+- **The login lockout could be avoided by changing one request header.**
+  The lockout counts failed sign-ins per user and address, and the address
+  was read from the first `X-Forwarded-For` entry, which the caller writes.
+  A different value on every guess gave every guess a fresh counter, so the
+  lockout never came. The address is now the one the KMS edge itself saw.
+- **Audit events recorded the source address the caller chose.** The same
+  header fed `source_ip` on every audit event, the address on a session,
+  keycore's threat signals and the requester address on approval and key
+  access records. All of them now use the address the edge saw. Backup,
+  HYOK and cluster-forwarding events recorded the edge proxy's own address
+  and now record the caller's.
+- **A key destruction could be requested in somebody else's name.**
+  `POST /keys/{id}/destroy` took `requester_id`, `requester_email` and
+  `requester_ip` from the request body. Approval rules keep the recorded
+  requester from voting on their own request, so a caller who named
+  another person could approve their own destruction. The requester is now
+  the signed-in caller; only a platform service acting for someone (a
+  playbook) may name them.
+- **Four logs named whoever the caller said they were.** The data
+  protection log (tokenize, detokenize, FPE, mask, redact) named
+  `dashboard` for everyone, or an `X-Actor` header; backup events, cluster
+  changes (`requested_by`) and backup deletion (`?actor=`) took their actor
+  from headers, the body or the query. All four now record the verified
+  caller.
+
+### Changed
+- `source_ip` on audit events is an address without a port.
+- These request fields are no longer read from a caller that is not a
+  platform service: `requester_id`, `requester_email`, `requester_ip` on
+  `POST /keys/{id}/destroy`; `requester_ip` on `POST /cloud/sync`;
+  `requested_by` on the cluster-manager's node and join routes; `?actor=`
+  on `DELETE /governance/backups/{id}`. Requests that send them still
+  succeed.
+- In a cluster, a member tells the primary the caller's address
+  (`X-Vecta-Cluster-Client-IP`, accepted only from an authenticated
+  member), so a forwarded change is recorded with the caller's address, not
+  the member's.
+- Behind a load balancer the address the edge sees is the load balancer's:
+  lockouts then count per user across all callers. A list of trusted
+  proxies is not built yet.
+
+How it works, and what is still open: `docs/SECURITY/REQUEST_ORIGIN.md`.
+
+Enforced by conformance rules `client-address` and `caller-named-actor`,
+`TestEdgeAppendsTheAddressItSawOnRealEnvoy` (the real Envoy image),
+`TestLockoutIgnoresTheAddressTheCallerWrites` (fails on the previous code),
+`TestKeyDestroyRequesterIsTheVerifiedCaller`, `TestClusterForwarding`,
+`TestSecureJoinEndToEnd` and the per-service actor tests.
+
 ## [12.0.0-beta] — 2026-10-12
 
 ### Breaking

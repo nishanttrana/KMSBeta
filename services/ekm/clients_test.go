@@ -411,18 +411,6 @@ func TestClientCheckInsArePrunedAndPurged(t *testing.T) {
 	}
 }
 
-func TestClientIPIsTheAddressTheEdgeSaw(t *testing.T) {
-	req := httptest.NewRequest("POST", "/x", nil)
-	req.RemoteAddr = "172.18.0.5:41000"
-	if got := clientIP(req); got != "172.18.0.5" {
-		t.Errorf("no proxy: %q", got)
-	}
-	req.Header.Set("X-Forwarded-For", "1.2.3.4, 10.20.15.32")
-	if got := clientIP(req); got != "10.20.15.32" {
-		t.Errorf("a caller-supplied first entry was trusted: %q", got)
-	}
-}
-
 // The packaged heartbeat scripts can't read the database, so they must not
 // report its TDE state as enabled.
 func TestDeployScriptsDoNotClaimTDEIsEnabled(t *testing.T) {

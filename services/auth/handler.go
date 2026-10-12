@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+	"vecta-kms/pkg/clientip"
 	"vecta-kms/pkg/route"
 
 	pkgauth "vecta-kms/pkg/auth"
@@ -658,7 +658,10 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	lockoutWindow := time.Duration(securityPolicy.LockoutMinutes) * time.Minute
 	loginUser := strings.ToLower(strings.TrimSpace(req.Username))
-	rlKey := req.TenantID + "|" + loginUser + "|" + clientIP(r)
+	// The lockout counts failures per user and address. The address is the
+	// one the edge saw: keyed on a header the caller writes, every guess got
+	// a fresh counter and the lockout never came (11.8.0-beta).
+	rlKey := req.TenantID + "|" + loginUser + "|" + clientip.From(r)
 	lockUntil, locked := h.logic.limiter.IsLocked(rlKey, time.Now().UTC())
 	lockScope := "node"
 	if !locked {
@@ -675,7 +678,7 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		// A09: audit-log account lockout events
 		_ = h.publishAudit(r.Context(), "audit.auth.account_locked", reqID, req.TenantID, map[string]any{
 			"username":     req.Username,
-			"source_ip":    clientIP(r),
+			"source_ip":    clientip.From(r),
 			"locked_until": lockUntil.UTC().Format(time.RFC3339),
 			"scope":        lockScope,
 			"result":       "refused",
@@ -707,7 +710,7 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 			// A09: audit-log login failure for invalid credentials
 			_ = h.publishAudit(r.Context(), "audit.auth.login_failed", reqID, req.TenantID, map[string]any{
 				"username":  req.Username,
-				"source_ip": clientIP(r),
+				"source_ip": clientip.From(r),
 				"reason":    "invalid_credentials",
 			})
 			writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid credentials", reqID, req.TenantID)
@@ -721,7 +724,7 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		_ = h.publishAudit(r.Context(), "audit.auth.login_failed", reqID, req.TenantID, map[string]any{
 			"username":  req.Username,
 			"user_id":   u.ID,
-			"source_ip": clientIP(r),
+			"source_ip": clientip.From(r),
 			"reason":    "user_disabled",
 		})
 		writeErr(w, http.StatusUnauthorized, "unauthorized", "user is disabled", reqID, req.TenantID)
@@ -734,7 +737,7 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		_ = h.publishAudit(r.Context(), "audit.auth.login_failed", reqID, req.TenantID, map[string]any{
 			"username":  req.Username,
 			"user_id":   u.ID,
-			"source_ip": clientIP(r),
+			"source_ip": clientip.From(r),
 			"reason":    "invalid_mfa_code",
 		})
 		writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid mfa code", reqID, req.TenantID)
@@ -755,7 +758,7 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	sHash := tokenHash(token)
 	defer pkgcrypto.Zeroize(sHash)
-	if err := h.store.CreateSession(r.Context(), Session{ID: NewID("sess"), TenantID: req.TenantID, UserID: u.ID, TokenHash: sHash, IPAddress: clientIP(r), UserAgent: r.UserAgent(), ExpiresAt: exp}); err != nil {
+	if err := h.store.CreateSession(r.Context(), Session{ID: NewID("sess"), TenantID: req.TenantID, UserID: u.ID, TokenHash: sHash, IPAddress: clientip.From(r), UserAgent: r.UserAgent(), ExpiresAt: exp}); err != nil {
 		writeErr(w, http.StatusInternalServerError, "store_error", "failed to create session", reqID, req.TenantID)
 		return
 	}
@@ -882,7 +885,7 @@ func (h *Handler) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 		TenantID:  claims.TenantID,
 		UserID:    claims.UserID,
 		TokenHash: sHash,
-		IPAddress: clientIP(r),
+		IPAddress: clientip.From(r),
 		UserAgent: r.UserAgent(),
 		ExpiresAt: exp,
 	}); err != nil {
@@ -2729,17 +2732,6 @@ func requestID(r *http.Request) string {
 		return id
 	}
 	return NewID("req")
-}
-
-func clientIP(r *http.Request) string {
-	if xff := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); xff != "" {
-		return strings.TrimSpace(strings.Split(xff, ",")[0])
-	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err == nil {
-		return host
-	}
-	return r.RemoteAddr
 }
 
 func hasPermission(perms []string, needed string) bool {

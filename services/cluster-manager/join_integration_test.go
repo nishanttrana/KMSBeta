@@ -17,6 +17,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"vecta-kms/pkg/clientip"
 
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/clusterrepl"
@@ -214,19 +215,26 @@ func TestSecureJoinEndToEnd(t *testing.T) {
 	}
 
 	// A forwarded write reaches the primary's service with a freshly minted token.
-	var gotAuth, gotPath, gotFwd string
+	var gotAuth, gotPath, gotFwd, gotFrom string
+	var gotForwardedFor []string
 	keycore := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotAuth, gotPath, gotFwd = r.Header.Get("Authorization"), r.URL.RequestURI(), r.Header.Get("X-Vecta-Forwarded-By")
+		gotFrom, gotForwardedFor = clientip.From(r), r.Header.Values(clientip.Header)
 		w.WriteHeader(http.StatusCreated)
 	}))
 	defer keycore.Close()
 	primary.WithForwarding(fakeMinter{})
 	primary.forwardTargets = func(svc string) (string, bool) { return keycore.URL, svc == "kms-keycore" }
 	claims, _ := json.Marshal(pkgauth.Claims{TenantID: "t1", Role: "tenant-admin", UserID: "alice"})
+	memberSaw := "198.51.100.7"
 	forward := func(method, path, cred string) int {
 		req, _ := http.NewRequest(method, srv.URL+"/cluster/forward/kms-keycore"+path, strings.NewReader("{}"))
 		req.Header.Set(pkgconfig.HeaderClusterNode, "node-2")
 		req.Header.Set(pkgconfig.HeaderClusterCredential, cred)
+		req.Header.Set(pkgconfig.HeaderClusterClientIP, memberSaw)
+		// What the caller wrote, the caller as the member saw it, and the
+		// member as this node's edge would append it.
+		req.Header.Set(clientip.Header, "203.0.113.9, 198.51.100.7, 10.0.0.2")
 		req.Header.Set(pkgconfig.HeaderForwardClaims, base64.RawURLEncoding.EncodeToString(claims))
 		resp, err := clusterstate.PinnedHTTPClient(st.PrimaryFingerprint, 10*time.Second).Do(req)
 		if err != nil {
@@ -241,6 +249,18 @@ func TestSecureJoinEndToEnd(t *testing.T) {
 	if gotAuth != "Bearer minted:alice:node-2" || gotPath != "/keys?tenant_id=t1" || gotFwd != "node-2" {
 		t.Fatalf("the service must receive the minted token and the original path: auth=%q path=%q fwd=%q", gotAuth, gotPath, gotFwd)
 	}
+	// The service is told the address the authenticated member vouched for,
+	// and only that: not the caller's own entry, not the member's address.
+	if gotFrom != "198.51.100.7" || len(gotForwardedFor) != 1 {
+		t.Fatalf("the caller's address must be the one the member saw: from=%q header=%q", gotFrom, gotForwardedFor)
+	}
+	// A member naming something that is not an address is not passed on, and
+	// what the header arrived with is not left in its place.
+	memberSaw = "203.0.113.9, 198.51.100.7"
+	if code := forward("POST", "/keys?tenant_id=t1", st.ForwardCredential); code != http.StatusCreated || len(gotForwardedFor) != 0 || gotFrom == "203.0.113.9" || gotFrom == "198.51.100.7" {
+		t.Fatalf("a list is not an address: status %d from=%q header=%q", code, gotFrom, gotForwardedFor)
+	}
+	memberSaw = "198.51.100.7"
 	gotPath = ""
 	if code := forward("POST", "/keys", "wrong-credential"); code != http.StatusUnauthorized || gotPath != "" {
 		t.Fatalf("a wrong member credential must be refused: %d", code)
@@ -248,7 +268,7 @@ func TestSecureJoinEndToEnd(t *testing.T) {
 	if code := forward("POST", "/keys/k1/encrypt", st.ForwardCredential); code != http.StatusForbidden || gotPath != "" {
 		t.Fatalf("crypto operations must not be run through the forward endpoint: %d", code)
 	}
-	if audit.count("audit.cluster.write_forwarded") != 1 || audit.count("audit.cluster.forward_refused") != 2 {
+	if audit.count("audit.cluster.write_forwarded") != 2 || audit.count("audit.cluster.forward_refused") != 2 {
 		t.Fatalf("forwards and refusals must be audited: %v", audit.subjects)
 	}
 	// Removing the member revokes its credential: it can no longer forward.

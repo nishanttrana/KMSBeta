@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strings"
 	"time"
+	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/clientip"
 )
 
 // BackupService serves backup policies, runs and restore points.
@@ -32,8 +33,8 @@ func (svc *BackupService) audit(r *http.Request, subject, tenantID string, data 
 	if svc.events == nil {
 		return
 	}
-	data["actor"] = firstNonEmptyHeader(r, "X-Actor", "X-Username")
-	data["source_ip"] = r.RemoteAddr
+	data["actor"] = pkgauth.Actor(r.Context())
+	data["source_ip"] = clientip.From(r)
 	raw, err := json.Marshal(map[string]interface{}{
 		"tenant_id": tenantID,
 		"service":   "backup",
@@ -45,13 +46,4 @@ func (svc *BackupService) audit(r *http.Request, subject, tenantID string, data 
 		return
 	}
 	_ = svc.events.Publish(context.WithoutCancel(r.Context()), subject, raw)
-}
-
-func firstNonEmptyHeader(r *http.Request, names ...string) string {
-	for _, n := range names {
-		if v := strings.TrimSpace(r.Header.Get(n)); v != "" {
-			return v
-		}
-	}
-	return ""
 }

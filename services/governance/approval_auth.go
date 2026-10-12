@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"strings"
+	"vecta-kms/pkg/clientip"
 
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/tenantcheck"
@@ -99,6 +100,7 @@ func (h *Handler) bindRequester(r *http.Request, claims *pkgauth.Claims, in *Cre
 	}
 	in.RequesterID = firstNonEmpty(claims.UserID, claims.ClientID)
 	in.RequesterEmail = ""
+	in.RequesterIP = clientip.From(r)
 	if callerIsUser(claims) {
 		if email, err := h.svc.store.UserEmail(r.Context(), in.TenantID, claims.UserID); err == nil {
 			in.RequesterEmail = email

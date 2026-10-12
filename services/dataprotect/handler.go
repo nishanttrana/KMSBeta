@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	pkgauth "vecta-kms/pkg/auth"
 
 	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/tenantcheck"
@@ -967,14 +968,12 @@ func tenantFromRequest(r *http.Request) string {
 	return strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
 }
 
+// actorFromRequest is the verified caller. It was read from X-Actor and
+// X-Username, which nothing in the platform sends, with "dashboard" as the
+// answer otherwise: every entry in the log named "dashboard", or whatever a
+// caller put in the header (11.8.0-beta).
 func actorFromRequest(r *http.Request) string {
-	if v := strings.TrimSpace(r.Header.Get("X-Actor")); v != "" {
-		return v
-	}
-	if v := strings.TrimSpace(r.Header.Get("X-Username")); v != "" {
-		return v
-	}
-	return "dashboard"
+	return pkgauth.Actor(r.Context())
 }
 
 func firstTenant(values ...string) string {

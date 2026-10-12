@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"vecta-kms/pkg/clientip"
 
 	"vecta-kms/pkg/tenantcheck"
 )
@@ -132,9 +133,8 @@ func (h *Handler) handleSync(w http.ResponseWriter, r *http.Request) {
 	if !bodyTenantAllowed(w, r, req.TenantID, reqID) {
 		return
 	}
-	if strings.TrimSpace(req.RequesterIP) == "" {
-		req.RequesterIP = requestIP(r)
-	}
+	// The address is the one the edge saw, not one the body or a header names.
+	req.RequesterIP = clientip.From(r)
 	out, err := h.svc.SyncCloudKeys(r.Context(), req)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, req.TenantID, "sync_failed")
@@ -236,17 +236,6 @@ func requestID(r *http.Request) string {
 		return id
 	}
 	return newID("req")
-}
-
-func requestIP(r *http.Request) string {
-	raw := strings.TrimSpace(r.Header.Get("X-Forwarded-For"))
-	if raw != "" {
-		parts := strings.Split(raw, ",")
-		if len(parts) > 0 {
-			return strings.TrimSpace(parts[0])
-		}
-	}
-	return strings.TrimSpace(r.Header.Get("X-Real-IP"))
 }
 
 func writeJSON(w http.ResponseWriter, code int, payload map[string]interface{}) {

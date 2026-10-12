@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"vecta-kms/pkg/clientip"
 
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauth "vecta-kms/pkg/auth"
@@ -86,10 +87,7 @@ func Wrap(next http.Handler, publisher EventPublisher, serviceName string) http.
 				result = "failure"
 			}
 
-			sourceIP := r.RemoteAddr
-			if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
-				sourceIP = strings.SplitN(fwd, ",", 2)[0]
-			}
+			sourceIP := clientip.From(r)
 
 			evt := pkgaudit.Event{
 				TenantID:   tenantID,

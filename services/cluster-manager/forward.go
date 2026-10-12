@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"vecta-kms/pkg/clientip"
 
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/clusterroute"
@@ -183,6 +184,10 @@ func (h *Handler) handleForward(w http.ResponseWriter, r *http.Request) {
 		req.Header.Set("Authorization", "Bearer "+bearer)
 	}
 	req.Header.Set("X-Vecta-Forwarded-By", node)
+	// The caller's address is the one the authenticated member's edge saw.
+	// Whatever X-Forwarded-For arrived with (the caller's entries, and this
+	// node's edge naming the member) is replaced by it.
+	clientip.Set(req, r.Header.Get(pkgconfig.HeaderClusterClientIP))
 	resp, err := s.forwardClient.Do(req)
 	if err != nil {
 		writeErr(w, http.StatusBadGateway, "service_unreachable", err.Error(), reqID, "root")

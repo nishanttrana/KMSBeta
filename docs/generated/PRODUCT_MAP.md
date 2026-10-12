@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-12T02:55:38Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-12T05:17:36Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -344,7 +344,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | certs | GET | /est/.well-known/est/cacerts | h.handleESTCACerts |  | services/certs/handler.go | 89 |
 | certs | POST | /est/.well-known/est/simplereenroll | h.handleESTSimpleReenroll |  | services/certs/handler.go | 92 |
 | certs | GET | /certs/edge-tls/measurement | s.handleEdgeMeasurement | authenticated | services/certs/internal_mtls_routes.go | 65 |
-| certs | POST | /v1/enroll | <inline func> | public | services/certs/internal_tls.go | 184 |
+| certs | POST | /v1/enroll | <inline func> | public | services/certs/internal_tls.go | 185 |
 | cloud | POST | /cloud/byok/keys | h.createBYOK | cloud.write | services/cloud/byok_routes.go | 26 |
 | cloud | POST | /cloud/byok/keys/{id}/rotate | op(OpRotate) | cloud.write | services/cloud/byok_routes.go | 28 |
 | cloud | POST | /cloud/byok/keys/{id}/reimport | op(OpReimport) | cloud.write | services/cloud/byok_routes.go | 29 |
@@ -355,21 +355,21 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | cloud | POST | /cloud/accounts/{id}/test | h.testAccount | cloud.write | services/cloud/credentials.go | 176 |
 | cloud | POST | /cloud/credentials/{id}/test | h.testCredential | authenticated | services/cloud/credentials.go | 177 |
 | cloud | GET | /cloud/credential-usage | h.credentialUsage | authenticated | services/cloud/credentials.go | 178 |
-| cloud | GET | /cloud/accounts | h.handleListAccounts |  | services/cloud/handler.go | 31 |
-| cloud | GET | /cloud/region-mappings | h.handleListRegionMappings |  | services/cloud/handler.go | 34 |
-| cloud | GET | /cloud/inventory | h.handleInventory |  | services/cloud/handler.go | 36 |
-| cloud | GET | /cloud/bindings | h.handleListBindings |  | services/cloud/handler.go | 37 |
-| cloud | GET | /cloud/bindings/{id} | h.handleGetBinding |  | services/cloud/handler.go | 38 |
-| cluster-manager | GET | /healthz | h.handleHealth |  | services/cluster-manager/handler.go | 32 |
-| cluster-manager | GET | /cluster/members | h.handleMembers |  | services/cluster-manager/handler.go | 35 |
-| cluster-manager | GET | /cluster/nodes | h.handleNodes |  | services/cluster-manager/handler.go | 36 |
-| cluster-manager | GET | /cluster/profiles | h.handleListProfiles |  | services/cluster-manager/handler.go | 38 |
-| cluster-manager | POST | /cluster/join/complete | h.handleJoinComplete |  | services/cluster-manager/handler.go | 43 |
-| cluster-manager | POST | /cluster/join/exchange | h.handleJoinExchange |  | services/cluster-manager/handler.go | 44 |
-| cluster-manager | POST | /cluster/nodes/{id}/heartbeat | h.handleNodeHeartbeat |  | services/cluster-manager/handler.go | 49 |
-| cluster-manager | POST | /cluster/sync/events | h.handlePublishSyncEvent |  | services/cluster-manager/handler.go | 53 |
-| cluster-manager | POST | /cluster/sync/ack | h.handleSyncAck |  | services/cluster-manager/handler.go | 55 |
-| cluster-manager | GET | /cluster/replication/status | h.handleReplicationStatus |  | services/cluster-manager/handler.go | 58 |
+| cloud | GET | /cloud/accounts | h.handleListAccounts |  | services/cloud/handler.go | 32 |
+| cloud | GET | /cloud/region-mappings | h.handleListRegionMappings |  | services/cloud/handler.go | 35 |
+| cloud | GET | /cloud/inventory | h.handleInventory |  | services/cloud/handler.go | 37 |
+| cloud | GET | /cloud/bindings | h.handleListBindings |  | services/cloud/handler.go | 38 |
+| cloud | GET | /cloud/bindings/{id} | h.handleGetBinding |  | services/cloud/handler.go | 39 |
+| cluster-manager | GET | /healthz | h.handleHealth |  | services/cluster-manager/handler.go | 33 |
+| cluster-manager | GET | /cluster/members | h.handleMembers |  | services/cluster-manager/handler.go | 36 |
+| cluster-manager | GET | /cluster/nodes | h.handleNodes |  | services/cluster-manager/handler.go | 37 |
+| cluster-manager | GET | /cluster/profiles | h.handleListProfiles |  | services/cluster-manager/handler.go | 39 |
+| cluster-manager | POST | /cluster/join/complete | h.handleJoinComplete |  | services/cluster-manager/handler.go | 44 |
+| cluster-manager | POST | /cluster/join/exchange | h.handleJoinExchange |  | services/cluster-manager/handler.go | 45 |
+| cluster-manager | POST | /cluster/nodes/{id}/heartbeat | h.handleNodeHeartbeat |  | services/cluster-manager/handler.go | 50 |
+| cluster-manager | POST | /cluster/sync/events | h.handlePublishSyncEvent |  | services/cluster-manager/handler.go | 54 |
+| cluster-manager | POST | /cluster/sync/ack | h.handleSyncAck |  | services/cluster-manager/handler.go | 56 |
+| cluster-manager | GET | /cluster/replication/status | h.handleReplicationStatus |  | services/cluster-manager/handler.go | 59 |
 | compliance | POST | /compliance/connections/{id}/resolve | h.resolveConnection | authenticated | services/compliance/connections_service.go | 71 |
 | compliance | POST | /compliance/connections/import | h.importConnection | authenticated | services/compliance/connections_service.go | 72 |
 | compliance | GET | /compliance/connections/{id} | h.checkConnectionUse | compliance.connection.use | services/compliance/credentials.go | 36 |

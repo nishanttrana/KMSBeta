@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"vecta-kms/pkg/clientip"
 
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauth "vecta-kms/pkg/auth"
@@ -29,8 +30,12 @@ import (
 const (
 	HeaderClusterNode       = "X-Vecta-Cluster-Node"
 	HeaderClusterCredential = "X-Vecta-Cluster-Credential"
-	HeaderForwardClaims     = "X-Vecta-Forward-Claims"
-	HeaderForwardedTo       = "X-Vecta-Forwarded-To"
+	// HeaderClusterClientIP is the address this member's edge saw the caller
+	// at. The primary takes it only from a member it has authenticated: on
+	// the way there the primary's own edge appends the member's address.
+	HeaderClusterClientIP = "X-Vecta-Cluster-Client-IP"
+	HeaderForwardClaims   = "X-Vecta-Forward-Claims"
+	HeaderForwardedTo     = "X-Vecta-Forwarded-To"
 )
 
 var hopByHop = map[string]bool{
@@ -175,6 +180,7 @@ func (f *clusterForwarder) forward(w http.ResponseWriter, r *http.Request, st cl
 	}
 	req.Header.Set(HeaderClusterNode, st.NodeID)
 	req.Header.Set(HeaderClusterCredential, st.ForwardCredential)
+	req.Header.Set(HeaderClusterClientIP, clientip.From(r))
 	if claimsHeader != "" {
 		req.Header.Set(HeaderForwardClaims, claimsHeader)
 	}
@@ -207,7 +213,7 @@ func (f *clusterForwarder) audit(r *http.Request, st clusterstate.State, c *pkga
 	}
 	evt := pkgaudit.Event{
 		Method: r.Method, Endpoint: r.URL.Path, StatusCode: status,
-		SourceIP: r.RemoteAddr, UserAgent: r.UserAgent(), NodeID: st.NodeID,
+		SourceIP: clientip.From(r), UserAgent: r.UserAgent(), NodeID: st.NodeID,
 		CorrelationID: r.Header.Get("X-Request-ID"),
 		TargetType:    "cluster_primary", TargetID: st.PrimaryNodeID,
 		Result:  "success",

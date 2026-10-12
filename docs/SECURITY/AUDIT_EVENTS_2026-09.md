@@ -483,6 +483,20 @@ are gone too.
 |---|---|---|
 | `audit.key.cryptoperiods_listed`, `audit.key.cryptoperiod_set`, `audit.key.cryptoperiod_reset` | Kernel events for the tenant's cryptoperiods (`days`, `default_days`); refusals `invalid_days`, `unknown_category`, `not_custom` with `result: refused` | `TestTenantCryptoperiodDrivesRotation`, `TestRotationRoutesRefusalsAudited` |
 
+## Source address and actor on every event (12.1.0-beta, docs/SECURITY/REQUEST_ORIGIN.md)
+
+No new events. What two fields of existing events mean changed:
+
+| Field | Now | Test |
+|---|---|---|
+| `source_ip` on kernel, middleware and `request_refused` events | the address the edge appended to `X-Forwarded-For`, never an earlier entry | `TestFromIsTheEntryTheEdgeAppended`, `TestEdgeAppendsTheAddressItSawOnRealEnvoy` |
+| `source_ip` on `audit.auth.login_failed` and `audit.auth.account_locked` | the same; it is also the address in the lockout key | `TestLockoutIgnoresTheAddressTheCallerWrites` |
+| `requester_id`, `requester_email`, `requester_ip` sent to governance for a key destruction | the verified caller and the edge-seen address; a platform service may name the person it acts for | `TestKeyDestroyRequesterIsTheVerifiedCaller` |
+| `actor`, `source_ip` on backup events | the verified caller; the caller's address, not the proxy's | `TestBackupAuditNamesTheVerifiedCallerAndTheirAddress` |
+| actor in the data protection log | the verified caller (was `dashboard` or a header) | `TestAuditActorIsTheVerifiedCaller` |
+| `requested_by` / `updated_by` on cluster events | the verified caller (was the body or a header) | `TestClusterChangeActorIsTheVerifiedCaller` |
+| `SourceIP` on `cluster_write_forwarded` / `cluster_write_refused`, and the address the primary records for a forwarded write | the caller's address as the member's edge saw it | `TestClusterForwarding`, `TestSecureJoinEndToEnd` |
+
 ## EKM database clients (11.7.0-beta, docs/SECURITY/EKM_CLIENTS.md)
 
 Kernel events (`pkg/route`): one per call, refusals included. None carries a

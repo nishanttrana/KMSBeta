@@ -35,6 +35,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"vecta-kms/pkg/clientip"
 
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauth "vecta-kms/pkg/auth"
@@ -555,7 +556,7 @@ func (rt *Router) emit(c *Call, spec Spec, status int, took time.Duration) {
 		Result:        result,
 		StatusCode:    status,
 		ErrorMessage:  c.errMsg,
-		SourceIP:      sourceIP(r),
+		SourceIP:      clientip.From(r),
 		UserAgent:     r.UserAgent(),
 		Method:        r.Method,
 		Endpoint:      r.URL.Path,
@@ -596,14 +597,6 @@ func actorType(claims *pkgauth.Claims) string {
 	default:
 		return "client"
 	}
-}
-
-func sourceIP(r *http.Request) string {
-	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
-		first, _, _ := strings.Cut(fwd, ",")
-		return strings.TrimSpace(first)
-	}
-	return r.RemoteAddr
 }
 
 func headerOr(r *http.Request, name, def string) string {

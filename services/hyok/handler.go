@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"vecta-kms/pkg/clientip"
 
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/tenantcheck"
@@ -335,9 +336,9 @@ func (h *Handler) dkeCaller(w http.ResponseWriter, r *http.Request, reqID string
 		tenantID, _, err = h.svc.resolveDKETenant(r.Context(), hint, func(m DKEEndpointMetadata) bool {
 			return m.KeyURIHostname != "" && strings.EqualFold(strings.TrimSpace(m.KeyURIHostname), host)
 		})
-		identity = AuthIdentity{Mode: authModeAnonymous, RemoteIP: strings.TrimSpace(r.RemoteAddr)}
+		identity = AuthIdentity{Mode: authModeAnonymous, RemoteIP: clientip.From(r)}
 	case raw != "" && isEntraToken(raw):
-		identity, tenantID, err = h.svc.AuthenticateEntraDKE(r.Context(), hint, raw, strings.TrimSpace(r.RemoteAddr))
+		identity, tenantID, err = h.svc.AuthenticateEntraDKE(r.Context(), hint, raw, clientip.From(r))
 	default:
 		identity, err = h.authenticate(r, hint)
 		tenantID = firstNonEmpty(hint, identity.TenantID)
@@ -396,7 +397,7 @@ func (h *Handler) authenticate(r *http.Request, tenantHint string) (AuthIdentity
 		UserID:    strings.TrimSpace(claims.UserID),
 		Role:      strings.TrimSpace(claims.Role),
 		TokenJTI:  strings.TrimSpace(claims.ID),
-		RemoteIP:  strings.TrimSpace(r.RemoteAddr),
+		RemoteIP:  clientip.From(r),
 		JWTIssuer: strings.TrimSpace(claims.Issuer),
 	}
 	for _, aud := range claims.Audience {

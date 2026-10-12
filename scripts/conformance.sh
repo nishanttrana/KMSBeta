@@ -275,6 +275,38 @@ else
   echo "PASS [service-token]"
 fi
 
+# The address a request came from is what the platform itself observed
+# (pkg/clientip): the entry the edge proxy appended to X-Forwarded-For, or the
+# connection's own address. Until 11.8.0-beta nine places read the first
+# entry, which the caller writes: the audit source address, the login lockout
+# key and the requester address on an approval were whatever a caller sent.
+# Only pkg/clientip reads a forwarded-address header or a request's
+# RemoteAddr. (A KMIP session is a TCP connection, not a proxied request.)
+addr_hits=$(grep -rniE '"(x-forwarded-for|x-real-ip|x-client-ip|true-client-ip|cf-connecting-ip|x-envoy-external-address|forwarded)"|(^|[^A-Za-z0-9_.])(r|req|request)\.RemoteAddr|c\.R\.RemoteAddr' \
+  services pkg --include='*.go' 2>/dev/null | grep -v '_test\.go:' | grep -v '^pkg/clientip/' || true)
+if [ -n "$addr_hits" ]; then
+  FAIL=1
+  echo "FAIL [client-address]: read the caller's address with clientip.From, never from a header or RemoteAddr"
+  printf '%s\n' "$addr_hits" | sed 's/^/  /'
+else
+  echo "PASS [client-address]"
+fi
+
+# Who made a request is the verified token's subject (pkgauth.Actor), never a
+# header or a query parameter the caller wrote (CLAUDE.md rule 4). Until
+# 11.8.0-beta dataprotect, backup, cluster-manager and governance took an
+# audit actor from X-Actor / X-User-* headers that nothing in the platform
+# sends. (Keycore keeps X-Actor-* as explicitly unverified audit context.)
+actor_hits=$(grep -rnE '"X-(Actor|Username|User-(ID|Name|Email))"|Query\(\)\.Get\("actor"\)' \
+  services pkg --include='*.go' 2>/dev/null | grep -v '_test\.go:' || true)
+if [ -n "$actor_hits" ]; then
+  FAIL=1
+  echo "FAIL [caller-named-actor]: take the actor from pkgauth.Actor(ctx), never from a header or query parameter"
+  printf '%s\n' "$actor_hits" | sed 's/^/  /'
+else
+  echo "PASS [caller-named-actor]"
+fi
+
 # Rule 6c: every connection is TLS, every internal one mTLS (CLAUDE.md rule
 # 10, docs/SECURITY/INTERNAL_TLS.md). No plain listener, no insecure gRPC
 # credentials, and no http:// to a platform host in code or deployment files.

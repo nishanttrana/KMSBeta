@@ -141,6 +141,11 @@ client ──▶ member service (pkg/config wrapper)
            primary service (its own authz, validation and audit)
 ```
 
+- **The caller's address travels with the write.** The member sends the
+  address its own edge saw (`X-Vecta-Cluster-Client-IP`); the primary takes
+  it only after authenticating the member and passes it on as the request's
+  address, so the primary's audit names the caller, not the member
+  (docs/SECURITY/REQUEST_ORIGIN.md).
 - **Forward by default.** `pkg/clusterroute.Local` lists the few writes that
   run on a member. Each one writes only node-local tables.
   `TestLocalRoutesExist` checks that every entry is a real route. A new write

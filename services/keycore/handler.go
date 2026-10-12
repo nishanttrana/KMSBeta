@@ -11,12 +11,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"vecta-kms/pkg/clientip"
 
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/delegation"
@@ -744,10 +744,20 @@ func (h *Handler) handleDestroyKey(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", "justification is required", reqID, tenantID)
 		return
 	}
+	// The requester is the verified caller, at the address the edge saw. Only
+	// a platform service may name the person it acts for. Taken from the body
+	// for anyone, the requester was whoever the caller named, and governance
+	// keeps the *named* requester from approving: the real one could then
+	// approve their own key destruction (11.8.0-beta, CLAUDE.md rule 4).
 	actor := accessActorFromContext(r.Context())
-	requesterID := firstNonEmptyString(strings.TrimSpace(req.RequesterID), strings.TrimSpace(actor.UserID), strings.TrimSpace(actor.Username), "keycore")
-	requesterEmail := firstNonEmptyString(strings.TrimSpace(req.RequesterEmail), strings.TrimSpace(actor.Username), "keycore@vecta.local")
-	requesterIP := firstNonEmptyString(strings.TrimSpace(req.RequesterIP), strings.TrimSpace(r.Header.Get("X-Forwarded-For")), clientIP(r))
+	requesterID := firstNonEmptyString(strings.TrimSpace(actor.UserID), strings.TrimSpace(actor.Username), "keycore")
+	requesterEmail := firstNonEmptyString(strings.TrimSpace(actor.Username), "keycore@vecta.local")
+	requesterIP := clientip.From(r)
+	if actorIsServicePrincipal(actor) {
+		requesterID = firstNonEmptyString(strings.TrimSpace(req.RequesterID), requesterID)
+		requesterEmail = firstNonEmptyString(strings.TrimSpace(req.RequesterEmail), requesterEmail)
+		requesterIP = firstNonEmptyString(strings.TrimSpace(req.RequesterIP), requesterIP)
+	}
 	key, err := h.svc.GetKey(r.Context(), tenantID, r.PathValue("id"))
 	if err != nil {
 		writeErr(w, http.StatusNotFound, "not_found", err.Error(), reqID, tenantID)
@@ -2176,11 +2186,7 @@ func accessActorFromHTTPRequest(r *http.Request) AccessActor {
 	// (protocol services such as KMIP call as verified service principals),
 	// so a header can't move a request under another interface's policies.
 	actor.InterfaceName = "rest"
-	if fwd := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); fwd != "" {
-		actor.SourceIP = strings.TrimSpace(strings.SplitN(fwd, ",", 2)[0])
-	} else {
-		actor.SourceIP = r.RemoteAddr
-	}
+	actor.SourceIP = clientip.From(r)
 	return actor
 }
 
@@ -2209,24 +2215,6 @@ func splitCSVHeader(raw string) []string {
 		out = append(out, value)
 	}
 	return out
-}
-
-func clientIP(r *http.Request) string {
-	forwarded := strings.TrimSpace(r.Header.Get("X-Forwarded-For"))
-	if forwarded != "" {
-		parts := strings.Split(forwarded, ",")
-		if len(parts) > 0 {
-			candidate := strings.TrimSpace(parts[0])
-			if candidate != "" {
-				return candidate
-			}
-		}
-	}
-	host, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
-	if err == nil && strings.TrimSpace(host) != "" {
-		return strings.TrimSpace(host)
-	}
-	return strings.TrimSpace(r.RemoteAddr)
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload map[string]any) {

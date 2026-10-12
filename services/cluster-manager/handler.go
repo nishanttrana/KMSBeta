@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	pkgauth "vecta-kms/pkg/auth"
 
 	"vecta-kms/pkg/tenantcheck"
 )
@@ -162,9 +163,7 @@ func (h *Handler) handleJoinRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.TenantID = firstTenant(in.TenantID, tenantFromRequest(r))
-	if strings.TrimSpace(in.RequestedBy) == "" {
-		in.RequestedBy = firstActor(r)
-	}
+	in.RequestedBy = firstActor(r)
 	token, err := h.svc.CreateJoinToken(r.Context(), in)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, in.TenantID)
@@ -219,9 +218,7 @@ func (h *Handler) handleUpsertNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.TenantID = firstTenant(in.TenantID, tenantFromRequest(r))
-	if strings.TrimSpace(in.RequestedBy) == "" {
-		in.RequestedBy = firstActor(r)
-	}
+	in.RequestedBy = firstActor(r)
 	node, err := h.svc.UpsertNode(r.Context(), in)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, in.TenantID)
@@ -243,9 +240,7 @@ func (h *Handler) handleNodeRoleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.TenantID = firstTenant(in.TenantID, tenantFromRequest(r))
-	if strings.TrimSpace(in.RequestedBy) == "" {
-		in.RequestedBy = firstActor(r)
-	}
+	in.RequestedBy = firstActor(r)
 	node, err := h.svc.UpdateNodeRole(r.Context(), nodeID, in)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, in.TenantID)
@@ -267,9 +262,7 @@ func (h *Handler) handleRemoveNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.TenantID = firstTenant(in.TenantID, tenantFromRequest(r))
-	if strings.TrimSpace(in.RequestedBy) == "" {
-		in.RequestedBy = firstActor(r)
-	}
+	in.RequestedBy = firstActor(r)
 	result, err := h.svc.RemoveNode(r.Context(), nodeID, in)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, in.TenantID)
@@ -506,11 +499,13 @@ func mustTenant(r *http.Request, w http.ResponseWriter, reqID string) string {
 	return tenantID
 }
 
+// firstActor is the verified caller, or "system" when a request carries no
+// token. It was read from the body's requested_by and then from X-User-* and
+// X-Actor headers, so a cluster change was recorded under whatever name the
+// caller wrote (11.8.0-beta).
 func firstActor(r *http.Request) string {
-	for _, header := range []string{"X-User-Email", "X-User-Name", "X-User-ID", "X-Actor"} {
-		if value := strings.TrimSpace(r.Header.Get(header)); value != "" {
-			return value
-		}
+	if actor := pkgauth.Actor(r.Context()); actor != "" {
+		return actor
 	}
 	return "system"
 }

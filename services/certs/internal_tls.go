@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"vecta-kms/pkg/clientip"
 
 	"vecta-kms/pkg/route"
 	pkgsecurityheaders "vecta-kms/pkg/securityheaders"
@@ -192,7 +193,7 @@ func (s *Service) enrollHandler(tenantID, bootstrapSecret string, audit route.Em
 		}
 		c.Target(req.Identity)
 		c.Detail("identity", req.Identity)
-		c.Detail("remote_addr", c.R.RemoteAddr)
+		c.Detail("remote_addr", clientip.From(c.R))
 		block, _ := pem.Decode([]byte(req.CSRPEM))
 		if block == nil || block.Type != "CERTIFICATE REQUEST" {
 			c.Refuse(http.StatusBadRequest, "invalid_csr", "csr_pem is not a PEM certificate request")

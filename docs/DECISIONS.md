@@ -7,6 +7,44 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-12 — The caller's address and the actor each have one reader
+**Decision:** the address a request came from is `clientip.From(r)`: the
+last `X-Forwarded-For` entry (the one the edge proxy appended), or the
+connection's address when no proxy stood in between. A record's actor is
+`pkgauth.Actor(ctx)`, the verified token's subject. No other code reads a
+forwarded-address header, a request's `RemoteAddr`, an `X-Actor` / `X-User-*`
+header or an `?actor=` parameter. A cluster member states the address its
+edge saw in a header the primary takes only from an authenticated member
+(docs/SECURITY/REQUEST_ORIGIN.md).
+**Why:** nine places read the caller's address, eight of them from an entry
+the caller writes. The login lockout was keyed on it, so it could be
+avoided; every audit event's source address could be chosen. Four services
+took an audit actor from headers nothing sends, and keycore took the
+requester of a key destruction from the body, which decides who may approve.
+**Rejected:**
+- *Trusting the header only when the TLS peer is the edge proxy.* It ties
+  the helper to `pkg/svctls` and to every hop that may vouch for a caller
+  (the edge, the cluster forwarder). Service listeners already accept only
+  internal mTLS, so nothing outside the platform can deliver a request
+  whose last entry it wrote.
+- *Envoy's `x-envoy-external-address`.* Envoy overwrites it only for
+  requests it classes as external; whether a private address is external
+  depends on the Envoy version and its internal-address configuration.
+- *A list of trusted proxies (walk the header from the right).* The right
+  answer for a deployment behind a load balancer, but it needs a setting
+  that reaches every service and the edge. Until then the address is the
+  load balancer's, which is safe and coarse. Still open.
+- *Refusing a destroy request whose body names another requester.* An older
+  client that sends its own name would start failing. The field is ignored
+  for a caller that is not a platform service; the record is the truth
+  either way.
+- *Showing a user name instead of the token's user ID in the four logs.*
+  The actor means the same thing as on every kernel event (`actor_id`).
+**Enforced by:** conformance `client-address` and `caller-named-actor`;
+`TestEdgeAppendsTheAddressItSawOnRealEnvoy` (CI, real Envoy);
+`TestLockoutIgnoresTheAddressTheCallerWrites`;
+`TestKeyDestroyRequesterIsTheVerifiedCaller`.
+
 ## 2026-10-12 — Key material leaves only with a stated reason
 **Decision:** a wrapped export (`POST /keys/{id}/export`) is refused without
 `reason`; the reason is recorded in `audit.key.export` as `export_reason`

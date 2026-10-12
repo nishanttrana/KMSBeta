@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"vecta-kms/pkg/clientip"
 
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauth "vecta-kms/pkg/auth"
@@ -60,7 +61,7 @@ func wrapLegacy(parser func(string) (*pkgauth.Claims, error), next http.Handler,
 				Result:        route.ResultRefused,
 				StatusCode:    http.StatusUnauthorized,
 				ErrorMessage:  "authentication required",
-				SourceIP:      sourceIP(r),
+				SourceIP:      clientip.From(r),
 				UserAgent:     r.UserAgent(),
 				Method:        r.Method,
 				Endpoint:      r.URL.Path,
@@ -81,14 +82,6 @@ func firstNonEmpty(v ...string) string {
 		}
 	}
 	return ""
-}
-
-func sourceIP(r *http.Request) string {
-	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
-		first, _, _ := strings.Cut(fwd, ",")
-		return strings.TrimSpace(first)
-	}
-	return r.RemoteAddr
 }
 
 // PublicRouter is a pkg/route router: it knows which requests reach a

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"vecta-kms/pkg/clientip"
 
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauth "vecta-kms/pkg/auth"
@@ -23,7 +24,7 @@ import (
 var audited []string
 
 type seenRequest struct {
-	method, path, auth, node, cred, claims, body string
+	method, path, auth, node, cred, claims, body, client string
 }
 
 func newTestForwarder(t *testing.T, service string, st clusterstate.State) (*clusterForwarder, *[]string) {
@@ -57,7 +58,7 @@ func TestClusterForwarding(t *testing.T) {
 	var seen []seenRequest
 	primary := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		b, _ := io.ReadAll(r.Body)
-		seen = append(seen, seenRequest{r.Method, r.URL.RequestURI(), r.Header.Get("Authorization"), r.Header.Get(HeaderClusterNode), r.Header.Get(HeaderClusterCredential), r.Header.Get(HeaderForwardClaims), string(b)})
+		seen = append(seen, seenRequest{r.Method, r.URL.RequestURI(), r.Header.Get("Authorization"), r.Header.Get(HeaderClusterNode), r.Header.Get(HeaderClusterCredential), r.Header.Get(HeaderForwardClaims), string(b), r.Header.Get(HeaderClusterClientIP)})
 		w.Header().Set("X-From", "primary")
 		w.WriteHeader(http.StatusCreated)
 		_, _ = w.Write([]byte(`{"ok":true}`))
@@ -73,6 +74,8 @@ func TestClusterForwarding(t *testing.T) {
 			req.Header.Set("Authorization", "Bearer "+bearer)
 		}
 		req.Header.Set(HeaderClusterCredential, "spoofed") // a client must not inject cluster headers
+		req.Header.Set(HeaderClusterClientIP, "203.0.113.9")
+		req.Header.Set(clientip.Header, "203.0.113.9, 198.51.100.7") // what the caller wrote, then what this member's edge saw
 		rr := httptest.NewRecorder()
 		f.ServeHTTP(rr, req)
 		return rr
@@ -96,6 +99,9 @@ func TestClusterForwarding(t *testing.T) {
 	}
 	if got.auth != "" || got.node != "node-2" || got.cred != "cred-123" {
 		t.Fatalf("the user token must not travel; the member credential must replace any client header: %+v", got)
+	}
+	if got.client != "198.51.100.7" {
+		t.Fatalf("the primary must be told the address this member's edge saw, not one the caller wrote: %q", got.client)
 	}
 	raw, _ := base64.RawURLEncoding.DecodeString(got.claims)
 	var claims pkgauth.Claims

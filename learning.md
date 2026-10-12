@@ -5,6 +5,50 @@ Newest entries on top.
 
 ## 2026-10-12
 
+### "Where from" and "who" were read from what the caller wrote (12.1.0-beta)
+- **Nine readers of one header, each with its own copy of the same
+  mistake.** `X-Forwarded-For` is a list; Envoy appends the address it saw,
+  so only the last entry is the platform's. Eight places took the first
+  (`pkg/route`, `pkg/auditmw`, `pkg/jwtauth`, auth, keycore twice, cloud,
+  and keycore's destroy handler took the whole header), and each had its own
+  helper named `clientIP`, `sourceIP` or `requestIP`. How it slipped
+  through: "first entry is the client" is true behind a chain of honest
+  proxies and is what most examples show; every test sent a request with
+  no header at all, so first and last were the same. **Rule: one reader,
+  `clientip.From`; conformance `client-address` fails on a second.**
+- **The worst consequence was not the one first reported.** It was found as
+  "the audit source address can be forged". The same value was the third
+  part of the login lockout key, so a header that changes on every guess
+  meant no lockout at all. A fault in evidence is worth following to every
+  decision that reads the same value.
+- **Next to it, a body field decided who may approve.** Keycore's destroy
+  handler read `requester_id` from the body before the verified actor, on
+  the same line as the header. Governance refuses a vote from the recorded
+  requester, so naming somebody else made the caller eligible to approve
+  their own key destruction. Rule 4 already said identity never comes from
+  a body field; nothing checked it for this handler because the field looked
+  like metadata. **A field that another service uses to decide something is
+  identity, whatever it is called.**
+- **Four services logged an actor from headers nobody sends.** No caller in
+  the repository sets `X-Actor`, `X-Username` or `X-User-*`. So dataprotect
+  logged every operation as `dashboard` (an invented default), backup
+  logged an empty actor, and all four logged whatever a caller typed. The
+  check that found them: for each header a handler reads, grep for who sets
+  it. Conformance `caller-named-actor` fails on a new one.
+- **A proxy's append behaviour is a fact to test on the proxy.** The
+  real-Envoy test has Envoy answer the request itself and return the
+  `X-Forwarded-For` it would have sent upstream in a response header
+  (`%REQ(X-FORWARDED-FOR)%`). The first version pointed Envoy at a listener
+  on the host and failed on Docker Desktop for reasons unrelated to the
+  question.
+- **A full deploy from this checkout shipped my uncommitted fix.** Another
+  session ran `./deploy-local.sh` at 12.0.0-beta while these edits were on
+  disk, so the live auth already had the fix and the lockout bypass could
+  not be reproduced live any more. The proof that the old code failed is
+  the new test run in a worktree at the previous commit (sixth guess: 401).
+- **Not reviewed:** `requested_by`, `created_by` and `requester_id` in other
+  services' request bodies (docs/SECURITY/REQUEST_ORIGIN.md, "Still open").
+
 ### Three fields the dialog used to fake, built for real (12.0.0-beta)
 - **A "replace everything" update can't carry one new field safely.**
   `PUT /keys/{id}` rewrites name, purpose, owner, cloud, region, labels,
@@ -82,10 +126,9 @@ Newest entries on top.
 - **`X-Forwarded-For`'s first entry is the caller's claim.** Envoy
   (`use_remote_address: true`) appends the address it saw, so the last entry
   is the trustworthy one; a client can prepend anything. The client's
-  "Source IP" uses the last entry (`TestClientIPIsTheAddressTheEdgeSaw`).
-  **Not fixed here:** `pkg/route`, `pkg/auditmw` and `pkg/jwtauth` still take
-  the first entry for the audit event's `source_ip`, which a caller can
-  therefore forge. It needs its own change and test.
+  "Source IP" uses the last entry. Left open here, the first entry was still
+  read for the audit event's `source_ip` and more; fixed for every reader
+  in 12.1.0-beta (`pkg/clientip`, entry above).
 - **`document.elementFromPoint` answers null below the fold.** The
   covered-controls sweep reported every off-screen row as "covered by
   undefined" on a thousand-row table. It now skips points outside the

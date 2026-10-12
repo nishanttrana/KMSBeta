@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"vecta-kms/pkg/clientip"
 
 	ldap "github.com/go-ldap/ldap/v3"
 	pkgcrypto "vecta-kms/pkg/crypto"
@@ -118,7 +119,7 @@ func (h *Handler) handleSSOCallback(w http.ResponseWriter, r *http.Request) {
 			"reason":   reason,
 			"result":   "refused",
 			"severity": "warning",
-			"ip":       clientIP(r),
+			"ip":       clientip.From(r),
 		})
 	}
 
@@ -225,7 +226,7 @@ func (h *Handler) handleSSOCallback(w http.ResponseWriter, r *http.Request) {
 		TenantID:  tenantID,
 		UserID:    user.ID,
 		TokenHash: sHash,
-		IPAddress: clientIP(r),
+		IPAddress: clientip.From(r),
 		UserAgent: r.UserAgent(),
 		ExpiresAt: exp,
 	}); err != nil {

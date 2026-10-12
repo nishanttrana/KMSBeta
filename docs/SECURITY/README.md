@@ -20,6 +20,10 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
 - [EKM_CLIENTS.md](EKM_CLIENTS.md): how a database client is registered
   (one-time token, then its own client key), what its health states mean,
   and why a tenant token can no longer register a client or keep it alive.
+- [REQUEST_ORIGIN.md](REQUEST_ORIGIN.md): the address a request came from
+  and who made it come only from what the platform observed or verified
+  (`pkg/clientip`, `pkgauth.Actor`), never from a header, query parameter or
+  body field the caller wrote.
 - [KEY_ACCESS_MODEL.md](KEY_ACCESS_MODEL.md): the binding design for key
   access and key management: one decision for every interface (usage mask,
   lifecycle phase, grants and label policies, conditions, explicit deny),

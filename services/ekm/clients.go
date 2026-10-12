@@ -5,11 +5,11 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
-	"net"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
+	"vecta-kms/pkg/clientip"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
 	"vecta-kms/pkg/route"
@@ -217,24 +217,10 @@ func parseRegistrationToken(token string) (tenantID, clientID string, ok bool) {
 	return string(tenant), parts[2], true
 }
 
-// clientIP is the address the request came from. Behind the edge proxy that
-// is the last X-Forwarded-For entry, the one the proxy appended; earlier
-// entries are the caller's own claim.
-func clientIP(r *http.Request) string {
-	if fwd := strings.Join(r.Header.Values("X-Forwarded-For"), ","); strings.TrimSpace(fwd) != "" {
-		parts := strings.Split(fwd, ",")
-		return strings.TrimSpace(parts[len(parts)-1])
-	}
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		return host
-	}
-	return r.RemoteAddr
-}
-
 type sourceIPKey struct{}
 
 func withSourceIP(ctx context.Context, r *http.Request) context.Context {
-	return context.WithValue(ctx, sourceIPKey{}, clientIP(r))
+	return context.WithValue(ctx, sourceIPKey{}, clientip.From(r))
 }
 
 func sourceIPFrom(ctx context.Context) string { v, _ := ctx.Value(sourceIPKey{}).(string); return v }
@@ -483,7 +469,7 @@ func (h *Handler) enrollClient(c *route.Call) {
 		refuse("registration_token_expired", "the registration token has expired: issue a new one")
 		return
 	}
-	version, host, ip := strings.TrimSpace(req.Version), strings.TrimSpace(req.Host), clientIP(c.R)
+	version, host, ip := strings.TrimSpace(req.Version), strings.TrimSpace(req.Host), clientip.From(c.R)
 	if len(version) > 64 || !clientHostRE.MatchString(host) {
 		c.Error(http.StatusBadRequest, "bad_request", "version or host is not valid")
 		return
@@ -552,7 +538,7 @@ func (h *Handler) clientCheckIn(c *route.Call) {
 		c.Error(http.StatusBadRequest, "bad_request", "version is not valid")
 		return
 	}
-	now, ip := time.Now().UTC(), clientIP(c.R)
+	now, ip := time.Now().UTC(), clientip.From(c.R)
 	if err := h.svc.store.UpdateAgentHeartbeat(ctx, c.Tenant, rec.ID, status, normalizeTDEState(req.TDEState),
 		strings.TrimSpace(req.ActiveKeyID), strings.TrimSpace(req.ActiveKeyVersion), req.ConfigVersionAck, validJSONOr(req.MetadataJSON, "{}"), now); err != nil {
 		clientError(c, err)

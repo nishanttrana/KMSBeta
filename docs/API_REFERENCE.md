@@ -501,6 +501,11 @@ curl -sk -X POST https://localhost/svc/keycore/keys/3fa85f64-5717-4562-b3fc-2c96
 
 Irreversible. All versions and material destroyed. State → DESTROYED.
 
+The requester recorded with the request (and kept from approving it) is the
+verified caller, at the address the edge saw. `requester_id`,
+`requester_email` and `requester_ip` in the body are read only from a
+platform service acting for someone (12.1.0-beta).
+
 ---
 
 ### POST /svc/keycore/keys/{id}/encrypt
@@ -3962,6 +3967,11 @@ token, requires `exp` and an allowed `hd` on the authentication token, and
 uses only the key the authorization token names.
 
 ## Appendix: Audit Action Subject Reference
+
+On every event, `source_ip` is the address the KMS edge accepted the
+connection from, without a port, and the actor is the verified token's
+subject. Neither is taken from a header or a body field
+([SECURITY/REQUEST_ORIGIN.md](SECURITY/REQUEST_ORIGIN.md), 12.1.0-beta).
 
 Audit events use dot-separated action subjects. On a service fully on the
 route kernel, a request with no bearer token or an invalid one is refused

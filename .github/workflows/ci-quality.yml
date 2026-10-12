@@ -131,6 +131,11 @@ jobs:
           VECTA_TEST_ENVOY_IMAGE: envoyproxy/envoy:v1.39.1
         run: go test -count=1 -run 'RealEnvoy' ./services/certs
 
+      - name: The address the edge appends, on a real Envoy (pkg/clientip)
+        env:
+          VECTA_TEST_ENVOY_IMAGE: envoyproxy/envoy:v1.39.1
+        run: go test -count=1 -run 'RealEnvoy' ./pkg/clientip
+
   dashboard-quality:
     name: Dashboard Lint/Type/Unit/Build/Smoke
     runs-on: ubuntu-latest

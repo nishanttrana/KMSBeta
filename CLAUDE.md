@@ -63,6 +63,14 @@ an approach, record it here or in the matching doc below.
    JWT, an XML signature, a JWKS-verified token): never from a request body
    field, an `X-Client-*` header, or the TLS peer certificate — behind Envoy
    the peer is always Envoy (1.27.0-beta, docs/DECISIONS.md).
+   **Where a request came from and who made it each have one reader:**
+   `clientip.From(r)` (the address the edge appended, never the first
+   `X-Forwarded-For` entry or `RemoteAddr`) and `pkgauth.Actor(ctx)` (never
+   an `X-Actor` / `X-User-*` header, a query parameter or a body field). A
+   field another service uses to decide something, such as the requester on
+   an approval, is identity whatever it is called (12.1.0-beta,
+   [docs/SECURITY/REQUEST_ORIGIN.md](docs/SECURITY/REQUEST_ORIGIN.md);
+   conformance `client-address`, `caller-named-actor`).
 5. **FIPS 140-3 is the customer's choice (made in the KMS UI), on the certified module**
    ([docs/SECURITY/FIPS.md](docs/SECURITY/FIPS.md)):
    - Every binary builds with `GOFIPS140` = `pkg/fips.CertifiedModuleVersion`.

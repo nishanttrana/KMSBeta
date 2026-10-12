@@ -79,9 +79,8 @@ stops working. This is how a lost or exposed client key is rotated.
   a write to the primary and would refuse anything else.
 - Verifiers are compared in constant time, and compared even when no such
   client exists.
-- **Source IP** is the address the edge proxy saw (the last
-  `X-Forwarded-For` entry). Earlier entries are the caller's own claim and
-  are ignored.
+- **Source IP** is the address the edge proxy saw (`clientip.From`,
+  [REQUEST_ORIGIN.md](REQUEST_ORIGIN.md)), never one the caller wrote.
 
 ## Health
 

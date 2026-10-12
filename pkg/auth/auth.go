@@ -123,6 +123,23 @@ func ClaimsFromContext(ctx context.Context) (*Claims, bool) {
 	return c, ok
 }
 
+// Actor names the verified caller of ctx's request: the token's user, else
+// its client, else its subject. It is "" without a verified token. A record
+// or audit event takes its actor from here, never from a header or a body
+// field, which say whatever the caller wrote (CLAUDE.md rule 4).
+func Actor(ctx context.Context) string {
+	claims, ok := ClaimsFromContext(ctx)
+	if !ok || claims == nil {
+		return ""
+	}
+	for _, v := range []string{claims.UserID, claims.ClientID, claims.Subject} {
+		if v = strings.TrimSpace(v); v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
 func HTTPMiddleware(next http.Handler, parser func(string) (*Claims, error)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		raw := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer"))

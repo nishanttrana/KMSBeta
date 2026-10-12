@@ -336,11 +336,8 @@ func (h *Handler) handleDeleteBackup(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	actor := strings.TrimSpace(r.URL.Query().Get("actor"))
-	if actor == "" {
-		actor = strings.TrimSpace(r.Header.Get("X-User-ID"))
-	}
-	err := h.svc.DeleteBackup(r.Context(), tenantID, r.PathValue("id"), actor)
+	// Who deleted it is the verified caller, not an ?actor= or a header.
+	err := h.svc.DeleteBackup(r.Context(), tenantID, r.PathValue("id"), pkgauth.Actor(r.Context()))
 	if err != nil {
 		code := http.StatusBadRequest
 		if errors.Is(err, errNotFound) {
