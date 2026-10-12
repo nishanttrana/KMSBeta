@@ -10,8 +10,9 @@
 # none is finished (or none exists yet). It reads GitHub's public API, so it
 # needs no login for a public repository; for a private one put a token in
 # GITHUB_TOKEN (it is sent as a header and never printed). Job logs need a
-# login whatever the repository: this prints the failing step's name, and
-# the steps themselves are in .github/workflows/ to run locally.
+# login whatever the repository, so this prints the failing step's name and
+# the job's annotations: scripts/ci-go-test.sh writes one for each failing
+# test, with what it printed.
 #
 # Works under macOS's bash 3.2.
 set -u
@@ -43,7 +44,19 @@ for r in json.load(sys.stdin).get("workflow_runs", []): print(r["id"])')"
   fi
   status=0
   for id in $ids; do
-    api "actions/runs/${id}/jobs?per_page=100" | RUNS="$runs" RUN_ID="$id" python3 -c '
+    jobs="$(api "actions/runs/${id}/jobs?per_page=100")" || { echo "GitHub did not answer for run ${id}" >&2; return 2; }
+    # What a failed job said about itself: its annotations are public, its
+    # log is not. scripts/ci-go-test.sh writes one for each failing test.
+    notes="$(for job in $(printf '%s' "$jobs" | python3 -c 'import json,sys
+for j in json.load(sys.stdin).get("jobs", []):
+    if j.get("conclusion") == "failure": print(j["id"])'); do
+      api "check-runs/${job}/annotations?per_page=50" | JOB="$job" python3 -c 'import json,os,sys
+for a in json.load(sys.stdin):
+    m = (a.get("message") or "").strip()
+    if a.get("annotation_level") == "failure" and not m.startswith("Process completed with exit code"):
+        print(json.dumps({"job": int(os.environ["JOB"]), "title": a.get("title") or "", "message": m}))'
+    done)"
+    printf '%s' "$jobs" | RUNS="$runs" RUN_ID="$id" NOTES="$notes" python3 -c '
 import json, os, sys
 jobs = json.load(sys.stdin).get("jobs", [])
 run = next(r for r in json.loads(os.environ["RUNS"])["workflow_runs"] if str(r["id"]) == os.environ["RUN_ID"])
@@ -53,6 +66,10 @@ for j in jobs:
     for s in j.get("steps", []):
         if s.get("conclusion") == "failure":
             print("             failed at step %d: %s" % (s["number"], s["name"]))
+    for line in os.environ.get("NOTES", "").splitlines():
+        note = json.loads(line)
+        if note["job"] == j["id"]:
+            print("             " + (note["title"] + ": " if note["title"] else "") + note["message"].replace("\n", "\n               "))
 print("  " + run["html_url"])
 if run["status"] != "completed":
     sys.exit(2)

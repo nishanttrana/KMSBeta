@@ -5,6 +5,17 @@ Newest entries on top.
 
 ## 2026-10-13
 
+### A red job that cannot say why (13.6.0-beta)
+- With the install fixed, one test job of three failed and the other two
+  passed on the same commit: a test that fails sometimes, or only in that
+  mode on that machine. The job's log needs a login; the public API gave
+  the step name and "exit code 1". Two local Linux runs of the same mode
+  passed, so there was nothing to go on.
+- **Rule: a check that can fail must say what failed, somewhere the people
+  fixing it can read.** GitHub shows a job's annotations to anyone; the
+  test steps now write one per failing test (`scripts/ci-go-test.sh`).
+
+
 ### "It works in my container" was run as root (13.5.0-beta)
 - The SoftHSM install script passed every local run and failed on its
   first run in CI. The container ran it as root; a GitHub runner is an

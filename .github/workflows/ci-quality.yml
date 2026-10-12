@@ -63,7 +63,7 @@ jobs:
       - name: go test (fips140=${{ matrix.mode }})
         env:
           VECTA_REQUIRE_JDK: "1"
-        run: go test ./pkg/... ./services/...
+        run: scripts/ci-go-test.sh ./pkg/... ./services/...
 
       - name: Cross-build the Windows customer agent
         run: GOOS=windows GOARCH=amd64 go build ./services/ekm-agent/...
@@ -139,7 +139,7 @@ jobs:
           echo "$HOME/softhsm/bin" >> "$GITHUB_PATH"
 
       - name: Integration tests (run serially; they share the database)
-        run: go test -count=1 -p 1 -run 'Postgres|Preview|Simulated' ./services/auth ./services/dataprotect ./services/discovery ./services/compliance ./services/cloud ./services/ekm ./services/governance ./services/signing ./services/backup ./services/secrets ./services/keycore ./services/audit ./services/workload ./services/posture ./services/reporting ./pkg/mek ./pkg/clusterstate
+        run: scripts/ci-go-test.sh -count=1 -p 1 -run 'Postgres|Preview|Simulated' ./services/auth ./services/dataprotect ./services/discovery ./services/compliance ./services/cloud ./services/ekm ./services/governance ./services/signing ./services/backup ./services/secrets ./services/keycore ./services/audit ./services/workload ./services/posture ./services/reporting ./pkg/mek ./pkg/clusterstate
 
       # Needs a NATS server, so it skipped in every other job: until
       # 13.4.0-beta nothing in CI ran it.
@@ -255,7 +255,7 @@ jobs:
         run: go vet ./...
 
       - name: go test
-        run: go test ./...
+        run: scripts/ci-go-test.sh ./...
 
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest

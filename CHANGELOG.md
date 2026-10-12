@@ -4,6 +4,17 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.6.0-beta] — 2026-10-13
+
+### Added
+- **A failing test in CI says which test it is, where it can be read
+  without a GitHub login.** The test steps run through
+  `scripts/ci-go-test.sh`, which repeats each failing test and what it
+  printed as an annotation on the job, and `scripts/ci-status.sh` prints
+  them. Before, a red test job could only be read as "exit code 1". On
+  13.5.0-beta eight of the nine CI jobs passed; the ninth (the tests in
+  FIPS mode `on`) failed in a test this change is there to name.
+
 ## [13.5.0-beta] — 2026-10-13
 
 ### Fixed
