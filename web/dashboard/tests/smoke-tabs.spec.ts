@@ -548,18 +548,23 @@ test("the ACME wizard asks for the email and name instead of inventing them", as
   expect(acme).toBe(0);
 });
 
-// The REST API tab's hand-written examples are checked against the service
-// for keycore only (12.3.0-beta). Any other service's are shown as not
-// checked, rather than as fact.
-test("the REST API tab says which examples have not been checked against the service", async ({ page }) => {
+// Every service's hand-written examples are checked against its handlers
+// (13.1.0-beta), so none is labelled as unchecked. A response the check could
+// not obtain is shown as that, not as a guess.
+test("the REST API tab shows checked examples, and says where no response was obtained", async ({ page }) => {
   await page.getByText("Workbench", { exact: true }).first().click();
   await page.getByTestId("subnav-workbench").getByRole("button", { name: "REST API", exact: true }).click();
   const search = page.getByPlaceholder("Search service, method, path or capability...");
-  await search.fill("List Keys");
-  await expect(page.getByText("Lists the tenant's keys the caller may see.", { exact: false }).first()).toBeVisible();
-  await expect(page.getByTestId("example-unverified")).toHaveCount(0);
-  await search.fill("Register EKM Database");
-  await expect(page.getByTestId("example-unverified")).toBeVisible();
+  for (const title of ["List Keys", "Register EKM Database"]) {
+    await search.fill(title);
+    await expect(page.getByText("1 matched", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("example-unverified")).toHaveCount(0);
+  }
+  const response = page.getByText("Expected Success Response", { exact: true }).locator("xpath=..").locator("textarea");
+  await expect(response).toHaveValue(/"database"/);
+  await search.fill("Create KMIP Client");
+  await expect(page.getByText("1 matched", { exact: true })).toBeVisible();
+  await expect(response).toHaveValue(/Execute endpoint to inspect the live response payload/);
 });
 
 // What the certs service answers (services/certs/internal_mtls.go, edge_tls.go),

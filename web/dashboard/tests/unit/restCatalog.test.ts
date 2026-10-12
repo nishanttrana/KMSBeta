@@ -43,15 +43,40 @@ describe("REST catalogue", () => {
     expect([...VERIFIED_EXAMPLE_SERVICES].sort()).toEqual(withTest.sort());
   });
 
-  // The services whose examples nobody has checked. This list only shrinks:
-  // add services/<name>/rest_examples_test.go, fix what it finds, and move
-  // the name to VERIFIED_EXAMPLE_SERVICES.
-  it("shows every other service's examples as not checked", () => {
-    const unverified = new Set(REST_API_CATALOG_FULL.filter((entry) => entry.unverified).map((entry) => entry.service));
-    expect([...unverified].sort()).toEqual(["audit", "auth", "certs", "cloud", "compliance", "confidential", "dataprotect", "discovery", "ekm", "governance", "hyok", "kmip", "posture", "reporting", "sbom", "secrets", "workload"]);
-    expect(REST_API_CATALOG_FULL.some((entry) => entry.service === "keycore" && entry.unverified)).toBe(false);
-    // A discovered route with no hand-written example claims nothing to check.
-    expect(REST_API_CATALOG_FULL.find((entry) => entry.id === "keycore-put-keys-id-description")?.unverified).toBe(false);
+  // Every service's examples are checked (13.1.0-beta). A service that gains
+  // hand-written examples brings its rest_examples_test.go, or its examples
+  // are shown as not checked and this fails.
+  it("has no service whose examples are unchecked", () => {
+    expect([...new Set(REST_API_CATALOG_FULL.filter((entry) => entry.unverified).map((entry) => entry.service))]).toEqual([]);
+    expect(new Set(REST_API_CATALOG.map((entry) => entry.service))).toEqual(new Set(VERIFIED_EXAMPLE_SERVICES));
+  });
+
+  // A body field the service's decoder silently ignores would pass the Go
+  // test. Each top-level field of an example body is one the service names
+  // in a json tag.
+  it("shows no request field the service does not have", () => {
+    const tags = new Map<string, Set<string>>();
+    const tagsOf = (service: string) => {
+      if (!tags.has(service)) {
+        const dir = join(REPO, "services", service);
+        const found = new Set<string>();
+        for (const name of readdirSync(dir)) {
+          if (!name.endsWith(".go") || name.endsWith("_test.go")) continue;
+          for (const m of readFileSync(join(dir, name), "utf8").matchAll(/json:"([A-Za-z0-9_]+)/g)) found.add(m[1]!);
+        }
+        tags.set(service, found);
+      }
+      return tags.get(service)!;
+    };
+    const unknown: string[] = [];
+    for (const entry of REST_API_CATALOG) {
+      let body: unknown;
+      try { body = JSON.parse(entry.bodyTemplate || "{}"); } catch { unknown.push(`${entry.id}: the body is not JSON`); continue; }
+      for (const field of Object.keys((body as Record<string, unknown>) || {})) {
+        if (!tagsOf(entry.service).has(field)) unknown.push(`${entry.id}: ${field}`);
+      }
+    }
+    expect(unknown).toEqual([]);
   });
 
   it("lets the playground call the services that register routes, by their edge name", () => {

@@ -84,17 +84,26 @@ version beside it; only the current one is restored.
 `rest_examples_test.go` sends each to its real handlers: the route must
 exist, the body must decode, and a successful answer must contain every
 field the example shows. A service with that test is listed in
-`VERIFIED_EXAMPLE_SERVICES`; the examples of every other service carry a
-note that they have not been checked. keycore is the first (12.3.0-beta).
+`VERIFIED_EXAMPLE_SERVICES`; the examples of any other service carry a
+note that they have not been checked. keycore was the first
+(12.3.0-beta); since 13.1.0-beta every service with examples has the test
+(`routetest.Examples`), so nothing is labelled.
+**A shown response is one the service gave.** Where the test cannot obtain
+an answer, the example shows only the note "Execute endpoint to inspect
+the live response payload."; any other response on a call that fails is a
+test failure. In strict FIPS mode a refusal is not held against the
+example, because some calls are refused there by design.
 **Why:** 18 of keycore's 21 examples were wrong and 18 entries named routes
-that do not exist; nothing compared them with the services.
+that do not exist; nothing compared them with the services. Of the other
+159, 51 requests needed correcting and every response was written by hand.
 **Rejected:** correcting them by reading the handlers (a second guess, with
 no gate); deleting every unchecked entry (137 titles and descriptions lost);
-leaving them unlabelled.
-**Enforced by:** `TestRESTExamplesMatchTheService`,
+leaving them unlabelled; keeping a guessed response where none could be
+obtained.
+**Enforced by:** `TestRESTExamplesMatchTheService` in each service,
 `tests/unit/restCatalog.test.ts` (routes registered, the exported copy
-current, the verified list tied to the test files, the unchecked list only
-shrinking).
+current, the verified list tied to the test files, no service unchecked,
+no body field the service's request types lack).
 
 ## 2026-10-12 — The caller's address and the actor each have one reader
 **Decision:** the address a request came from is `clientip.From(r)`: the

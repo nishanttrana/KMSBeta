@@ -470,9 +470,11 @@ changes code without touching CHANGELOG.md or learning.md.
     id. `tests/unit/controlsAreReal.test.ts` enforces this.
   - An example of an API is checked by a test or says it isn't. A
     hand-written request or response (the REST API tab, a doc) is sent to
-    the real handler by the service's `rest_examples_test.go`; until a
-    service has that test its examples are labelled as not checked
-    (`VERIFIED_EXAMPLE_SERVICES`, `tests/unit/restCatalog.test.ts`).
+    the real handler by the service's `rest_examples_test.go`
+    (`routetest.Examples`); a service without that test has its examples
+    labelled as not checked (`VERIFIED_EXAMPLE_SERVICES`,
+    `tests/unit/restCatalog.test.ts`). A response shown is one the service
+    gave; where none could be obtained the example says so, never a guess.
   - A layout is rendered and tested in every state it has: collapsed and
     open, empty and crowded (a count of 4,200, not 3). A badge sits beside
     its icon, never over it. The smoke tests' `coveredControls` sweep

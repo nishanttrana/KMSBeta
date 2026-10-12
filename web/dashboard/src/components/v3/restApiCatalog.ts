@@ -158,12 +158,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns secret metadata inventory. Secret values are not returned here.",
     requestExample: "GET /svc/secrets/secrets?tenant_id=root&limit=100&offset=0",
-    responseExample: { items: [{ id: "sec_01", name: "db-password", secret_type: "password", status: "active" }] },
+    responseExample: {"items": [{"id": "sec_7cf336e0c472c6ce", "tenant_id": "t1", "name": "db-password", "secret_type": "password", "description": "Updated password", "labels": {}, "metadata": {}, "status": "active", "lease_ttl_seconds": 0, "current_version": 3, "created_by": "tester", "created_at": "2026-10-12T10:48:10Z", "updated_at": "2026-10-12T10:48:10Z", "path": "/db-password", "restricted": false}], "request_id": "req_e030d0c1f774e24d"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid query" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks secret-list privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "certs-list",
@@ -175,11 +175,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns certificate inventory for tenant CA/certificate lifecycle tracking.",
     requestExample: "GET /svc/certs/certs?tenant_id=root&limit=100&offset=0",
-    responseExample: { items: [{ id: "crt_01", subject_cn: "api.bank.com", status: "active", algorithm: "ECDSA-P384" }] },
+    responseExample: {"items": [{"id": "crt_64ba2899fb6c95fa", "tenant_id": "t1", "ca_id": "ca_dfed5bd39eee614b", "serial_number": "a90dfab78a89c7146535c897f9ad7f", "subject_cn": "service.tenant.local", "sans": ["service.tenant.local"], "cert_type": "tls-server", "algorithm": "ECDSA-P384", "profile_id": "", "protocol": "renew", "cert_class": "classical", "cert_pem": "<certificate>", "status": "revoked", "not_before": "2026-10-12T10:43:06.803576Z", "not_after": "2027-10-12T10:48:06.803576Z", "revoked_at": "2026-10-12T10:48:06.804617Z", "revocation_reason": "key_compromise", "created_at": "2026-10-12T10:48:06Z", "updated_at": "2026-10-12T10:48:06Z", "key_ref": ""}], "request_id": "req_f71632d705e47451"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid query" },
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "cert-issue",
@@ -188,16 +189,16 @@ export const REST_API_CATALOG = [
     service: "certs",
     method: "POST",
     pathTemplate: "/certs",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "ca_id": "ca_runtime",\n  "subject_cn": "service.tenant.local",\n  "sans": ["service.tenant.local"],\n  "cert_type": "tls-server",\n  "algorithm": "ECDSA-P384",\n  "server_keygen": true,\n  "validity_days": 365,\n  "protocol": "REST"\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"ca_id\": \"{{ca_id}}\",\n  \"subject_cn\": \"service.tenant.local\",\n  \"sans\": [\n    \"service.tenant.local\"\n  ],\n  \"cert_type\": \"tls-server\",\n  \"algorithm\": \"ECDSA-P384\",\n  \"server_keygen\": true,\n  \"validity_days\": 365,\n  \"protocol\": \"REST\"\n}",
     description: "Issues a certificate from selected CA/profile. Supports server-side keygen.",
     requestExample: "POST /svc/certs/certs",
-    responseExample: { certificate: { id: "crt_99", status: "active", subject_cn: "service.tenant.local" } },
+    responseExample: {"certificate": {"id": "crt_3167cf35fa15485d", "tenant_id": "t1", "ca_id": "ca_dfed5bd39eee614b", "serial_number": "cbf02d8d6fc0b525958c467dc0bd2e", "subject_cn": "service.tenant.local", "sans": ["service.tenant.local"], "cert_type": "tls-server", "algorithm": "ECDSA-P384", "profile_id": "", "protocol": "REST", "cert_class": "classical", "cert_pem": "<certificate>", "status": "active", "not_before": "2026-10-12T10:43:06.797519Z", "not_after": "2027-10-12T10:48:06.797519Z", "revoked_at": "0001-01-01T00:00:00Z", "revocation_reason": "", "created_at": "2026-10-12T10:48:06Z", "updated_at": "2026-10-12T10:48:06Z", "key_ref": ""}, "private_key_pem": "<private key, PEM>", "request_id": "req_9388d99edbcc4ecb"},
     errorCodes: [
-      { code: 400, meaning: "CA/profile/subject invalid" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 422, meaning: "Issuance policy violation" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "cert-star-summary",
@@ -209,11 +210,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns tenant ACME STAR posture including subscription counts, due-soon subscriptions, delegated coverage, and rollout-group risk.",
     requestExample: "GET /svc/certs/certs/star/summary?tenant_id=root",
-    responseExample: { summary: { enabled: true, subscription_count: 12, due_soon_count: 2, mass_rollout_risk_count: 1 } },
+    responseExample: {"request_id": "req_7fb1e27e0d160bde", "summary": {"tenant_id": "t1", "enabled": true, "delegation_enabled": true, "subscription_count": 1, "delegated_count": 1, "auto_renew_count": 1, "due_soon_count": 1, "error_count": 0, "mass_rollout_risk_count": 0, "subscriptions": [{"id": "star_18194c17aa23752c", "tenant_id": "t1", "name": "mesh-edge", "account_id": "", "ca_id": "ca_dfed5bd39eee614b", "subject_cn": "edge.root.example", "sans": [], "cert_type": "tls-server", "cert_class": "star", "algorithm": "ECDSA-P256", "validity_hours": 24, "renew_before_minutes": 120, "auto_renew": true, "allow_delegation": true, "delegated_subscriber": "spiffe://prod/ns/edge/sa/gateway", "latest_cert_id": "crt_c8c5d116025fff54", "issuance_count": 2, "status": "active", "rollout_group": "mesh-us-east-1", "last_issued_at": "2026-10-12T10:48:06.802299Z", "next_renewal_at": "2026-10-13T08:48:06Z", "created_by": "system", "metadata_json": "null", "created_at": "2026-10-12T10:48:06.798884Z"}], "mass_rollout_risks": null, "recommended_window_hint": "Use short-lived STAR certs for gateways, ephemeral agents, a..."}},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid query" },
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "cert-star-list",
@@ -225,11 +227,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists STAR subscriptions with delegated subscriber metadata, issuance counters, and next renewal timing.",
     requestExample: "GET /svc/certs/certs/star/subscriptions?tenant_id=root&limit=100",
-    responseExample: { items: [{ id: "star_01", subject_cn: "edge.root.example", validity_hours: 24, auto_renew: true, status: "active" }] },
+    responseExample: {"items": [{"id": "star_18194c17aa23752c", "tenant_id": "t1", "name": "mesh-edge", "account_id": "", "ca_id": "ca_dfed5bd39eee614b", "subject_cn": "edge.root.example", "sans": ["edge.root.example"], "cert_type": "tls-server", "cert_class": "star", "algorithm": "ECDSA-P256", "validity_hours": 24, "renew_before_minutes": 120, "auto_renew": true, "allow_delegation": true, "delegated_subscriber": "spiffe://prod/ns/edge/sa/gateway", "latest_cert_id": "crt_c8c5d116025fff54", "issuance_count": 2, "status": "active", "rollout_group": "mesh-us-east-1", "last_issued_at": "2026-10-12T10:48:06.802299Z", "next_renewal_at": "2026-10-13T08:48:06Z", "created_by": "system", "metadata_json": "null", "created_at": "2026-10-12T10:48:06.798884Z"}], "request_id": "req_19364f0bae4cf1fc"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid query" },
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "cert-star-create",
@@ -239,15 +242,15 @@ export const REST_API_CATALOG = [
     method: "POST",
     pathTemplate: "/certs/star/subscriptions",
     bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "mesh-edge",\n  "ca_id": "ca_runtime",\n  "subject_cn": "edge.root.example",\n  "sans": ["edge.root.example"],\n  "validity_hours": 24,\n  "renew_before_minutes": 120,\n  "auto_renew": true,\n  "allow_delegation": true,\n  "delegated_subscriber": "spiffe://prod/ns/edge/sa/gateway",\n  "rollout_group": "mesh-us-east-1"\n}',
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "mesh-edge",\n  "ca_id": "{{ca_id}}",\n  "subject_cn": "edge.root.example",\n  "sans": ["edge.root.example"],\n  "validity_hours": 24,\n  "renew_before_minutes": 120,\n  "auto_renew": true,\n  "allow_delegation": true,\n  "delegated_subscriber": "spiffe://prod/ns/edge/sa/gateway",\n  "rollout_group": "mesh-us-east-1"\n}',
     description: "Creates a short-lived automatically renewed certificate subscription under the tenant ACME STAR policy.",
     requestExample: "POST /svc/certs/certs/star/subscriptions",
-    responseExample: { subscription: { id: "star_01", latest_cert_id: "crt_901", status: "active" } },
+    responseExample: {"request_id": "req_5af18fa75ea81303", "subscription": {"id": "star_18194c17aa23752c", "tenant_id": "t1", "name": "mesh-edge", "account_id": "", "ca_id": "ca_dfed5bd39eee614b", "subject_cn": "edge.root.example", "sans": ["edge.root.example"], "cert_type": "tls-server", "cert_class": "star", "algorithm": "ECDSA-P256", "validity_hours": 24, "renew_before_minutes": 120, "auto_renew": true, "allow_delegation": true, "delegated_subscriber": "spiffe://prod/ns/edge/sa/gateway", "latest_cert_id": "crt_985af93d6ad2b94b", "issuance_count": 1, "status": "active", "rollout_group": "mesh-us-east-1", "last_issued_at": "2026-10-12T10:48:06.800441Z", "next_renewal_at": "2026-10-13T08:48:06Z", "created_by": "system", "metadata_json": "null", "created_at": "2026-10-12T10:48:06.798884Z"}},
     errorCodes: [
-      { code: 400, meaning: "CA/subject/STAR policy invalid" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 422, meaning: "Subscription blocked by PKI or STAR policy" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "cert-star-refresh",
@@ -255,17 +258,18 @@ export const REST_API_CATALOG = [
     title: "Refresh ACME STAR Subscription",
     service: "certs",
     method: "POST",
-    pathTemplate: "/certs/star/subscriptions/{id}/refresh",
+    pathTemplate: "/certs/star/subscriptions/{{subscription_id}}/refresh",
     bodyTemplate:
       '{\n  "tenant_id": "{{tenant_id}}",\n  "force": true,\n  "requested_by": "platform-ops"\n}',
     description: "Forces immediate re-issuance for one ACME STAR subscription.",
-    requestExample: "POST /svc/certs/certs/star/subscriptions/{id}/refresh",
-    responseExample: { subscription: { id: "star_01", latest_cert_id: "crt_902", issuance_count: 7, status: "active" } },
+    requestExample: "POST /svc/certs/certs/star/subscriptions/{{subscription_id}}/refresh",
+    responseExample: {"request_id": "req_e5762f8d5d0c422f", "subscription": {"id": "star_18194c17aa23752c", "tenant_id": "t1", "name": "mesh-edge", "account_id": "", "ca_id": "ca_dfed5bd39eee614b", "subject_cn": "edge.root.example", "sans": ["edge.root.example"], "cert_type": "tls-server", "cert_class": "star", "algorithm": "ECDSA-P256", "validity_hours": 24, "renew_before_minutes": 120, "auto_renew": true, "allow_delegation": true, "delegated_subscriber": "spiffe://prod/ns/edge/sa/gateway", "latest_cert_id": "crt_c8c5d116025fff54", "issuance_count": 2, "status": "active", "rollout_group": "mesh-us-east-1", "last_issued_at": "2026-10-12T10:48:06.802299Z", "next_renewal_at": "2026-10-13T08:48:06Z", "created_by": "system", "metadata_json": "null", "created_at": "2026-10-12T10:48:06.798884Z"}},
     errorCodes: [
-      { code: 400, meaning: "Subscription not ready or request invalid" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Subscription not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "cert-star-delete",
@@ -273,16 +277,17 @@ export const REST_API_CATALOG = [
     title: "Delete ACME STAR Subscription",
     service: "certs",
     method: "DELETE",
-    pathTemplate: "/certs/star/subscriptions/{id}?tenant_id={{tenant_id}}",
+    pathTemplate: "/certs/star/subscriptions/{{subscription_id}}?tenant_id={{tenant_id}}",
     bodyTemplate: "",
     description: "Deletes a STAR subscription and stops future automated renewals for it.",
-    requestExample: "DELETE /svc/certs/certs/star/subscriptions/{id}?tenant_id=root",
-    responseExample: { status: "deleted" },
+    requestExample: "DELETE /svc/certs/certs/star/subscriptions/{{subscription_id}}?tenant_id={{tenant_id}}",
+    responseExample: {"request_id": "req_b2e27c6c8335fc42", "status": "deleted"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid request" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Subscription not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "gov-requests",
@@ -294,12 +299,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns active/pending governance approvals and quorum state.",
     requestExample: "GET /svc/governance/governance/requests?tenant_id=root&status=pending",
-    responseExample: { items: [{ id: "req_01", action: "key.export", status: "pending", required_approvals: 2, current_approvals: 1 }] },
+    responseExample: {"items": null, "request_id": "req_FA86Rq_hy2o"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid filter" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks governance read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "byok-accounts-list",
@@ -311,11 +316,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns registered cloud BYOK connectors (AWS, Azure, GCP, OCI, Salesforce) for current tenant.",
     requestExample: "GET /svc/cloud/cloud/accounts",
-    responseExample: { items: [{ id: "acct_aws_01", provider: "aws", name: "aws-prod", default_region: "us-east-1", status: "active" }] },
+    responseExample: {"items": [], "request_id": "req_795dadb105582588"},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks BYOK connector read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "byok-create",
@@ -328,14 +334,12 @@ export const REST_API_CATALOG = [
       '{\n  "account_id": "acct_aws_01",\n  "key_id": "{{key_id}}",\n  "alias": "orders-db",\n  "validity_days": 365\n}',
     description: "Creates the cloud key and imports the KMS key's current version: the cloud's wrapping key, wrapped in keycore (KMS keys) or inside the PKCS#11 HSM (HSM keys made with cloud import allowed), imported, verified. Returns the key and the run's steps.",
     requestExample: "POST /svc/cloud/cloud/byok/keys",
-    responseExample: { key: { id: "byok_01", provider: "aws", key_id: "key_123", source: "hsm", cloud_key_id: "1234abcd-...", material_state: "current" }, run: { status: "succeeded", steps: [{ name: "Wrap the key material inside the HSM", status: "succeeded" }] } },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 400, meaning: "Key spec or validity not supported by the cloud" },
-      { code: 403, meaning: "Key access, export policy or FIPS mode refused the material" },
-      { code: 409, meaning: "Key not exportable, HSM key not made for cloud import, or approval required" },
-      { code: 424, meaning: "Key access justification service unreachable" },
-      { code: 502, meaning: "A cloud step failed; the response carries the run and its steps" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "byok-rotate",
@@ -347,11 +351,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: '{\n  "validity_days": 365\n}',
     description: "Rotates the KMS key, imports the new version as new material and makes it current in the cloud. Reimport, revoke, restore, verify and sync are the sibling operations.",
     requestExample: "POST /svc/cloud/cloud/byok/keys/byok_01/rotate",
-    responseExample: { key: { id: "byok_01", current_material_id: "mat-2" }, run: { status: "succeeded" } },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 409, meaning: "The cloud can't take new material on a key (Alibaba) or there is no current material" },
-      { code: 502, meaning: "A cloud step failed; the response carries the run and its steps" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "hyok-endpoints-list",
@@ -363,12 +369,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists HYOK endpoint protocols and policy bindings (DKE/Salesforce/Google/Generic).",
     requestExample: "GET /svc/hyok/hyok/v1/endpoints?tenant_id=root",
-    responseExample: { items: [{ protocol: "dke", enabled: true, auth_mode: "jwt", governance_required: true }] },
+    responseExample: {"items": [{"tenant_id": "t1", "protocol": "dke", "enabled": true, "auth_mode": "jwt", "policy_id": "", "governance_required": false, "metadata_json": "{}", "created_at": "0001-01-01T00:00:00Z", "updated_at": "0001-01-01T00:00:00Z"}], "request_id": "req_ae2eba7c52f14cc4"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks HYOK read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "hyok-dke-publickey",
@@ -380,12 +386,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns DKE-compatible public key material for Microsoft-style HYOK/DKE integration.",
     requestExample: "GET /svc/hyok/hyok/dke/v1/keys/{key_id}/publickey?tenant_id=root",
-    responseExample: { key: { key_id: "key_123", algorithm: "RSA-OAEP-2048", format: "pem", public_key: "-----BEGIN PUBLIC KEY-----..." } },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 400, meaning: "key_id missing or invalid for DKE" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 422, meaning: "Key algorithm/profile incompatible with DKE export" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "kmip-profiles-list",
@@ -397,11 +404,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists KMIP onboarding profiles used to issue/internalize KMIP client credentials.",
     requestExample: "GET /svc/kmip/kmip/profiles?tenant_id=root",
-    responseExample: { items: [{ id: "prof_01", name: "default-kmip", role: "kmip-client", certificate_duration_days: 365 }] },
+    responseExample: {"items": [], "request_id": "req_3a329da668805426"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "kmip-client-create",
@@ -410,16 +418,16 @@ export const REST_API_CATALOG = [
     service: "kmip",
     method: "POST",
     pathTemplate: "/kmip/clients",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "app-kmip-client-01",\n  "profile_id": "prof_01",\n  "role": "kmip-client",\n  "enrollment_mode": "internal",\n  "common_name": "app-kmip-client-01"\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"app-kmip-client-01\",\n  \"profile_id\": \"{{profile_id}}\",\n  \"role\": \"kmip-client\",\n  \"enrollment_mode\": \"internal\",\n  \"common_name\": \"app-kmip-client-01\"\n}",
     description: "Registers a KMIP client and issues internal credentials when enrollment_mode is internal.",
     requestExample: "POST /svc/kmip/kmip/clients",
-    responseExample: { client: { id: "kmip_client_01", name: "app-kmip-client-01", status: "active", enrollment_mode: "internal" } },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 400, meaning: "Profile/enrollment payload invalid" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 422, meaning: "Certificate issuance or external cert validation failed" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "kmip-clients-list",
@@ -431,11 +439,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists registered KMIP clients, enrollment mode, certificate fingerprint and status.",
     requestExample: "GET /svc/kmip/kmip/clients?tenant_id=root",
-    responseExample: { items: [{ id: "kmipc_01", name: "app-kmip-client-01", status: "active", enrollment_mode: "internal", role: "kmip-client" }] },
+    responseExample: {"items": [], "request_id": "req_1e4bf78320934796"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "kmip-client-delete",
@@ -443,16 +452,17 @@ export const REST_API_CATALOG = [
     title: "Delete KMIP Client",
     service: "kmip",
     method: "DELETE",
-    pathTemplate: "/kmip/clients/{{id}}?tenant_id={{tenant_id}}",
+    pathTemplate: "/kmip/clients/{{client_id}}?tenant_id={{tenant_id}}",
     bodyTemplate: "",
     description: "Deletes a KMIP client registration and removes certificate-linked access from KMIP service.",
-    requestExample: "DELETE /svc/kmip/kmip/clients/kmipc_01?tenant_id=root",
-    responseExample: { status: "deleted" },
+    requestExample: "DELETE /svc/kmip/kmip/clients/{{client_id}}?tenant_id={{tenant_id}}",
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or client id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "KMIP client not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "kmip-profile-delete",
@@ -460,17 +470,17 @@ export const REST_API_CATALOG = [
     title: "Delete KMIP Client Profile",
     service: "kmip",
     method: "DELETE",
-    pathTemplate: "/kmip/profiles/{{id}}?tenant_id={{tenant_id}}",
+    pathTemplate: "/kmip/profiles/{{profile_id}}?tenant_id={{tenant_id}}",
     bodyTemplate: "",
     description: "Deletes a KMIP client profile. Profile deletion is blocked while any KMIP client is still attached.",
-    requestExample: "DELETE /svc/kmip/kmip/profiles/kpf_01?tenant_id=root",
-    responseExample: { status: "deleted" },
+    requestExample: "DELETE /svc/kmip/kmip/profiles/{{profile_id}}?tenant_id={{tenant_id}}",
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or profile id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Profile not found" },
-      { code: 409, meaning: "Profile is still assigned to one or more KMIP clients" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "ekm-agents-list",
@@ -482,11 +492,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists deployed EKM/TDE agents and their registration metadata.",
     requestExample: "GET /svc/ekm/ekm/agents?tenant_id=root",
-    responseExample: { items: [{ id: "agent_01", name: "mssql-prod-01", db_engine: "mssql", status: "active", host: "10.0.0.5" }] },
+    responseExample: {"items": [{"id": "agent_ae2691882c162b91", "tenant_id": "t1", "name": "mssql-prod-03", "role": "ekm-agent", "db_engine": "mssql", "host": "10.0.0.15", "version": "SQL Server 2022", "status": "connected", "tde_state": "enabled", "heartbeat_interval_sec": 30, "last_heartbeat_at": "2026-10-12T10:52:42.154775Z", "assigned_key_id": "tde-key-001", "assigned_key_version": "v1", "config_version": 3, "config_version_ack": 0, "metadata_json": "{}", "tls_client_cn": "tester", "created_at": "2026-10-12T10:52:42Z", "updated_at": "2026-10-12T10:52:42Z"}], "request_id": "req_fb5cc5093af9b0a1"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "ekm-agent-register",
@@ -499,12 +510,12 @@ export const REST_API_CATALOG = [
       '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "mssql-prod-03",\n  "role": "ekm-agent",\n  "db_engine": "mssql",\n  "host": "10.0.0.15",\n  "version": "SQL Server 2022",\n  "heartbeat_interval_sec": 30,\n  "auto_provision_tde": true\n}',
     description: "Registers an EKM agent endpoint and provisions initial TDE key mapping policy.",
     requestExample: "POST /svc/ekm/ekm/agents/register",
-    responseExample: { agent: { id: "agent_03", name: "mssql-prod-03", status: "active", assigned_key_id: "key_tde_01" } },
+    responseExample: {"agent": {"id": "agent_ae2691882c162b91", "tenant_id": "t1", "name": "mssql-prod-03", "role": "ekm-agent", "db_engine": "mssql", "host": "10.0.0.15", "version": "SQL Server 2022", "status": "connected", "tde_state": "unknown", "heartbeat_interval_sec": 30, "last_heartbeat_at": "2026-10-12T10:52:42.149023Z", "assigned_key_id": "tde_key_1", "assigned_key_version": "v1", "config_version": 1, "config_version_ack": 0, "metadata_json": "{}", "tls_client_cn": "tester", "created_at": "2026-10-12T10:52:42Z", "updated_at": "2026-10-12T10:52:42Z"}, "auto_provisioned_key": {"id": "tde_key_1", "tenant_id": "t1", "keycore_key_id": "tde_key_1", "name": "tde-agent-agent_ae2691882c162b91", "algorithm": "RSA-3072", "status": "active", "current_version": "v1", "public_key": "<public key>", "public_key_format": "pem", "created_by": "ekm-auto-agent", "auto_provisioned": true, "metadata_json": "{}", "created_at": "2026-10-12T10:52:42Z", "updated_at": "2026-10-12T10:52:42Z", "rotated_at": "0001-01-01T00:00:00Z", "last_accessed_at": "0001-01-01T00:00:00Z"}, "request_id": "req_319be47636ad0b17"},
     errorCodes: [
-      { code: 400, meaning: "Agent payload invalid (host/engine/version)" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 422, meaning: "Key provisioning/policy assignment failed" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "approval-vote",
@@ -513,16 +524,17 @@ export const REST_API_CATALOG = [
     service: "governance",
     method: "POST",
     pathTemplate: "/governance/approve/{{request_id}}",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "request_id": "REQ_ID_HERE",\n  "vote": "approved",\n  "comment": "Approved after review",\n  "challenge_code": ""\n}',
+    bodyTemplate: 
+      "{\n  \"vote\": \"approved\",\n  \"comment\": \"Approved after review\"\n}",
     description: "Submits governance vote for pending request; supports challenge-response when enabled.",
     requestExample: "POST /svc/governance/governance/approve/{request_id}",
-    responseExample: { request: { id: "req_01", status: "approved", current_approvals: 2, required_approvals: 2 } },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 400, meaning: "Vote payload invalid or request_id missing" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 422, meaning: "Request expired/challenge invalid/already resolved" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "reporting-alerts-list",
@@ -534,11 +546,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists alert center events with severity/status filters and pagination.",
     requestExample: "GET /svc/reporting/alerts?tenant_id=root&status=open&limit=100&offset=0",
-    responseExample: { items: [{ id: "alert_01", severity: "critical", title: "Key rotation overdue", status: "open" }] },
+    responseExample: {"items": [], "request_id": "req_73f62fc31b178c6d"},
     errorCodes: [
-      { code: 400, meaning: "Invalid query filters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "reporting-ack-alert",
@@ -547,16 +560,17 @@ export const REST_API_CATALOG = [
     service: "reporting",
     method: "PUT",
     pathTemplate: "/alerts/{{alert_id}}/acknowledge?tenant_id={{tenant_id}}",
-    bodyTemplate:
-      '{\n  "actor": "admin@bank.com"\n}',
+    bodyTemplate: 
+      "{}",
     description: "Acknowledges an active alert and updates alert center counters/channels state.",
     requestExample: "PUT /svc/reporting/alerts/{alert_id}/acknowledge?tenant_id=root",
-    responseExample: { status: "ok" },
+    responseExample: {"request_id": "req_354e8c23ead8d6fe", "status": "ok"},
     errorCodes: [
-      { code: 400, meaning: "alert_id missing or invalid" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 422, meaning: "Alert already resolved or immutable" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "reporting-generate-report",
@@ -569,12 +583,12 @@ export const REST_API_CATALOG = [
       '{\n  "template_id": "key-rotation-summary",\n  "format": "pdf",\n  "filters": {\n    "date_from": "2026-01-01",\n    "date_to": "2026-12-31"\n  }\n}',
     description: "Creates an asynchronous reporting job (PDF/JSON/CSV depending on template/format support).",
     requestExample: "POST /svc/reporting/reports/generate",
-    responseExample: { job: { id: "rep_job_01", template_id: "key-rotation-summary", status: "queued", format: "pdf" } },
+    responseExample: {"job": {"id": "rjob_79cbc86ee76a1e9c", "tenant_id": "t1", "template_id": "key-rotation-summary", "format": "pdf", "status": "queued", "filters": {"date_from": "2026-01-01", "date_to": "2026-12-31"}, "result_content": "", "result_content_type": "", "requested_by": "tester", "error": "", "created_at": "0001-01-01T00:00:00Z", "updated_at": "0001-01-01T00:00:00Z", "completed_at": "0001-01-01T00:00:00Z"}, "request_id": "req_2a020a7aae27b39c"},
     errorCodes: [
-      { code: 400, meaning: "Template/format/filter payload invalid" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 422, meaning: "Template disabled or policy restricts generation" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
 
   /* ── Auth & Identity ─────────────────────────────────────────────── */
@@ -585,21 +599,16 @@ export const REST_API_CATALOG = [
     service: "auth",
     method: "POST",
     pathTemplate: "/auth/login",
-    bodyTemplate:
-      '{\n  "username": "admin",\n  "password": "changeme",\n  "tenant_id": "{{tenant_id}}"\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"username\": \"newuser\",\n  \"password\": \"Example-Passw0rd-2026\"\n}",
     description: "Authenticates user and returns JWT access/refresh tokens.",
     requestExample: "POST /svc/auth/auth/login",
-    responseExample: {
-      access_token: "eyJhbGciOi...",
-      refresh_token: "dGhpcyBpcyBh...",
-      token_type: "Bearer",
-      expires_in: 3600
-    },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 400, meaning: "Missing or malformed credentials" },
-      { code: 401, meaning: "Invalid username or password" },
-      { code: 403, meaning: "Account locked or tenant disabled" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "auth-refresh",
@@ -608,19 +617,16 @@ export const REST_API_CATALOG = [
     service: "auth",
     method: "POST",
     pathTemplate: "/auth/refresh",
-    bodyTemplate:
-      '{\n  "refresh_token": "REFRESH_TOKEN_HERE",\n  "tenant_id": "{{tenant_id}}"\n}',
-    description: "Exchanges refresh token for a new access token.",
+    bodyTemplate: 
+      "",
+    description: "Issues a new token for the caller of the bearer token presented. There is no body.",
     requestExample: "POST /svc/auth/auth/refresh",
-    responseExample: {
-      access_token: "eyJhbGciOi...",
-      token_type: "Bearer",
-      expires_in: 3600
-    },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 400, meaning: "Missing or malformed refresh token" },
-      { code: 401, meaning: "Refresh token expired or revoked" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "auth-logout",
@@ -629,14 +635,16 @@ export const REST_API_CATALOG = [
     service: "auth",
     method: "POST",
     pathTemplate: "/auth/logout",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}"\n}',
+    bodyTemplate: 
+      "{}",
     description: "Invalidates current session and revokes tokens.",
     requestExample: "POST /svc/auth/auth/logout",
-    responseExample: { status: "ok", message: "Session invalidated" },
+    responseExample: {"request_id": "req_c91ae9e7a5f4cdfa", "status": "ok"},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "auth-change-password",
@@ -645,16 +653,16 @@ export const REST_API_CATALOG = [
     service: "auth",
     method: "POST",
     pathTemplate: "/auth/change-password",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "current_password": "old",\n  "new_password": "new"\n}',
+    bodyTemplate: 
+      "{\n  \"current_password\": \"Example-Passw0rd-2026\",\n  \"new_password\": \"Another-Passw0rd-2026\"\n}",
     description: "Changes the authenticated user's password.",
     requestExample: "POST /svc/auth/auth/change-password",
-    responseExample: { status: "ok", message: "Password changed successfully" },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 400, meaning: "New password does not meet policy requirements" },
-      { code: 401, meaning: "Current password incorrect or JWT invalid" },
-      { code: 403, meaning: "Password change not permitted by policy" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "auth-users-list",
@@ -666,14 +674,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists all user accounts in the tenant.",
     requestExample: "GET /svc/auth/auth/users?tenant_id=root",
-    responseExample: {
-      items: [{ id: "usr_01", username: "admin", role: "admin", email: "admin@example.com", status: "active" }]
-    },
+    responseExample: {"items": [{"id": "usr_b97e75f0b50d23f8", "tenant_id": "t1", "username": "alice.scim", "email": "alice@example.com", "role": "readonly", "status": "active", "must_change_password": false, "created_at": "2026-10-12T10:55:29Z"}], "request_id": "req_b79829f86dafa6a6"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks user-list privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "auth-users-create",
@@ -682,16 +688,16 @@ export const REST_API_CATALOG = [
     service: "auth",
     method: "POST",
     pathTemplate: "/auth/users",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "username": "newuser",\n  "password": "securepass",\n  "role": "operator",\n  "email": "user@example.com"\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"username\": \"newuser\",\n  \"password\": \"Example-Passw0rd-2026\",\n  \"role\": \"operator\",\n  \"email\": \"user@example.com\"\n}",
     description: "Creates a new user account.",
     requestExample: "POST /svc/auth/auth/users",
-    responseExample: { user: { id: "usr_02", username: "newuser", role: "operator", email: "user@example.com", status: "active" } },
+    responseExample: {"request_id": "req_615e52f0f3ac364f", "user_id": "usr_176b4c99438de96d"},
     errorCodes: [
-      { code: 400, meaning: "Invalid payload or password policy violation" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 409, meaning: "Username already exists in tenant" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "auth-scim-settings-get",
@@ -703,22 +709,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns tenant SCIM provisioning settings such as enablement, default role/status, deprovision behavior, and token prefix state.",
     requestExample: "GET /svc/auth/auth/scim/settings?tenant_id=root",
-    responseExample: {
-      settings: {
-        tenant_id: "root",
-        enabled: true,
-        default_role: "readonly",
-        default_status: "active",
-        deprovision_mode: "disable",
-        group_role_mappings_enabled: true,
-        token_prefix: "scim_abcd1234"
-      }
-    },
+    responseExample: {"request_id": "req_2a5bd0a01e77f5b0", "settings": {"tenant_id": "t1", "enabled": true, "default_role": "readonly", "default_status": "active", "default_must_change_password": false, "deprovision_mode": "disable", "group_role_mappings_enabled": true, "updated_by": "admin-1", "created_at": "2026-10-12T10:55:29Z", "updated_at": "2026-10-12T10:55:29Z"}},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks SCIM configuration read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "auth-scim-settings-update",
@@ -731,12 +727,12 @@ export const REST_API_CATALOG = [
       '{\n  "tenant_id": "{{tenant_id}}",\n  "enabled": true,\n  "default_role": "readonly",\n  "default_status": "active",\n  "default_must_change_password": false,\n  "deprovision_mode": "disable",\n  "group_role_mappings_enabled": true\n}',
     description: "Creates or updates tenant SCIM provisioning controls for inbound user and group lifecycle.",
     requestExample: "PUT /svc/auth/auth/scim/settings",
-    responseExample: { settings: { tenant_id: "root", enabled: true, default_role: "readonly" } },
+    responseExample: {"request_id": "req_ba9bf9575c5c4706", "settings": {"tenant_id": "t1", "enabled": true, "default_role": "readonly", "default_status": "active", "default_must_change_password": false, "deprovision_mode": "disable", "group_role_mappings_enabled": true, "updated_by": "admin-1", "created_at": "2026-10-12T10:55:29Z", "updated_at": "2026-10-12T10:55:29Z"}},
     errorCodes: [
-      { code: 400, meaning: "Invalid role, status, or deprovision mode" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks SCIM configuration write privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "auth-scim-users-list",
@@ -748,14 +744,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists tenant users created or managed through SCIM provisioning, including external IDs and sync state.",
     requestExample: "GET /svc/auth/auth/scim/users?tenant_id=root",
-    responseExample: {
-      items: [{ id: "usr_01", username: "alice.scim", email: "alice@example.com", external_id: "okta-user-01", status: "active" }]
-    },
+    responseExample: {"items": [{"id": "usr_b97e75f0b50d23f8", "tenant_id": "t1", "username": "alice.scim", "email": "alice@example.com", "role": "readonly", "status": "active", "must_change_password": false, "created_at": "2026-10-12T10:55:29Z", "external_id": "okta-user-01", "display_name": "Alice SCIM", "scim_managed": true, "last_synced_at": "2026-10-12T10:55:29Z"}], "request_id": "req_2986c917203dfe3d"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks SCIM inventory read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "scim-users-create",
@@ -768,17 +762,12 @@ export const REST_API_CATALOG = [
       '{\n  "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],\n  "externalId": "okta-user-01",\n  "userName": "alice.scim",\n  "displayName": "Alice SCIM",\n  "active": true,\n  "emails": [{"value": "alice@example.com", "primary": true}],\n  "roles": [{"value": "readonly"}]\n}',
     description: "RFC 7644 SCIM user provisioning endpoint for IdPs such as Okta or Entra ID. Uses the tenant SCIM bearer token rather than a JWT admin session.",
     requestExample: "POST /svc/auth/scim/v2/Users",
-    responseExample: {
-      id: "usr_01",
-      userName: "alice.scim",
-      externalId: "okta-user-01",
-      active: true
-    },
+    responseExample: {"active": true, "displayName": "Alice SCIM", "emails": [{"primary": true, "type": "work", "value": "alice@example.com"}], "externalId": "okta-user-01", "id": "usr_b97e75f0b50d23f8", "meta": {"created": "2026-10-12T10:55:29Z", "lastModified": "2026-10-12T10:55:29Z", "resourceType": "User"}, "name": {"familyName": "", "givenName": ""}, "roles": [{"value": "readonly"}], "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"], "userName": "alice.scim"},
     errorCodes: [
-      { code: 400, meaning: "Invalid SCIM user payload" },
-      { code: 401, meaning: "SCIM bearer token missing or invalid" },
-      { code: 403, meaning: "SCIM disabled for tenant or write not permitted" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "scim-groups-create",
@@ -787,16 +776,16 @@ export const REST_API_CATALOG = [
     service: "auth",
     method: "POST",
     pathTemplate: "/scim/v2/Groups",
-    bodyTemplate:
-      '{\n  "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],\n  "externalId": "okta-group-ops",\n  "displayName": "Operations",\n  "members": [{"value": "usr_01"}]\n}',
+    bodyTemplate: 
+      "{\n  \"schemas\": [\n    \"urn:ietf:params:scim:schemas:core:2.0:Group\"\n  ],\n  \"externalId\": \"okta-group-ops\",\n  \"displayName\": \"Operations\"\n}",
     description: "RFC 7644 SCIM group provisioning endpoint used to mirror directory groups and later map them to tenant roles inside KMS.",
     requestExample: "POST /svc/auth/scim/v2/Groups",
-    responseExample: { id: "grp_01", displayName: "Operations", externalId: "okta-group-ops", members: [{ value: "usr_01" }] },
+    responseExample: {"displayName": "Operations", "externalId": "okta-group-ops", "id": "grp_12092717dc7b43bc", "members": [], "meta": {"created": "2026-10-12T10:55:29Z", "lastModified": "2026-10-12T10:55:29Z", "resourceType": "Group"}, "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"]},
     errorCodes: [
-      { code: 400, meaning: "Invalid group payload or unknown member" },
-      { code: 401, meaning: "SCIM bearer token missing or invalid" },
-      { code: 403, meaning: "SCIM disabled for tenant or write not permitted" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "auth-tenants-list",
@@ -808,14 +797,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists all configured tenants.",
     requestExample: "GET /svc/auth/tenants?tenant_id=root",
-    responseExample: {
-      items: [{ id: "tenant_01", name: "prod-tenant", admin_email: "admin@example.com", status: "active" }]
-    },
+    responseExample: {"items": [{"id": "prod-tenant", "name": "Production", "status": "active", "created_at": "2026-10-12T10:55:29Z"}], "request_id": "req_c5a8959449aaf7d6"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks tenant-list privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "auth-tenants-create",
@@ -824,16 +811,16 @@ export const REST_API_CATALOG = [
     service: "auth",
     method: "POST",
     pathTemplate: "/tenants",
-    bodyTemplate:
-      '{\n  "name": "prod-tenant",\n  "admin_email": "admin@example.com"\n}',
+    bodyTemplate: 
+      "{\n  \"id\": \"prod-tenant\",\n  \"name\": \"Production\",\n  \"admin_email\": \"admin@example.com\"\n}",
     description: "Creates a new tenant with isolated key namespace.",
     requestExample: "POST /svc/auth/tenants",
-    responseExample: { tenant: { id: "tenant_02", name: "prod-tenant", admin_email: "admin@example.com", status: "active" } },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 400, meaning: "Invalid tenant name or admin email" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 409, meaning: "Tenant name already exists" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "auth-password-policy-get",
@@ -845,18 +832,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns current password policy configuration.",
     requestExample: "GET /svc/auth/auth/password-policy?tenant_id=root",
-    responseExample: {
-      min_length: 12,
-      require_uppercase: true,
-      require_number: true,
-      require_special: true,
-      max_age_days: 90
-    },
+    responseExample: {"policy": {"tenant_id": "t1", "min_length": 12, "max_length": 128, "require_upper": true, "require_lower": true, "require_digit": true, "require_special": true, "require_no_whitespace": true, "deny_username": true, "deny_email_local_part": true, "min_unique_chars": 6, "updated_by": "admin-1", "updated_at": "2026-10-12T10:55:29Z"}, "request_id": "req_7ba6ea8b7a8c9acf"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks policy-read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "auth-password-policy-update",
@@ -865,16 +846,16 @@ export const REST_API_CATALOG = [
     service: "auth",
     method: "PUT",
     pathTemplate: "/auth/password-policy",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "min_length": 12,\n  "require_uppercase": true,\n  "require_number": true,\n  "require_special": true,\n  "max_age_days": 90\n}',
+    bodyTemplate: 
+      "{\n  \"min_length\": 12,\n  \"require_special\": true\n}",
     description: "Updates password policy enforcement rules.",
     requestExample: "PUT /svc/auth/auth/password-policy",
-    responseExample: { status: "ok", message: "Password policy updated" },
+    responseExample: {"policy": {"tenant_id": "t1", "min_length": 12, "max_length": 128, "require_upper": true, "require_lower": true, "require_digit": true, "require_special": true, "require_no_whitespace": true, "deny_username": true, "deny_email_local_part": true, "min_unique_chars": 6, "updated_by": "admin-1", "updated_at": "2026-10-12T10:55:29Z"}, "request_id": "req_37238e060dcfe547"},
     errorCodes: [
-      { code: 400, meaning: "Invalid policy parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks policy-update privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "auth-security-policy-get",
@@ -886,17 +867,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns login security settings (lockout, MFA, session timeout).",
     requestExample: "GET /svc/auth/auth/security-policy?tenant_id=root",
-    responseExample: {
-      max_failed_attempts: 5,
-      lockout_duration_minutes: 15,
-      session_timeout_minutes: 30,
-      mfa_required: false
-    },
+    responseExample: {"policy": {"tenant_id": "t1", "max_failed_attempts": 5, "lockout_minutes": 15, "idle_timeout_minutes": 15, "updated_by": "admin-1", "updated_at": "2026-10-12T10:55:29Z"}, "request_id": "req_83b14d49ad7637c8"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks policy-read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "auth-security-policy-update",
@@ -905,16 +881,16 @@ export const REST_API_CATALOG = [
     service: "auth",
     method: "PUT",
     pathTemplate: "/auth/security-policy",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "max_failed_attempts": 5,\n  "lockout_duration_minutes": 15,\n  "session_timeout_minutes": 30,\n  "mfa_required": false\n}',
+    bodyTemplate: 
+      "{\n  \"max_failed_attempts\": 5\n}",
     description: "Updates login security and session timeout settings.",
     requestExample: "PUT /svc/auth/auth/security-policy",
-    responseExample: { status: "ok", message: "Security policy updated" },
+    responseExample: {"policy": {"tenant_id": "t1", "max_failed_attempts": 5, "lockout_minutes": 15, "idle_timeout_minutes": 15, "updated_by": "admin-1", "updated_at": "2026-10-12T10:55:29Z"}, "request_id": "req_2378b06046ae6a00"},
     errorCodes: [
-      { code: 400, meaning: "Invalid security policy parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks policy-update privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "auth-sso-providers",
@@ -926,14 +902,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists configured SSO identity providers (SAML/OIDC).",
     requestExample: "GET /svc/auth/auth/sso/providers?tenant_id=root",
-    responseExample: {
-      items: [{ id: "sso_01", name: "corporate-okta", protocol: "OIDC", status: "active", issuer: "https://corp.okta.com" }]
-    },
+    responseExample: {"providers": [], "request_id": "req_7953bfe09046803f"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks SSO configuration read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "auth-identity-providers",
@@ -945,14 +919,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists external identity providers (LDAP/AD/OIDC/SAML) for user sync.",
     requestExample: "GET /svc/auth/auth/identity/providers?tenant_id=root",
-    responseExample: {
-      items: [{ id: "idp_01", name: "corp-ldap", type: "LDAP", status: "active", host: "ldap.corp.local" }]
-    },
+    responseExample: {"items": [{"tenant_id": "t1", "provider": "ad", "enabled": false, "config": {"base_dn": "", "bind_dn": "", "group_name_attr": "cn", "group_object_filter": "(objectClass=group)", "insecure_skip_verify": false, "ldap_url": "ldaps://dc01.example.local:636", "timeout_sec": 10, "use_start_tls": false, "user_display_attr": "displayName", "user_email_attr": "mail", "user_login_attr": "sAMAccountName", "user_object_filter": "(objectClass=user)"}, "secret_presence": {"bind_password_set": false}, "updated_by": "system", "created_at": "0001-01-01T00:00:00Z", "updated_at": "0001-01-01T00:00:00Z"}], "request_id": "req_2f6344d2118e4628"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks identity provider read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "auth-clients-list",
@@ -964,14 +936,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists registered API/service clients.",
     requestExample: "GET /svc/auth/auth/clients?tenant_id=root",
-    responseExample: {
-      items: [{ id: "client_01", name: "billing-svc", client_id: "svc_billing_abc", status: "active", created_at: "2026-01-15T10:00:00Z" }]
-    },
+    responseExample: {"items": null, "request_id": "req_32c5c88d3407e0cb"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks client-list privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
 
   /* ── Key Lifecycle ───────────────────────────────────────────────── */
@@ -1231,13 +1201,12 @@ export const REST_API_CATALOG = [
       '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "db-password",\n  "secret_type": "password",\n  "value": "s3cret!",\n  "description": "Production database password"\n}',
     description: "Creates a new secret in the vault.",
     requestExample: "POST /svc/secrets/secrets",
-    responseExample: { secret: { id: "sec_02", name: "db-password", secret_type: "password", status: "active", version: 1 } },
+    responseExample: {"request_id": "req_5bd804cd5e9ba412", "secret": {"id": "sec_7cf336e0c472c6ce", "tenant_id": "t1", "name": "db-password", "secret_type": "password", "description": "Production database password", "labels": {}, "metadata": {}, "status": "active", "lease_ttl_seconds": 0, "current_version": 1, "created_by": "tester", "created_at": "2026-10-12T10:48:10Z", "updated_at": "2026-10-12T10:48:10Z", "path": "/db-password", "restricted": false}},
     errorCodes: [
-      { code: 400, meaning: "Invalid payload or secret_type" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks secret-create privilege" },
-      { code: 409, meaning: "Secret name already exists for tenant" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "secrets-get",
@@ -1249,13 +1218,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns secret metadata (not the value).",
     requestExample: "GET /svc/secrets/secrets/{secret_id}?tenant_id=root",
-    responseExample: { secret: { id: "sec_01", name: "db-password", secret_type: "password", status: "active", version: 3, created_at: "2026-01-01T00:00:00Z" } },
+    responseExample: {"request_id": "req_82b43ff68ba2fd7d", "secret": {"id": "sec_7cf336e0c472c6ce", "tenant_id": "t1", "name": "db-password", "secret_type": "password", "description": "Updated password", "labels": {}, "metadata": {}, "status": "active", "lease_ttl_seconds": 0, "current_version": 3, "created_by": "tester", "created_at": "2026-10-12T10:48:10Z", "updated_at": "2026-10-12T10:48:10Z", "path": "/db-password", "restricted": false}},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or secret_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks secret-read privilege" },
-      { code: 404, meaning: "Secret not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "secrets-get-value",
@@ -1267,13 +1236,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns the decrypted secret value.",
     requestExample: "GET /svc/secrets/secrets/{secret_id}/value?tenant_id=root",
-    responseExample: { secret_id: "sec_01", value: "s3cret!", version: 3 },
+    responseExample: {"content_type": "text/plain", "format": "raw", "request_id": "req_86bb095a66147377", "value": "new-s3cret!", "version": 3},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or secret_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks secret-value-read privilege" },
-      { code: 404, meaning: "Secret not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "secrets-update",
@@ -1282,17 +1251,17 @@ export const REST_API_CATALOG = [
     service: "secrets",
     method: "PUT",
     pathTemplate: "/secrets/{{secret_id}}",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "value": "new-s3cret!",\n  "description": "Updated password"\n}',
+    bodyTemplate: 
+      "{\n  \"value\": \"new-s3cret!\",\n  \"description\": \"Updated password\"\n}",
     description: "Updates secret value, creating a new version.",
     requestExample: "PUT /svc/secrets/secrets/{secret_id}",
-    responseExample: { secret: { id: "sec_01", name: "db-password", version: 4, status: "active", updated_at: "2026-03-04T12:00:00Z" } },
+    responseExample: {"request_id": "req_4a0f765bc5a7746e", "secret": {"id": "sec_7cf336e0c472c6ce", "tenant_id": "t1", "name": "db-password", "secret_type": "password", "description": "Updated password", "labels": {}, "metadata": {}, "status": "active", "lease_ttl_seconds": 0, "current_version": 3, "created_by": "tester", "created_at": "2026-10-12T10:48:10Z", "updated_at": "2026-10-12T10:48:10Z", "path": "/db-password", "restricted": false}},
     errorCodes: [
-      { code: 400, meaning: "Invalid payload" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks secret-update privilege" },
-      { code: 404, meaning: "Secret not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "secrets-delete",
@@ -1304,13 +1273,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Soft-deletes a secret from the vault.",
     requestExample: "DELETE /svc/secrets/secrets/{secret_id}?tenant_id=root",
-    responseExample: { status: "deleted", secret_id: "sec_01", deleted_at: "2026-03-04T12:00:00Z" },
+    responseExample: {"recoverable": true, "request_id": "req_07fcd2ce6718adb5", "status": "deleted"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or secret_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks secret-delete privilege" },
-      { code: 404, meaning: "Secret not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "secrets-rotate",
@@ -1319,17 +1288,17 @@ export const REST_API_CATALOG = [
     service: "secrets",
     method: "POST",
     pathTemplate: "/secrets/{{secret_id}}/rotate",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}"\n}',
+    bodyTemplate: 
+      "{\n  \"value\": \"n3w-s3cret!\"\n}",
     description: "Rotates secret to a new version.",
     requestExample: "POST /svc/secrets/secrets/{secret_id}/rotate",
-    responseExample: { secret: { id: "sec_01", version: 5, status: "active", rotated_at: "2026-03-04T12:00:00Z" } },
+    responseExample: {"request_id": "req_ccbf5781afec746c", "secret": {"id": "sec_7cf336e0c472c6ce", "tenant_id": "t1", "name": "db-password", "secret_type": "password", "description": "Production database password", "labels": {}, "metadata": {}, "status": "active", "lease_ttl_seconds": 0, "current_version": 2, "created_by": "tester", "created_at": "2026-10-12T10:48:10Z", "updated_at": "2026-10-12T10:48:10Z", "path": "/db-password", "restricted": false}},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or secret_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks secret-rotate privilege" },
-      { code: 404, meaning: "Secret not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "secrets-versions",
@@ -1341,17 +1310,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists all versions of a secret with timestamps.",
     requestExample: "GET /svc/secrets/secrets/{secret_id}/versions?tenant_id=root",
-    responseExample: {
-      items: [
-        { version: 1, created_at: "2026-01-01T00:00:00Z", status: "superseded" },
-        { version: 2, created_at: "2026-02-15T00:00:00Z", status: "active" }
-      ]
-    },
+    responseExample: {"request_id": "req_ddfbeb4efc5eb18e", "versions": [{"version": 3, "created_at": "2026-10-12T10:48:10Z"}]},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or secret_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Secret not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "secrets-stats",
@@ -1363,17 +1328,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns vault statistics (total secrets, types, rotation status).",
     requestExample: "GET /svc/secrets/secrets/stats?tenant_id=root",
-    responseExample: {
-      total_secrets: 142,
-      by_type: { password: 80, api_key: 35, certificate: 15, generic: 12 },
-      rotation_overdue: 8,
-      last_rotation: "2026-03-01T00:00:00Z"
-    },
+    responseExample: {"request_id": "req_0e4cf639b9941453", "stats": {"total_secrets": 1, "by_type": {"password": 1}, "total_versions": 3, "expiring_within_30d": 0, "expired": 0}},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks secret-stats privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
 
   /* ── Certificates / PKI ────────────────────────────────────────────── */
@@ -1384,19 +1344,16 @@ export const REST_API_CATALOG = [
     service: "certs",
     method: "POST",
     pathTemplate: "/certs/ca",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "root-ca",\n  "algorithm": "ECDSA-P384",\n  "validity_years": 10,\n  "subject_cn": "Vecta Root CA",\n  "key_type": "internal"\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"root-ca\",\n  \"ca_level\": \"root\",\n  \"algorithm\": \"ECDSA-P384\",\n  \"subject\": \"CN=Example Root CA\",\n  \"validity_days\": 3650\n}",
     description: "Creates a new Certificate Authority.",
     requestExample: "POST /svc/certs/certs/ca",
-    responseExample: {
-      ca: { id: "ca_01", name: "root-ca", algorithm: "ECDSA-P384", subject_cn: "Vecta Root CA", status: "active", validity_years: 10 }
-    },
+    responseExample: {"ca": {"id": "ca_dfed5bd39eee614b", "tenant_id": "t1", "name": "root-ca", "parent_ca_id": "", "ca_level": "root", "algorithm": "ECDSA-P384", "ca_type": "classical", "key_backend": "software", "key_ref": "", "cert_pem": "<certificate>", "subject": "CN=Example Root CA", "status": "active", "ots_current": 0, "ots_max": 0, "ots_alert_threshold": 0, "created_at": "2026-10-12T10:48:06Z", "updated_at": "2026-10-12T10:48:06Z"}, "request_id": "req_71cca19f16b45ef6"},
     errorCodes: [
-      { code: 400, meaning: "Invalid algorithm, subject, or validity parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 409, meaning: "CA with same name already exists for tenant" },
-      { code: 422, meaning: "CA creation blocked by policy or HSM unavailable" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "certs-ca-list",
@@ -1408,14 +1365,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists all Certificate Authorities for tenant.",
     requestExample: "GET /svc/certs/certs/ca?tenant_id=root",
-    responseExample: {
-      items: [{ id: "ca_01", name: "root-ca", algorithm: "ECDSA-P384", subject_cn: "Vecta Root CA", status: "active" }]
-    },
+    responseExample: {"items": [{"id": "ca_dfed5bd39eee614b", "tenant_id": "t1", "name": "root-ca", "parent_ca_id": "", "ca_level": "root", "algorithm": "ECDSA-P384", "ca_type": "classical", "key_backend": "software", "key_ref": "", "cert_pem": "<certificate>", "subject": "CN=Example Root CA", "status": "active", "ots_current": 0, "ots_max": 0, "ots_alert_threshold": 0, "created_at": "2026-10-12T10:48:06Z", "updated_at": "2026-10-12T10:48:06Z"}], "request_id": "req_39c5d72807511b54"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks CA list privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "certs-revoke",
@@ -1424,19 +1379,17 @@ export const REST_API_CATALOG = [
     service: "certs",
     method: "POST",
     pathTemplate: "/certs/{{cert_id}}/revoke",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "reason": "key_compromise"\n}',
+    bodyTemplate: 
+      "{\n  \"reason\": \"key_compromise\"\n}",
     description: "Revokes a certificate with specified reason code.",
     requestExample: "POST /svc/certs/certs/{cert_id}/revoke",
-    responseExample: {
-      certificate: { id: "crt_01", status: "revoked", revocation_reason: "key_compromise", revoked_at: "2026-03-04T12:00:00Z" }
-    },
+    responseExample: {"request_id": "req_cb6a5af4e094e4d5", "status": "revoked"},
     errorCodes: [
-      { code: 400, meaning: "Invalid reason code or missing cert_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Certificate not found" },
-      { code: 422, meaning: "Certificate already revoked or expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "certs-renew",
@@ -1445,19 +1398,17 @@ export const REST_API_CATALOG = [
     service: "certs",
     method: "POST",
     pathTemplate: "/certs/{{cert_id}}/renew",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "validity_days": 365\n}',
+    bodyTemplate: 
+      "{\n  \"validity_days\": 365\n}",
     description: "Renews a certificate with new validity period.",
     requestExample: "POST /svc/certs/certs/{cert_id}/renew",
-    responseExample: {
-      certificate: { id: "crt_01_v2", status: "active", not_before: "2026-03-04T00:00:00Z", not_after: "2027-03-04T00:00:00Z", renewed_from: "crt_01" }
-    },
+    responseExample: {"certificate": {"id": "crt_64ba2899fb6c95fa", "tenant_id": "t1", "ca_id": "ca_dfed5bd39eee614b", "serial_number": "a90dfab78a89c7146535c897f9ad7f", "subject_cn": "service.tenant.local", "sans": ["service.tenant.local"], "cert_type": "tls-server", "algorithm": "ECDSA-P384", "profile_id": "", "protocol": "renew", "cert_class": "classical", "cert_pem": "<certificate>", "status": "active", "not_before": "2026-10-12T10:43:06.803576Z", "not_after": "2027-10-12T10:48:06.803576Z", "revoked_at": "0001-01-01T00:00:00Z", "revocation_reason": "", "created_at": "2026-10-12T10:48:06Z", "updated_at": "2026-10-12T10:48:06Z", "key_ref": ""}, "request_id": "req_1d0e07a58f8bdb94"},
     errorCodes: [
-      { code: 400, meaning: "Invalid validity_days or missing cert_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Certificate not found" },
-      { code: 422, meaning: "Certificate revoked or CA signing policy violation" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "certs-download",
@@ -1469,16 +1420,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Downloads certificate in PEM/DER format.",
     requestExample: "GET /svc/certs/certs/download/{cert_id}?tenant_id=root",
-    responseExample: {
-      cert_id: "crt_01",
-      format: "pem",
-      data: "-----BEGIN CERTIFICATE-----\nMIIB...\n-----END CERTIFICATE-----"
-    },
+    responseExample: {"content": "<certificate>", "content_type": "application/x-pem-file", "request_id": "req_02aa4cc3acd3305e"},
     errorCodes: [
-      { code: 400, meaning: "Missing cert_id or tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Certificate not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "certs-profiles-list",
@@ -1490,17 +1438,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists certificate issuance profiles (TLS server, client auth, code signing, etc.).",
     requestExample: "GET /svc/certs/certs/profiles?tenant_id=root",
-    responseExample: {
-      items: [
-        { id: "prof_tls", name: "TLS Server", cert_type: "tls-server", default_validity_days: 365 },
-        { id: "prof_client", name: "Client Auth", cert_type: "client-auth", default_validity_days: 180 },
-        { id: "prof_codesign", name: "Code Signing", cert_type: "code-signing", default_validity_days: 730 }
-      ]
-    },
+    responseExample: {"items": [{"id": "cpf_ecc8f4d3e51b5bc9", "tenant_id": "t1", "name": "internal-mtls-service", "cert_type": "tls-client", "algorithm": "ECDSA-P384", "cert_class": "classical", "profile_json": "{\"mtls\":\"internal\"}", "is_default": true, "created_at": "2026-10-12T10:48:06Z"}], "request_id": "req_a98b8885ffdb412b"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "certs-inventory",
@@ -1512,18 +1455,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns certificate inventory summary with expiry statistics.",
     requestExample: "GET /svc/certs/certs/inventory?tenant_id=root",
-    responseExample: {
-      total: 256,
-      by_status: { active: 210, expired: 30, revoked: 16 },
-      expiring_30d: 12,
-      expiring_90d: 35,
-      by_algorithm: { "ECDSA-P384": 180, "RSA-2048": 50, "RSA-4096": 26 }
-    },
+    responseExample: {"items": [{"cert_id": "crt_985af93d6ad2b94b", "ca_id": "ca_dfed5bd39eee614b", "cert_type": "tls-server", "cert_class": "classical", "status": "active", "not_after": "2026-10-13T10:48:06Z", "profile_id": ""}], "request_id": "req_54f5ef1886faa503"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks cert inventory privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "certs-security-status",
@@ -1535,18 +1472,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns PKI security posture including weak algorithms and expiring certs.",
     requestExample: "GET /svc/certs/certs/security/status?tenant_id=root",
-    responseExample: {
-      posture_score: 87,
-      weak_algorithms: [{ algorithm: "RSA-1024", count: 3, recommendation: "Upgrade to RSA-2048 or ECDSA-P384" }],
-      expiring_critical: 4,
-      revocation_pending: 1,
-      ca_health: { root_ca_valid: true, intermediate_ca_valid: true }
-    },
+    responseExample: {"request_id": "req_12cc7f2080d5a756", "status": {"storage_mode": "legacy", "root_key_mode": "legacy", "ready": false, "state": "legacy", "key_version": "", "sealed_path": "", "mlock_status": ""}},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks PKI security read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
 
   /* ── Audit ─────────────────────────────────────────────────────────── */
@@ -1560,19 +1491,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists audit trail events with pagination.",
     requestExample: "GET /svc/audit/audit/events?tenant_id=root&limit=100&offset=0",
-    responseExample: {
-      items: [
-        { id: "evt_001", action: "key.created", actor: "admin@bank.com", target: "key_123", timestamp: "2026-03-04T10:30:00Z", service: "keycore" }
-      ],
-      total: 4520,
-      limit: 100,
-      offset: 0
-    },
+    responseExample: {"items": null, "request_id": "req_0736d3ac390de1fe"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid pagination parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks audit read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "audit-event-get",
@@ -1584,23 +1508,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns full details for a specific audit event.",
     requestExample: "GET /svc/audit/audit/events/{id}?tenant_id=root",
-    responseExample: {
-      id: "evt_001",
-      action: "key.created",
-      actor: "admin@bank.com",
-      actor_ip: "10.0.0.5",
-      target: "key_123",
-      target_type: "key",
-      service: "keycore",
-      timestamp: "2026-03-04T10:30:00Z",
-      metadata: { algorithm: "AES-256-GCM", key_name: "prod-db-master" },
-      chain_hash: "sha256:abc123..."
-    },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or event id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Audit event not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "audit-search",
@@ -1608,23 +1522,17 @@ export const REST_API_CATALOG = [
     title: "Search Audit Events",
     service: "audit",
     method: "POST",
-    pathTemplate: "/audit/search",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "query": "key.exported",\n  "from": "2026-01-01T00:00:00Z",\n  "to": "2026-12-31T23:59:59Z",\n  "limit": 50\n}',
-    description: "Searches audit events by action, actor, target, or time range.",
-    requestExample: "POST /svc/audit/audit/search",
-    responseExample: {
-      items: [
-        { id: "evt_042", action: "key.exported", actor: "ops@bank.com", target: "key_456", timestamp: "2026-02-15T14:22:00Z" }
-      ],
-      total: 7,
-      limit: 50
-    },
+    pathTemplate: "/audit/search?tenant_id={{tenant_id}}&action=audit.key.export&limit=50",
+    bodyTemplate: 
+      "",
+    description: "Searches audit events. The filters are query parameters, as for GET /audit/events; the body is not read.",
+    requestExample: "POST /svc/audit/audit/search?tenant_id={{tenant_id}}&action=audit.key.export&limit=50",
+    responseExample: {"items": null, "request_id": "req_ceb47c7ea201c7d5"},
     errorCodes: [
-      { code: 400, meaning: "Invalid query, date range, or limit" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks audit search privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "audit-chain-verify",
@@ -1636,18 +1544,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Verifies tamper-proof audit chain integrity.",
     requestExample: "GET /svc/audit/audit/chain/verify?tenant_id=root",
-    responseExample: {
-      chain_valid: true,
-      total_blocks: 45200,
-      last_verified_block: 45200,
-      last_hash: "sha256:def456...",
-      verified_at: "2026-03-04T12:00:00Z"
-    },
+    responseExample: {"breaks": null, "ok": true, "request_id": "req_0303b43af34cfcf8"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 422, meaning: "Chain integrity verification failed — potential tampering detected" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "audit-timeline",
@@ -1659,20 +1561,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns timeline of all events related to a specific target (key, cert, secret).",
     requestExample: "GET /svc/audit/audit/timeline/{target_id}?tenant_id=root",
-    responseExample: {
-      target_id: "key_123",
-      target_type: "key",
-      events: [
-        { id: "evt_001", action: "key.created", actor: "admin@bank.com", timestamp: "2026-01-10T08:00:00Z" },
-        { id: "evt_015", action: "key.rotated", actor: "admin@bank.com", timestamp: "2026-02-10T08:00:00Z" },
-        { id: "evt_042", action: "key.exported", actor: "ops@bank.com", timestamp: "2026-02-15T14:22:00Z" }
-      ]
-    },
+    responseExample: {"items": null, "request_id": "req_322e8fdd95e99c9a"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or target_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "No audit events found for target" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
 
   /* ── Compliance ────────────────────────────────────────────────────── */
@@ -1686,19 +1581,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns overall compliance posture score and breakdown.",
     requestExample: "GET /svc/compliance/compliance/posture?tenant_id=root",
-    responseExample: {
-      overall_score: 92,
-      by_framework: [
-        { framework: "NIST SP 800-57", score: 95, controls_passed: 38, controls_total: 40 },
-        { framework: "PCI-DSS", score: 88, controls_passed: 22, controls_total: 25 }
-      ],
-      last_assessed: "2026-03-03T06:00:00Z"
-    },
+    responseExample: {"posture": {"id": "posture_72d5e55357c2ce2f", "tenant_id": "t1", "overall_score": 99, "key_hygiene": 98, "policy_compliance": 100, "access_security": 100, "crypto_posture": 98, "pqc_readiness": 100, "framework_scores": {"eidas": 99, "fips-140-3": 99, "nist-800-57": 99, "pci-dss-4.0": 99}, "metrics": {"approved_algorithm_pct": 0, "cert_active": 0, "cert_ari_enabled": 0, "cert_due_soon_windows": 0, "cert_emergency_rotations": 0, "cert_expired": 0, "cert_expiring_30d": 0, "cert_mass_renewal_risks": 0, "cert_missed_windows": 0, "cert_pqc_class_pct": 0, "cert_revoked": 0, "cert_score": 100, "cert_star_delegated": 0, "cert_star_due_soon": 0, "cert_star_rollout_risks": 0, "cert_star_subscriptions": 0, "cert_total": 0, "cert_weak_algorithms": 0, "deprecated_count": 0, "failed_auth_rate_pct": 0, "mfa_adoption_pct": 0, "orphaned_count": 0, "policy_coverage_pct": 0, "policy_violation_count": 0}, "gap_count": 0, "created_at": "2026-10-12T10:44:21Z"}, "request_id": "req_bd427b273eeafe9e"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks compliance read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "compliance-posture-history",
@@ -1710,18 +1598,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns compliance score trend over time.",
     requestExample: "GET /svc/compliance/compliance/posture/history?tenant_id=root",
-    responseExample: {
-      trend: [
-        { date: "2026-01-01", score: 85 },
-        { date: "2026-02-01", score: 89 },
-        { date: "2026-03-01", score: 92 }
-      ]
-    },
+    responseExample: {"items": [{"id": "posture_72d5e55357c2ce2f", "tenant_id": "t1", "overall_score": 99, "key_hygiene": 98, "policy_compliance": 100, "access_security": 100, "crypto_posture": 98, "pqc_readiness": 100, "framework_scores": {"eidas": 99, "fips-140-3": 99, "nist-800-57": 99, "pci-dss-4.0": 99}, "metrics": {"approved_algorithm_pct": 0, "cert_active": 0, "cert_ari_enabled": 0, "cert_due_soon_windows": 0, "cert_emergency_rotations": 0, "cert_expired": 0, "cert_expiring_30d": 0, "cert_mass_renewal_risks": 0, "cert_missed_windows": 0, "cert_pqc_class_pct": 0, "cert_revoked": 0, "cert_score": 100, "cert_star_delegated": 0, "cert_star_due_soon": 0, "cert_star_rollout_risks": 0, "cert_star_subscriptions": 0, "cert_total": 0, "cert_weak_algorithms": 0, "deprecated_count": 0, "failed_auth_rate_pct": 0, "mfa_adoption_pct": 0, "orphaned_count": 0, "policy_coverage_pct": 0, "policy_violation_count": 0}, "gap_count": 0, "created_at": "2026-10-12T10:44:21Z"}], "request_id": "req_82bf1d3fadd69e67"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks compliance read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "compliance-assessment-run",
@@ -1730,19 +1612,16 @@ export const REST_API_CATALOG = [
     service: "compliance",
     method: "POST",
     pathTemplate: "/compliance/assessment/run",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "framework_id": "nist-sp800-57"\n}',
+    bodyTemplate: 
+      "{}",
     description: "Triggers a compliance assessment against selected framework.",
     requestExample: "POST /svc/compliance/compliance/assessment/run",
-    responseExample: {
-      assessment: { id: "assess_01", framework_id: "nist-sp800-57", status: "running", started_at: "2026-03-04T12:00:00Z" }
-    },
+    responseExample: {"assessment": {"id": "assess_09f7a63e06cddea4", "tenant_id": "t1", "trigger": "manual", "template_id": "default", "template_name": "Built-in Baseline", "overall_score": 99, "framework_scores": {"eidas": 99, "fips-140-3": 99, "nist-800-57": 99, "pci-dss-4.0": 99}, "findings": [], "pqc": {"ready_percent": 0, "ml_kem_migrated": 0, "ml_dsa_migrated": 0, "pending": 0, "total_evaluated": 0}, "cert_metrics": {"cert_score": 100}, "posture": {"id": "posture_72d5e55357c2ce2f", "tenant_id": "t1", "overall_score": 99, "key_hygiene": 98, "policy_compliance": 100, "access_security": 100, "crypto_posture": 98, "pqc_readiness": 100, "framework_scores": {"eidas": 99, "fips-140-3": 99, "nist-800-57": 99, "pci-dss-4.0": 99}, "metrics": {"approved_algorithm_pct": 0, "cert_active": 0, "cert_ari_enabled": 0, "cert_due_soon_windows": 0, "cert_emergency_rotations": 0, "cert_expired": 0, "cert_expiring_30d": 0, "cert_mass_renewal_risks": 0, "cert_missed_windows": 0, "cert_pqc_class_pct": 0, "cert_revoked": 0, "cert_score": 100, "cert_star_delegated": 0, "cert_star_due_soon": 0, "cert_star_rollout_risks": 0, "cert_star_subscriptions": 0, "cert_total": 0, "cert_weak_algorithms": 0, "deprecated_count": 0, "failed_auth_rate_pct": 0, "mfa_adoption_pct": 0, "orphaned_count": 0, "policy_coverage_pct": 0, "policy_violation_count": 0}, "gap_count": 0, "created_at": "2026-10-12T10:44:21Z"}, "created_at": "2026-10-12T10:44:21Z"}, "request_id": "req_d91b06815a0d8ec8"},
     errorCodes: [
-      { code: 400, meaning: "Invalid or unsupported framework_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 409, meaning: "Assessment already in progress for this framework" },
-      { code: 422, meaning: "Assessment blocked by policy or insufficient data" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "compliance-frameworks",
@@ -1754,17 +1633,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists available compliance frameworks (NIST, PCI-DSS, FIPS, etc.).",
     requestExample: "GET /svc/compliance/compliance/frameworks?tenant_id=root",
-    responseExample: {
-      items: [
-        { id: "nist-sp800-57", name: "NIST SP 800-57", version: "Rev. 5", controls_count: 40 },
-        { id: "pci-dss-4.0", name: "PCI-DSS", version: "4.0", controls_count: 25 },
-        { id: "fips-140-3", name: "FIPS 140-3", version: "2019", controls_count: 18 }
-      ]
-    },
+    responseExample: {"items": [{"id": "pci-dss-4.0", "name": "PCI DSS", "version": "4.0", "description": "Payment card data security controls", "controls": [{}]}], "request_id": "req_6ef5baf9d34664a9"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "compliance-key-hygiene",
@@ -1776,17 +1650,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns key hygiene report (rotation overdue, weak algorithms, policy violations).",
     requestExample: "GET /svc/compliance/compliance/keys/hygiene?tenant_id=root",
-    responseExample: {
-      rotation_overdue: [{ key_id: "key_42", name: "legacy-db-key", last_rotated: "2025-01-15T00:00:00Z", policy_max_days: 90 }],
-      weak_algorithms: [{ key_id: "key_03", algorithm: "DES", recommendation: "Migrate to AES-256-GCM" }],
-      policy_violations: 5,
-      total_keys_assessed: 320
-    },
+    responseExample: {"report": {"tenant_id": "t1", "total_keys": 0, "approved_algorithm_pct": 0, "rotation_coverage_pct": 0, "policy_coverage_pct": 0, "orphaned_count": 0, "expiring_count": 0, "deprecated_count": 0, "unused_90_days_count": 0, "pqc_ready_pct": 0, "algorithm_distribution": {}, "orphaned_keys": [], "expiring_keys": []}, "request_id": "req_b63b63c70fc8c418"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks compliance key hygiene privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "compliance-orphaned-keys",
@@ -1798,18 +1667,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists keys with no recent usage that may be orphaned.",
     requestExample: "GET /svc/compliance/compliance/keys/orphaned?tenant_id=root",
-    responseExample: {
-      items: [
-        { key_id: "key_07", name: "decom-app-key", last_used: "2025-06-10T00:00:00Z", days_inactive: 267, status: "active" },
-        { key_id: "key_11", name: "test-key-old", last_used: "2025-03-01T00:00:00Z", days_inactive: 368, status: "active" }
-      ],
-      total_orphaned: 2
-    },
+    responseExample: {"items": [], "request_id": "req_db50130ac1eb0fec"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks compliance orphaned-keys privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "compliance-cbom-summary",
@@ -1821,21 +1684,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns cryptographic bill of materials summary with PQC readiness.",
     requestExample: "GET /svc/compliance/compliance/cbom/summary?tenant_id=root",
-    responseExample: {
-      algorithms_in_use: [
-        { algorithm: "AES-256-GCM", usage_count: 245, pqc_safe: true },
-        { algorithm: "RSA-2048", usage_count: 50, pqc_safe: false, migration_recommendation: "ML-KEM-768" },
-        { algorithm: "ECDSA-P384", usage_count: 180, pqc_safe: false, migration_recommendation: "ML-DSA-65" }
-      ],
-      pqc_readiness_pct: 51,
-      total_crypto_assets: 475,
-      generated_at: "2026-03-04T12:00:00Z"
-    },
+    responseExample: {"request_id": "req_026ee83429143c33", "summary": {"algorithm_distribution": {}, "deprecated_count": 0, "pqc_readiness_percent": 0, "pqc_ready_count": 0, "strength_histogram": {"128-255": 0, "256-3071": 0, "<128": 0, ">=3072": 0}, "total_assets": 0}},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks CBOM read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
 
   /* ── Governance ────────────────────────────────────────────────────── */
@@ -1849,20 +1703,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns governance delivery configuration (approval modes, notification channels).",
     requestExample: "GET /svc/governance/governance/settings?tenant_id=root",
-    responseExample: {
-      approval_expiry_minutes: 60,
-      notify_email: true,
-      notify_slack: false,
-      smtp_host: "smtp.example.com",
-      smtp_port: "587",
-      default_approval_mode: "quorum",
-      challenge_response_enabled: false
-    },
+    responseExample: {"request_id": "req_mRYpGuYv3lI", "settings": {"tenant_id": "root", "approval_expiry_minutes": 60, "expiry_check_interval_seconds": 5, "approval_delivery_mode": "notify", "smtp_connection_id": "", "smtp_host": "", "smtp_port": "", "smtp_username": "", "smtp_from": "", "smtp_starttls": false, "notify_dashboard": true, "notify_email": true, "notify_slack": false, "notify_teams": false, "slack_connection_id": "", "teams_connection_id": "", "delivery_webhook_timeout_seconds": 5, "challenge_response_enabled": false, "updated_by": "system", "updated_at": "2026-10-12T10:50:27Z"}},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks governance settings read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "governance-settings-update",
@@ -1871,24 +1717,16 @@ export const REST_API_CATALOG = [
     service: "governance",
     method: "PUT",
     pathTemplate: "/governance/settings",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "approval_expiry_minutes": 60,\n  "notify_email": true,\n  "notify_slack": false,\n  "smtp_host": "smtp.example.com",\n  "smtp_port": "587"\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"approval_expiry_minutes\": 60,\n  \"notify_email\": true\n}",
     description: "Updates governance notification and delivery settings.",
     requestExample: "PUT /svc/governance/governance/settings",
-    responseExample: {
-      status: "updated",
-      approval_expiry_minutes: 60,
-      notify_email: true,
-      notify_slack: false,
-      smtp_host: "smtp.example.com",
-      smtp_port: "587"
-    },
+    responseExample: {"request_id": "req_iZ3mq-EfAIE", "settings": {"tenant_id": "root", "approval_expiry_minutes": 60, "expiry_check_interval_seconds": 5, "approval_delivery_mode": "notify", "smtp_connection_id": "", "smtp_host": "", "smtp_port": "", "smtp_username": "", "smtp_from": "", "smtp_starttls": false, "notify_dashboard": true, "notify_email": true, "notify_slack": false, "notify_teams": false, "slack_connection_id": "", "teams_connection_id": "", "delivery_webhook_timeout_seconds": 5, "challenge_response_enabled": false, "updated_by": "system", "updated_at": "2026-10-12T10:50:27Z"}},
     errorCodes: [
-      { code: 400, meaning: "Invalid settings payload" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks governance settings write privilege" },
-      { code: 422, meaning: "SMTP validation failed or invalid configuration" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "governance-system-state-get",
@@ -1900,19 +1738,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns system state (FIPS mode, network config, backup policy).",
     requestExample: "GET /svc/governance/governance/system/state?tenant_id=root",
-    responseExample: {
-      fips_mode: "enabled",
-      backup_schedule: "daily@02:00",
-      backup_retention_days: 30,
-      network_mode: "private",
-      last_backup: "2026-03-04T02:00:00Z",
-      hsm_status: "connected"
-    },
+    responseExample: {"request_id": "req_RvStLfLMUFI", "state": {"tenant_id": "root", "fips_mode": "enabled", "fips_mode_policy": "strict", "fips_crypto_library": "Go Cryptographic Module (go1.27.1, GOEXPERIMENT=none, CGO=1,...", "fips_library_validated": false, "fips_runtime_enabled": false, "fips_runtime_enforced": false, "fips_module_version": "latest", "fips_tls_profile": "tls13_minimum", "fips_rng_mode": "os_csprng", "fips_entropy_source": "os-csprng", "fips_entropy_health": "ok", "fips_entropy_sample_bytes": 4096, "fips_entropy_read_micros": 2, "fips_entropy_measured_at": "2026-10-12T10:50:27.864472Z", "snmp_target": "", "go_runtime_version": "go1.27.1", "flight_recorder_ready": true, "runtime_secret_ready": false, "posture_force_quorum_destructive_ops": false, "posture_require_step_up_auth": false, "posture_pause_connector_sync": false, "posture_guardrail_policy_required": false, "updated_by": "system"}},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks system state read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "governance-system-state-update",
@@ -1921,22 +1752,16 @@ export const REST_API_CATALOG = [
     service: "governance",
     method: "PUT",
     pathTemplate: "/governance/system/state",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "fips_mode": "enabled",\n  "backup_schedule": "daily@02:00",\n  "backup_retention_days": 30\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"fips_mode\": \"enabled\"\n}",
     description: "Updates system-level security and operational state.",
     requestExample: "PUT /svc/governance/governance/system/state",
-    responseExample: {
-      status: "updated",
-      fips_mode: "enabled",
-      backup_schedule: "daily@02:00",
-      backup_retention_days: 30
-    },
+    responseExample: {"request_id": "req_mo6RBjQiCTM", "state": {"tenant_id": "root", "fips_mode": "enabled", "fips_mode_policy": "strict", "fips_crypto_library": "Go Cryptographic Module (go1.27.1, GOEXPERIMENT=none, CGO=1,...", "fips_library_validated": false, "fips_runtime_enabled": false, "fips_runtime_enforced": false, "fips_module_version": "latest", "fips_tls_profile": "tls13_minimum", "fips_rng_mode": "os_csprng", "fips_entropy_source": "os-csprng", "fips_entropy_health": "ok", "fips_entropy_sample_bytes": 4096, "fips_entropy_read_micros": 3, "fips_entropy_measured_at": "2026-10-12T10:50:27.86388Z", "snmp_target": "", "go_runtime_version": "go1.27.1", "flight_recorder_ready": true, "runtime_secret_ready": false, "posture_force_quorum_destructive_ops": false, "posture_require_step_up_auth": false, "posture_pause_connector_sync": false, "posture_guardrail_policy_required": false, "updated_by": "system"}},
     errorCodes: [
-      { code: 400, meaning: "Invalid system state payload" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks system state write privilege" },
-      { code: 422, meaning: "FIPS mode transition blocked or backup schedule invalid" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "governance-backups-list",
@@ -1948,17 +1773,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists encrypted backup jobs with status and timestamps.",
     requestExample: "GET /svc/governance/governance/backups?tenant_id=root",
-    responseExample: {
-      items: [
-        { id: "bkp_01", scope: "system", status: "completed", created_at: "2026-03-04T02:00:00Z", size_mb: 128, bind_to_hsm: false },
-        { id: "bkp_02", scope: "system", status: "completed", created_at: "2026-03-03T02:00:00Z", size_mb: 125, bind_to_hsm: false }
-      ]
-    },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks backup list privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "governance-backups-create",
@@ -1971,16 +1791,12 @@ export const REST_API_CATALOG = [
       '{\n  "tenant_id": "{{tenant_id}}",\n  "scope": "system",\n  "bind_to_hsm": false,\n  "created_by": "admin"\n}',
     description: "Creates an encrypted backup of KMS data.",
     requestExample: "POST /svc/governance/governance/backups",
-    responseExample: {
-      backup: { id: "bkp_03", scope: "system", status: "in_progress", created_at: "2026-03-04T12:00:00Z", created_by: "admin", bind_to_hsm: false }
-    },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 400, meaning: "Invalid scope or missing required fields" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks backup create privilege" },
-      { code: 409, meaning: "Backup already in progress" },
-      { code: 422, meaning: "HSM binding requested but HSM unavailable" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "governance-policies-list",
@@ -1992,17 +1808,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists governance policies (approval rules, quorum requirements).",
     requestExample: "GET /svc/governance/governance/policies?tenant_id=root",
-    responseExample: {
-      items: [
-        { id: "pol_01", name: "key-export-approval", action: "key.export", required_approvals: 2, approver_roles: ["admin", "security-officer"], status: "active" },
-        { id: "pol_02", name: "key-destroy-approval", action: "key.destroy", required_approvals: 3, approver_roles: ["admin", "security-officer", "compliance-officer"], status: "active" }
-      ]
-    },
+    responseExample: {"items": [{"id": "apol_jsaGd7mi3Dw", "tenant_id": "root", "name": "key-destroy-approval", "description": "", "scope": "key_operation", "trigger_actions": ["key.destroy"], "quorum_mode": "threshold", "required_approvals": 2, "total_approvers": 3, "approver_roles": ["admin"], "approver_users": null, "timeout_hours": 48, "escalation_hours": 0, "escalation_to": null, "retention_days": 90, "notification_channels": ["email"], "status": "active", "created_at": "2026-10-12T10:50:27Z"}], "request_id": "req_lmIfapWoQNg"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks governance policies read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "governance-policies-create",
@@ -2011,20 +1822,16 @@ export const REST_API_CATALOG = [
     service: "governance",
     method: "POST",
     pathTemplate: "/governance/policies",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "key-export-approval",\n  "action": "key.export",\n  "required_approvals": 2,\n  "approver_roles": ["admin", "security-officer"]\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"key-destroy-approval\",\n  \"scope\": \"key_operation\",\n  \"trigger_actions\": [\n    \"key.destroy\"\n  ],\n  \"required_approvals\": 2,\n  \"total_approvers\": 3,\n  \"approver_roles\": [\n    \"admin\",\n    \"security-officer\"\n  ]\n}",
     description: "Creates a governance approval policy.",
     requestExample: "POST /svc/governance/governance/policies",
-    responseExample: {
-      policy: { id: "pol_03", name: "key-export-approval", action: "key.export", required_approvals: 2, approver_roles: ["admin", "security-officer"], status: "active", created_at: "2026-03-04T12:00:00Z" }
-    },
+    responseExample: {"policy": {"id": "apol_jsaGd7mi3Dw", "tenant_id": "root", "name": "key-destroy-approval", "description": "", "scope": "key_operation", "trigger_actions": ["key.destroy"], "quorum_mode": "threshold", "required_approvals": 2, "total_approvers": 3, "approver_roles": ["admin"], "approver_users": null, "timeout_hours": 48, "escalation_hours": 0, "escalation_to": null, "retention_days": 90, "notification_channels": ["email"], "status": "active", "created_at": "2026-10-12T10:50:27Z"}, "request_id": "req_EN_XAvWR-zw"},
     errorCodes: [
-      { code: 400, meaning: "Invalid policy payload or missing required fields" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks governance policy create privilege" },
-      { code: 409, meaning: "Policy with same name or action already exists" },
-      { code: 422, meaning: "Invalid approver roles or action not recognized" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
 
   /* ── Data Protection ─────────────────────────────────────────── */
@@ -2036,21 +1843,16 @@ export const REST_API_CATALOG = [
     service: "dataprotect",
     method: "POST",
     pathTemplate: "/tokenize",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "plaintext": "4111-1111-1111-1111",\n  "format": "credit_card",\n  "ttl": "24h"\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"vault_id\": \"{{vault_id}}\",\n  \"values\": [\n    \"4111111111111111\"\n  ]\n}",
     description: "Tokenizes sensitive data and returns a surrogate token with optional TTL.",
     requestExample: "POST /svc/dataprotect/tokenize",
-    responseExample: {
-      token: "tok_abc123",
-      format: "credit_card",
-      expires_at: "2026-03-05T12:00:00Z"
-    },
+    responseExample: {"items": [{"expires_at": "2027-10-12T10:48:02.674116Z", "input": "4111111111111111", "reused": false, "token": "<token>", "vault_id": "vault_454d00340849ca86"}], "request_id": "req_6180c7d9346b5901"},
     errorCodes: [
-      { code: 400, meaning: "Invalid payload or unsupported format" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks tokenize permission" },
-      { code: 422, meaning: "Plaintext does not match declared format" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "dataprotect-detokenize",
@@ -2059,20 +1861,16 @@ export const REST_API_CATALOG = [
     service: "dataprotect",
     method: "POST",
     pathTemplate: "/detokenize",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "token": "tok_abc123"\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"tokens\": [\n    \"<token from tokenize>\"\n  ]\n}",
     description: "Resolves a token back to its original plaintext value.",
     requestExample: "POST /svc/dataprotect/detokenize",
-    responseExample: {
-      plaintext: "4111-1111-1111-1111",
-      format: "credit_card"
-    },
+    responseExample: {"items": [{"created_at": "2026-10-12T10:48:02Z", "expires_at": "2027-10-12T10:48:02.674116Z", "renew_count": 0, "token": "<token>", "use_count": 0, "use_limit": 0, "value": "4111111111111111", "vault_id": "vault_454d00340849ca86"}], "request_id": "req_2cd62cbf220abd52"},
     errorCodes: [
-      { code: 400, meaning: "Invalid payload or malformed token" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks detokenize permission" },
-      { code: 404, meaning: "Token not found or expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "dataprotect-tokenize-batch",
@@ -2081,22 +1879,16 @@ export const REST_API_CATALOG = [
     service: "dataprotect",
     method: "POST",
     pathTemplate: "/tokenize/batch",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "items": [\n    { "plaintext": "4111-1111-1111-1111", "format": "credit_card" },\n    { "plaintext": "550000001234", "format": "credit_card" }\n  ]\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"vault_id\": \"{{vault_id}}\",\n  \"values\": [\n    \"4111111111111111\",\n    \"5500005555555559\"\n  ]\n}",
     description: "Tokenizes multiple values in a single request.",
     requestExample: "POST /svc/dataprotect/tokenize/batch",
-    responseExample: {
-      tokens: [
-        { token: "tok_abc123", format: "credit_card" },
-        { token: "tok_def456", format: "credit_card" }
-      ]
-    },
+    responseExample: {"items": [{"input": "4111111111111111", "reused": true, "token": "<token>", "vault_id": "vault_454d00340849ca86"}], "request_id": "req_ca33208abc45b0b0"},
     errorCodes: [
-      { code: 400, meaning: "Invalid payload or unsupported format in one or more items" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks tokenize permission" },
-      { code: 422, meaning: "One or more items failed format validation" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "dataprotect-fpe-encrypt",
@@ -2105,21 +1897,16 @@ export const REST_API_CATALOG = [
     service: "dataprotect",
     method: "POST",
     pathTemplate: "/fpe/encrypt",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "key_id": "{{key_id}}",\n  "plaintext": "4111111111111111",\n  "alphabet": "numeric",\n  "tweak": "0000000000"\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"key_id\": \"{{key_id}}\",\n  \"plaintext\": \"4111111111111111\",\n  \"tweak\": \"0000000000\"\n}",
     description: "Encrypts data using Format-Preserving Encryption (FF1/FF3-1), keeping output in the same format and length.",
     requestExample: "POST /svc/dataprotect/fpe/encrypt",
-    responseExample: {
-      ciphertext: "7293840185629374",
-      alphabet: "numeric"
-    },
+    responseExample: {"request_id": "req_487d4b3c697676bc", "result": {"ciphertext": "8584984204257152"}},
     errorCodes: [
-      { code: 400, meaning: "Invalid payload, alphabet, or tweak length" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks FPE encrypt permission" },
-      { code: 404, meaning: "Key not found" },
-      { code: 422, meaning: "Plaintext contains characters outside declared alphabet" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "dataprotect-fpe-decrypt",
@@ -2128,21 +1915,16 @@ export const REST_API_CATALOG = [
     service: "dataprotect",
     method: "POST",
     pathTemplate: "/fpe/decrypt",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "key_id": "{{key_id}}",\n  "ciphertext": "7293840185629374",\n  "alphabet": "numeric",\n  "tweak": "0000000000"\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"key_id\": \"{{key_id}}\",\n  \"ciphertext\": \"7293840185629374\",\n  \"tweak\": \"0000000000\"\n}",
     description: "Decrypts FPE-encrypted data back to the original plaintext.",
     requestExample: "POST /svc/dataprotect/fpe/decrypt",
-    responseExample: {
-      plaintext: "4111111111111111",
-      alphabet: "numeric"
-    },
+    responseExample: {"request_id": "req_03b493daa8314483", "result": {"plaintext": "2972197281620566"}},
     errorCodes: [
-      { code: 400, meaning: "Invalid payload, alphabet, or tweak length" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks FPE decrypt permission" },
-      { code: 404, meaning: "Key not found" },
-      { code: 422, meaning: "Ciphertext contains characters outside declared alphabet" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "dataprotect-mask",
@@ -2151,20 +1933,16 @@ export const REST_API_CATALOG = [
     service: "dataprotect",
     method: "POST",
     pathTemplate: "/mask",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "value": "4111-1111-1111-1111",\n  "policy_id": "mask_cc"\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"policy_id\": \"{{policy_id}}\",\n  \"data\": {\n    \"card_number\": \"4111111111111111\"\n  },\n  \"role\": \"support\"\n}",
     description: "Applies a masking policy to partially obscure sensitive data.",
     requestExample: "POST /svc/dataprotect/mask",
-    responseExample: {
-      masked: "****-****-****-1111",
-      policy_id: "mask_cc"
-    },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 400, meaning: "Invalid payload or missing required fields" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks mask permission" },
-      { code: 404, meaning: "Masking policy not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "dataprotect-redact",
@@ -2173,23 +1951,16 @@ export const REST_API_CATALOG = [
     service: "dataprotect",
     method: "POST",
     pathTemplate: "/redact",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "text": "My SSN is 123-45-6789 and email is user@example.com",\n  "rules": ["ssn", "email"]\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"content\": \"Card 4111 1111 1111 1111, contact jane@example.com\",\n  \"content_type\": \"text/plain\"\n}",
     description: "Scans text for sensitive patterns and replaces matches with [REDACTED].",
     requestExample: "POST /svc/dataprotect/redact",
-    responseExample: {
-      redacted: "My SSN is [REDACTED] and email is [REDACTED]",
-      detections: [
-        { type: "ssn", count: 1 },
-        { type: "email", count: 1 }
-      ]
-    },
+    responseExample: {"request_id": "req_cc833b9932168c29", "result": {"content": "Card 4111 1111 1111 1111, contact [REDACTED]", "matches": [{"end": 50, "label": "EMAIL", "match": "jane@example.com", "start": 34}]}},
     errorCodes: [
-      { code: 400, meaning: "Invalid payload or unrecognized rule names" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks redact permission" },
-      { code: 422, meaning: "Text exceeds maximum allowed length" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "dataprotect-envelope-encrypt",
@@ -2198,24 +1969,16 @@ export const REST_API_CATALOG = [
     service: "dataprotect",
     method: "POST",
     pathTemplate: "/app/envelope-encrypt",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "key_id": "{{key_id}}",\n  "plaintext_base64": "SGVsbG8gV29ybGQ=",\n  "aad": "context-string"\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"key_id\": \"{{key_id}}\",\n  \"plaintext\": \"aGVsbG8tdmVjdGE=\"\n}",
     description: "Generates a DEK, encrypts plaintext locally, and wraps the DEK with the specified KEK.",
     requestExample: "POST /svc/dataprotect/app/envelope-encrypt",
-    responseExample: {
-      encrypted_dek: "base64...",
-      ciphertext_base64: "base64...",
-      iv: "base64...",
-      tag: "base64...",
-      aad: "context-string"
-    },
+    responseExample: {"request_id": "req_d67cc069e238e532", "result": {"algorithm": "AES-GCM", "ciphertext": "doKLVKxKvt9PCKf/nGrF3GgPNMxB/tu3KYpo66Gn0XE=", "dek_created_at": "2026-10-12T10:48:02Z", "iv": "H15exaH5RamALIBq", "wrapped_dek": "x/uEWNdtfJ6l63i9z3DE/4R5EvLv/EOeVvTZjYvquxTzJE9ped125WoCDUbffk1D", "wrapped_dek_iv": "HxNV/UhDPdnita9T"}},
     errorCodes: [
-      { code: 400, meaning: "Invalid payload or base64 encoding" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks envelope encrypt permission" },
-      { code: 404, meaning: "Key not found" },
-      { code: 422, meaning: "Key state/policy blocks encryption" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "dataprotect-envelope-decrypt",
@@ -2224,20 +1987,16 @@ export const REST_API_CATALOG = [
     service: "dataprotect",
     method: "POST",
     pathTemplate: "/app/envelope-decrypt",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "key_id": "{{key_id}}",\n  "encrypted_dek": "base64...",\n  "ciphertext_base64": "base64...",\n  "iv": "base64...",\n  "tag": "base64...",\n  "aad": "context-string"\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"key_id\": \"{{key_id}}\",\n  \"ciphertext\": \"<ciphertext from envelope-encrypt>\",\n  \"iv\": \"<iv from envelope-encrypt>\",\n  \"wrapped_dek\": \"<wrapped_dek from envelope-encrypt>\",\n  \"wrapped_dek_iv\": \"<wrapped_dek_iv from envelope-encrypt>\"\n}",
     description: "Unwraps the DEK with the KEK and decrypts the ciphertext.",
     requestExample: "POST /svc/dataprotect/app/envelope-decrypt",
-    responseExample: {
-      plaintext_base64: "SGVsbG8gV29ybGQ="
-    },
+    responseExample: {"request_id": "req_7a81fea2649e5ce5", "result": {"plaintext": "aGVsbG8tdmVjdGE="}},
     errorCodes: [
-      { code: 400, meaning: "Invalid payload or base64 encoding" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks envelope decrypt permission" },
-      { code: 404, meaning: "Key not found" },
-      { code: 422, meaning: "Authentication/tag verification failed or wrong key" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "dataprotect-masking-policies-list",
@@ -2249,16 +2008,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists all configured masking policies for a tenant.",
     requestExample: "GET /svc/dataprotect/masking-policies?tenant_id=root",
-    responseExample: {
-      items: [
-        { id: "mask_cc", name: "Credit Card Mask", pattern: "credit_card", mask_char: "*", visible_last: 4, status: "active" }
-      ]
-    },
+    responseExample: {"items": [], "request_id": "req_0600da044e316809"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks masking policy read privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
 
   // ── Reporting expansion ──────────────────────────────────────────────
@@ -2272,17 +2027,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns aggregate alert statistics including counts by severity and open/acknowledged breakdown.",
     requestExample: "GET /svc/reporting/alerts/stats?tenant_id=root",
-    responseExample: {
-      total: 847,
-      by_severity: { critical: 12, high: 89, warning: 234, info: 512 },
-      open: 156,
-      acknowledged: 691
-    },
+    responseExample: {"request_id": "req_bc8ec112f4b329b2", "stats": {"bucket_seconds": 3600, "by_severity": {"critical": 0, "high": 0, "info": 0, "warning": 0}, "by_status": {}, "daily_trend": {}, "from": "2026-10-12T10:43:56.498128Z", "generated_at": "2026-10-12T10:43:56.498131Z", "series": [{"count": 0, "start": "2026-10-12T10:00:00Z"}], "to": "2026-10-12T10:43:56.498128Z", "top_actions": [], "total": 0}},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid query parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks required privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "reporting-alert-mttr",
@@ -2294,16 +2044,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns mean-time-to-resolve statistics for alerts, broken down by severity over a rolling period.",
     requestExample: "GET /svc/reporting/alerts/stats/mttr?tenant_id=root",
-    responseExample: {
-      mean_time_to_resolve_hours: 4.2,
-      by_severity: { critical: 0.5, high: 2.1, warning: 6.8, info: 12.4 },
-      period: "30d"
-    },
+    responseExample: {"mttr_minutes": {}, "request_id": "req_5eb1e27eaacc003f"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid query parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks required privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "reporting-alert-top-sources",
@@ -2315,14 +2061,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns the top alert-generating sources ranked by count.",
     requestExample: "GET /svc/reporting/alerts/stats/top-sources?tenant_id=root&limit=5",
-    responseExample: {
-      sources: [{ source: "auth-service", count: 245 }, { source: "key-rotation", count: 189 }]
-    },
+    responseExample: {"request_id": "req_4454b866fd703ab3", "sources": {"actors": [], "ips": [], "services": []}, "top_actors": [], "top_ips": [], "top_services": []},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid limit" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks required privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "reporting-alert-rules-list",
@@ -2334,14 +2078,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists configured alert rules including conditions, thresholds, and enabled state.",
     requestExample: "GET /svc/reporting/alerts/rules?tenant_id=root",
-    responseExample: {
-      items: [{ id: "rule_01", name: "High Failure Rate", condition: "threshold", pattern: "auth.login.failed", threshold: 10, window_seconds: 300, severity: "high", enabled: true }]
-    },
+    responseExample: {"items": [{"id": "rule_a88171850fa9affc", "tenant_id": "t1", "name": "High Failure Rate", "condition": "threshold", "severity": "high", "event_pattern": "", "threshold": 10, "window_seconds": 300, "channels": ["screen"], "enabled": true, "expression": "", "created_at": "2026-10-12T10:43:56Z", "updated_at": "2026-10-12T10:43:56Z"}], "request_id": "req_95fe85b12d3b6e5c"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid query parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks required privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "reporting-alert-rules-create",
@@ -2350,19 +2092,16 @@ export const REST_API_CATALOG = [
     service: "reporting",
     method: "POST",
     pathTemplate: "/alerts/rules",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "High Failure Rate",\n  "condition": "threshold",\n  "pattern": "auth.login.failed",\n  "threshold": 10,\n  "window_seconds": 300,\n  "severity": "high",\n  "channels": ["email", "webhook"]\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"High Failure Rate\",\n  \"condition\": \"threshold\",\n  \"threshold\": 10,\n  \"window_seconds\": 300,\n  \"severity\": \"high\",\n  \"channels\": [\n    \"email\",\n    \"webhook\"\n  ]\n}",
     description: "Creates a new alert rule with condition, threshold, and notification channels.",
     requestExample: "POST /svc/reporting/alerts/rules",
-    responseExample: {
-      rule: { id: "rule_02", name: "High Failure Rate", condition: "threshold", enabled: true, created_at: "2026-03-04T12:00:00Z" }
-    },
+    responseExample: {"item": {"id": "rule_a88171850fa9affc", "tenant_id": "t1", "name": "High Failure Rate", "condition": "threshold", "severity": "high", "event_pattern": "", "threshold": 10, "window_seconds": 300, "channels": ["screen"], "enabled": true, "expression": "", "created_at": "0001-01-01T00:00:00Z", "updated_at": "0001-01-01T00:00:00Z"}, "request_id": "req_1646b3ec21f392c2"},
     errorCodes: [
-      { code: 400, meaning: "Invalid rule payload or missing required fields" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks required privilege" },
-      { code: 409, meaning: "Rule with same name already exists" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "reporting-alerts-bulk-ack",
@@ -2371,20 +2110,16 @@ export const REST_API_CATALOG = [
     service: "reporting",
     method: "POST",
     pathTemplate: "/alerts/bulk/acknowledge",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "alert_ids": ["alert_01", "alert_02", "alert_03"],\n  "note": "Investigated — false positive"\n}',
+    bodyTemplate: 
+      "{\n  \"note\": \"Investigated \\u2014 false positive\"\n}",
     description: "Acknowledges multiple alerts in a single request with an optional investigation note.",
     requestExample: "POST /svc/reporting/alerts/bulk/acknowledge",
-    responseExample: {
-      acknowledged: 3,
-      failed: 0
-    },
+    responseExample: {"request_id": "req_a5121a9b9ffd4be3", "updated": 0},
     errorCodes: [
-      { code: 400, meaning: "Invalid payload or empty alert_ids array" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks required privilege" },
-      { code: 422, meaning: "One or more alert IDs not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "reporting-report-jobs-list",
@@ -2396,14 +2131,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists report generation jobs with status and download links for completed reports.",
     requestExample: "GET /svc/reporting/reports/jobs?tenant_id=root",
-    responseExample: {
-      items: [{ id: "rpt_01", type: "compliance-summary", status: "completed", created_at: "2026-03-04T02:00:00Z", download_url: "/reports/download/rpt_01" }]
-    },
+    responseExample: {"items": [{"id": "rjob_79cbc86ee76a1e9c", "tenant_id": "t1", "template_id": "key-rotation-summary", "format": "pdf", "status": "completed", "filters": {"date_from": "2026-01-01", "date_to": "2026-12-31"}, "result_content": "JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFn...", "result_content_type": "application/pdf", "requested_by": "tester", "error": "", "created_at": "2026-10-12T10:43:56Z", "updated_at": "2026-10-12T10:43:56Z", "completed_at": "2026-10-12T10:43:56.498071Z"}], "request_id": "req_fcc8d1de1d9fe6f0"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid query parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks required privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "reporting-scheduled-list",
@@ -2415,14 +2148,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists scheduled report definitions with cron expressions and last/next run timestamps.",
     requestExample: "GET /svc/reporting/reports/scheduled?tenant_id=root",
-    responseExample: {
-      items: [{ id: "sched_01", name: "Weekly Compliance", type: "compliance-summary", cron: "0 2 * * MON", last_run: "2026-03-03T02:00:00Z", next_run: "2026-03-10T02:00:00Z", enabled: true }]
-    },
+    responseExample: {"items": [], "request_id": "req_9ff249f07633102a"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid query parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks required privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   // ── Security Posture ───────────────────────────────────────────────
   {
@@ -2435,15 +2166,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists security posture findings such as weak algorithms, expired keys, and policy violations.",
     requestExample: "GET /svc/posture/posture/findings?tenant_id=root",
-    responseExample: {
-      items: [{ id: "find_01", title: "Weak Key Algorithm", severity: "high", resource: "key_abc", category: "key-hygiene", status: "open", first_seen: "2026-03-01T10:00:00Z" }],
-      total: 42
-    },
+    responseExample: {"items": [], "request_id": "req_2e1ab88fdf227651"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid query parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks required privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "posture-risk-score",
@@ -2455,17 +2183,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns the composite risk score with grade, category breakdown, and trend direction.",
     requestExample: "GET /svc/posture/posture/risk?tenant_id=root",
-    responseExample: {
-      score: 72,
-      grade: "B",
-      breakdown: { key_hygiene: 85, access_control: 70, compliance: 65, crypto_agility: 68 },
-      trend: "improving"
-    },
+    responseExample: {"request_id": "req_dc2e533c7f2cb9b9", "risk": {"id": "", "tenant_id": "t1", "risk_24h": 0, "risk_7d": 0, "predictive_score": 0, "preventive_score": 0, "corrective_score": 0, "top_signals": null, "captured_at": "0001-01-01T00:00:00Z", "assessed": false, "baseline_days": 0}},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks required privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "posture-risk-history",
@@ -2477,14 +2200,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns historical risk score data points over the requested number of days.",
     requestExample: "GET /svc/posture/posture/risk/history?tenant_id=root&days=30",
-    responseExample: {
-      points: [{ date: "2026-03-04", score: 72 }, { date: "2026-03-03", score: 70 }, { date: "2026-03-02", score: 68 }]
-    },
+    responseExample: {"items": [], "request_id": "req_b0b27dc4b93b3312"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid days parameter" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks required privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "posture-dashboard",
@@ -2496,16 +2217,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns a consolidated posture dashboard with risk score, finding counts, and top recommendations.",
     requestExample: "GET /svc/posture/posture/dashboard?tenant_id=root",
-    responseExample: {
-      risk_score: 72,
-      findings: { critical: 2, high: 8, warning: 15, info: 17 },
-      top_recommendations: [{ title: "Rotate expired keys", impact: "high", effort: "low" }]
-    },
+    responseExample: {"blast_radius": [], "critical_findings": 0, "open_findings": 0, "pending_actions": [], "recent_findings": [], "remediation_cockpit": [{"id": "approval-required", "label": "Approval Required", "description": "Actions that run only after a governance approval opened by the executor.", "count": 0, "actions": null}], "request_id": "req_d8f963c3d1b75d1c", "risk": {"id": "", "tenant_id": "t1", "risk_24h": 0, "risk_7d": 0, "predictive_score": 0, "preventive_score": 0, "corrective_score": 0, "top_signals": null, "captured_at": "0001-01-01T00:00:00Z", "assessed": false, "baseline_days": 0}, "risk_drivers": {"current_risk_24h": 0, "previous_risk_24h": 0, "net_delta": 0, "summary": "Risk is stable relative to the previous scan.", "drivers": []}, "scenario_simulator": [], "sla_overview": {"open_count": 0, "overdue_count": 0, "due_soon_count": 0, "average_age_hours": 0}, "validation_badges": [{"domain": "byok", "kind": "auth_freshness", "label": "BYOK auth freshness", "status": "unknown", "detail": "No successful connector auth seen recently.", "last_checked_at": "2026-10-12T10:43:37.478648Z", "last_success_at": "0001-01-01T00:00:00Z"}]},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks required privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "posture-actions-list",
@@ -2517,14 +2234,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists recommended remediation actions linked to findings with priority and status.",
     requestExample: "GET /svc/posture/posture/actions?tenant_id=root",
-    responseExample: {
-      items: [{ id: "act_01", finding_id: "find_01", action: "rotate_key", status: "pending", priority: "high" }]
-    },
+    responseExample: {"items": [], "request_id": "req_782c6f77570abac2"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid query parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks required privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   // ── Discovery ──────────────────────────────────────────────────────
   {
@@ -2534,19 +2249,16 @@ export const REST_API_CATALOG = [
     service: "discovery",
     method: "POST",
     pathTemplate: "/discovery/scan",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "scope": "full",\n  "targets": ["aws", "azure", "gcp"],\n  "depth": "deep"\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     description: "Initiates a cryptographic asset discovery scan across specified cloud providers.",
     requestExample: "POST /svc/discovery/discovery/scan",
-    responseExample: {
-      scan: { id: "scan_01", status: "running", scope: "full", started_at: "2026-03-04T12:00:00Z", targets: ["aws", "azure", "gcp"] }
-    },
+    responseExample: {"request_id": "req_0195606aa31200c4", "scan": {"id": "scan_28690cc6009d95ef", "tenant_id": "t1", "scan_type": "network,cloud,certs,code,git,storage", "status": "running", "trigger": "manual", "stats": {"sources_done": []}, "started_at": "2026-10-12T10:43:50.902489Z", "completed_at": "0001-01-01T00:00:00Z", "created_at": "0001-01-01T00:00:00Z"}},
     errorCodes: [
-      { code: 400, meaning: "Invalid scope, targets, or missing required fields" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks required privilege" },
-      { code: 409, meaning: "Scan already in progress" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "discovery-scans-list",
@@ -2558,14 +2270,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists discovery scan history with status, timing, and asset counts.",
     requestExample: "GET /svc/discovery/discovery/scans?tenant_id=root",
-    responseExample: {
-      items: [{ id: "scan_01", status: "completed", scope: "full", started_at: "2026-03-04T12:00:00Z", completed_at: "2026-03-04T12:15:00Z", assets_found: 1247 }]
-    },
+    responseExample: {"items": [{"id": "scan_28690cc6009d95ef", "tenant_id": "t1", "scan_type": "network,cloud,certs,code,git,storage", "status": "running", "trigger": "manual", "stats": {"sources_done": []}, "started_at": "2026-10-12T10:43:50.902489Z", "completed_at": "0001-01-01T00:00:00Z", "created_at": "2026-10-12T10:43:50Z"}], "request_id": "req_8c225bcc9d4f1016"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid query parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks required privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "discovery-assets-list",
@@ -2577,15 +2287,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists discovered cryptographic assets with provider, type, algorithm, and status details.",
     requestExample: "GET /svc/discovery/discovery/assets?tenant_id=root",
-    responseExample: {
-      items: [{ id: "asset_01", type: "kms_key", provider: "aws", region: "us-east-1", name: "prod-master-key", algorithm: "AES-256", status: "active", discovered_at: "2026-03-04T12:05:00Z" }],
-      total: 1247
-    },
+    responseExample: {"items": [], "request_id": "req_6609c245ba708cf2", "total": 0},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid query parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks required privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "discovery-summary",
@@ -2597,17 +2304,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns an aggregate summary of discovered assets grouped by provider and type.",
     requestExample: "GET /svc/discovery/discovery/summary?tenant_id=root",
-    responseExample: {
-      total_assets: 1247,
-      by_provider: { aws: 523, azure: 412, gcp: 312 },
-      by_type: { kms_key: 890, certificate: 234, secret: 123 },
-      last_scan: "2026-03-04T12:15:00Z"
-    },
+    responseExample: {"request_id": "req_f04e54ddc236e540", "summary": {"tenant_id": "t1", "total_assets": 1, "source_distribution": {"certs": 1}, "algorithm_distribution": {"RSA-3072": 1}, "classification_counts": {"exposed": 0, "quantum_vulnerable": 1, "strong": 0, "unknown": 0, "weak": 0}, "pqc_ready_count": 0, "pqc_readiness_percent": 0, "algorithm_classes": {"RSA-3072": {"quantum_vulnerable": 1}}, "source_classification": {"certs": {"quantum_vulnerable": 1}}, "expiring_30d": 0}},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks required privilege" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
 
   // ── Disk Encryption ──
@@ -2625,11 +2327,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns full status, configuration, and last heartbeat data for a specific EKM agent.",
     requestExample: "GET /svc/ekm/ekm/agents/agent-mssql-01",
-    responseExample: { agent: { id: "agent-mssql-01", status: "connected", tde_state: "enabled", last_heartbeat: "2026-03-05T12:00:00Z" } },
+    responseExample: {"request_id": "req_f1bf07017842d616", "status": {"agent": {"id": "agent_ae2691882c162b91", "tenant_id": "t1", "name": "mssql-prod-03", "role": "ekm-agent", "db_engine": "mssql", "host": "10.0.0.15", "version": "SQL Server 2022", "status": "connected", "tde_state": "enabled", "heartbeat_interval_sec": 30, "last_heartbeat_at": "2026-10-12T10:52:42.154775Z", "assigned_key_id": "tde-key-001", "assigned_key_version": "v1", "config_version": 3, "config_version_ack": 0, "metadata_json": "{}", "tls_client_cn": "tester", "created_at": "2026-10-12T10:52:42Z", "updated_at": "2026-10-12T10:52:42Z"}, "managed_databases": 1, "tde_enabled_databases": 0, "last_heartbeat_age_sec": 0}},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Agent not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "ekm-agent-health",
@@ -2641,11 +2345,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns real-time agent health: connectivity, TDE state, PKCS#11 readiness, OS metrics.",
     requestExample: "GET /svc/ekm/ekm/agents/agent-mssql-01/health",
-    responseExample: { status: "healthy", tde_state: "enabled", pkcs11_ready: true, cpu_pct: 12.5, mem_pct: 45.2 },
+    responseExample: {"health": {"agent": {"id": "agent_ae2691882c162b91", "tenant_id": "t1", "name": "mssql-prod-03", "role": "ekm-agent", "db_engine": "mssql", "host": "10.0.0.15", "version": "SQL Server 2022", "status": "connected", "tde_state": "enabled", "heartbeat_interval_sec": 30, "last_heartbeat_at": "2026-10-12T10:52:42.154775Z", "assigned_key_id": "tde-key-001", "assigned_key_version": "v1", "config_version": 3, "config_version_ack": 0, "metadata_json": "{}", "tls_client_cn": "tester", "created_at": "2026-10-12T10:52:42Z", "updated_at": "2026-10-12T10:52:42Z"}, "health": "unknown", "last_heartbeat_age_sec": 0, "metrics": {"hostname": "10.0.0.15", "os_name": "", "os_version": "", "kernel": "", "arch": "", "cpu_usage_pct": 0, "memory_usage_pct": 0, "disk_usage_pct": 0, "load_1": 0, "uptime_sec": 0, "agent_runtime_sec": 0}, "warnings": ["agent has not reported OS metrics"]}, "request_id": "req_e2e3133fb5695326"},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Agent not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "ekm-agent-logs",
@@ -2657,11 +2363,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns recent operation logs for an EKM agent, including heartbeats, rotations, and errors.",
     requestExample: "GET /svc/ekm/ekm/agents/agent-mssql-01/logs?limit=50",
-    responseExample: { logs: [{ timestamp: "2026-03-05T12:00:00Z", level: "info", message: "heartbeat sent" }] },
+    responseExample: {"items": [], "request_id": "req_2c7ea6888e11d098"},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Agent not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "ekm-agent-deploy",
@@ -2669,15 +2377,17 @@ export const REST_API_CATALOG = [
     title: "Download Agent Package",
     service: "ekm",
     method: "GET",
-    pathTemplate: "/ekm/agents/{{agent_id}}/deploy",
+    pathTemplate: "/ekm/agents/{{agent_id}}/deploy?tenant_id={{tenant_id}}&os=linux",
     bodyTemplate: "",
     description: "Downloads the agent deployment package (ZIP) pre-configured for this agent's settings.",
-    requestExample: "GET /svc/ekm/ekm/agents/agent-mssql-01/deploy",
-    responseExample: { content_type: "application/zip", filename: "vecta-ekm-agent-mssql-01.zip" },
+    requestExample: "GET /svc/ekm/ekm/agents/{{agent_id}}/deploy?tenant_id={{tenant_id}}&os=linux",
+    responseExample: {"package": {"agent_id": "agent_ae2691882c162b91", "name": "mssql-prod-03", "db_engine": "mssql", "target_os": "linux", "created_at": "2026-10-12T10:52:42.155832Z", "heartbeat_path": "/ekm/agents/agent_ae2691882c162b91/heartbeat", "register_path": "/ekm/agents/register", "rotate_path": "/ekm/agents/agent_ae2691882c162b91/rotate", "supported_databases": ["mssql"], "recommended_profiles": [], "files": [{"path": "agent.env", "content": "TENANT_ID=t1\nAGENT_ID=agent_ae2691882c162b91\nAGENT_NAME=mssq...", "mode": "0600"}]}, "request_id": "req_42c8b5b2c08dfd4a"},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Agent not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "ekm-agent-rotate",
@@ -2686,15 +2396,17 @@ export const REST_API_CATALOG = [
     service: "ekm",
     method: "POST",
     pathTemplate: "/ekm/agents/{{agent_id}}/rotate",
-    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "reason": "scheduled_rotation",\n  "force": false\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"reason\": \"scheduled_rotation\"\n}",
     description: "Triggers TDE key rotation for the agent's database. Creates a new key version and re-wraps the DEK.",
     requestExample: "POST /svc/ekm/ekm/agents/agent-mssql-01/rotate",
-    responseExample: { status: "rotated", new_key_version: "v3", rotated_at: "2026-03-05T12:00:00Z" },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 400, meaning: "Agent not in rotatable state" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Agent not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "ekm-agent-delete",
@@ -2706,12 +2418,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Removes an EKM agent registration. Database must have local key backup before removal.",
     requestExample: "DELETE /svc/ekm/ekm/agents/agent-mssql-01",
-    responseExample: { status: "deleted", agent_id: "agent-mssql-01" },
+    responseExample: {"deleted": {"agent_id": "agent_ae2691882c162b91", "deleted_databases": 1, "deleted_keys": 1, "deleted_logs": 0, "deleted_key_ids": ["tde_key_3"]}, "request_id": "req_eebfa4adec265ac8"},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Agent not found" },
-      { code: 409, meaning: "Agent has active TDE keys without backup" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "ekm-agent-heartbeat",
@@ -2723,12 +2436,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "status": "connected",\n  "tde_state": "enabled",\n  "active_key_id": "tde-key-001",\n  "active_key_version": "v1",\n  "metadata_json": "{}"\n}',
     description: "Sends agent heartbeat with status, TDE state, OS metrics, and PKCS#11 health.",
     requestExample: "POST /svc/ekm/ekm/agents/agent-mssql-01/heartbeat",
-    responseExample: { status: "ack", server_time: "2026-03-05T12:00:00Z" },
+    responseExample: {"agent": {"id": "agent_ae2691882c162b91", "tenant_id": "t1", "name": "mssql-prod-03", "role": "ekm-agent", "db_engine": "mssql", "host": "10.0.0.15", "version": "SQL Server 2022", "status": "connected", "tde_state": "enabled", "heartbeat_interval_sec": 30, "last_heartbeat_at": "2026-10-12T10:52:42.154775Z", "assigned_key_id": "tde-key-001", "assigned_key_version": "v1", "config_version": 3, "config_version_ack": 0, "metadata_json": "{}", "tls_client_cn": "tester", "created_at": "2026-10-12T10:52:42Z", "updated_at": "2026-10-12T10:52:42Z"}, "request_id": "req_4ca61bbcb5426d98"},
     errorCodes: [
-      { code: 400, meaning: "Invalid heartbeat payload" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Agent not registered" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
 
   // ── BitLocker ──
@@ -2739,15 +2453,16 @@ export const REST_API_CATALOG = [
     service: "ekm",
     method: "POST",
     pathTemplate: "/ekm/bitlocker/clients/register",
-    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "agent_id": "bl-win-01",\n  "name": "Desktop-Finance-01",\n  "host": "10.0.1.50",\n  "bitlocker_mount_point": "C:",\n  "bitlocker_protector_type": "recovery_password"\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"Desktop-Finance-01\",\n  \"host\": \"10.0.1.50\"\n}",
     description: "Registers a Windows machine for centralized BitLocker management.",
     requestExample: "POST /svc/ekm/ekm/bitlocker/clients/register",
-    responseExample: { client: { id: "bl-win-01", status: "registered", assigned_protector: "recovery_password" } },
+    responseExample: {"client": {"id": "blc_6b6283d344090663", "tenant_id": "t1", "name": "Desktop-Finance-01", "host": "10.0.1.50", "os_version": "windows", "status": "connected", "health": "unknown", "protection_status": "unknown", "encryption_percentage": 0, "mount_point": "C:", "heartbeat_interval_sec": 30, "last_heartbeat_at": "2026-10-12T10:52:42.153512Z", "tpm_present": false, "tpm_ready": false, "jwt_subject": "tester", "tls_client_cn": "", "metadata_json": "{}", "created_at": "2026-10-12T10:52:42Z", "updated_at": "2026-10-12T10:52:42Z"}, "request_id": "req_60db85a8329abddc"},
     errorCodes: [
-      { code: 400, meaning: "Invalid client registration payload" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 409, meaning: "Client already registered" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "ekm-bitlocker-list",
@@ -2759,10 +2474,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists all registered BitLocker clients with encryption status and last heartbeat.",
     requestExample: "GET /svc/ekm/ekm/bitlocker/clients?tenant_id=root",
-    responseExample: { items: [{ id: "bl-win-01", name: "Desktop-Finance-01", protection_status: "On", last_heartbeat: "2026-03-05T12:00:00Z" }] },
+    responseExample: {"items": [{"id": "blc_6b6283d344090663", "tenant_id": "t1", "name": "Desktop-Finance-01", "host": "10.0.1.50", "os_version": "windows", "status": "connected", "health": "unknown", "protection_status": "unknown", "encryption_percentage": 0, "mount_point": "C:", "heartbeat_interval_sec": 30, "last_heartbeat_at": "2026-10-12T10:52:42.153512Z", "tpm_present": false, "tpm_ready": false, "jwt_subject": "tester", "tls_client_cn": "", "metadata_json": "{}", "created_at": "2026-10-12T10:52:42Z", "updated_at": "2026-10-12T10:52:42Z"}], "request_id": "req_f4388edb71c8631c"},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "ekm-bitlocker-get",
@@ -2774,11 +2491,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns detailed BitLocker client info: encryption status, protector, mount point, TPM state.",
     requestExample: "GET /svc/ekm/ekm/bitlocker/clients/bl-win-01",
-    responseExample: { client: { id: "bl-win-01", protection_status: "On", encryption_method: "XtsAes256", tpm_present: true, tpm_ready: true } },
+    responseExample: {"client": {"id": "blc_6b6283d344090663", "tenant_id": "t1", "name": "Desktop-Finance-01", "host": "10.0.1.50", "os_version": "windows", "status": "connected", "health": "unknown", "protection_status": "unknown", "encryption_percentage": 0, "mount_point": "C:", "heartbeat_interval_sec": 30, "last_heartbeat_at": "2026-10-12T10:52:42.153512Z", "tpm_present": false, "tpm_ready": false, "jwt_subject": "tester", "tls_client_cn": "", "metadata_json": "{}", "created_at": "2026-10-12T10:52:42Z", "updated_at": "2026-10-12T10:52:42Z"}, "request_id": "req_8f833ea813c9fb95"},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Client not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "ekm-bitlocker-delete-preview",
@@ -2790,11 +2509,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Shows impact of deleting a BitLocker client, including escrowed recovery keys that will be orphaned.",
     requestExample: "GET /svc/ekm/ekm/bitlocker/clients/bl-win-01/delete-preview",
-    responseExample: { client_id: "bl-win-01", recovery_keys_count: 2, warning: "Recovery keys will be orphaned" },
+    responseExample: {"preview": {"client_id": "blc_6b6283d344090663", "client_name": "Desktop-Finance-01", "host": "10.0.1.50", "latest_recovery_key": "", "latest_recovery_key_masked": "", "latest_recovery_at": "0001-01-01T00:00:00Z", "recovery_keys_available": 0}, "request_id": "req_6e1dec10eda80e89"},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Client not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "ekm-bitlocker-delete",
@@ -2803,14 +2524,17 @@ export const REST_API_CATALOG = [
     service: "ekm",
     method: "DELETE",
     pathTemplate: "/ekm/bitlocker/clients/{{client_id}}",
-    bodyTemplate: "",
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"reason\": \"decommissioned\",\n  \"confirm_backup\": true\n}",
     description: "Removes a BitLocker client registration and optionally purges escrowed recovery keys.",
     requestExample: "DELETE /svc/ekm/ekm/bitlocker/clients/bl-win-01",
-    responseExample: { status: "deleted", client_id: "bl-win-01" },
+    responseExample: {"deleted": {"client_id": "blc_6b6283d344090663", "deleted_clients": 1, "deleted_jobs": 1, "deleted_recovery_keys": 0}, "request_id": "req_dca208e04dfcdc26"},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Client not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "ekm-bitlocker-heartbeat",
@@ -2822,11 +2546,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "status": "connected",\n  "protection_status": "On",\n  "encryption_percentage": 100\n}',
     description: "Sends heartbeat from BitLocker agent with current encryption status and OS metrics.",
     requestExample: "POST /svc/ekm/ekm/bitlocker/clients/bl-win-01/heartbeat",
-    responseExample: { status: "ack" },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Client not registered" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "ekm-bitlocker-operations",
@@ -2835,15 +2561,17 @@ export const REST_API_CATALOG = [
     service: "ekm",
     method: "POST",
     pathTemplate: "/ekm/bitlocker/clients/{{client_id}}/operations",
-    bodyTemplate: '{\n  "operation": "enable",\n  "mount_point": "C:",\n  "protector_type": "recovery_password"\n}',
+    bodyTemplate: 
+      "{\n  \"operation\": \"enable\"\n}",
     description: "Queues a BitLocker operation (enable, disable, suspend, resume, rotate_recovery, status, tpm_status).",
     requestExample: "POST /svc/ekm/ekm/bitlocker/clients/bl-win-01/operations",
-    responseExample: { job_id: "job-abc123", status: "queued", operation: "enable" },
+    responseExample: {"job": {"id": "bljob_806fb88aeb05dacc", "tenant_id": "t1", "client_id": "blc_6b6283d344090663", "operation": "enable", "params_json": "{}", "status": "pending", "requested_by": "dashboard", "request_id": "blop_51982c9a6a72e28d", "requested_at": "2026-10-12T10:52:42.155374Z", "dispatched_at": "0001-01-01T00:00:00Z", "completed_at": "0001-01-01T00:00:00Z", "result_json": "{}", "error_message": "", "recovery_key_ref": ""}, "request_id": "req_a3c0ef96393818ca"},
     errorCodes: [
-      { code: 400, meaning: "Invalid operation" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Client not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "ekm-bitlocker-jobs-next",
@@ -2855,11 +2583,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Agent polls for the next pending job. Returns empty if no jobs are queued.",
     requestExample: "POST /svc/ekm/ekm/bitlocker/clients/bl-win-01/jobs/next",
-    responseExample: { job_id: "job-abc123", operation: "enable", params: { mount_point: "C:", protector_type: "recovery_password" } },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Client not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "ekm-bitlocker-job-result",
@@ -2868,15 +2598,17 @@ export const REST_API_CATALOG = [
     service: "ekm",
     method: "POST",
     pathTemplate: "/ekm/bitlocker/clients/{{client_id}}/jobs/{{job_id}}/result",
-    bodyTemplate: '{\n  "job_id": "job-abc123",\n  "status": "completed",\n  "result": "BitLocker enabled successfully",\n  "error": ""\n}',
+    bodyTemplate: 
+      "{\n  \"status\": \"completed\",\n  \"result\": {\n    \"message\": \"BitLocker enabled\"\n  }\n}",
     description: "Agent submits the result of a completed BitLocker job.",
     requestExample: "POST /svc/ekm/ekm/bitlocker/clients/bl-win-01/jobs/job-abc123/result",
-    responseExample: { status: "recorded" },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 400, meaning: "Invalid result payload" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Job not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "ekm-bitlocker-recovery",
@@ -2888,11 +2620,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists escrowed BitLocker recovery keys. Supports filtering by client ID.",
     requestExample: "GET /svc/ekm/ekm/bitlocker/recovery?tenant_id=root",
-    responseExample: { keys: [{ client_id: "bl-win-01", recovery_password: "123456-...", created_at: "2026-03-01T10:00:00Z" }] },
+    responseExample: {"items": [], "request_id": "req_1167f642c375e598"},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Requires admin role" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "ekm-bitlocker-network-scan",
@@ -2901,14 +2634,16 @@ export const REST_API_CATALOG = [
     service: "ekm",
     method: "POST",
     pathTemplate: "/ekm/bitlocker/network/scan",
-    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "subnet": "10.0.1.0/24",\n  "timeout_sec": 30\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"ip_range\": \"10.0.1.0/28\"\n}",
     description: "Scans a subnet for Windows endpoints that support BitLocker, returning discovered devices.",
     requestExample: "POST /svc/ekm/ekm/bitlocker/network/scan",
-    responseExample: { discovered: [{ ip: "10.0.1.50", hostname: "DESKTOP-FIN01", os: "Windows 11 Pro", tpm_present: true }] },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 400, meaning: "Invalid subnet" },
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "ekm-bitlocker-deploy",
@@ -2916,15 +2651,17 @@ export const REST_API_CATALOG = [
     title: "Download BitLocker Agent",
     service: "ekm",
     method: "GET",
-    pathTemplate: "/ekm/bitlocker/clients/{{client_id}}/deploy",
+    pathTemplate: "/ekm/bitlocker/clients/{{client_id}}/deploy?tenant_id={{tenant_id}}&os=windows",
     bodyTemplate: "",
     description: "Downloads the BitLocker agent installer package pre-configured for this client.",
-    requestExample: "GET /svc/ekm/ekm/bitlocker/clients/bl-win-01/deploy",
-    responseExample: { content_type: "application/zip", filename: "vecta-bitlocker-agent-bl-win-01.zip" },
+    requestExample: "GET /svc/ekm/ekm/bitlocker/clients/{{client_id}}/deploy?tenant_id={{tenant_id}}&os=windows",
+    responseExample: {"package": {"agent_id": "blc_6b6283d344090663", "name": "Desktop-Finance-01", "db_engine": "bitlocker", "target_os": "windows", "created_at": "2026-10-12T10:52:42.15659Z", "heartbeat_path": "/ekm/bitlocker/clients/blc_6b6283d344090663/heartbeat", "register_path": "/ekm/bitlocker/clients/register", "rotate_path": "/ekm/bitlocker/clients/blc_6b6283d344090663/operations", "supported_databases": ["bitlocker"], "recommended_profiles": ["windows-bitlocker-agent"], "files": [{"path": "agent-config.json", "content": "{\n  \"agent_id\": \"blc_6b6283d344090663\",\n  \"agent_mode\": \"bit...", "mode": "0600"}]}, "request_id": "req_532ee2da4168ad75"},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Client not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
 
   // ── TDE Keys ──
@@ -2938,11 +2675,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "mssql-prod-tde",\n  "algorithm": "RSA-3072"\n}',
     description: "Creates a new TDE encryption key for database transparent data encryption.",
     requestExample: "POST /svc/ekm/ekm/tde/keys",
-    responseExample: { key: { id: "tde-key-001", keycore_key_id: "key_...", name: "mssql-prod-tde", algorithm: "RSA-3072", status: "active", current_version: "1", created_at: "2026-03-05T12:00:00Z" } },
+    responseExample: {"key": {"id": "tde_key_2", "tenant_id": "t1", "keycore_key_id": "tde_key_2", "name": "mssql-prod-tde", "algorithm": "RSA-3072", "status": "active", "current_version": "v1", "public_key": "<public key>", "public_key_format": "pem", "created_by": "ekm", "auto_provisioned": false, "metadata_json": "{}", "created_at": "2026-10-12T10:52:42Z", "updated_at": "2026-10-12T10:52:42Z", "rotated_at": "0001-01-01T00:00:00Z", "last_accessed_at": "0001-01-01T00:00:00Z"}, "request_id": "req_e6ac1e8be8a4939a"},
     errorCodes: [
-      { code: 400, meaning: "Invalid key parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "ekm-tde-wrap",
@@ -2951,15 +2689,17 @@ export const REST_API_CATALOG = [
     service: "ekm",
     method: "POST",
     pathTemplate: "/ekm/tde/keys/{{key_id}}/wrap",
-    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "plaintext": "{{base64_plaintext}}"\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"plaintext\": \"aGVsbG8tdmVjdGE=\"\n}",
     description: "Wraps (encrypts) data using a TDE key. Used by agents to encrypt DEKs.",
     requestExample: "POST /svc/ekm/ekm/tde/keys/tde-key-001/wrap",
-    responseExample: { ciphertext: "base64...", iv: "base64..." },
+    responseExample: {"request_id": "req_6372b7a1fe1b3d74", "result": {"key_id": "tde_key_2", "version": 1, "ciphertext": "d3JhcDphR1ZzYkc4dGRtVmpkR0U9", "iv": "ZmFrZS1la20taXYtMDE="}},
     errorCodes: [
-      { code: 400, meaning: "Invalid plaintext" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Key not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "ekm-tde-unwrap",
@@ -2968,15 +2708,17 @@ export const REST_API_CATALOG = [
     service: "ekm",
     method: "POST",
     pathTemplate: "/ekm/tde/keys/{{key_id}}/unwrap",
-    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "ciphertext": "{{base64_ciphertext}}",\n  "iv": "{{base64_iv}}"\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"ciphertext\": \"<ciphertext from wrap>\",\n  \"iv\": \"<iv from wrap>\"\n}",
     description: "Unwraps (decrypts) data using a TDE key. Used by agents to decrypt DEKs.",
     requestExample: "POST /svc/ekm/ekm/tde/keys/tde-key-001/unwrap",
-    responseExample: { plaintext: "base64..." },
+    responseExample: {"request_id": "req_f1614f9a40053510", "result": {"key_id": "tde_key_2", "version": 2, "plaintext": "aGVsbG8tdmVjdGE="}},
     errorCodes: [
-      { code: 400, meaning: "Invalid ciphertext" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Key not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "ekm-tde-rotate",
@@ -2988,11 +2730,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "reason": "compliance_rotation"\n}',
     description: "Rotates a TDE key to a new version. Old versions remain available for unwrap/decrypt.",
     requestExample: "POST /svc/ekm/ekm/tde/keys/tde-key-001/rotate",
-    responseExample: { key: { key_id: "tde-key-001", version: 3, rotated_at: "2026-03-05T12:00:00Z" } },
+    responseExample: {"request_id": "req_7b541ac956b384d7", "rotation": {"key_id": "tde_key_2", "version_id": "v2", "affected_agent_ids": []}},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Key not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
   {
     id: "ekm-tde-public",
@@ -3004,12 +2748,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns the public key keycore holds for a TDE key (pem or opaque). TDE key material never leaves the KMS; 424 public_key_unavailable when keycore holds none.",
     requestExample: "GET /svc/ekm/ekm/tde/keys/tde-key-001/public",
-    responseExample: { public_key: { key_id: "tde-key-001", algorithm: "RSA-3072", public_key: "-----BEGIN PUBLIC KEY-----...", format: "pem", key_version: "3" } },
+    responseExample: {"public_key": {"key_id": "tde_key_2", "algorithm": "RSA-3072", "public_key": "<public key>", "format": "pem", "key_version": "v2"}, "request_id": "req_1e604b816c990c60"},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Key not found" },
-      { code: 424, meaning: "public_key_unavailable: keycore holds no public key for it" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
 
   // ── EKM Database ──
@@ -3020,14 +2765,16 @@ export const REST_API_CATALOG = [
     service: "ekm",
     method: "POST",
     pathTemplate: "/ekm/databases",
-    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "MSSQL-Prod",\n  "engine": "mssql",\n  "host": "10.0.0.15",\n  "port": 1433\n}',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"agent_id\": \"{{agent_id}}\",\n  \"name\": \"MSSQL-Prod\",\n  \"engine\": \"mssql\",\n  \"host\": \"10.0.0.15\",\n  \"port\": 1433,\n  \"database_name\": \"orders\"\n}",
     description: "Registers a database instance for EKM key management and TDE monitoring.",
     requestExample: "POST /svc/ekm/ekm/databases",
-    responseExample: { database: { id: "db-001", name: "MSSQL-Prod", engine: "mssql", status: "registered" } },
+    responseExample: {"auto_provisioned_key": {"id": "tde_key_3", "tenant_id": "t1", "keycore_key_id": "tde_key_3", "name": "tde-db-db_396b95fa1bf44d10", "algorithm": "RSA-3072", "status": "active", "current_version": "v1", "public_key": "<public key>", "public_key_format": "pem", "created_by": "ekm-auto-database", "auto_provisioned": true, "metadata_json": "{}", "created_at": "2026-10-12T10:52:42Z", "updated_at": "2026-10-12T10:52:42Z", "rotated_at": "0001-01-01T00:00:00Z", "last_accessed_at": "0001-01-01T00:00:00Z"}, "database": {"id": "db_396b95fa1bf44d10", "tenant_id": "t1", "agent_id": "agent_ae2691882c162b91", "name": "MSSQL-Prod", "engine": "mssql", "host": "10.0.0.15", "port": 1433, "database_name": "orders", "status": "", "tde_enabled": false, "tde_state": "disabled", "key_id": "tde_key_3", "auto_provisioned": true, "metadata_json": "{}", "last_seen_at": "2026-10-12T10:52:42.15436Z", "created_at": "2026-10-12T10:52:42Z", "updated_at": "2026-10-12T10:52:42Z"}, "request_id": "req_0282a2032da8805a"},
     errorCodes: [
-      { code: 400, meaning: "Invalid database parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "ekm-db-list",
@@ -3039,10 +2786,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists all registered databases with their TDE encryption status.",
     requestExample: "GET /svc/ekm/ekm/databases?tenant_id=root",
-    responseExample: { items: [{ id: "db-001", name: "MSSQL-Prod", engine: "mssql", tde_state: "enabled" }] },
+    responseExample: {"items": [{"id": "db_396b95fa1bf44d10", "tenant_id": "t1", "agent_id": "agent_ae2691882c162b91", "name": "MSSQL-Prod", "engine": "mssql", "host": "10.0.0.15", "port": 1433, "database_name": "orders", "status": "", "tde_enabled": false, "tde_state": "disabled", "key_id": "tde_key_3", "auto_provisioned": true, "metadata_json": "{}", "last_seen_at": "2026-10-12T10:52:42.15436Z", "created_at": "2026-10-12T10:52:42Z", "updated_at": "2026-10-12T10:52:42Z"}], "request_id": "req_e834f2aae8fe9b8e"},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "ekm-db-get",
@@ -3054,11 +2803,13 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Returns detailed info for a registered database: TDE state, assigned agent, key mapping.",
     requestExample: "GET /svc/ekm/ekm/databases/db-001",
-    responseExample: { database: { id: "db-001", name: "MSSQL-Prod", tde_state: "enabled", agent_id: "agent-mssql-01", key_id: "tde-key-001" } },
+    responseExample: {"database": {"id": "db_396b95fa1bf44d10", "tenant_id": "t1", "agent_id": "agent_ae2691882c162b91", "name": "MSSQL-Prod", "engine": "mssql", "host": "10.0.0.15", "port": 1433, "database_name": "orders", "status": "", "tde_enabled": false, "tde_state": "disabled", "key_id": "tde_key_3", "auto_provisioned": true, "metadata_json": "{}", "last_seen_at": "2026-10-12T10:52:42.15436Z", "created_at": "2026-10-12T10:52:42Z", "updated_at": "2026-10-12T10:52:42Z"}, "request_id": "req_1180e89658f3e773"},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Database not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
   },
 
   // ── EKM SDK ──
@@ -3072,10 +2823,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists the client SDK Vecta ships: the Java JCA provider (source), with the services it registers. No PKCS#11 module is shipped and no usage telemetry is reported.",
     requestExample: "GET /svc/ekm/ekm/sdk/overview?tenant_id={{tenant_id}}",
-    responseExample: { providers: [{ id: "jca", name: "Java JCA/JCE Provider", status: "available", capabilities: ["Cipher AES/GCM/NoPadding", "Signature SHA256withRSA", "Signature SHA256withECDSA", "KeyStore VectaKMS"] }], mechanisms: [], clients: [] },
+    responseExample: {"overview": {"refreshed_at": "2026-10-12T10:52:42.157955Z", "providers": [{"id": "jca", "name": "Java JCA/JCE Provider", "artifact_name": "vecta-jca-sdk-all.zip", "version": "source", "status": "available", "size_label": "13 KB", "transport": "HTTPS (TLS 1.3), bearer token", "sessions_active": 0, "ops_24h": 0, "clients_connected": 0, "top_mechanism": "", "platforms": [], "capabilities": []}], "mechanisms": [], "clients": []}, "request_id": "req_c298e83258ee56d6"},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
   {
     id: "ekm-sdk-download",
@@ -3087,11 +2840,12 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Downloads the Java JCA provider source as a zip (base64 in the JSON response). provider=pkcs11 is refused: no PKCS#11 module exists.",
     requestExample: "GET /svc/ekm/ekm/sdk/download?tenant_id={{tenant_id}}&provider=jca&os=all",
-    responseExample: { artifact: { provider: "jca", filename: "vecta-jca-sdk-all.zip", content_type: "application/zip", encoding: "base64" } },
+    responseExample: {"artifact": {"provider": "jca", "target_os": "all", "filename": "vecta-jca-sdk-all.zip", "content_type": "application/zip", "encoding": "base64", "content": "UEsDBBQACAAIAAAAAAAAAAAAAAAAAAAAAAAuAAAAdmVjdGEtamNhLXByb3Zp...", "size_bytes": 13116, "sha256": "981b7653467fd4707d0984b97c6675376bdb2695334273f1d46a3086cb931c3d"}, "request_id": "req_01e4d7476654d146"},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Package or platform not found" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
 
   /* ── Vault Hierarchy (OpenBao-compatible) ── */
@@ -3104,17 +2858,397 @@ export const REST_API_CATALOG = [
     service: "certs",
     method: "POST",
     pathTemplate: "/certs/ca",
-    bodyTemplate: '{ "name": "{{ca_name}}", "algorithm": "ECDSA-P384", "key_backend": "hsm", "key_ref": "{{hsm_key_id}}", "subject": "CN={{subject}}", "ca_level": "root" }',
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"hsm-root-ca\",\n  \"ca_level\": \"root\",\n  \"algorithm\": \"ECDSA-P384\",\n  \"key_backend\": \"hsm\",\n  \"subject\": \"CN=Example HSM Root CA\"\n}",
     description: "Creates a certificate authority with its signing key stored in the HSM. All signing operations are delegated to the HSM via PKCS#11.",
     requestExample: 'POST /svc/certs/ca\n{"name":"Prod Root CA","algorithm":"ECDSA-P384","key_backend":"hsm","key_ref":"hsm-key-001","subject":"CN=Prod Root CA,O=Acme"}',
-    responseExample: { id: "ca-001", name: "Prod Root CA", key_backend: "hsm", key_ref: "hsm-key-001", status: "active" },
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
     errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 400, meaning: "Invalid CA configuration" },
-      { code: 404, meaning: "HSM key_ref not found" },
-      { code: 502, meaning: "HSM communication failure" }
-    ]
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
   },
 
-  /* ── Crypto Inventory ── */
+  /* ── Examples that were kept in the catalogue generator until 13.1.0-beta ── */
+  {
+    id: "auth-post-auth-client-token",
+    group: "Identity & Access (auth)",
+    title: "Issue REST Client Token",
+    service: "auth",
+    method: "POST",
+    pathTemplate: "/auth/client-token?tenant_id={{tenant_id}}",
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"client_id\": \"reg_123\"\n}",
+    description: "Issues a tenant-scoped client access token. Depending on the registered client auth mode, the request must also carry a validated mTLS binding, DPoP proof, or HTTP Message Signature.",
+    requestExample: "POST /svc/auth/auth/client-token?tenant_id={{tenant_id}}",
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "auth-get-auth-clients",
+    group: "Identity & Access (auth)",
+    title: "List Client Registrations",
+    service: "auth",
+    method: "GET",
+    pathTemplate: "/auth/clients?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "",
+    description: "Lists registered clients with sender-constrained auth mode, replay protection state, and verification counters.",
+    requestExample: "GET /svc/auth/auth/clients?tenant_id={{tenant_id}}",
+    responseExample: {"items": null, "request_id": "req_f9757a8af9565986"},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "auth-put-auth-clients-id",
+    group: "Identity & Access (auth)",
+    title: "Update Client Registration Security",
+    service: "auth",
+    method: "PUT",
+    pathTemplate: "/auth/clients/{{id}}?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "{\n  \"ip_whitelist\": [\"10.10.10.0/24\"],\n  \"rate_limit\": 1500,\n  \"auth_mode\": \"http_message_signature\",\n  \"replay_protection_enabled\": true,\n  \"http_signature_key_id\": \"sdk-signing-key-01\",\n  \"http_signature_public_key_pem\": \"-----BEGIN PUBLIC KEY-----\\n...\\n-----END PUBLIC KEY-----\",\n  \"http_signature_algorithm\": \"ed25519\"\n}",
+    description: "Updates the client allowlist, rate limit, auth mode, and sender-constrained request binding. This is where operators move REST clients from legacy bearer mode to OAuth mTLS, DPoP, or HTTP Message Signatures.",
+    requestExample: "PUT /svc/auth/auth/clients/{{id}}?tenant_id={{tenant_id}}",
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
+  },
+  {
+    id: "auth-get-auth-rest-client-security-summary",
+    group: "Identity & Access (auth)",
+    title: "Get REST Client Security Summary",
+    service: "auth",
+    method: "GET",
+    pathTemplate: "/auth/rest-client-security/summary?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "",
+    description: "Returns sender-constrained auth posture for tenant REST clients, including replay protection coverage, signature failures, unsigned request blocks, and non-compliant legacy clients.",
+    requestExample: "GET /svc/auth/auth/rest-client-security/summary?tenant_id={{tenant_id}}",
+    responseExample: {"request_id": "req_f84752c4fbf77370", "summary": {"tenant_id": "t1", "total_clients": 0, "sender_constrained_clients": 0, "oauth_mtls_clients": 0, "dpop_clients": 0, "http_message_signature_clients": 0, "replay_protected_clients": 0, "verified_requests": 0, "replay_violations": 0, "signature_failures": 0, "unsigned_rejects": 0, "non_compliant_clients": 0, "last_violation_at": "0001-01-01T00:00:00Z"}},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "sbom-post-sbom-generate",
+    group: "SBOM / CBOM (sbom)",
+    title: "Generate SBOM Snapshot",
+    service: "sbom",
+    method: "POST",
+    pathTemplate: "/sbom/generate?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "{\n  \"trigger\": \"manual\"\n}",
+    description: "Builds a fresh software BOM snapshot from the local workspace. The snapshot is used by the history, diff and export endpoints.",
+    requestExample: "POST /svc/sbom/sbom/generate?tenant_id={{tenant_id}}",
+    responseExample: {"request_id": "req_c728d40c38a76fcd", "snapshot": {"id": "sbom_608d8c409c528649", "source_hash": "928da6df71c794dcfbda176c2ebee103beee9db17471eb95c72491cde286f291", "created_at": "2026-10-12T10:49:32Z", "document": {"format": "cyclonedx", "spec_version": "1.6", "generated_at": "2026-10-12T10:49:32.631386Z", "appliance": "vecta-kms", "components": [{}]}, "summary": {"appliance": "vecta-kms", "component_count": 4, "format": "cyclonedx", "generated_at": "2026-10-12T10:49:32.631386Z", "spec_version": "1.6", "type_count": {"infrastructure": 3, "runtime": 1}}}, "status": "accepted"},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "confidential-get-confidential-policy",
+    group: "Confidential Compute (confidential)",
+    title: "Get Attestation Policy",
+    service: "confidential",
+    method: "GET",
+    pathTemplate: "/confidential/policy?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "",
+    description: "Returns the tenant-scoped attested key release policy used by the Confidential Compute service.",
+    requestExample: "GET /svc/confidential/confidential/policy?tenant_id={{tenant_id}}",
+    responseExample: {"policy": {"tenant_id": "t1", "enabled": true, "provider": "aws_nitro_enclaves", "mode": "enforce", "key_scopes": ["payments-prod"], "approved_images": ["123456789012.dkr.ecr.us-east-1.amazonaws.com/payments/authorizer:v1.4.2"], "approved_subjects": ["spiffe://root/workloads/payments-authorizer"], "allowed_attesters": ["aws.nitro-enclaves"], "required_measurements": {"pcr0": "baseline-image-hash", "pcr8": "secure-boot-chain-hash"}, "required_claims": {"environment": "prod", "team": "payments"}, "require_secure_boot": true, "require_debug_disabled": true, "max_evidence_age_sec": 300, "cluster_scope": "node_allowlist", "allowed_cluster_nodes": ["vecta-kms-01"], "fallback_action": "deny", "updated_by": "tester", "updated_at": "0001-01-01T00:00:00Z"}, "request_id": "req_bfbb17966a21f5f7"},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "confidential-put-confidential-policy",
+    group: "Confidential Compute (confidential)",
+    title: "Update Attestation Policy",
+    service: "confidential",
+    method: "PUT",
+    pathTemplate: "/confidential/policy?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"enabled\": true,\n  \"provider\": \"aws_nitro_enclaves\",\n  \"mode\": \"enforce\",\n  \"key_scopes\": [\"payments-prod\"],\n  \"approved_images\": [\"123456789012.dkr.ecr.us-east-1.amazonaws.com/payments/authorizer:v1.4.2\"],\n  \"approved_subjects\": [\"spiffe://root/workloads/payments-authorizer\"],\n  \"allowed_attesters\": [\"aws.nitro-enclaves\"],\n  \"required_measurements\": { \"pcr0\": \"baseline-image-hash\", \"pcr8\": \"secure-boot-chain-hash\" },\n  \"required_claims\": { \"environment\": \"prod\", \"team\": \"payments\" },\n  \"require_secure_boot\": true,\n  \"require_debug_disabled\": true,\n  \"max_evidence_age_sec\": 300,\n  \"cluster_scope\": \"node_allowlist\",\n  \"allowed_cluster_nodes\": [\"vecta-kms-01\"],\n  \"fallback_action\": \"deny\"\n}",
+    description: "Creates or updates the tenant attestation policy for attested key release.",
+    requestExample: "PUT /svc/confidential/confidential/policy?tenant_id={{tenant_id}}",
+    responseExample: {"policy": {"tenant_id": "t1", "enabled": true, "provider": "aws_nitro_enclaves", "mode": "enforce", "key_scopes": ["payments-prod"], "approved_images": ["123456789012.dkr.ecr.us-east-1.amazonaws.com/payments/authorizer:v1.4.2"], "approved_subjects": ["spiffe://root/workloads/payments-authorizer"], "allowed_attesters": ["aws.nitro-enclaves"], "required_measurements": {"pcr0": "baseline-image-hash", "pcr8": "secure-boot-chain-hash"}, "required_claims": {"environment": "prod", "team": "payments"}, "require_secure_boot": true, "require_debug_disabled": true, "max_evidence_age_sec": 300, "cluster_scope": "node_allowlist", "allowed_cluster_nodes": ["vecta-kms-01"], "fallback_action": "deny", "updated_by": "tester", "updated_at": "0001-01-01T00:00:00Z"}, "request_id": "req_7e140e04e1de31ba"},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "confidential-get-confidential-summary",
+    group: "Confidential Compute (confidential)",
+    title: "Get Confidential Compute Summary",
+    service: "confidential",
+    method: "GET",
+    pathTemplate: "/confidential/summary?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "",
+    description: "Returns summary metrics for the tenant attested release program, including recent release decisions and cluster node spread.",
+    requestExample: "GET /svc/confidential/confidential/summary?tenant_id={{tenant_id}}",
+    responseExample: {"request_id": "req_c42d5a1067b40916", "summary": {"tenant_id": "t1", "policy_enabled": true, "provider": "aws_nitro_enclaves", "approved_image_count": 1, "key_scope_count": 1, "release_count_24h": 0, "deny_count_24h": 0, "review_count_24h": 0, "cryptographically_verified_count_24h": 0, "unique_cluster_nodes": 0, "last_decision_at": "0001-01-01T00:00:00Z"}},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "confidential-post-confidential-evaluate",
+    group: "Confidential Compute (confidential)",
+    title: "Evaluate Attested Key Release",
+    service: "confidential",
+    method: "POST",
+    pathTemplate: "/confidential/evaluate?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"key_id\": \"key-prod-root\",\n  \"key_scope\": \"payments-prod\",\n  \"provider\": \"aws_nitro_enclaves\",\n  \"attestation_format\": \"cose_sign1\",\n  \"attestation_document\": \"{{base64_cose_sign1_attestation_document}}\",\n  \"audience\": \"kms-key-release\",\n  \"nonce\": \"nonce-demo-001\",\n  \"cluster_node_id\": \"vecta-kms-01\",\n  \"requester\": \"platform-ops\",\n  \"release_reason\": \"authorize payment enclave\",\n  \"dry_run\": true\n}",
+    description: "Cryptographically verifies an AWS, Azure, or GCP attestation document, derives signed claims and measurements, and then evaluates the result against the tenant attested-release policy.",
+    requestExample: "POST /svc/confidential/confidential/evaluate?tenant_id={{tenant_id}}",
+    responseExample: {"request_id": "req_0604041aace4cc29", "result": {"release_id": "rel_0120b68ef5f3808f", "decision": "deny", "allowed": false, "reasons": ["failed to parse AWS attestation document"], "matched_claims": [], "matched_measurements": [], "missing_claims": [], "missing_measurements": [], "missing_attributes": ["cryptographic_verification"], "measurement_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a", "claims_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a", "policy_version": "63dc51d0a99a9d84e97bad1b80cf6b47c39027a07feb3f2859dca505c73e8791", "provider": "aws_nitro_enclaves", "cluster_node_id": "vecta-kms-01", "cryptographically_verified": false, "verification_mode": "aws_cose_sign1_x509", "verification_issuer": "", "verification_key_id": "", "attestation_document_hash": "724d093b5c0d0793334d76b82ce8d9af6c0dd0f174c7752237b59b88a446eddf", "attestation_document_format": "cose_sign1", "expires_at": "0001-01-01T00:00:00Z", "evaluated_at": "2026-10-12T10:43:40.339103Z", "policy": {"tenant_id": "t1", "enabled": false, "provider": "aws_nitro_enclaves", "mode": "enforce", "key_scopes": [], "approved_images": [], "approved_subjects": [], "allowed_attesters": [], "required_measurements": {}, "required_claims": {}, "require_secure_boot": true, "require_debug_disabled": true, "max_evidence_age_sec": 300, "cluster_scope": "cluster_wide", "allowed_cluster_nodes": [], "fallback_action": "deny", "updated_at": "0001-01-01T00:00:00Z"}, "released": false}},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "confidential-get-confidential-releases",
+    group: "Confidential Compute (confidential)",
+    title: "List Attested Release History",
+    service: "confidential",
+    method: "GET",
+    pathTemplate: "/confidential/releases?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "",
+    description: "Lists stored attested release decisions for the tenant.",
+    requestExample: "GET /svc/confidential/confidential/releases?tenant_id={{tenant_id}}",
+    responseExample: {"items": null, "request_id": "req_bd35b508d8aa6892"},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "confidential-get-confidential-releases-id",
+    group: "Confidential Compute (confidential)",
+    title: "Get Attested Release Record",
+    service: "confidential",
+    method: "GET",
+    pathTemplate: "/confidential/releases/{{id}}?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "",
+    description: "Returns a single stored attested release record for the tenant.",
+    requestExample: "GET /svc/confidential/confidential/releases/{{id}}?tenant_id={{tenant_id}}",
+    responseExample: {"item": {"id": "", "tenant_id": "", "key_id": "", "key_scope": "", "provider": "", "workload_identity": "", "attester": "", "image_ref": "", "image_digest": "", "audience": "", "evidence_issued_at": "0001-01-01T00:00:00Z", "secure_boot": false, "debug_disabled": false, "cluster_node_id": "", "requester": "", "release_reason": "", "decision": "", "allowed": false, "reasons": null, "matched_claims": null, "matched_measurements": null, "missing_claims": null, "missing_measurements": null, "missing_attributes": null}, "request_id": "req_de305c2adc75a800"},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" },
+      { code: 404, meaning: "Not found, or not visible to the caller" }
+    ],
+  },
+  {
+    id: "workload-get-workload-identity-settings",
+    group: "Workload Identity (workload)",
+    title: "Get Workload Identity Settings",
+    service: "workload",
+    method: "GET",
+    pathTemplate: "/workload-identity/settings?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "",
+    description: "Returns the tenant SPIFFE trust-domain settings, issuance defaults, federation mode, and token-exchange controls.",
+    requestExample: "GET /svc/workload/workload-identity/settings?tenant_id={{tenant_id}}",
+    responseExample: {"request_id": "req_8813f421cd5387d4", "settings": {"tenant_id": "root", "enabled": true, "trust_domain": "root", "federation_enabled": true, "token_exchange_enabled": true, "default_x509_ttl_seconds": 43200, "default_jwt_ttl_seconds": 1800, "rotation_window_seconds": 900, "allowed_audiences": ["kms"], "local_bundle_jwks": "{\"keys\":[{\"alg\":\"RS256\",\"e\":\"AQAB\",\"kid\":\"5fa586363e126afc\",...", "local_ca_certificate_pem": "<certificate>", "jwt_signer_key_id": "<jwt signer key id>", "updated_by": "tester", "updated_at": "0001-01-01T00:00:00Z"}},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "workload-put-workload-identity-settings",
+    group: "Workload Identity (workload)",
+    title: "Update Workload Identity Settings",
+    service: "workload",
+    method: "PUT",
+    pathTemplate: "/workload-identity/settings?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"enabled\": true,\n  \"trust_domain\": \"root\",\n  \"federation_enabled\": true,\n  \"token_exchange_enabled\": true,\n  \"default_x509_ttl_seconds\": 43200,\n  \"default_jwt_ttl_seconds\": 1800,\n  \"rotation_window_seconds\": 1800,\n  \"allowed_audiences\": [\"kms\", \"kms-workload\", \"kms-rest\"]\n}",
+    description: "Creates or updates the tenant workload-identity policy: the SPIFFE trust domain, whether federated trust domains and token exchange are accepted, SVID lifetimes and the JWT-SVID audiences accepted for exchange. Needs workload.write.",
+    requestExample: "PUT /svc/workload/workload-identity/settings?tenant_id={{tenant_id}}",
+    responseExample: {"request_id": "req_74c85d06f0423bd8", "settings": {"tenant_id": "root", "enabled": true, "trust_domain": "root", "federation_enabled": true, "token_exchange_enabled": true, "default_x509_ttl_seconds": 43200, "default_jwt_ttl_seconds": 1800, "rotation_window_seconds": 900, "allowed_audiences": ["kms"], "local_bundle_jwks": "{\"keys\":[{\"alg\":\"RS256\",\"e\":\"AQAB\",\"kid\":\"5fa586363e126afc\",...", "local_ca_certificate_pem": "<certificate>", "jwt_signer_key_id": "<jwt signer key id>", "updated_by": "tester", "updated_at": "0001-01-01T00:00:00Z"}},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "workload-get-workload-identity-summary",
+    group: "Workload Identity (workload)",
+    title: "Get Workload Identity Summary",
+    service: "workload",
+    method: "GET",
+    pathTemplate: "/workload-identity/summary?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "",
+    description: "Returns health and drift counters for workload identity, including expiring or expired SVIDs, over-privileged registrations, token exchange activity, and key usage.",
+    requestExample: "GET /svc/workload/workload-identity/summary?tenant_id={{tenant_id}}",
+    responseExample: {"request_id": "req_1208a142baa4a5e6", "summary": {"tenant_id": "root", "enabled": true, "trust_domain": "root", "federation_enabled": true, "token_exchange_enabled": true, "registration_count": 1, "enabled_registration_count": 1, "federated_trust_domain_count": 0, "issuance_count_24h": 3, "token_exchange_count_24h": 0, "key_usage_count_24h": 0, "unique_workloads_using_keys_24h": 0, "unique_keys_used_24h": 0, "expiring_svid_count": 0, "expired_svid_count": 0, "over_privileged_count": 0, "last_exchange_at": "0001-01-01T00:00:00Z", "last_key_use_at": "0001-01-01T00:00:00Z", "rotation_healthy": true, "key_usage_unavailable": "audit log client is not configured"}},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "workload-post-workload-identity-registrations",
+    group: "Workload Identity (workload)",
+    title: "Create Workload Registration",
+    service: "workload",
+    method: "POST",
+    pathTemplate: "/workload-identity/registrations?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"payments-api\",\n  \"spiffe_id\": \"spiffe://root/workloads/payments-api\",\n  \"selectors\": [\"docker:image:payments-api\", \"env:prod\"],\n  \"allowed_interfaces\": [\"rest\", \"payment-tcp\"],\n  \"allowed_key_ids\": [\"key_payments_prod\"],\n  \"permissions\": [\"key.encrypt\", \"key.decrypt\", \"key.sign\"],\n  \"issue_jwt_svid\": true,\n  \"issue_x509_svid\": true,\n  \"enabled\": true\n}",
+    description: "Registers a workload identity and binds it to allowed interfaces, permissions, and keys.",
+    requestExample: "POST /svc/workload/workload-identity/registrations?tenant_id={{tenant_id}}",
+    responseExample: {"registration": {"id": "wid_a2dd16109494795c", "tenant_id": "root", "name": "payments-api", "spiffe_id": "spiffe://root/workloads/payments-api", "selectors": ["docker:image:payments-api"], "allowed_interfaces": ["payment-tcp"], "allowed_key_ids": ["key_payments_prod"], "permissions": ["key.decrypt"], "issue_x509_svid": true, "issue_jwt_svid": true, "default_ttl_seconds": 1800, "enabled": true, "last_issued_at": "0001-01-01T00:00:00Z", "last_used_at": "0001-01-01T00:00:00Z", "created_at": "0001-01-01T00:00:00Z", "updated_at": "0001-01-01T00:00:00Z"}, "request_id": "req_3b770f16aad81bf1"},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "workload-post-workload-identity-issue",
+    group: "Workload Identity (workload)",
+    title: "Issue SVID",
+    service: "workload",
+    method: "POST",
+    pathTemplate: "/workload-identity/issue?tenant_id={{tenant_id}}",
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"registration_id\": \"{{registration_id}}\",\n  \"svid_type\": \"jwt\",\n  \"audiences\": [\n    \"kms\"\n  ],\n  \"ttl_seconds\": 1800\n}",
+    description: "Issues a JWT-SVID or X.509-SVID for a registered workload using the tenant trust domain signer material. Needs workload.issue: an X.509-SVID response carries the workload's private key.",
+    requestExample: "POST /svc/workload/workload-identity/issue?tenant_id={{tenant_id}}",
+    responseExample: {"issued": {"issuance_id": "iss_4ad9d122ad10b8d7", "registration_id": "wid_a2dd16109494795c", "spiffe_id": "spiffe://root/workloads/payments-api", "svid_type": "jwt", "jwt_svid": "<jwt>", "jwks_json": "{\"keys\":[{\"alg\":\"RS256\",\"e\":\"AQAB\",\"kid\":\"5fa586363e126afc\",...", "serial_or_key_id": "5fa586363e126afc", "expires_at": "2026-10-12T11:23:01.645279Z", "rotation_due_at": "2026-10-12T11:08:01.645279Z", "cryptographically_signed": true}, "request_id": "req_6d4d1ba5b83e0617"},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "workload-post-workload-identity-token-exchange",
+    group: "Workload Identity (workload)",
+    title: "Exchange SVID For KMS Token",
+    service: "workload",
+    method: "POST",
+    pathTemplate: "/workload-identity/token/exchange?tenant_id={{tenant_id}}",
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"registration_id\": \"{{registration_id}}\",\n  \"interface_name\": \"rest\",\n  \"audience\": \"kms\",\n  \"requested_permissions\": [\n    \"key.encrypt\",\n    \"key.decrypt\"\n  ],\n  \"requested_key_ids\": [\n    \"key_payments_prod\"\n  ],\n  \"jwt_svid\": \"<jwt_svid from issue>\"\n}",
+    description: "Needs no bearer token: the SVID is the credential. Verifies it against the tenant's trust anchors (federated bundles only when federation is on), requires the audience to be one the tenant allows and the registration to be the SVID's own, applies interface and key scoping, and returns a short-lived KMS bearer token. An X.509-SVID also needs x509_svid_proof: a signature by its private key over the tenant, the leaf certificate's SHA-256 and signed_at, accepted once within two minutes.",
+    requestExample: "POST /svc/workload/workload-identity/token/exchange?tenant_id={{tenant_id}}",
+    responseExample: {"exchange": {"tenant_id": "root", "registration_id": "wid_a2dd16109494795c", "spiffe_id": "spiffe://root/workloads/payments-api", "trust_domain": "root", "svid_type": "jwt", "interface_name": "rest", "allowed_permissions": ["key.decrypt"], "allowed_key_ids": ["key_payments_prod"], "kms_access_token": "<kms access token>", "kms_access_token_expiry": "<kms access token expiry>", "svid_expires_at": "<svid expires at>", "rotation_due_at": "2026-10-12T11:08:01Z"}, "request_id": "req_bc1ad1d705528442"},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "workload-get-workload-identity-graph",
+    group: "Workload Identity (workload)",
+    title: "Get Workload Authorization Graph",
+    service: "workload",
+    method: "GET",
+    pathTemplate: "/workload-identity/graph?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "",
+    description: "Returns the workload-to-key authorization graph built from registrations plus observed workload-backed key usage in audit events.",
+    requestExample: "GET /svc/workload/workload-identity/graph?tenant_id={{tenant_id}}",
+    responseExample: {"graph": {"tenant_id": "root", "generated_at": "2026-10-12T10:53:01.646415Z", "nodes": [{"id": "key:key_payments_prod", "label": "key_payments_prod", "kind": "key", "status": "bound"}], "edges": [{"source": "workload:spiffe://root/workloads/payments-api", "target": "key:key_payments_prod", "label": "authorized", "kind": "policy"}], "key_usage_unavailable": "audit log client is not configured"}, "request_id": "req_2cb2e9518a9ae003"},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "workload-get-workload-identity-usage",
+    group: "Workload Identity (workload)",
+    title: "List Workload Key Usage",
+    service: "workload",
+    method: "GET",
+    pathTemplate: "/workload-identity/usage?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "",
+    description: "Returns recent audit-backed key operations that were authenticated through workload identity instead of a static API credential.",
+    requestExample: "GET /svc/workload/workload-identity/usage?tenant_id={{tenant_id}}",
+    responseExample: {"note": "Execute endpoint to inspect the live response payload."},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "sbom-post-cbom-generate",
+    group: "SBOM / CBOM (sbom)",
+    title: "Generate CBOM Snapshot",
+    service: "sbom",
+    method: "POST",
+    pathTemplate: "/cbom/generate?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"trigger\": \"manual\"\n}",
+    description: "Builds a fresh cryptographic BOM snapshot for the tenant, including algorithm distribution, PQC readiness, deprecated assets, and source inventory.",
+    requestExample: "POST /svc/sbom/cbom/generate?tenant_id={{tenant_id}}",
+    responseExample: {"request_id": "req_514f4a69f50c83cd", "snapshot": {"id": "cbom_187031851b8a55c1", "tenant_id": "root", "source_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "created_at": "2026-10-12T10:49:32Z", "document": {"format": "cyclonedx-crypto", "spec_version": "1.6", "tenant_id": "root", "generated_at": "2026-10-12T10:49:32.628182Z", "assets": [], "algorithm_distribution": {}, "strength_histogram": {"128-255": 0, "256-3071": 0, "<128": 0, ">=3072": 0}, "deprecated_count": 0, "pqc_ready_count": 0, "total_asset_count": 0, "pqc_readiness_percent": 0, "source_count": {"certs": 0, "discovery": 0, "keycore": 0}, "metadata": {}}, "summary": {"algorithm_distribution": {}, "deprecated_count": 0, "pqc_readiness_percent": 0, "pqc_ready_count": 0, "source_count": {"certs": 0, "discovery": 0, "keycore": 0}, "strength_histogram": {"128-255": 0, "256-3071": 0, "<128": 0, ">=3072": 0}, "tenant_id": "root", "total_assets": 0}}, "status": "accepted"},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  },
+  {
+    id: "sbom-get-cbom-pqc-readiness",
+    group: "SBOM / CBOM (sbom)",
+    title: "Get CBOM PQC Readiness",
+    service: "sbom",
+    method: "GET",
+    pathTemplate: "/cbom/pqc-readiness?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      "",
+    description: "Returns post-quantum readiness metrics derived from the latest tenant CBOM, including total assets, PQC-ready counts, deprecated counts, algorithm distribution, and strength histogram.",
+    requestExample: "GET /svc/sbom/cbom/pqc-readiness?tenant_id={{tenant_id}}",
+    responseExample: {"pqc_readiness": {"pqc_readiness_percent": 0, "pqc_ready_count": 0, "status": "not_ready", "tenant_id": "root", "total_assets": 0}, "request_id": "req_0833bebb6225a254"},
+    errorCodes: [
+      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
+    ],
+  }
 ];

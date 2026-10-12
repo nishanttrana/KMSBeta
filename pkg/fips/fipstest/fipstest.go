@@ -21,6 +21,9 @@ func SkipIfStrict(t testing.TB, feature string) {
 	}
 }
 
+// Strict reports whether the runtime enforces FIPS 140-only mode.
+func Strict() bool { return fips140.Enforced() }
+
 // StrictOnly skips t unless the runtime enforces FIPS 140-only mode.
 func StrictOnly(t testing.TB) {
 	t.Helper()

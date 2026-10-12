@@ -4,6 +4,38 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.1.0-beta] — 2026-10-12
+
+### Fixed
+- **The REST API tab's examples for every service are now checked against
+  the service.** 12.3.0-beta checked the key examples and labelled the
+  other 159 as not checked. Each of those is now sent to its service's
+  real handlers by a test. 51 of them needed correcting before the
+  service would take the request as written: 49 bodies (fields the service
+  does not have, or values it refuses) and the agent and BitLocker deploy
+  paths, which need `os=`. The audit search and token refresh examples
+  showed a body those routes never read.
+- **Every response shown is one the service gave.** All 159 responses were
+  written by hand. 135 are now the service's real answer, with tokens,
+  keys and certificates replaced by a placeholder. For 24 the test could
+  not obtain an answer (the route needs another service, a real network or
+  a second person's approval); those say so instead of showing a guess.
+- The "not checked" note is gone from the REST API tab, since no service is
+  unchecked.
+
+### Changed
+- The catalogue generator no longer keeps 21 examples of its own: they
+  moved into the one hand-written catalogue, where the same test covers
+  them.
+
+### Added
+- `routetest.Examples`: one helper each service's `rest_examples_test.go`
+  calls. An example fails when its route is not registered, its body does
+  not decode, a response is shown but the call did not succeed, or the
+  response shows a field the real answer lacks.
+- A dashboard unit test fails when an example body has a field the
+  service's request types do not have.
+
 ## [13.0.0-beta] — 2026-10-12
 
 ### Security

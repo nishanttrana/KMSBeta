@@ -5,6 +5,36 @@ Newest entries on top.
 
 ## 2026-10-12
 
+### Checking the other 159 API examples (13.1.0-beta)
+- **A third of the unchecked examples were wrong.** 51 of 159 requests
+  needed correcting before the service took them as written. The services decode
+  strictly, so an extra field is a 400; a reader copying the example gets
+  an error on the first try. Labelling them "not checked" in 12.3.0-beta
+  was honest and still left them wrong.
+- **The generator was a second catalogue.** `generate-rest-catalog.mjs`
+  held 21 hand-written examples in `ENDPOINT_OVERRIDES`, outside the file
+  the checks read. **Rule: a generator holds no content of its own;** they
+  are in `restApiCatalog.ts` now.
+- **A body the route never reads is also a wrong example.** Audit search
+  takes its filters from the query and token refresh from the cookie; both
+  examples showed a JSON body. Nothing refuses it, so only the static
+  check (body fields must exist in the service's request types) finds this
+  kind.
+- **A response is taken from the service or not shown.** The helper writes
+  each real answer out (`REST_EXAMPLES_OUT`), and the examples were filled
+  from that file with token, key and certificate values replaced. Where a
+  handler test cannot get an answer (KMIP client enrolment needs the certs
+  service, a network scan needs a network, a vote needs a second person)
+  the example shows the standard note, and the test accepts only that note
+  on a call that fails.
+- **Strict FIPS mode refuses some calls by design** (dataprotect without
+  approved key material). The helper does not hold a refusal against the
+  example in `only` mode; `off` and `on` still require the shown answer.
+- **Order matters for examples that use each other's IDs.** The helper
+  runs creates first, remembers the IDs they return and fills later paths
+  and bodies with them; a service names its own first steps (`First`).
+
+
 ### A service with no token check, and two that never compared the tenant (13.0.0-beta)
 - **How it was found.** Reviewing which body fields name a person, I asked
   the running stack, signed in as a user with one permission, for every

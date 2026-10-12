@@ -7,10 +7,16 @@ import { DISCOVERED_REST_API_CATALOG } from "../generated/restApiCatalog.generat
 //
 // A hand-written example is only as good as the last time someone compared it
 // with the service. A service is listed here once a Go test sends each of its
-// examples to the real handlers (services/<name>/rest_examples_test.go); the
-// examples of every other service are shown as not checked. The list only
-// grows (tests/unit/restCatalog.test.ts).
-export const VERIFIED_EXAMPLE_SERVICES: readonly string[] = ["keycore"];
+// examples to the real handlers (services/<name>/rest_examples_test.go,
+// pkg/route/routetest.Examples): the route exists, the body decodes, and the
+// response shown is one the service gave, or the note that no response was
+// obtained. The examples of a service that is not listed are shown as not
+// checked. Every service with examples is listed since 13.1.0-beta; a new
+// one joins with its test (tests/unit/restCatalog.test.ts).
+export const VERIFIED_EXAMPLE_SERVICES: readonly string[] = [
+  "audit", "auth", "certs", "cloud", "compliance", "confidential", "dataprotect", "discovery", "ekm",
+  "governance", "hyok", "keycore", "kmip", "posture", "reporting", "sbom", "secrets", "workload"
+];
 
 // A route's {param} becomes the playground's {{param}} placeholder.
 export const normalizeRestPathTemplate = (raw: string) =>
@@ -34,7 +40,7 @@ export const REST_API_CATALOG_FULL: RestCatalogEntry[] = (() => {
       return;
     }
     seen.add(key);
-    rows.push({ ...item, service, method, pathTemplate, unverified: (handWritten || Boolean(item.handWritten)) && !VERIFIED_EXAMPLE_SERVICES.includes(service) });
+    rows.push({ ...item, service, method, pathTemplate, unverified: handWritten && !VERIFIED_EXAMPLE_SERVICES.includes(service) });
   };
   REST_API_CATALOG.forEach((item) => add(item, true));
   DISCOVERED_REST_API_CATALOG.forEach((item) => add(item, false));
