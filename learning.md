@@ -5,6 +5,21 @@ Newest entries on top.
 
 ## 2026-10-13
 
+### "It works in my container" was run as root (13.5.0-beta)
+- The SoftHSM install script passed every local run and failed on its
+  first run in CI. The container ran it as root; a GitHub runner is an
+  ordinary user with `sudo`. SoftHSM's build defaults its configuration
+  directory to `/etc` and its state to `/var` whatever the prefix, and the
+  script used `sudo` only for a prefix it could not write.
+- **Rule: reproduce CI as CI runs: the same user, not only the same
+  operating system.** The check that found it is a container with an
+  unprivileged user and passwordless `sudo`, which installs and then runs
+  the HSM tests.
+- **`scripts/ci-status.sh` earned its place the first time it was used.**
+  The failure was visible two minutes after the push, with the step named.
+  Without it this would have been one more "CI: can't see it from here".
+
+
 ### CI had failed 274 times out of 274 (13.4.0-beta)
 - **How it stayed unseen.** The work is done from a terminal with no
   GitHub login, so "I can't see CI" was written at the end of report after

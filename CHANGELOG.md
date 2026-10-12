@@ -4,6 +4,17 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.5.0-beta] — 2026-10-13
+
+### Fixed
+- **The SoftHSM build added in 13.4.0-beta failed on GitHub's runners.** It
+  installed a configuration file in `/etc` and a token directory in `/var`,
+  which only root may write; it had only ever been run as root. It now
+  keeps everything under its own prefix and needs no root for a prefix the
+  user owns. With that, the three FIPS-mode test jobs and the integration
+  job get past their install step. 13.4.0-beta already turned the backend
+  job green, for the first time.
+
 ## [13.4.0-beta] — 2026-10-13
 
 ### Security

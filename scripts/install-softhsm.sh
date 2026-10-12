@@ -52,8 +52,13 @@ if [ "$got" != "$COMMIT" ]; then
   exit 1
 fi
 
+# Everything goes under the prefix. Left to its defaults the install also
+# writes /etc/softhsm2.conf, /var/lib/softhsm and a p11-kit module file, which
+# a CI runner (not root) may not: the first version of this script was only
+# ever run as root and failed on GitHub for exactly that.
 cmake -S "$src" -B "$src/build" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$PREFIX" \
-  -DWITH_CRYPTO_BACKEND=openssl -DBUILD_TESTS=OFF >/dev/null
+  -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_INSTALL_SYSCONFDIR="$PREFIX/etc" -DCMAKE_INSTALL_LOCALSTATEDIR="$PREFIX/var" \
+  -DENABLE_P11_KIT=OFF -DWITH_CRYPTO_BACKEND=openssl -DBUILD_TESTS=OFF >/dev/null
 cmake --build "$src/build" -j "$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)" >/dev/null
 # Root is needed only where the prefix is not ours to write (/opt).
 INSTALL="$SUDO"
