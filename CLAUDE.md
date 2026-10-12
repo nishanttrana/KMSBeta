@@ -272,8 +272,12 @@ an approach, record it here or in the matching doc below.
   Every step is recorded with its CLI equivalent, custody per KMS version.
   An operation a cloud lacks is refused and not offered. Tests drive each
   cloud's wire protocol with a double that unwraps what it receives.
-  Owner scope for later slices: per-cloud key pages, a structured
-  allow-listed console (no shell), automation as playbook actions.
+  The key pages and the cloud console (13.2.0-beta) send only operations
+  from the fixed catalogue in `services/cloud/console.go`: a new cloud
+  operation is a catalogue entry with its own route, permission and audit
+  action, never a free-form command, and never one that returns key
+  material. BYOK automation only announces (expiring, rotation due);
+  playbook actions do the work.
 - **Every external credential is added once, in Playbooks → Credentials**
   (owner directive, 2026-09-28: webhooks and SIEM "should not be separate
   tab, just part of" Playbooks; widened 2026-10-10: credentials for

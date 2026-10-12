@@ -3301,6 +3301,36 @@
       "service": "cloud"
     },
     {
+      "action": "byok_automation_updated",
+      "code_scope": "cloud",
+      "file": "services/cloud/byok_routes.go",
+      "handler": "h.setBYOKAutomation",
+      "line": 34,
+      "match_key": "cloud|PUT|/cloud/byok/keys/{param}/automation",
+      "method": "PUT",
+      "normalized_path": "/cloud/byok/keys/{param}/automation",
+      "path": "/cloud/byok/keys/{id}/automation",
+      "permission": "cloud.write",
+      "registration": "kernel",
+      "resource": "cloud_byok_key",
+      "service": "cloud"
+    },
+    {
+      "action": "console_operations_read",
+      "code_scope": "cloud",
+      "file": "services/cloud/console.go",
+      "handler": "h.consoleOperations",
+      "line": 243,
+      "match_key": "cloud|GET|/cloud/console/operations",
+      "method": "GET",
+      "normalized_path": "/cloud/console/operations",
+      "path": "/cloud/console/operations",
+      "permission": "cloud.read",
+      "registration": "kernel",
+      "resource": "cloud_account",
+      "service": "cloud"
+    },
+    {
       "action": "account_test_requested",
       "code_scope": "cloud",
       "file": "services/cloud/credentials.go",
@@ -15348,36 +15378,6 @@
       "service": "compliance"
     },
     {
-      "action": "playbooks_listed",
-      "code_scope": "compliance",
-      "file": "services/compliance/handler_playbooks.go",
-      "handler": "h.listPlaybooks",
-      "line": 137,
-      "match_key": "compliance|GET|/compliance/playbooks",
-      "method": "GET",
-      "normalized_path": "/compliance/playbooks",
-      "path": "/compliance/playbooks",
-      "permission": "compliance.playbook.read",
-      "registration": "kernel",
-      "resource": "playbook",
-      "service": "compliance"
-    },
-    {
-      "action": "playbook_created",
-      "code_scope": "compliance",
-      "file": "services/compliance/handler_playbooks.go",
-      "handler": "h.createPlaybook",
-      "line": 138,
-      "match_key": "compliance|POST|/compliance/playbooks",
-      "method": "POST",
-      "normalized_path": "/compliance/playbooks",
-      "path": "/compliance/playbooks",
-      "permission": "compliance.playbook.write",
-      "registration": "kernel",
-      "resource": "playbook",
-      "service": "compliance"
-    },
-    {
       "action": "playbook_read",
       "code_scope": "compliance",
       "file": "services/compliance/handler_playbooks.go",
@@ -24739,10 +24739,50 @@
       "tag": "button"
     },
     {
+      "file": "web/dashboard/src/components/v3/tabs/byok/Automation.tsx",
+      "handler": "",
+      "label": "void save()}>",
+      "line": 68,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/byok/Automation.tsx",
+      "handler": "",
+      "label": "{ createAutomationPlaybook(session, p.trigger).then(() => { onToast?.(`Playbo...",
+      "line": 78,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/byok/CloudConsole.tsx",
+      "handler": "",
+      "label": "void run()}>{con.busy ? \"Running\u2026\" : `Run $ `}",
+      "line": 95,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/byok/CloudConsole.tsx",
+      "handler": "exportScript",
+      "label": "Export as script",
+      "line": 98,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
       "file": "web/dashboard/src/components/v3/tabs/byok/Console.tsx",
       "handler": "",
       "label": "void load()}>Refresh",
-      "line": 84,
+      "line": 86,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/byok/Console.tsx",
+      "handler": "",
+      "label": "setConsoleOpen(true)}>Cloud console",
+      "line": 87,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24750,7 +24790,7 @@
       "file": "web/dashboard/src/components/v3/tabs/byok/Console.tsx",
       "handler": "",
       "label": "setCreating(true)}> Bring your own key",
-      "line": 85,
+      "line": 88,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24758,7 +24798,7 @@
       "file": "web/dashboard/src/components/v3/tabs/byok/Console.tsx",
       "handler": "",
       "label": "download(\"vecta-byok-cloud-calls.sh\", runsToScript(runs))}> Export as script",
-      "line": 126,
+      "line": 129,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24766,7 +24806,7 @@
       "file": "web/dashboard/src/components/v3/tabs/byok/Console.tsx",
       "handler": "",
       "label": "setOpenRun(openRun === r.id ? \"\" : r.id)} style={ }> \u00b7 {k ? `$ $ ` : r.byok_i...",
-      "line": 133,
+      "line": 136,
       "tabs": [],
       "tag": "button"
     },
@@ -24790,7 +24830,15 @@
       "file": "web/dashboard/src/components/v3/tabs/byok/KeyDetail.tsx",
       "handler": "",
       "label": "void act(op)}>{busy === op ? `$ \u2026` : label}",
-      "line": 87,
+      "line": 90,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/byok/KeyDetail.tsx",
+      "handler": "",
+      "label": "setView(v)}>{ [v]}",
+      "line": 109,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24798,9 +24846,25 @@
       "file": "web/dashboard/src/components/v3/tabs/byok/KeyDetail.tsx",
       "handler": "",
       "label": "setOpen(open === r.id ? \"\" : r.id)} style={ }> \u00b7 steps \u00b7",
-      "line": 147,
+      "line": 156,
       "tabs": [],
       "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/byok/KeyPages.tsx",
+      "handler": "",
+      "label": "void act(op, params, confirm)}>{con.busy === op ? `$ \u2026` : label}",
+      "line": 71,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/byok/KeyPages.tsx",
+      "handler": "",
+      "label": "{ setTab(t.id); setForm( ); }}>",
+      "line": 83,
+      "tabs": [],
+      "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/byok/RunSteps.tsx",
@@ -27408,6 +27472,71 @@
       "path": "/cloud/byok/runs",
       "service": "cloud",
       "service_key": "cloud",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"cloud\", `/cloud/console/operations?account_id=${encodeURIComponent(accountId)}`)",
+      "file": "web/dashboard/src/lib/byok.ts",
+      "line": 186,
+      "match_key": "cloud|GET|/cloud/console/operations",
+      "method": "GET",
+      "normalized_path": "/cloud/console/operations",
+      "path": "/cloud/console/operations?account_id={param}",
+      "service": "cloud",
+      "service_key": "cloud",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequestRaw(\"cloud\", `/cloud/console/${encodeURIComponent(op)}`)",
+      "file": "web/dashboard/src/lib/byok.ts",
+      "line": 191,
+      "match_key": "cloud|POST|/cloud/console/{param}",
+      "method": "POST",
+      "normalized_path": "/cloud/console/{param}",
+      "path": "/cloud/console/{param}",
+      "service": "cloud",
+      "service_key": "cloud",
+      "source": "serviceRequestRaw"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"cloud\", `/cloud/byok/keys/${encodeURIComponent(id)}/automation`)",
+      "file": "web/dashboard/src/lib/byok.ts",
+      "line": 207,
+      "match_key": "cloud|PUT|/cloud/byok/keys/{param}/automation",
+      "method": "PUT",
+      "normalized_path": "/cloud/byok/keys/{param}/automation",
+      "path": "/cloud/byok/keys/{param}/automation",
+      "service": "cloud",
+      "service_key": "cloud",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": false,
+      "expression": "serviceRequest(\"compliance\", \"/compliance/playbooks\")",
+      "file": "web/dashboard/src/lib/byok.ts",
+      "line": 224,
+      "match_key": "compliance|GET|/compliance/playbooks",
+      "method": "GET",
+      "normalized_path": "/compliance/playbooks",
+      "path": "/compliance/playbooks",
+      "service": "compliance",
+      "service_key": "compliance",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": false,
+      "expression": "serviceRequest(\"compliance\", \"/compliance/playbooks\")",
+      "file": "web/dashboard/src/lib/byok.ts",
+      "line": 234,
+      "match_key": "compliance|POST|/compliance/playbooks",
+      "method": "POST",
+      "normalized_path": "/compliance/playbooks",
+      "path": "/compliance/playbooks",
+      "service": "compliance",
+      "service_key": "compliance",
       "source": "serviceRequest"
     },
     {
@@ -33274,7 +33403,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-12T16:54:00Z",
+  "generated_at": "2026-10-12T17:09:14Z",
   "navigation": [
     {
       "group": "Overview",
@@ -45991,7 +46120,7 @@
         "byokFail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 65,
+      "handler_line": 66,
       "handler_name": "listBYOK",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46057,7 +46186,7 @@
         "Get"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 74,
+      "handler_line": 75,
       "handler_name": "listBYOKRuns",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46109,7 +46238,7 @@
         "byokFail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 87,
+      "handler_line": 88,
       "handler_name": "getBYOK",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46174,7 +46303,7 @@
         "byokFail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 96,
+      "handler_line": 97,
       "handler_name": "createBYOK",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46216,7 +46345,8 @@
         "UpdateBYOKKey",
         "Describe",
         "PutBYOKMaterial",
-        "verifyStep"
+        "verifyStep",
+        "runError"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -46251,7 +46381,8 @@
             "UpdateBYOKKey",
             "Describe",
             "PutBYOKMaterial",
-            "verifyStep"
+            "verifyStep",
+            "runError"
           ],
           "internal_package_calls": [],
           "line": 262,
@@ -46420,6 +46551,130 @@
       "service_helper_calls": [],
       "service_internal_package_calls": [],
       "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"cloud\", `/cloud/byok/keys/${encodeURIComponent(id)}/automation`)",
+          "file": "web/dashboard/src/lib/byok.ts",
+          "line": 207,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.setBYOKAutomation",
+      "handler_external_package_calls": [],
+      "handler_file": "services/cloud/byok_automation.go",
+      "handler_helper_calls": [
+        "SetBYOKAutomation",
+        "byokFail",
+        "automationOf"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 168,
+      "handler_name": "setBYOKAutomation",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "SetBYOKAutomation"
+      ],
+      "handler_store_calls": [],
+      "method": "PUT",
+      "normalized_path": "/cloud/byok/keys/{param}/automation",
+      "path": "/cloud/byok/keys/{id}/automation",
+      "route_file": "services/cloud/byok_routes.go",
+      "route_line": 34,
+      "service": "cloud",
+      "service_external_package_calls": [
+        "strconv.Itoa"
+      ],
+      "service_helper_calls": [
+        "byokTarget",
+        "refuseBYOK",
+        "Capabilities",
+        "cloudName",
+        "UpdateBYOKKey"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "strconv.Itoa"
+          ],
+          "file": "services/cloud/byok_automation.go",
+          "helper_calls": [
+            "byokTarget",
+            "refuseBYOK",
+            "Capabilities",
+            "cloudName",
+            "UpdateBYOKKey"
+          ],
+          "internal_package_calls": [],
+          "line": 47,
+          "name": "SetBYOKAutomation",
+          "receiver_calls": [
+            "s.byokStore.UpdateBYOKKey"
+          ],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [
+        "s.byokStore.UpdateBYOKKey"
+      ],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"cloud\", `/cloud/console/operations?account_id=${encodeURIComponent(accountId)}`)",
+          "file": "web/dashboard/src/lib/byok.ts",
+          "line": 186,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.consoleOperations",
+      "handler_external_package_calls": [
+        "sort.SliceStable",
+        "strings.TrimSpace"
+      ],
+      "handler_file": "services/cloud/console.go",
+      "handler_helper_calls": [
+        "Get",
+        "GetAccount",
+        "consoleProviderFor",
+        "Console"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 254,
+      "handler_name": "consoleOperations",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "consoleProviderFor"
+      ],
+      "handler_store_calls": [
+        "GetAccount"
+      ],
+      "method": "GET",
+      "normalized_path": "/cloud/console/operations",
+      "path": "/cloud/console/operations",
+      "route_file": "services/cloud/console.go",
+      "route_line": 243,
+      "service": "cloud",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [],
+          "file": "services/cloud/console.go",
+          "helper_calls": [],
+          "internal_package_calls": [],
+          "line": 192,
+          "name": "consoleProviderFor",
+          "receiver_calls": [],
+          "store_calls": []
+        }
+      ],
       "service_receiver_calls": [],
       "service_store_calls": []
     },
@@ -46642,7 +46897,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 68,
+          "line": 71,
           "name": "RegisterAccount",
           "receiver_calls": [],
           "store_calls": [
@@ -46703,7 +46958,7 @@
             "normalizeProvider"
           ],
           "internal_package_calls": [],
-          "line": 142,
+          "line": 145,
           "name": "ListAccounts",
           "receiver_calls": [],
           "store_calls": [
@@ -46773,7 +47028,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 155,
+          "line": 158,
           "name": "DeleteAccount",
           "receiver_calls": [
             "s.exposure.Retire"
@@ -46849,7 +47104,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 177,
+          "line": 180,
           "name": "SetRegionMapping",
           "receiver_calls": [],
           "store_calls": [
@@ -46910,7 +47165,7 @@
             "normalizeProvider"
           ],
           "internal_package_calls": [],
-          "line": 211,
+          "line": 214,
           "name": "ListRegionMappings",
           "receiver_calls": [],
           "store_calls": [
@@ -47028,7 +47283,7 @@
             "GetSyncJob"
           ],
           "internal_package_calls": [],
-          "line": 224,
+          "line": 227,
           "name": "SyncCloudKeys",
           "receiver_calls": [
             "s.providers.Get"
@@ -47117,7 +47372,7 @@
             "Name"
           ],
           "internal_package_calls": [],
-          "line": 406,
+          "line": 409,
           "name": "DiscoverInventory",
           "receiver_calls": [],
           "store_calls": [
@@ -47181,7 +47436,7 @@
             "normalizeProvider"
           ],
           "internal_package_calls": [],
-          "line": 454,
+          "line": 457,
           "name": "ListBindings",
           "receiver_calls": [],
           "store_calls": [
@@ -47235,7 +47490,7 @@
           "file": "services/cloud/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 469,
+          "line": 472,
           "name": "GetBinding",
           "receiver_calls": [],
           "store_calls": [
@@ -51276,7 +51531,14 @@
       "service_store_calls": []
     },
     {
-      "frontend_call_sites": [],
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"compliance\", \"/compliance/playbooks\")",
+          "file": "web/dashboard/src/lib/byok.ts",
+          "line": 224,
+          "source": "serviceRequest"
+        }
+      ],
       "handler": "h.listPlaybooks",
       "handler_external_package_calls": [],
       "handler_file": "services/compliance/handler_playbooks.go",
@@ -51307,7 +51569,14 @@
       "service_store_calls": []
     },
     {
-      "frontend_call_sites": [],
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"compliance\", \"/compliance/playbooks\")",
+          "file": "web/dashboard/src/lib/byok.ts",
+          "line": 234,
+          "source": "serviceRequest"
+        }
+      ],
       "handler": "h.createPlaybook",
       "handler_external_package_calls": [],
       "handler_file": "services/compliance/handler_playbooks.go",
@@ -90618,7 +90887,7 @@
       "autokey": 15,
       "backup": 11,
       "certs": 69,
-      "cloud": 26,
+      "cloud": 28,
       "cluster-manager": 21,
       "compliance": 61,
       "confidential": 7,
@@ -90650,9 +90919,9 @@
       "autokey": 11,
       "backup": 10,
       "certs": 52,
-      "cloud": 12,
+      "cloud": 15,
       "cluster-manager": 11,
-      "compliance": 28,
+      "compliance": 30,
       "confidential": 6,
       "dataprotect": 28,
       "discovery": 22,
@@ -90877,20 +91146,20 @@
     ]
   },
   "summary": {
-    "backend_routes": 907,
+    "backend_routes": 909,
     "backend_services": 28,
-    "button_inventory": 770,
-    "frontend_call_sites": 537,
-    "matched_frontend_call_sites": 516,
+    "button_inventory": 778,
+    "frontend_call_sites": 542,
+    "matched_frontend_call_sites": 520,
     "nav_items": 26,
-    "request_flows": 907,
-    "request_flows_with_frontend": 523,
+    "request_flows": 909,
+    "request_flows_with_frontend": 527,
     "request_flows_with_internal_package_calls": 194,
-    "request_flows_with_service_calls": 533,
-    "request_flows_with_store_calls": 644,
+    "request_flows_with_service_calls": 535,
+    "request_flows_with_store_calls": 645,
     "subpane_groups": 9,
     "tab_components": 33,
-    "unmatched_frontend_call_sites": 21
+    "unmatched_frontend_call_sites": 22
   },
   "tabs": [
     {
@@ -91476,6 +91745,19 @@
       "service": "auth",
       "service_key": "auth",
       "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequestRaw(\"cloud\", `/cloud/console/${encodeURIComponent(op)}`)",
+      "file": "web/dashboard/src/lib/byok.ts",
+      "line": 191,
+      "match_key": "cloud|POST|/cloud/console/{param}",
+      "method": "POST",
+      "normalized_path": "/cloud/console/{param}",
+      "path": "/cloud/console/{param}",
+      "service": "cloud",
+      "service_key": "cloud",
+      "source": "serviceRequestRaw"
     },
     {
       "dynamic": true,
@@ -99224,7 +99506,7 @@
         ],
         "handler": "listBYOK",
         "handlerFile": "services/cloud/byok_routes.go",
-        "handlerLine": 65,
+        "handlerLine": 66,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -99260,7 +99542,7 @@
         ],
         "handler": "listBYOKRuns",
         "handlerFile": "services/cloud/byok_routes.go",
-        "handlerLine": 74,
+        "handlerLine": 75,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -99294,7 +99576,7 @@
         ],
         "handler": "getBYOK",
         "handlerFile": "services/cloud/byok_routes.go",
-        "handlerLine": 87,
+        "handlerLine": 88,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -99329,7 +99611,7 @@
         "frontendSites": [],
         "handler": "createBYOK",
         "handlerFile": "services/cloud/byok_routes.go",
-        "handlerLine": 96,
+        "handlerLine": 97,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -99489,6 +99771,79 @@
         "storeCalls": [],
         "uiLabels": [
           "API only"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [
+          "strconv.Itoa"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"cloud\", `/cloud/byok/keys/${encodeURIComponent(id)}/automation`)",
+            "file": "web/dashboard/src/lib/byok.ts",
+            "line": 207,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "setBYOKAutomation",
+        "handlerFile": "services/cloud/byok_automation.go",
+        "handlerLine": 168,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "PUT",
+        "normalizedPath": "/cloud/byok/keys/{param}/automation",
+        "path": "/cloud/byok/keys/{id}/automation",
+        "receiverCalls": [
+          "s.byokStore.UpdateBYOKKey"
+        ],
+        "risk": "medium",
+        "routeKey": "cloud|PUT|/cloud/byok/keys/{param}/automation",
+        "sensitive": false,
+        "service": "cloud",
+        "serviceCalls": [
+          "SetBYOKAutomation"
+        ],
+        "storeCalls": [],
+        "uiLabels": [
+          "byok"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [
+          "sort.SliceStable",
+          "strings.TrimSpace"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"cloud\", `/cloud/console/operations?account_id=${encodeURIComponent(accountId)}`)",
+            "file": "web/dashboard/src/lib/byok.ts",
+            "line": 186,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "consoleOperations",
+        "handlerFile": "services/cloud/console.go",
+        "handlerLine": 254,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/cloud/console/operations",
+        "path": "/cloud/console/operations",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "cloud|GET|/cloud/console/operations",
+        "sensitive": false,
+        "service": "cloud",
+        "serviceCalls": [
+          "consoleProviderFor"
+        ],
+        "storeCalls": [
+          "GetAccount"
+        ],
+        "uiLabels": [
+          "byok"
         ]
       },
       {
@@ -101897,11 +102252,18 @@
       {
         "complexity": 1,
         "externalPackages": [],
-        "frontendSites": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"compliance\", \"/compliance/playbooks\")",
+            "file": "web/dashboard/src/lib/byok.ts",
+            "line": 224,
+            "source": "serviceRequest"
+          }
+        ],
         "handler": "listPlaybooks",
         "handlerFile": "services/compliance/handler_playbooks.go",
         "handlerLine": 163,
-        "hasFrontend": false,
+        "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
         "normalizedPath": "/compliance/playbooks",
@@ -101916,17 +102278,24 @@
           "ListPlaybooks"
         ],
         "uiLabels": [
-          "API only"
+          "byok"
         ]
       },
       {
         "complexity": 2,
         "externalPackages": [],
-        "frontendSites": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"compliance\", \"/compliance/playbooks\")",
+            "file": "web/dashboard/src/lib/byok.ts",
+            "line": 234,
+            "source": "serviceRequest"
+          }
+        ],
         "handler": "createPlaybook",
         "handlerFile": "services/compliance/handler_playbooks.go",
         "handlerLine": 183,
-        "hasFrontend": false,
+        "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
         "normalizedPath": "/compliance/playbooks",
@@ -101943,7 +102312,7 @@
           "CreatePlaybook"
         ],
         "uiLabels": [
-          "API only"
+          "byok"
         ]
       },
       {
@@ -122969,7 +123338,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-12T16:54:00Z",
+    "generatedAt": "2026-10-12T17:09:14Z",
     "methods": [
       "DELETE",
       "GET",
@@ -123009,8 +123378,8 @@
       "workload"
     ],
     "summary": {
-      "flows": 907,
-      "frontendBacked": 523,
+      "flows": 909,
+      "frontendBacked": 527,
       "highRisk": 346,
       "services": 28
     }

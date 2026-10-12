@@ -16,6 +16,9 @@ type BYOKStore interface {
 	UpdateBYOKKey(ctx context.Context, k BYOKKey) error
 	GetBYOKKey(ctx context.Context, tenantID, id string) (BYOKKey, error)
 	ListBYOKKeys(ctx context.Context, tenantID string) ([]BYOKKey, error)
+	// ListAutomatedBYOKKeys returns, across tenants, the keys with an
+	// automation rule (byok_automation.go).
+	ListAutomatedBYOKKeys(ctx context.Context) ([]BYOKKey, error)
 	PutBYOKMaterial(ctx context.Context, m BYOKMaterial) error
 	ListBYOKMaterials(ctx context.Context, tenantID, byokID string) ([]BYOKMaterial, error)
 	PutBYOKRun(ctx context.Context, r BYOKRun) error
@@ -96,6 +99,24 @@ func (s *SQLStore) GetBYOKKey(ctx context.Context, tenantID, id string) (BYOKKey
 
 func (s *SQLStore) ListBYOKKeys(ctx context.Context, tenantID string) ([]BYOKKey, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `SELECT `+byokKeyColumns+` FROM cloud_byok_keys WHERE tenant_id=$1 ORDER BY created_at DESC`, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := []BYOKKey{}
+	for rows.Next() {
+		k, err := scanBYOKKey(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, k)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) ListAutomatedBYOKKeys(ctx context.Context) ([]BYOKKey, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `SELECT `+byokKeyColumns+` FROM cloud_byok_keys
+WHERE origin = 'byok' AND (settings_json LIKE '%renew_before_days%' OR settings_json LIKE '%rotate_every_days%')`)
 	if err != nil {
 		return nil, err
 	}

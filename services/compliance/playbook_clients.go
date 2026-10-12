@@ -18,7 +18,7 @@ import (
 // service identity. http.DefaultTransport is svctls's router, so each call
 // is internal mTLS.
 type platformURLs struct {
-	Keycore, Certs, Auth, Governance, Reporting, Posture string
+	Keycore, Certs, Auth, Governance, Reporting, Posture, Cloud string
 }
 
 func platformURLsFromEnv() platformURLs {
@@ -29,6 +29,7 @@ func platformURLsFromEnv() platformURLs {
 		Governance: envOr("GOVERNANCE_URL", "https://governance:8050"),
 		Reporting:  envOr("REPORTING_URL", "https://reporting:8140"),
 		Posture:    envOr("POSTURE_URL", "https://posture:8220"),
+		Cloud:      envOr("CLOUD_URL", "https://cloud:8080"),
 	}
 }
 

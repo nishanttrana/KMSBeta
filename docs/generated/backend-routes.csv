@@ -219,6 +219,8 @@ cloud,POST,/cloud/byok/keys/{id}/restore,/cloud/byok/keys/{param}/restore,op(OpR
 cloud,POST,/cloud/byok/keys/{id}/verify,/cloud/byok/keys/{param}/verify,op(OpVerify),kernel,cloud.write,byok_verified,cloud_byok_key,services/cloud/byok_routes.go,31,cloud|POST|/cloud/byok/keys/{param}/verify
 cloud,POST,/cloud/byok/keys/{id}/sync,/cloud/byok/keys/{param}/sync,op(OpSync),kernel,cloud.write,byok_synced,cloud_byok_key,services/cloud/byok_routes.go,32,cloud|POST|/cloud/byok/keys/{param}/sync
 cloud,POST,/cloud/byok/keys/{id}/revoke,/cloud/byok/keys/{param}/revoke,op(OpRevoke),kernel,cloud.write,byok_revoked,cloud_byok_key,services/cloud/byok_routes.go,33,cloud|POST|/cloud/byok/keys/{param}/revoke
+cloud,PUT,/cloud/byok/keys/{id}/automation,/cloud/byok/keys/{param}/automation,h.setBYOKAutomation,kernel,cloud.write,byok_automation_updated,cloud_byok_key,services/cloud/byok_routes.go,34,cloud|PUT|/cloud/byok/keys/{param}/automation
+cloud,GET,/cloud/console/operations,/cloud/console/operations,h.consoleOperations,kernel,cloud.read,console_operations_read,cloud_account,services/cloud/console.go,243,cloud|GET|/cloud/console/operations
 cloud,POST,/cloud/accounts/{id}/test,/cloud/accounts/{param}/test,h.testAccount,kernel,cloud.write,account_test_requested,cloud_account,services/cloud/credentials.go,176,cloud|POST|/cloud/accounts/{param}/test
 cloud,POST,/cloud/credentials/{id}/test,/cloud/credentials/{param}/test,h.testCredential,kernel,authenticated,credential_tested,credential,services/cloud/credentials.go,177,cloud|POST|/cloud/credentials/{param}/test
 cloud,GET,/cloud/credential-usage,/cloud/credential-usage,h.credentialUsage,kernel,authenticated,credential_usage_read,credential,services/cloud/credentials.go,178,cloud|GET|/cloud/credential-usage

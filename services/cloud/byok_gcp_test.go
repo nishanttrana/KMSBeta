@@ -4,14 +4,17 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"net"
+	"net/http"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	iampb "cloud.google.com/go/iam/apiv1/iampb"
 	cloudkmspb "cloud.google.com/go/kms/apiv1/kmspb"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
@@ -32,17 +35,66 @@ type gcpKMSDouble struct {
 	keys     map[string]*cloudkmspb.CryptoKey
 	versions map[string]*cloudkmspb.CryptoKeyVersion
 	material map[string][]byte
+	policies map[string]*iampb.Policy
+}
+
+// gcpIAMDouble is the IAM policy service on the same connection, as
+// Google serves it.
+type gcpIAMDouble struct {
+	iampb.UnimplementedIAMPolicyServer
+	d *gcpKMSDouble
+}
+
+func (i gcpIAMDouble) GetIamPolicy(_ context.Context, r *iampb.GetIamPolicyRequest) (*iampb.Policy, error) {
+	i.d.mu.Lock()
+	defer i.d.mu.Unlock()
+	if p := i.d.policies[r.GetResource()]; p != nil {
+		return p, nil
+	}
+	return &iampb.Policy{Version: 1}, nil
+}
+
+func (i gcpIAMDouble) SetIamPolicy(_ context.Context, r *iampb.SetIamPolicyRequest) (*iampb.Policy, error) {
+	i.d.mu.Lock()
+	defer i.d.mu.Unlock()
+	i.d.policies[r.GetResource()] = r.GetPolicy()
+	return r.GetPolicy(), nil
+}
+
+func (d *gcpKMSDouble) ListCryptoKeyVersions(_ context.Context, r *cloudkmspb.ListCryptoKeyVersionsRequest) (*cloudkmspb.ListCryptoKeyVersionsResponse, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	out := &cloudkmspb.ListCryptoKeyVersionsResponse{}
+	for name, v := range d.versions {
+		if strings.HasPrefix(name, r.GetParent()+"/") {
+			out.CryptoKeyVersions = append(out.CryptoKeyVersions, v)
+		}
+	}
+	out.TotalSize = int32(len(out.CryptoKeyVersions))
+	return out, nil
+}
+
+func (d *gcpKMSDouble) UpdateCryptoKey(_ context.Context, r *cloudkmspb.UpdateCryptoKeyRequest) (*cloudkmspb.CryptoKey, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	k := d.keys[r.GetCryptoKey().GetName()]
+	if len(r.GetUpdateMask().GetPaths()) != 1 || r.GetUpdateMask().GetPaths()[0] != "labels" {
+		return nil, status.Error(codes.InvalidArgument, "the double updates labels only")
+	}
+	k.Labels = r.GetCryptoKey().GetLabels()
+	return k, nil
 }
 
 func newGCPDouble(t *testing.T) (*gcpKMSDouble, []option.ClientOption) {
 	d := &gcpKMSDouble{jobs: map[string]*rsa.PrivateKey{}, keys: map[string]*cloudkmspb.CryptoKey{},
-		versions: map[string]*cloudkmspb.CryptoKeyVersion{}, material: map[string][]byte{}}
+		versions: map[string]*cloudkmspb.CryptoKeyVersion{}, material: map[string][]byte{}, policies: map[string]*iampb.Policy{}}
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	srv := grpc.NewServer()
 	cloudkmspb.RegisterKeyManagementServiceServer(srv, d)
+	iampb.RegisterIAMPolicyServer(srv, gcpIAMDouble{d: d})
 	go srv.Serve(lis) //nolint:errcheck
 	t.Cleanup(srv.Stop)
 	return d, []option.ClientOption{option.WithEndpoint(lis.Addr().String()), option.WithoutAuthentication(),
@@ -237,5 +289,62 @@ func TestBYOKGoogleCloudImportJobs(t *testing.T) {
 	}
 	if string(d.material[v2]) != string(kc.material("t1", "key-1", 2)) || key.CurrentMatID != v2 {
 		t.Fatal("the destroyed version did not get KMS version 2 back")
+	}
+}
+
+// The console over Google's real gRPC API: versions, labels as tags, the
+// primary version's state, and the key's IAM policy.
+func TestConsoleGoogleCloud(t *testing.T) {
+	svc, _, kc, _ := newCloudService(t)
+	d, opts := newGCPDouble(t)
+	gcpPollEvery = 10 * time.Millisecond
+	svc.byokProviders[ProviderGCP] = &gcpProvider{options: opts}
+	setCred(svc, "cred-gcp-double", "gcp", map[string]string{"project_id": "proj", "location": "europe-west1", "key_ring": "vecta"})
+	acct, err := svc.RegisterAccount(attachCtx("t1"), RegisterCloudAccountRequest{TenantID: "t1", Provider: ProviderGCP, Name: "gcp", ConnectionID: "cred-gcp-double"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	kc.Seed("t1", "key-1", "AES-256")
+	_, k, err := svc.CreateBYOK(context.Background(), "t1", "alice", CreateBYOKRequest{AccountID: acct.ID, KeyID: "key-1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rt, _ := consoleRouter(svc)
+	op := func(name string, params map[string]string) (int, consoleOut) {
+		return runOp(t, rt, rw, name, map[string]interface{}{"account_id": acct.ID, "key": k.CloudKeyID, "params": params})
+	}
+	if code, out := op("list-versions", nil); code != 200 || !strings.Contains(string(out.Result), "cryptoKeyVersions/1") {
+		t.Fatalf("list-versions %d %s", code, out.Result)
+	}
+	if code, out := op("tag-key", map[string]string{"tag_key": "team", "tag_value": "payments"}); code != 200 || !strings.HasPrefix(out.CLI, "gcloud kms keys update") {
+		t.Fatalf("tag %d %+v", code, out)
+	}
+	if _, out := op("list-tags", nil); !strings.Contains(string(out.Result), "payments") {
+		t.Fatal("label missing")
+	}
+	if code, out := op("disable-key", nil); code != 200 || d.versions[k.CurrentMatID].GetState() != cloudkmspb.CryptoKeyVersion_DISABLED {
+		t.Fatalf("primary version not disabled: %d %+v", code, out)
+	}
+	if code, _ := op("encrypt", map[string]string{"plaintext_b64": b64s("x")}); code != http.StatusBadGateway {
+		t.Fatalf("encrypt with a disabled primary: %d", code)
+	}
+	op("enable-key", nil)
+	enc := struct {
+		C string `json:"ciphertext_b64"`
+	}{}
+	_, out := op("encrypt", map[string]string{"plaintext_b64": b64s("hello")})
+	_ = json.Unmarshal(out.Result, &enc)
+	if _, out := op("decrypt", map[string]string{"ciphertext_b64": enc.C}); !strings.Contains(string(out.Result), "hello") {
+		t.Fatalf("decrypt %s", out.Result)
+	}
+	pol := `{"bindings":[{"role":"roles/cloudkms.cryptoKeyEncrypterDecrypter","members":["serviceAccount:app@proj.iam.gserviceaccount.com"]}]}`
+	if code, out := op("put-key-policy", map[string]string{"policy": pol}); code != 200 {
+		t.Fatalf("set IAM policy %d %+v", code, out)
+	}
+	if _, out := op("get-key-policy", nil); !strings.Contains(string(out.Result), "app@proj") {
+		t.Fatalf("IAM policy %s", out.Result)
+	}
+	if code, _ := op("create-grant", map[string]string{"grantee": "x", "operations": "Encrypt"}); code != http.StatusConflict {
+		t.Fatalf("Google has no grants: %d", code)
 	}
 }

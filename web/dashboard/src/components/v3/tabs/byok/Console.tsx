@@ -10,6 +10,7 @@ import { C } from "../../theme";
 import { BarRow, ChartCard, Swatch, solid } from "../discovery/Charts";
 import { BYOKCreateWizard } from "./CreateWizard";
 import { BYOKKeyDetail } from "./KeyDetail";
+import { CloudConsole } from "./CloudConsole";
 import {
   CLOUD_ORDER, MONO, OPERATION_LABEL, SOURCE_LABEL, STATES, allDrill, cloudDrill, cloudLabel, expiringDrill, fmtAgo, fmtDate,
   sourceDrill, stateDrill, stateOf, type BYOKDrill,
@@ -46,6 +47,7 @@ export function BYOKConsole({ session, accounts, keyCatalog, onAddConnector, onT
   const [openKey, setOpenKey] = useState("");
   const [creating, setCreating] = useState(false);
   const [openRun, setOpenRun] = useState("");
+  const [consoleOpen, setConsoleOpen] = useState(false);
   const now = Date.now();
 
   const load = useCallback(async () => {
@@ -82,6 +84,7 @@ export function BYOKConsole({ session, accounts, keyCatalog, onAddConnector, onT
     <div>
       <Section title="Cloud BYOK" actions={<div style={{ display: "flex", gap: 8 }}>
         <Btn small onClick={() => void load()}>Refresh</Btn>
+        <Btn small disabled={!accounts.length} onClick={() => setConsoleOpen(true)}>Cloud console</Btn>
         <Btn small primary onClick={() => setCreating(true)}><CloudUpload size={12} /> Bring your own key</Btn>
       </div>}>
         {error && <div style={{ fontSize: 11, color: C.redFg, marginBottom: 10 }}>BYOK unavailable: {error}</div>}
@@ -142,6 +145,7 @@ export function BYOKConsole({ session, accounts, keyCatalog, onAddConnector, onT
         </div>
       </Section>
 
+      {consoleOpen && <CloudConsole session={session} accounts={accounts} onClose={() => setConsoleOpen(false)} />}
       {creating && <BYOKCreateWizard session={session} accounts={accounts} providers={providers} keyCatalog={keyCatalog as never[]}
         onClose={() => setCreating(false)} onDone={() => void load()} onAddConnector={() => { setCreating(false); onAddConnector(); }} onToast={onToast} />}
       {openKey && <BYOKKeyDetail session={session} id={openKey} listed={keys.find((k) => k.id === openKey)} caps={capsOf(keys.find((k) => k.id === openKey)?.provider ?? "")}

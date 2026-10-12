@@ -56,6 +56,8 @@ type azureDouble struct {
 	url      string
 	keks     map[string]*rsa.PrivateKey
 	versions map[string][]azureVersion // key name → versions
+	tags     map[string]map[string]interface{}
+	deleted  map[string][]azureVersion // soft-deleted keys
 }
 
 type azureVersion struct {
@@ -65,7 +67,7 @@ type azureVersion struct {
 }
 
 func newAzureDouble(t *testing.T) *azureDouble {
-	d := &azureDouble{keks: map[string]*rsa.PrivateKey{}, versions: map[string][]azureVersion{}}
+	d := &azureDouble{keks: map[string]*rsa.PrivateKey{}, versions: map[string][]azureVersion{}, tags: map[string]map[string]interface{}{}, deleted: map[string][]azureVersion{}}
 	srv := httptest.NewServer(d)
 	t.Cleanup(srv.Close)
 	d.url = srv.URL
@@ -82,7 +84,46 @@ func (d *azureDouble) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var body map[string]interface{}
 	_ = json.NewDecoder(r.Body).Decode(&body)
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/") // keys, name, [version|create], [op]
+	if len(parts) == 1 && r.Method == http.MethodGet {
+		list := []map[string]interface{}{}
+		for n := range d.versions {
+			list = append(list, map[string]interface{}{"kid": d.url + "/keys/" + n})
+		}
+		writeJSONT(w, 200, map[string]interface{}{"value": list})
+		return
+	}
 	name := parts[1]
+	if parts[0] == "deletedkeys" {
+		d.versions[name] = d.deleted[name]
+		delete(d.deleted, name)
+		writeJSONT(w, 200, map[string]interface{}{"key": map[string]interface{}{"kid": d.url + "/keys/" + name}})
+		return
+	}
+	if r.Method == http.MethodPatch && len(parts) == 2 {
+		vs := d.versions[name]
+		if attrs, ok := body["attributes"].(map[string]interface{}); ok {
+			vs[len(vs)-1].enabled = attrs["enabled"].(bool)
+		}
+		if tags, ok := body["tags"].(map[string]interface{}); ok {
+			d.tags[name] = tags
+		}
+		writeJSONT(w, 200, map[string]interface{}{"key": map[string]interface{}{"kid": d.url + "/keys/" + name}, "tags": d.tags[name]})
+		return
+	}
+	if r.Method == http.MethodGet && len(parts) == 3 && parts[2] == "versions" {
+		list := []map[string]interface{}{}
+		for _, v := range d.versions[name] {
+			list = append(list, map[string]interface{}{"kid": d.url + "/keys/" + name + "/" + v.id, "attributes": map[string]bool{"enabled": v.enabled}})
+		}
+		writeJSONT(w, 200, map[string]interface{}{"value": list})
+		return
+	}
+	if r.Method == http.MethodDelete && d.versions[name] != nil {
+		d.deleted[name] = d.versions[name]
+		delete(d.versions, name)
+		writeJSONT(w, 200, map[string]interface{}{"recoveryId": d.url + "/deletedkeys/" + name, "scheduledPurgeDate": 1900000000})
+		return
+	}
 	b64 := base64.RawURLEncoding
 	switch {
 	case r.Method == http.MethodPost && len(parts) == 3 && parts[2] == "create":
@@ -122,7 +163,8 @@ func (d *azureDouble) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodGet && len(parts) == 2:
 		vs := d.versions[name]
 		last := vs[len(vs)-1]
-		writeJSONT(w, 200, map[string]interface{}{"key": map[string]interface{}{"kid": d.url + "/keys/" + name + "/" + last.id}, "attributes": map[string]interface{}{"enabled": last.enabled}})
+		writeJSONT(w, 200, map[string]interface{}{"key": map[string]interface{}{"kid": d.url + "/keys/" + name + "/" + last.id, "kty": "oct-HSM"},
+			"attributes": map[string]interface{}{"enabled": last.enabled}, "tags": d.tags[name]})
 	case r.Method == http.MethodPost && len(parts) == 4:
 		var v *azureVersion
 		for i := range d.versions[name] {
@@ -137,7 +179,7 @@ func (d *azureDouble) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		in := must(b64.DecodeString(body["value"].(string)))
 		var out []byte
 		var err error
-		if parts[3] == "wrapkey" {
+		if parts[3] == "wrapkey" || parts[3] == "encrypt" {
 			out = gcmSeal(v.material, in)
 		} else {
 			out, err = gcmOpen(v.material, in)
@@ -197,10 +239,13 @@ type alibabaDouble struct {
 	wrap     *rsa.PrivateKey
 	material map[string][]byte
 	state    map[string]string
+	aliases  map[string]string            // alias → key
+	tags     map[string]map[string]string // key → tags
 }
 
 func newAlibabaDouble(t *testing.T) (*alibabaDouble, string) {
-	d := &alibabaDouble{wrap: must(rsa.GenerateKey(pkgcrypto.Reader, 2048)), material: map[string][]byte{}, state: map[string]string{}}
+	d := &alibabaDouble{wrap: must(rsa.GenerateKey(pkgcrypto.Reader, 2048)), material: map[string][]byte{}, state: map[string]string{},
+		aliases: map[string]string{}, tags: map[string]map[string]string{}}
 	srv := httptest.NewServer(d)
 	t.Cleanup(srv.Close)
 	return d, srv.URL
@@ -231,6 +276,46 @@ func (d *alibabaDouble) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		d.material[id], d.state[id] = m, "Enabled"
 		writeJSONT(w, 200, map[string]string{})
+	case "CreateAlias":
+		d.aliases[q.Get("AliasName")] = id
+		writeJSONT(w, 200, map[string]string{})
+	case "DeleteAlias":
+		delete(d.aliases, q.Get("AliasName"))
+		writeJSONT(w, 200, map[string]string{})
+	case "ListAliasesByKeyId":
+		list := []map[string]string{}
+		for a, k := range d.aliases {
+			if k == id {
+				list = append(list, map[string]string{"AliasName": a, "KeyId": k})
+			}
+		}
+		writeJSONT(w, 200, map[string]interface{}{"Aliases": map[string]interface{}{"Alias": list}})
+	case "TagResource":
+		var tags []map[string]string
+		_ = json.Unmarshal([]byte(q.Get("Tags")), &tags)
+		if d.tags[id] == nil {
+			d.tags[id] = map[string]string{}
+		}
+		for _, t := range tags {
+			d.tags[id][t["TagKey"]] = t["TagValue"]
+		}
+		writeJSONT(w, 200, map[string]string{})
+	case "UntagResource":
+		var keys []string
+		_ = json.Unmarshal([]byte(q.Get("TagKeys")), &keys)
+		for _, k := range keys {
+			delete(d.tags[id], k)
+		}
+		writeJSONT(w, 200, map[string]string{})
+	case "ListResourceTags":
+		list := []map[string]string{}
+		for k, v := range d.tags[id] {
+			list = append(list, map[string]string{"TagKey": k, "TagValue": v})
+		}
+		writeJSONT(w, 200, map[string]interface{}{"Tags": map[string]interface{}{"Tag": list}})
+	case "EnableKey", "DisableKey":
+		d.state[id] = map[bool]string{true: "Enabled", false: "Disabled"}[q.Get("Action") == "EnableKey"]
+		writeJSONT(w, 200, map[string]string{})
 	case "DeleteKeyMaterial":
 		delete(d.material, id)
 		d.state[id] = "PendingImport"
@@ -239,7 +324,7 @@ func (d *alibabaDouble) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSONT(w, 200, map[string]interface{}{"KeyMetadata": map[string]string{"KeyId": id, "KeyState": d.state[id]}})
 	case "Encrypt":
 		m := d.material[id]
-		if m == nil {
+		if m == nil || d.state[id] != "Enabled" {
 			writeJSONT(w, 400, map[string]string{"Code": "Forbidden.KeyNotEnabled"})
 			return
 		}
@@ -350,5 +435,96 @@ func TestBYOKSalesforceTenantSecret(t *testing.T) {
 	}
 	if _, _, err := svc.RunBYOK(ctx, "t1", key.ID, OpRevoke, "alice", BYOKOperationRequest{}); byokReason(err) != "operation_not_supported" {
 		t.Fatalf("revoke on Salesforce: %v", err)
+	}
+}
+
+// The console over Key Vault's REST API: tags, disable, soft delete and
+// recovery, and an AES-GCM round trip with the version's material.
+func TestConsoleAzure(t *testing.T) {
+	fipstest.SkipIfStrict(t, "the import step's CKM_RSA_AES_KEY_WRAP (SHA-1) done by the KMS")
+	svc, _, kc, _ := newCloudService(t)
+	d := newAzureDouble(t)
+	setCred(svc, "cred-azure-double", "azure", map[string]string{"vault_url": d.url, "access_token": "azure-test-token"})
+	acct, err := svc.RegisterAccount(attachCtx("t1"), RegisterCloudAccountRequest{TenantID: "t1", Provider: ProviderAzure, Name: "kv", ConnectionID: "cred-azure-double"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	kc.Seed("t1", "key-1", "AES-256")
+	_, k, err := svc.CreateBYOK(context.Background(), "t1", "alice", CreateBYOKRequest{AccountID: acct.ID, KeyID: "key-1", Alias: "payments"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rt, _ := consoleRouter(svc)
+	op := func(name, version string, params map[string]string) (int, consoleOut) {
+		return runOp(t, rt, rw, name, map[string]interface{}{"account_id": acct.ID, "key": k.CloudKeyID, "version": version, "params": params})
+	}
+	if code, out := op("tag-key", "", map[string]string{"tag_key": "team", "tag_value": "payments"}); code != 200 || !strings.HasPrefix(out.CLI, "az keyvault key") {
+		t.Fatalf("tag %d %+v", code, out)
+	}
+	if _, out := op("list-tags", "", nil); !strings.Contains(string(out.Result), "payments") {
+		t.Fatal("tag missing")
+	}
+	var enc struct {
+		C string `json:"ciphertext_b64"`
+	}
+	_, out := op("encrypt", k.CurrentMatID, map[string]string{"plaintext_b64": b64s("hello azure")})
+	_ = json.Unmarshal(out.Result, &enc)
+	if _, out := op("decrypt", k.CurrentMatID, map[string]string{"ciphertext_b64": enc.C}); !strings.Contains(string(out.Result), "hello azure") {
+		t.Fatalf("decrypt %s", out.Result)
+	}
+	if code, _ := op("disable-key", "", nil); code != 200 || d.versions["payments"][0].enabled {
+		t.Fatal("not disabled")
+	}
+	if code, _ := op("schedule-key-deletion", "", nil); code != 200 || d.deleted["payments"] == nil {
+		t.Fatal("not soft-deleted")
+	}
+	if code, _ := op("cancel-key-deletion", "", nil); code != 200 || d.versions["payments"] == nil {
+		t.Fatal("not recovered")
+	}
+	if code, _ := op("put-key-policy", "", map[string]string{"policy": "{}"}); code != http.StatusConflict {
+		t.Fatalf("Azure has no per-key policy: %d", code)
+	}
+}
+
+// The console over Alibaba's signed RPC API: aliases, tags, disable.
+func TestConsoleAlibaba(t *testing.T) {
+	fipstest.SkipIfStrict(t, "Alibaba's HMAC-SHA1 request signing")
+	svc, _, kc, _ := newCloudService(t)
+	d, endpoint := newAlibabaDouble(t)
+	setCred(svc, "cred-ali-double", "alibaba", map[string]string{"access_key_id": "LTAItest", "access_key_secret": "test-only", "region": "cn-hangzhou", "endpoint_url": endpoint})
+	acct, err := svc.RegisterAccount(attachCtx("t1"), RegisterCloudAccountRequest{TenantID: "t1", Provider: ProviderAlibaba, Name: "ali", ConnectionID: "cred-ali-double"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	kc.Seed("t1", "key-1", "AES-256")
+	_, k, err := svc.CreateBYOK(context.Background(), "t1", "alice", CreateBYOKRequest{AccountID: acct.ID, KeyID: "key-1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rt, _ := consoleRouter(svc)
+	op := func(name string, params map[string]string) (int, consoleOut) {
+		return runOp(t, rt, rw, name, map[string]interface{}{"account_id": acct.ID, "key": k.CloudKeyID, "params": params})
+	}
+	if code, out := op("create-alias", map[string]string{"alias": "orders"}); code != 200 || d.aliases["alias/orders"] != k.CloudKeyID || !strings.HasPrefix(out.CLI, "aliyun kms ") {
+		t.Fatalf("alias %d %+v", code, out)
+	}
+	if _, out := op("list-aliases", nil); !strings.Contains(string(out.Result), "alias/orders") {
+		t.Fatal("alias missing")
+	}
+	op("tag-key", map[string]string{"tag_key": "team", "tag_value": "payments"})
+	if _, out := op("list-tags", nil); !strings.Contains(string(out.Result), "payments") {
+		t.Fatal("tag missing")
+	}
+	op("untag-key", map[string]string{"tag_key": "team"})
+	if len(d.tags[k.CloudKeyID]) != 0 {
+		t.Fatal("tag not removed")
+	}
+	op("disable-key", nil)
+	if code, _ := op("encrypt", map[string]string{"plaintext_b64": b64s("x")}); code != http.StatusBadGateway {
+		t.Fatalf("encrypt with a disabled key: %d", code)
+	}
+	op("enable-key", nil)
+	if code, _ := op("encrypt", map[string]string{"plaintext_b64": base64.StdEncoding.EncodeToString([]byte{0xff, 0xfe})}); code != http.StatusBadRequest {
+		t.Fatalf("binary plaintext to Alibaba: %d", code)
 	}
 }

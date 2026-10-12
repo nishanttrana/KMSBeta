@@ -127,6 +127,11 @@ func main() {
 	// own import protocol (byok_engine.go).
 	svc.SetBYOK(NewSQLStore(dbConn), NewHTTPKeyCoreClient(keycoreURL, 60*time.Second), defaultBYOKProviders())
 	handler.byokRoutes(kernel)
+	handler.consoleRoutes(kernel)
+	if auditClient != nil {
+		svc.SetAuditEmitter(auditClient)
+	}
+	go svc.byokAutomationLoop(ctx, clusterstate.RunsPrimaryJobs, 15*time.Minute, logger.Printf)
 	kernel.MountOn(handler.mux)
 
 	httpPort := envOr("HTTP_PORT", "8080")

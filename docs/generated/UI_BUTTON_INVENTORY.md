@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-12T16:54:00Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-12T17:09:14Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -582,14 +582,22 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 169 | - | button | { if (!window.confirm(`Roll back "$ "? The successor keys it created are deac... |  |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 72 | - | button | Cancel | onClose} style={{ background: "transparent", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 73 | - | button | (icon or dynamic label) | onSave |
-| web/dashboard/src/components/v3/tabs/byok/Console.tsx | 84 | - | Btn | void load()}>Refresh |  |
-| web/dashboard/src/components/v3/tabs/byok/Console.tsx | 85 | - | Btn | setCreating(true)}> Bring your own key |  |
-| web/dashboard/src/components/v3/tabs/byok/Console.tsx | 126 | - | Btn | download("vecta-byok-cloud-calls.sh", runsToScript(runs))}> Export as script |  |
-| web/dashboard/src/components/v3/tabs/byok/Console.tsx | 133 | - | button | setOpenRun(openRun === r.id ? "" : r.id)} style={ }> · {k ? `$ $ ` : r.byok_i... |  |
+| web/dashboard/src/components/v3/tabs/byok/Automation.tsx | 68 | - | Btn | void save()}> |  |
+| web/dashboard/src/components/v3/tabs/byok/Automation.tsx | 78 | - | Btn | { createAutomationPlaybook(session, p.trigger).then(() => { onToast?.(`Playbo... |  |
+| web/dashboard/src/components/v3/tabs/byok/CloudConsole.tsx | 95 | - | Btn | void run()}>{con.busy ? "Running…" : `Run $ `} |  |
+| web/dashboard/src/components/v3/tabs/byok/CloudConsole.tsx | 98 | - | Btn | Export as script | exportScript |
+| web/dashboard/src/components/v3/tabs/byok/Console.tsx | 86 | - | Btn | void load()}>Refresh |  |
+| web/dashboard/src/components/v3/tabs/byok/Console.tsx | 87 | - | Btn | setConsoleOpen(true)}>Cloud console |  |
+| web/dashboard/src/components/v3/tabs/byok/Console.tsx | 88 | - | Btn | setCreating(true)}> Bring your own key |  |
+| web/dashboard/src/components/v3/tabs/byok/Console.tsx | 129 | - | Btn | download("vecta-byok-cloud-calls.sh", runsToScript(runs))}> Export as script |  |
+| web/dashboard/src/components/v3/tabs/byok/Console.tsx | 136 | - | button | setOpenRun(openRun === r.id ? "" : r.id)} style={ }> · {k ? `$ $ ` : r.byok_i... |  |
 | web/dashboard/src/components/v3/tabs/byok/CreateWizard.tsx | 156 | - | Btn | (icon or dynamic label) | onClose |
 | web/dashboard/src/components/v3/tabs/byok/CreateWizard.tsx | 157 | - | Btn | void submit()}> |  |
-| web/dashboard/src/components/v3/tabs/byok/KeyDetail.tsx | 87 | - | Btn | void act(op)}>{busy === op ? `$ …` : label} |  |
-| web/dashboard/src/components/v3/tabs/byok/KeyDetail.tsx | 147 | - | button | setOpen(open === r.id ? "" : r.id)} style={ }> · steps · |  |
+| web/dashboard/src/components/v3/tabs/byok/KeyDetail.tsx | 90 | - | Btn | void act(op)}>{busy === op ? `$ …` : label} |  |
+| web/dashboard/src/components/v3/tabs/byok/KeyDetail.tsx | 109 | - | Btn | setView(v)}>{ [v]} |  |
+| web/dashboard/src/components/v3/tabs/byok/KeyDetail.tsx | 156 | - | button | setOpen(open === r.id ? "" : r.id)} style={ }> · steps · |  |
+| web/dashboard/src/components/v3/tabs/byok/KeyPages.tsx | 71 | - | Btn | void act(op, params, confirm)}>{con.busy === op ? `$ …` : label} |  |
+| web/dashboard/src/components/v3/tabs/byok/KeyPages.tsx | 83 | - | Btn | { setTab(t.id); setForm( ); }}> |  |
 | web/dashboard/src/components/v3/tabs/byok/RunSteps.tsx | 37 | - | button | copy(s.cli \|\| "")} title="Copy the CLI equivalent" style={ }> |  |
 | web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 162 | - | button | setStatus(s)} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 170 | - | Btn | void save()} disabled= >Save |  |

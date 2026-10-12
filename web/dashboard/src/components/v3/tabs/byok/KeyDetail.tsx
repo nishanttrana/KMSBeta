@@ -9,6 +9,8 @@ import { B, Btn, Inp, Modal, usePromptDialog } from "../../legacyPrimitives";
 import { C } from "../../theme";
 import { MONO, SOURCE_LABEL, STATES, cloudLabel, fmtDate, stateOf } from "./meta";
 import { RunSteps } from "./RunSteps";
+import { KeyPages } from "./KeyPages";
+import { BYOKAutomationPanel } from "./Automation";
 
 type Props = {
   session: AuthSession;
@@ -35,6 +37,7 @@ export function BYOKKeyDetail({ session, id, listed, caps, onClose, onChanged, o
   const [days, setDays] = useState("");
   const [lastRun, setLastRun] = useState<BYOKRun | null>(null);
   const [open, setOpen] = useState("");
+  const [view, setView] = useState<"material" | "settings" | "automation">("material");
   const prompt = usePromptDialog();
 
   const load = useCallback(async () => {
@@ -102,6 +105,12 @@ export function BYOKKeyDetail({ session, id, listed, caps, onClose, onChanged, o
             <Fact l="Expires" v={k.expires_at ? fmtDate(k.expires_at) : "does not expire"} />
           </div>
 
+          {byok && <div style={{ display: "flex", gap: 6 }}>
+            {(["material", "settings", "automation"] as const).map((v) => <Btn key={v} small primary={view === v} onClick={() => setView(v)}>{{ material: "Material", settings: "Key settings", automation: "Automation" }[v]}</Btn>)}
+          </div>}
+          {byok && view === "settings" && <KeyPages session={session} k={k} />}
+          {byok && view === "automation" && <BYOKAutomationPanel session={session} k={k} caps={caps} onSaved={() => { void load(); onChanged(); }} onToast={onToast} />}
+          {view === "material" && <>
           {byok ? (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
               {action("rotate", "Rotate", !!caps?.rotate && state === "current")}
@@ -154,6 +163,7 @@ export function BYOKKeyDetail({ session, id, listed, caps, onClose, onChanged, o
               {!detail?.runs.length && <div style={{ fontSize: 11, color: C.muted }}>No runs.</div>}
             </div>
           </div>
+          </>}
         </>}
       </div>
       {prompt.ui}

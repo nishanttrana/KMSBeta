@@ -7,6 +7,33 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-12 — The cloud console is a fixed catalogue; BYOK automation announces and playbooks act
+**Decision:** the cloud console is a list of named key operations
+(`services/cloud/console.go`), each its own kernel route with a permission,
+typed parameters and an audit action. A cloud implements the operations its
+API has; anything else is refused with `operation_not_supported` and not
+offered. The BYOK key pages call the same routes. Automation rules live on
+the key; the cloud service's sweep (primary only) emits
+`audit.cloud.byok_material_expiring` / `byok_rotation_due` once per piece of
+material, and tenant playbooks run `byok_reimport` / `byok_rotate` through
+the routes a person uses.
+**Why:** the owner asked for a structured, allow-listed console with no
+shell, per-cloud key pages, and automation as playbook actions
+(2026-10-11). A route per operation makes "who may do what in a cloud" a
+permission and makes each audit record name the operation. Acting through
+playbooks keeps one place for authority, approvals and failure handling.
+**Rejected:** a free-form command box (nothing to allow-list, nothing to
+audit by name); one generic `/cloud/console/run` route (one permission for
+reading a key and deleting it); a sweep that rotates by itself (acts on no
+person's authority); generating data keys in the console (plaintext key
+material in the browser); recording parameter values in audit (a plaintext
+or a policy in the audit log).
+**Enforced by:** `TestConsoleRoutesRefusalsAudited`, `TestConsoleRefusals`,
+`TestConsoleOperationsListSupport`, `TestBYOKAutomation` (a member's sweep
+does nothing; the same material is announced once),
+`TestBYOKRenewalPlaybookCallsReimport`, and the smoke tests in
+`web/dashboard/tests/byok.spec.ts`.
+
 ## 2026-10-12 — Legacy handlers go behind the kernel through an adapter; the tenant has one source
 **Decision:** KMIP's management API, Autokey and signing are registered on
 `pkg/route` with `route.Legacy(handler)`. The kernel verifies the token,

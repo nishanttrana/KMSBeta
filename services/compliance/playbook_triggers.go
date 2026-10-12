@@ -188,6 +188,9 @@ func triggerMatches(t PlaybookTrigger, specs []TriggerSpec, ev RunEvent, tenante
 		if s.SuccessOnly && ev.Result != "" && ev.Result != route.ResultSuccess {
 			return false
 		}
+		if s.FailureOnly && ev.Result != route.ResultFailure {
+			return false
+		}
 		return tenanted || s.Platform
 	}
 	return false

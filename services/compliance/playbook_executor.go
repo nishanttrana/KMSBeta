@@ -13,6 +13,7 @@ import (
 	"net/http"
 	neturl "net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -571,6 +572,19 @@ func (e *PlaybookExecutor) executeAction(ctx context.Context, typ string, p map[
 		return post(e.urls.Keycore, "/keys/"+esc(p["key_id"])+"/activate", map[string]string{"mode": "immediate"})
 	case "trigger_rotation_policy":
 		return post(e.urls.Keycore, "/rotation/policies/"+esc(p["policy_id"])+"/trigger", nil)
+	case "byok_rotate", "byok_reimport", "byok_verify", "byok_revoke":
+		body := map[string]interface{}{}
+		if d := strings.TrimSpace(p["validity_days"]); d != "" && typ != "byok_verify" && typ != "byok_revoke" {
+			n, err := strconv.Atoi(d)
+			if err != nil || n < 0 {
+				return "", fmt.Errorf("validity_days %q is not a number of days", d)
+			}
+			if n > 0 {
+				body["validity_days"] = n
+			}
+		}
+		body["reason"] = "playbook " + rc.PlaybookID + " run " + rc.RunID
+		return post(e.urls.Cloud, "/cloud/byok/keys/"+esc(p["byok_id"])+"/"+strings.TrimPrefix(typ, "byok_"), body)
 	case "renew_certificate":
 		return post(e.urls.Certs, "/certs/"+esc(p["cert_id"])+"/renew", map[string]string{})
 	case "revoke_certificate":
@@ -866,6 +880,8 @@ func (e *PlaybookExecutor) checkTarget(ctx context.Context, typ string, p map[st
 	switch typ {
 	case "rotate_key", "disable_key", "deactivate_key", "activate_key":
 		return get(e.urls.Keycore + "/keys/" + esc(p["key_id"]) + "?tenant_id=" + neturl.QueryEscape(rc.TenantID))
+	case "byok_rotate", "byok_reimport", "byok_verify", "byok_revoke":
+		return get(e.urls.Cloud + "/cloud/byok/keys/" + esc(p["byok_id"]) + "?tenant_id=" + neturl.QueryEscape(rc.TenantID))
 	case "renew_certificate", "revoke_certificate":
 		return get(e.urls.Certs + "/certs/" + esc(p["cert_id"]) + "?tenant_id=" + neturl.QueryEscape(rc.TenantID))
 	case "acknowledge_alert", "resolve_alert":

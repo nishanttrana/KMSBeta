@@ -31,6 +31,7 @@ func (h *Handler) byokRoutes(rt *route.Router) {
 	rt.Handle("POST /cloud/byok/keys/{id}/verify", write("byok_verified", "info"), op(OpVerify))
 	rt.Handle("POST /cloud/byok/keys/{id}/sync", write("byok_synced", "info"), op(OpSync))
 	rt.Handle("POST /cloud/byok/keys/{id}/revoke", write("byok_revoked", "critical"), op(OpRevoke))
+	rt.Handle("PUT /cloud/byok/keys/{id}/automation", write("byok_automation_updated", "warning"), h.setBYOKAutomation)
 }
 
 // byokFail writes err: a refusal as refused with its reason, a failed run

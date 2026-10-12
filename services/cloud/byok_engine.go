@@ -342,7 +342,7 @@ func (s *Service) CreateBYOK(ctx context.Context, tenantID, actor string, req Cr
 		return r.finish(), t.key, err
 	}
 	s.verifyStep(r, t)
-	return r.finish(), t.key, nil
+	return r.finish(), t.key, runError(r.run)
 }
 
 func (s *Service) materials(ctx context.Context, k BYOKKey) ([]BYOKMaterial, BYOKMaterial) {

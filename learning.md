@@ -5,6 +5,43 @@ Newest entries on top.
 
 ## 2026-10-12
 
+### BYOK console, key settings and automation (13.2.0-beta)
+- **A create that verifies must fail when the verification fails.**
+  `CreateBYOK` ran its steps, recorded the failed verify in the run, and
+  returned `nil`. The route answered 201 and the audit event said success
+  for a key that could not encrypt. Every other BYOK operation already
+  returned the run's error; create was written first and never revisited.
+  **Rule: a run with a failed step is a failed call, whichever step it
+  was.** `TestConsoleGoogleCloud` and the Google lifecycle test now use the
+  key after creating it.
+- **Google Cloud does not make an imported version primary.** A new
+  symmetric CryptoKey created for import has no primary version, and
+  importing one does not set it. Encrypt then fails with "no primary
+  version". The double accepted the import, so only a test that encrypts
+  with the key finds this. **Rule: a protocol double proves the wire
+  format; a test must still use what was made.**
+- **The sweep announces, a playbook acts.** The automation sweep could have
+  called rotate itself. It would then act on nobody's authority and need its
+  own approval and failure handling. It emits
+  `audit.cloud.byok_material_expiring` and `byok_rotation_due` instead, and
+  a tenant playbook runs the action as the person who created it, with the
+  permission check and approvals playbooks already have.
+- **Once per piece of material.** The sweep runs every 15 minutes; without
+  a mark it would announce the same expiry each time. The mark is the
+  material ID and its expiry, stored on the key, so new material (or a new
+  expiry) is announced afresh. It runs on the primary only, because the mark
+  is replicated state.
+- **A catalogue, not a command line.** The owner's reference console takes
+  shell-like commands. Here an operation is a route with a permission and
+  typed parameters, so what a role may do in a cloud is a permission, an
+  audit record names the operation, and nothing a caller types is passed
+  through. Generating a data key is left out: it would hand plaintext key
+  material to the browser.
+- **Three gates caught the dashboard code on the way in,** all added after
+  it was written: a response body read with `.json()` (Go zero times), a
+  paragraph of explanation on the page, and unformatted new Go files.
+
+
 ### Checking the other 159 API examples (13.1.0-beta)
 - **A third of the unchecked examples were wrong.** 51 of 159 requests
   needed correcting before the service took them as written. The services decode

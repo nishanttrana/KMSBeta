@@ -156,3 +156,83 @@ export function runsToScript(runs: BYOKRun[]): string {
   }
   return lines.join("\n");
 }
+
+// ---- Cloud console (13.2.0-beta): a fixed catalogue of key operations in
+// KMS terms; each cloud supports the ones its API has.
+
+export type ConsoleParam = { name: string; type: "string" | "int" | "json" | "base64"; required?: boolean; help?: string };
+export type ConsoleOp = {
+  name: string;
+  label: string;
+  group: string;
+  mutating: boolean;
+  danger?: boolean;
+  needs_key: boolean;
+  params?: ConsoleParam[];
+  supported: boolean;
+};
+export type ConsoleCall = { account_id: string; key?: string; version?: string; region?: string; params?: Record<string, string> };
+export type ConsoleResult = { result: unknown; cli: string; operation: string; provider?: string };
+
+export class ConsoleError extends Error {
+  cli: string;
+  constructor(message: string, cli: string) {
+    super(message);
+    this.cli = cli;
+  }
+}
+
+export async function listConsoleOperations(session: AuthSession, accountId: string): Promise<{ items: ConsoleOp[]; provider: string }> {
+  const out = await serviceRequest<{ items?: ConsoleOp[]; provider?: string }>(session, "cloud", `/cloud/console/operations?account_id=${encodeURIComponent(accountId)}`);
+  return { items: out.items ?? [], provider: out.provider ?? "" };
+}
+
+export async function runConsoleOperation(session: AuthSession, op: string, call: ConsoleCall): Promise<ConsoleResult> {
+  const res = await serviceRequestRaw(session, "cloud", `/cloud/console/${encodeURIComponent(op)}`, { method: "POST", body: JSON.stringify(call) }, BYOK_TIMEOUT_MS);
+  const payload = (await res.text().then((t) => parseServiceJSON(t)).catch(() => ({}))) as Partial<ConsoleResult> & { error?: { message?: string } };
+  if (!res.ok) throw new ConsoleError(payload.error?.message || `Request failed (${res.status})`, payload.cli || "");
+  return payload as ConsoleResult;
+}
+
+// ---- Automation (13.2.0-beta): rules on a key, acted on by playbooks.
+
+export type BYOKAutomation = { renew_before_days: number; rotate_every_days: number; renew_validity_days: number };
+
+export function automationOf(k: BYOKKey): BYOKAutomation {
+  const n = (v?: string) => Number(v || 0) || 0;
+  return { renew_before_days: n(k.settings?.renew_before_days), rotate_every_days: n(k.settings?.rotate_every_days), renew_validity_days: n(k.settings?.renew_validity_days) };
+}
+
+export async function setBYOKAutomation(session: AuthSession, id: string, a: BYOKAutomation): Promise<BYOKKey> {
+  const out = await serviceRequest<{ key: BYOKKey }>(session, "cloud", `/cloud/byok/keys/${encodeURIComponent(id)}/automation`, { method: "PUT", body: JSON.stringify(a) });
+  return out.key;
+}
+
+type Playbook = { id: string; name: string; trigger?: { type?: string }; enabled?: boolean };
+
+// The two tenant playbooks that act on the automation events, one per
+// trigger, for every BYOK key. Created on the caller's authority (they
+// must hold cloud.write), named so they are found again.
+export const AUTOMATION_PLAYBOOKS = [
+  { name: "Cloud BYOK: renew expiring material", trigger: "byok_material_expiring", action: "byok_reimport",
+    parameters: { byok_id: "{{event.target_id}}", validity_days: "{{event.details.validity_days}}" } },
+  { name: "Cloud BYOK: rotate material when due", trigger: "byok_rotation_due", action: "byok_rotate",
+    parameters: { byok_id: "{{event.target_id}}" } },
+] as const;
+
+export async function automationPlaybooks(session: AuthSession): Promise<Record<string, Playbook | undefined>> {
+  const out = await serviceRequest<{ data?: Playbook[] }>(session, "compliance", "/compliance/playbooks");
+  const list = out.data ?? [];
+  const found: Record<string, Playbook | undefined> = {};
+  for (const p of AUTOMATION_PLAYBOOKS) found[p.trigger] = list.find((x) => x.trigger?.type === p.trigger && x.name === p.name);
+  return found;
+}
+
+export async function createAutomationPlaybook(session: AuthSession, trigger: string): Promise<void> {
+  const p = AUTOMATION_PLAYBOOKS.find((x) => x.trigger === trigger);
+  if (!p) throw new Error(`no automation playbook for ${trigger}`);
+  await serviceRequest(session, "compliance", "/compliance/playbooks", {
+    method: "POST",
+    body: JSON.stringify({ name: p.name, enabled: true, trigger: { type: p.trigger }, actions: [{ type: p.action, parameters: p.parameters }] }),
+  });
+}

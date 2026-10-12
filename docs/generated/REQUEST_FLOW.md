@@ -1,15 +1,15 @@
 # Generated Request Flow Map
 
-Generated at `2026-10-12T16:54:00Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-12T17:09:14Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `907`
-- Routes with exact frontend call sites: `523`
-- Routes whose handlers call `h.svc.*`: `533`
-- Routes with detected store calls: `644`
+- Backend routes analyzed: `909`
+- Routes with exact frontend call sites: `527`
+- Routes whose handlers call `h.svc.*`: `535`
+- Routes with detected store calls: `645`
 - Routes with detected internal `pkg/*` calls: `194`
 
 ## How To Trace One Frontend Click
@@ -161,9 +161,11 @@ This file connects frontend requests to backend Go processing. It is static anal
 | certs\|POST\|/certs/edge-tls/csr | POST /certs/edge-tls/csr | handleEdgeCSR (services/certs/internal_mtls_routes.go:287) |  |  |  |  | web/dashboard/src/lib/certs.ts:1200 |
 | certs\|POST\|/certs/edge-tls/certificate/install | POST /certs/edge-tls/certificate/install | handleEdgeInstall (services/certs/internal_mtls_routes.go:314) |  |  |  |  | web/dashboard/src/lib/certs.ts:1208 |
 | cloud\|GET\|/cloud/byok/providers | GET /cloud/byok/providers | <inline func> (:) |  |  |  |  | web/dashboard/src/lib/byok.ts:121 |
-| cloud\|GET\|/cloud/byok/keys | GET /cloud/byok/keys | listBYOK (services/cloud/byok_routes.go:65) | ListBYOK | ListBindings | s.byokStore.ListBYOKKeys |  | web/dashboard/src/lib/byok.ts:126 |
-| cloud\|GET\|/cloud/byok/runs | GET /cloud/byok/runs | listBYOKRuns (services/cloud/byok_routes.go:74) | byokReady |  |  |  | web/dashboard/src/lib/byok.ts:135 |
-| cloud\|GET\|/cloud/byok/keys/{param} | GET /cloud/byok/keys/{id} | getBYOK (services/cloud/byok_routes.go:87) | GetBYOK |  | s.byokStore.GetBYOKKey, s.byokStore.ListBYOKMaterials, s.byokStore.ListBYOKRuns |  | web/dashboard/src/lib/byok.ts:131 |
+| cloud\|GET\|/cloud/byok/keys | GET /cloud/byok/keys | listBYOK (services/cloud/byok_routes.go:66) | ListBYOK | ListBindings | s.byokStore.ListBYOKKeys |  | web/dashboard/src/lib/byok.ts:126 |
+| cloud\|GET\|/cloud/byok/runs | GET /cloud/byok/runs | listBYOKRuns (services/cloud/byok_routes.go:75) | byokReady |  |  |  | web/dashboard/src/lib/byok.ts:135 |
+| cloud\|GET\|/cloud/byok/keys/{param} | GET /cloud/byok/keys/{id} | getBYOK (services/cloud/byok_routes.go:88) | GetBYOK |  | s.byokStore.GetBYOKKey, s.byokStore.ListBYOKMaterials, s.byokStore.ListBYOKRuns |  | web/dashboard/src/lib/byok.ts:131 |
+| cloud\|PUT\|/cloud/byok/keys/{param}/automation | PUT /cloud/byok/keys/{id}/automation | setBYOKAutomation (services/cloud/byok_automation.go:168) | SetBYOKAutomation |  | s.byokStore.UpdateBYOKKey |  | web/dashboard/src/lib/byok.ts:207 |
+| cloud\|GET\|/cloud/console/operations | GET /cloud/console/operations | consoleOperations (services/cloud/console.go:254) | consoleProviderFor | GetAccount |  |  | web/dashboard/src/lib/byok.ts:186 |
 | cloud\|POST\|/cloud/accounts | POST /cloud/accounts | handleRegisterAccount (services/cloud/handler.go:42) | RegisterAccount | CreateAccount, GetAccount |  |  | web/dashboard/src/lib/cloud.ts:129 |
 | cloud\|DELETE\|/cloud/accounts/{param} | DELETE /cloud/accounts/{id} | handleDeleteAccount (services/cloud/handler.go:74) | DeleteAccount | DeleteAccountCascade | s.exposure.Retire |  | web/dashboard/src/lib/cloud.ts:146 |
 | cloud\|POST\|/cloud/region-mappings | POST /cloud/region-mappings | handleSetRegionMapping (services/cloud/handler.go:93) | SetRegionMapping | SetRegionMapping, GetRegionMapping |  |  | web/dashboard/src/lib/cloud.ts:165 |
@@ -199,6 +201,8 @@ This file connects frontend requests to backend Go processing. It is static anal
 | compliance\|GET\|/compliance/risk/keys | GET /compliance/risk/keys | handleGetKeyRiskRanking (services/compliance/handler_dri.go:194) | publishAudit |  |  |  | web/dashboard/src/lib/dri.ts:54 |
 | compliance\|GET\|/compliance/risk/summary | GET /compliance/risk/summary | handleGetDataRiskSummary (services/compliance/handler_dri.go:244) |  |  |  |  | web/dashboard/src/lib/dri.ts:62 |
 | compliance\|GET\|/compliance/risk/remediation | GET /compliance/risk/remediation | handleGetRiskRemediation (services/compliance/handler_dri.go:322) |  |  |  |  | web/dashboard/src/lib/dri.ts:82 |
+| compliance\|GET\|/compliance/playbooks | GET /compliance/playbooks | listPlaybooks (services/compliance/handler_playbooks.go:163) |  | ListPlaybooks |  |  | web/dashboard/src/lib/byok.ts:224 |
+| compliance\|POST\|/compliance/playbooks | POST /compliance/playbooks | createPlaybook (services/compliance/handler_playbooks.go:183) |  | CreatePlaybook | h.triggers.Invalidate |  | web/dashboard/src/lib/byok.ts:234 |
 | compliance\|GET\|/compliance/playbooks/connections | GET /compliance/playbooks/connections | listConnections (services/compliance/playbook_connections.go:452) |  | ListConnections |  |  | web/dashboard/src/lib/credentials.ts:53, web/dashboard/src/lib/discovery.ts:381, web/dashboard/src/lib/governance.ts:220 |
 | compliance\|GET\|/compliance/private-endpoints | GET /compliance/private-endpoints | listPrivateEndpoints (services/compliance/private_endpoints.go:121) |  | ListPrivateEndpoints |  | pkg/route.Allowed, pkg/tenantcheck.InternalServiceTenant, pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/privateEndpoints.ts:16 |
 | compliance\|POST\|/compliance/private-endpoints | POST /compliance/private-endpoints | addPrivateEndpoint (services/compliance/private_endpoints.go:134) |  | ListPrivateEndpoints, CreatePrivateEndpoint |  |  | web/dashboard/src/lib/privateEndpoints.ts:25 |
@@ -762,16 +766,18 @@ This file connects frontend requests to backend Go processing. It is static anal
 | certs\|GET\|/certs/edge-tls/measurement | GET /certs/edge-tls/measurement | handleEdgeMeasurement (services/certs/internal_mtls_routes.go:351) |  |  |  |  |  |
 | certs\|POST\|/v1/enroll | POST /v1/enroll | <inline func> (:) |  |  |  |  |  |
 | cloud\|GET\|/cloud/byok/providers | GET /cloud/byok/providers | <inline func> (:) |  |  |  |  | web/dashboard/src/lib/byok.ts:121 |
-| cloud\|GET\|/cloud/byok/keys | GET /cloud/byok/keys | listBYOK (services/cloud/byok_routes.go:65) | ListBYOK | ListBindings | s.byokStore.ListBYOKKeys |  | web/dashboard/src/lib/byok.ts:126 |
-| cloud\|GET\|/cloud/byok/runs | GET /cloud/byok/runs | listBYOKRuns (services/cloud/byok_routes.go:74) | byokReady |  |  |  | web/dashboard/src/lib/byok.ts:135 |
-| cloud\|GET\|/cloud/byok/keys/{param} | GET /cloud/byok/keys/{id} | getBYOK (services/cloud/byok_routes.go:87) | GetBYOK |  | s.byokStore.GetBYOKKey, s.byokStore.ListBYOKMaterials, s.byokStore.ListBYOKRuns |  | web/dashboard/src/lib/byok.ts:131 |
-| cloud\|POST\|/cloud/byok/keys | POST /cloud/byok/keys | createBYOK (services/cloud/byok_routes.go:96) | CreateBYOK |  | s.byokKeycore.KeyInfo, s.byokStore.CreateBYOKKey, s.byokStore.UpdateBYOKKey, s.byokStore.PutBYOKMaterial |  |  |
+| cloud\|GET\|/cloud/byok/keys | GET /cloud/byok/keys | listBYOK (services/cloud/byok_routes.go:66) | ListBYOK | ListBindings | s.byokStore.ListBYOKKeys |  | web/dashboard/src/lib/byok.ts:126 |
+| cloud\|GET\|/cloud/byok/runs | GET /cloud/byok/runs | listBYOKRuns (services/cloud/byok_routes.go:75) | byokReady |  |  |  | web/dashboard/src/lib/byok.ts:135 |
+| cloud\|GET\|/cloud/byok/keys/{param} | GET /cloud/byok/keys/{id} | getBYOK (services/cloud/byok_routes.go:88) | GetBYOK |  | s.byokStore.GetBYOKKey, s.byokStore.ListBYOKMaterials, s.byokStore.ListBYOKRuns |  | web/dashboard/src/lib/byok.ts:131 |
+| cloud\|POST\|/cloud/byok/keys | POST /cloud/byok/keys | createBYOK (services/cloud/byok_routes.go:97) | CreateBYOK |  | s.byokKeycore.KeyInfo, s.byokStore.CreateBYOKKey, s.byokStore.UpdateBYOKKey, s.byokStore.PutBYOKMaterial |  |  |
 | cloud\|POST\|/cloud/byok/keys/{param}/rotate | POST /cloud/byok/keys/{id}/rotate | op(OpRotate) (:) |  |  |  |  |  |
 | cloud\|POST\|/cloud/byok/keys/{param}/reimport | POST /cloud/byok/keys/{id}/reimport | op(OpReimport) (:) |  |  |  |  |  |
 | cloud\|POST\|/cloud/byok/keys/{param}/restore | POST /cloud/byok/keys/{id}/restore | op(OpRestore) (:) |  |  |  |  |  |
 | cloud\|POST\|/cloud/byok/keys/{param}/verify | POST /cloud/byok/keys/{id}/verify | op(OpVerify) (:) |  |  |  |  |  |
 | cloud\|POST\|/cloud/byok/keys/{param}/sync | POST /cloud/byok/keys/{id}/sync | op(OpSync) (:) |  |  |  |  |  |
 | cloud\|POST\|/cloud/byok/keys/{param}/revoke | POST /cloud/byok/keys/{id}/revoke | op(OpRevoke) (:) |  |  |  |  |  |
+| cloud\|PUT\|/cloud/byok/keys/{param}/automation | PUT /cloud/byok/keys/{id}/automation | setBYOKAutomation (services/cloud/byok_automation.go:168) | SetBYOKAutomation |  | s.byokStore.UpdateBYOKKey |  | web/dashboard/src/lib/byok.ts:207 |
+| cloud\|GET\|/cloud/console/operations | GET /cloud/console/operations | consoleOperations (services/cloud/console.go:254) | consoleProviderFor | GetAccount |  |  | web/dashboard/src/lib/byok.ts:186 |
 | cloud\|POST\|/cloud/accounts/{param}/test | POST /cloud/accounts/{id}/test | testAccount (services/cloud/credentials.go:181) | TestAccount | GetAccount | s.creds.ReportTest |  |  |
 | cloud\|POST\|/cloud/credentials/{param}/test | POST /cloud/credentials/{id}/test | testCredential (services/cloud/credentials.go:199) | testCredentials |  |  |  |  |
 | cloud\|GET\|/cloud/credential-usage | GET /cloud/credential-usage | credentialUsage (services/cloud/credentials.go:230) |  | ListAccounts |  |  |  |
@@ -843,8 +849,8 @@ This file connects frontend requests to backend Go processing. It is static anal
 | compliance\|GET\|/compliance/risk/remediation | GET /compliance/risk/remediation | handleGetRiskRemediation (services/compliance/handler_dri.go:322) |  |  |  |  | web/dashboard/src/lib/dri.ts:82 |
 | compliance\|GET\|/compliance/playbooks/catalog | GET /compliance/playbooks/catalog | playbookCatalog (services/compliance/handler_playbooks.go:154) |  |  |  |  |  |
 | compliance\|GET\|/compliance/playbooks/summary | GET /compliance/playbooks/summary | playbookSummary (services/compliance/handler_playbooks.go:501) |  | GetPlaybookSummary |  |  |  |
-| compliance\|GET\|/compliance/playbooks | GET /compliance/playbooks | listPlaybooks (services/compliance/handler_playbooks.go:163) |  | ListPlaybooks |  |  |  |
-| compliance\|POST\|/compliance/playbooks | POST /compliance/playbooks | createPlaybook (services/compliance/handler_playbooks.go:183) |  | CreatePlaybook | h.triggers.Invalidate |  |  |
+| compliance\|GET\|/compliance/playbooks | GET /compliance/playbooks | listPlaybooks (services/compliance/handler_playbooks.go:163) |  | ListPlaybooks |  |  | web/dashboard/src/lib/byok.ts:224 |
+| compliance\|POST\|/compliance/playbooks | POST /compliance/playbooks | createPlaybook (services/compliance/handler_playbooks.go:183) |  | CreatePlaybook | h.triggers.Invalidate |  | web/dashboard/src/lib/byok.ts:234 |
 | compliance\|GET\|/compliance/playbooks/{param} | GET /compliance/playbooks/{id} | getPlaybook (services/compliance/handler_playbooks.go:175) |  |  |  |  |  |
 | compliance\|PUT\|/compliance/playbooks/{param} | PUT /compliance/playbooks/{id} | updatePlaybook (services/compliance/handler_playbooks.go:202) |  | UpdatePlaybook, ResetThresholdHits, GetConnection, DeletePlaybook, ListPlaybookRuns, GetPlaybookRun, GetPlaybookSummary, GetPlaybook | h.triggers.Invalidate, h.executor.Start, h.executor.Execute, h.executor.DryRun, h.executor.Cancel | pkg/route.Allowed |  |
 | compliance\|DELETE\|/compliance/playbooks/{param} | DELETE /compliance/playbooks/{id} | deletePlaybook (services/compliance/handler_playbooks.go:274) |  | DeletePlaybook, ResetThresholdHits | h.triggers.Invalidate |  |  |

@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-12T16:54:00Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-12T17:09:14Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `26`
 - Tab/component mappings: `33`
 - Sub-pane groups: `9`
-- Backend HTTP routes discovered: `907` across `28` services
-- Backend routes on the `pkg/route` kernel: `520` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `537`
-- Frontend call sites with exact backend route match: `516`
-- Frontend call sites needing review or dynamic/runtime confirmation: `21`
-- Clickable controls with static `onClick` handlers: `770`
-- Backend request flows with handler/service/package summaries: `907`
+- Backend HTTP routes discovered: `909` across `28` services
+- Backend routes on the `pkg/route` kernel: `522` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `542`
+- Frontend call sites with exact backend route match: `520`
+- Frontend call sites needing review or dynamic/runtime confirmation: `22`
+- Clickable controls with static `onClick` handlers: `778`
+- Backend request flows with handler/service/package summaries: `909`
 
 ## How To Use This For Launch
 
@@ -143,7 +143,7 @@ flowchart LR
   svc_autokey["autokey (15 routes)"]
   svc_backup["backup (11 routes)"]
   svc_certs["certs (69 routes)"]
-  svc_cloud["cloud (26 routes)"]
+  svc_cloud["cloud (28 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
   svc_compliance["compliance (61 routes)"]
   svc_confidential["confidential (7 routes)"]
@@ -212,9 +212,9 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | autokey | 15 | 11 |
 | backup | 11 | 10 |
 | certs | 69 | 52 |
-| cloud | 26 | 12 |
+| cloud | 28 | 15 |
 | cluster-manager | 21 | 11 |
-| compliance | 61 | 28 |
+| compliance | 61 | 30 |
 | confidential | 7 | 6 |
 | dataprotect | 49 | 28 |
 | discovery | 24 | 22 |
@@ -250,6 +250,7 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | auth | GET | /auth/identity/providers/{param}/users{param}` : ""} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 896 |
 | auth | GET | /auth/identity/providers/{param}/groups{param}` : ""} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 926 |
 | auth | GET | /auth/identity/providers/{param}/groups/{param}/members{param}` : ""} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 952 |
+| cloud | POST | /cloud/console/{param} | serviceRequestRaw | web/dashboard/src/lib/byok.ts | 191 |
 | cloud | GET | /cloud/accounts{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 121 |
 | cloud | GET | /cloud/region-mappings{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 157 |
 | cloud | GET | /cloud/inventory{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 203 |
@@ -264,7 +265,7 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | secrets | GET | /{param}&format={param}{param}` : ""} | serviceRequest | web/dashboard/src/lib/secrets.ts | 170 |
 | secrets | DELETE | /secretURL(session, secretId, `/versions/{param}`) | serviceRequest | web/dashboard/src/lib/secrets.ts | 199 |
 
-Showing `21` of `21`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
+Showing `22` of `22`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
 
 ## Backend Routes Not Directly Called From Dashboard
 
@@ -388,12 +389,12 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/cbom/diff | h.handleCBOMDiff |  | services/compliance/handler.go | 88 |
 | compliance | GET | /compliance/playbooks/catalog | h.playbookCatalog | compliance.playbook.read | services/compliance/handler_playbooks.go | 135 |
 | compliance | GET | /compliance/playbooks/summary | h.playbookSummary | compliance.playbook.read | services/compliance/handler_playbooks.go | 136 |
-| compliance | GET | /compliance/playbooks | h.listPlaybooks | compliance.playbook.read | services/compliance/handler_playbooks.go | 137 |
-| compliance | POST | /compliance/playbooks | h.createPlaybook | compliance.playbook.write | services/compliance/handler_playbooks.go | 138 |
 | compliance | GET | /compliance/playbooks/{id} | h.getPlaybook | compliance.playbook.read | services/compliance/handler_playbooks.go | 139 |
 | compliance | PUT | /compliance/playbooks/{id} | h.updatePlaybook | compliance.playbook.write | services/compliance/handler_playbooks.go | 140 |
+| compliance | DELETE | /compliance/playbooks/{id} | h.deletePlaybook | compliance.playbook.delete | services/compliance/handler_playbooks.go | 141 |
+| compliance | POST | /compliance/playbooks/{id}/run | h.runPlaybook | compliance.playbook.run | services/compliance/handler_playbooks.go | 142 |
 
-Showing `120` of `384`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `382`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

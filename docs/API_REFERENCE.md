@@ -2950,6 +2950,9 @@ Salesforce Shield. Every BYOK route goes through the route kernel
 | `POST /cloud/byok/keys/{id}/restore` | `cloud.write` | re-enable, or import the revoked version again from the KMS (`material_id` optional) |
 | `POST /cloud/byok/keys/{id}/verify` | `cloud.write` | a cryptographic round trip in the cloud |
 | `POST /cloud/byok/keys/{id}/sync` | `cloud.write` | read the cloud key's state |
+| `PUT /cloud/byok/keys/{id}/automation` | `cloud.write` | body `renew_before_days`, `renew_validity_days`, `rotate_every_days` (`0` is off); → `key`, `automation`. Audited as `byok_automation_updated` (13.2.0-beta) |
+| `GET /cloud/console/operations?account_id=` | `cloud.read` | the console catalogue: `items` (`name`, `label`, `group`, `mutating`, `danger`, `needs_key`, `params`, `supported` for that account's cloud), `provider` |
+| `POST /cloud/console/<operation>` | `cloud.read` for reads, `cloud.write` for changes and cryptography | body `account_id`, `key`, `version`, `region`, `params`; → `result`, `cli`, `operation`, `provider`. One route per operation, audited as `console_<operation>` with dashes as underscores ([the catalogue](SECURITY/CLOUD_BYOK.md)). `400 bad_request` for an unknown or malformed parameter, `409 operation_not_supported`, `502 cloud_error` with the cloud's message and `cli` |
 
 Refusals (`result: refused`, `reason`): `account_not_found` (`404`),
 `byok_not_supported`, `key_not_exportable`, `operation_not_supported`,
@@ -4051,7 +4054,7 @@ Common prefixes:
 | audit.confidential.* | Attestation verdicts and attested key release |
 | audit.keyaccess.* | Key access justification policy and decisions |
 | audit.ekm.* | EKM agents, database clients (`client_created`, `client_token_issued`, `client_enrolled`, `client_check_in`, `client_list`, `client_read`) and TDE keys; `audit.ekm.key_access_denied` for a TDE operation refused by key access (deny, or `key_access_unavailable`) |
-| audit.cloud.* | Cloud accounts, inventory and sync; BYOK `byok_created`, `byok_rotated`, `byok_reimported`, `byok_revoked`, `byok_restored`, `byok_verified`, `byok_synced`, `byok_keys_listed`, `byok_key_read`, `byok_runs_listed`, `byok_providers_read` (10.0.0-beta); `audit.cloud.key_access_denied` for a refusal by key access |
+| audit.cloud.* | Cloud accounts, inventory and sync; BYOK `byok_created`, `byok_rotated`, `byok_reimported`, `byok_revoked`, `byok_restored`, `byok_verified`, `byok_synced`, `byok_keys_listed`, `byok_key_read`, `byok_runs_listed`, `byok_providers_read` (10.0.0-beta); `console_<operation>` for each cloud console operation, `console_operations_read`, `byok_automation_updated`, and the automation sweep's `byok_material_expiring`, `byok_rotation_due` (13.2.0-beta); `audit.cloud.key_access_denied` for a refusal by key access |
 | audit.hyok.* | HYOK proxy requests; `audit.hyok.request_denied` for policy and key access refusals |
 | audit.security.* | Audit-side detection signals (sustained risk) |
 | audit.secrets.* | Secret vault access |
@@ -4428,6 +4431,7 @@ from the code; do not edit by hand.
 - `GET /svc/cloud/cloud/byok/keys`
 - `POST /svc/cloud/cloud/byok/keys`
 - `GET /svc/cloud/cloud/byok/keys/{id}`
+- `PUT /svc/cloud/cloud/byok/keys/{id}/automation`
 - `POST /svc/cloud/cloud/byok/keys/{id}/reimport`
 - `POST /svc/cloud/cloud/byok/keys/{id}/restore`
 - `POST /svc/cloud/cloud/byok/keys/{id}/revoke`
@@ -4436,6 +4440,35 @@ from the code; do not edit by hand.
 - `POST /svc/cloud/cloud/byok/keys/{id}/verify`
 - `GET /svc/cloud/cloud/byok/providers`
 - `GET /svc/cloud/cloud/byok/runs`
+- `POST /svc/cloud/cloud/console/cancel-key-deletion`
+- `POST /svc/cloud/cloud/console/create-alias`
+- `POST /svc/cloud/cloud/console/create-grant`
+- `POST /svc/cloud/cloud/console/decrypt`
+- `POST /svc/cloud/cloud/console/delete-alias`
+- `POST /svc/cloud/cloud/console/describe-key`
+- `POST /svc/cloud/cloud/console/disable-key`
+- `POST /svc/cloud/cloud/console/disable-rotation`
+- `POST /svc/cloud/cloud/console/enable-key`
+- `POST /svc/cloud/cloud/console/enable-rotation`
+- `POST /svc/cloud/cloud/console/encrypt`
+- `POST /svc/cloud/cloud/console/generate-mac`
+- `POST /svc/cloud/cloud/console/get-key-policy`
+- `POST /svc/cloud/cloud/console/get-public-key`
+- `POST /svc/cloud/cloud/console/get-rotation-status`
+- `POST /svc/cloud/cloud/console/list-aliases`
+- `POST /svc/cloud/cloud/console/list-grants`
+- `POST /svc/cloud/cloud/console/list-keys`
+- `POST /svc/cloud/cloud/console/list-tags`
+- `POST /svc/cloud/cloud/console/list-versions`
+- `GET /svc/cloud/cloud/console/operations`
+- `POST /svc/cloud/cloud/console/put-key-policy`
+- `POST /svc/cloud/cloud/console/revoke-grant`
+- `POST /svc/cloud/cloud/console/schedule-key-deletion`
+- `POST /svc/cloud/cloud/console/sign`
+- `POST /svc/cloud/cloud/console/tag-key`
+- `POST /svc/cloud/cloud/console/untag-key`
+- `POST /svc/cloud/cloud/console/verify`
+- `POST /svc/cloud/cloud/console/verify-mac`
 - `GET /svc/cloud/cloud/credential-usage`
 - `POST /svc/cloud/cloud/credentials/{id}/test`
 - `GET /svc/cloud/cloud/inventory`

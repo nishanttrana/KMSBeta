@@ -4,6 +4,50 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.2.0-beta] — 2026-10-12
+
+### Added
+- **Cloud key settings.** A BYOK key's page has a "Key settings" view with
+  the key's own settings in its cloud: state (enable, disable, schedule and
+  cancel deletion, the cloud's automatic rotation), policy, grants, aliases,
+  tags, and a "Try it" panel (encrypt and decrypt, sign and verify, MAC). A
+  tab or button appears only where that cloud has the operation.
+- **Cloud console.** Cloud Key Control → BYOK → "Cloud console" runs one of
+  a fixed list of 28 key operations against a cloud account, with typed
+  parameters, and shows the result and the command-line equivalent; the
+  history exports as a script. There is no shell and no free-form command:
+  an unknown operation, an unknown parameter or a malformed value is
+  refused before anything reaches the cloud. Each operation is its own
+  route (`POST /cloud/console/<operation>`) with `cloud.read` for reads
+  and `cloud.write` for changes and for cryptography, and its own audit
+  event (`audit.cloud.console_<operation>`); parameter values (a
+  plaintext, a policy) are never recorded. AWS has all 28, the other
+  clouds the ones their API has; Salesforce is read-only.
+- **BYOK automation through playbooks.** A key can carry two rules: renew
+  the material N days before it expires, and rotate it every N days
+  (`PUT /cloud/byok/keys/{id}/automation`). A rule the cloud cannot act on
+  is refused (no rotation on Alibaba, no expiry on Google Cloud or OCI).
+  The cloud service only announces that material is expiring or a rotation
+  is due, once per piece of material; a playbook does the work through the
+  same routes a person uses. New playbook triggers: material expiring,
+  rotation due, BYOK operation failed. New playbook actions: rotate, renew,
+  verify, and revoke (which waits for an approval). The key's "Automation"
+  view creates the two playbooks in one click each.
+
+### Fixed
+- **Google Cloud: a symmetric key could not encrypt after its first
+  import.** The imported version was never made the key's primary version.
+  It is now, when the key has none.
+- **Creating a BYOK key reported success when its last step failed.** A
+  failed verification after the import came back as a successful create.
+  It now answers `502 byok_run_failed` with the run, as every other BYOK
+  operation does. This is how the Google Cloud fault stayed unseen.
+
+### Still open
+- Not yet run against real cloud accounts: every cloud is tested against a
+  double that speaks its wire protocol
+  ([docs/SECURITY/CLOUD_BYOK.md](docs/SECURITY/CLOUD_BYOK.md)).
+
 ## [13.1.0-beta] — 2026-10-12
 
 ### Fixed

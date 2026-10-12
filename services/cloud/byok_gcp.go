@@ -178,6 +178,21 @@ func (p *gcpProvider) Import(ctx context.Context, c cloudKeyCall, k BYOKKey, in 
 	if ver.GetState() != cloudkmspb.CryptoKeyVersion_ENABLED {
 		return k, ver.GetName(), cli, fmt.Errorf("Google rejected the import (%s): %s", ver.GetState(), ver.GetImportFailureReason())
 	}
+	// A symmetric key's first version is not primary by itself; without a
+	// primary the key can't encrypt.
+	if k.KeySpec == SpecAES256 && !in.NewMaterial {
+		key, err := s.client.GetCryptoKey(ctx, &cloudkmspb.GetCryptoKeyRequest{Name: k.CloudKeyID})
+		if err != nil {
+			return k, ver.GetName(), cli, err
+		}
+		if key.GetPrimary() == nil {
+			versionID := ver.GetName()[strings.LastIndex(ver.GetName(), "/")+1:]
+			if _, err := s.client.UpdateCryptoKeyPrimaryVersion(ctx, &cloudkmspb.UpdateCryptoKeyPrimaryVersionRequest{Name: k.CloudKeyID, CryptoKeyVersionId: versionID}); err != nil {
+				return k, ver.GetName(), cli, err
+			}
+			cli += " && gcloud kms keys update " + k.CloudKeyID + " --primary-version " + versionID
+		}
+	}
 	return k, ver.GetName(), cli, nil
 }
 

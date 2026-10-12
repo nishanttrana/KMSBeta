@@ -12,6 +12,7 @@ import (
 	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgkeyaccess "vecta-kms/pkg/keyaccess"
 	"vecta-kms/pkg/mek"
+	"vecta-kms/pkg/route"
 )
 
 type EventPublisher interface {
@@ -35,6 +36,8 @@ type Service struct {
 	byokStore     BYOKStore
 	byokKeycore   BYOKKeycore
 	byokProviders map[string]BYOKProvider
+	// audit emits events no request carries (BYOK automation sweep).
+	audit route.Emitter
 }
 
 func NewService(store Store, providers *ProviderRegistry, events EventPublisher, mek []byte) *Service {

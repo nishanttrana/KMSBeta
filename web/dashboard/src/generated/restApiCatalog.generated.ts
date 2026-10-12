@@ -3643,6 +3643,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "cloud-get-cloud-console-operations",
+    "group": "Cloud Key Control (cloud)",
+    "title": "GET /cloud/console/operations",
+    "service": "cloud",
+    "method": "GET",
+    "pathTemplate": "/cloud/console/operations?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Cloud service.",
+    "requestExample": "GET /svc/cloud/cloud/console/operations?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "cloud-get-cloud-credential-usage",
     "group": "Cloud Key Control (cloud)",
     "title": "GET /cloud/credential-usage",
@@ -4044,6 +4072,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Cloud service.",
     "requestExample": "POST /svc/cloud/cloud/sync?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cloud-put-cloud-byok-keys-id-automation",
+    "group": "Cloud Key Control (cloud)",
+    "title": "PUT /cloud/byok/keys/{id}/automation",
+    "service": "cloud",
+    "method": "PUT",
+    "pathTemplate": "/cloud/byok/keys/{id}/automation?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Cloud service.",
+    "requestExample": "PUT /svc/cloud/cloud/byok/keys/{id}/automation?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

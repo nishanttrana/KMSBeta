@@ -12,7 +12,8 @@ import (
 
 // BYOK storage on real Postgres (CI integration-postgres): migration 004 is
 // re-runnable, settings and steps round-trip as JSON, nullable expiry and
-// revocation times survive, and materials update in place.
+// revocation times survive, materials update in place, and the automation
+// sweep finds exactly the keys that carry a rule.
 func TestBYOKStorePostgres(t *testing.T) {
 	dsn := strings.TrimSpace(os.Getenv("VECTA_TEST_POSTGRES_DSN"))
 	if dsn == "" {
@@ -50,6 +51,30 @@ func TestBYOKStorePostgres(t *testing.T) {
 	got, err := store.GetBYOKKey(ctx, tenant, "byok_1")
 	if err != nil || got.Settings["certificate_name"] != "BYOK_Cert" || got.ExpiresAt == nil || !got.ExpiresAt.Equal(exp) || got.MaterialState != MaterialCurrent {
 		t.Fatalf("key round trip: %+v %v", got, err)
+	}
+	// The automation sweep's query: only keys carrying a rule, across tenants.
+	automated := func() int {
+		keys, err := store.ListAutomatedBYOKKeys(ctx)
+		if err != nil {
+			t.Fatalf("automated keys: %v", err)
+		}
+		n := 0
+		for _, a := range keys {
+			if a.TenantID == tenant {
+				n++
+			}
+		}
+		return n
+	}
+	if n := automated(); n != 0 {
+		t.Fatalf("a key with no rule was listed for the sweep (%d)", n)
+	}
+	k.Settings[settingRotateEvery] = "90"
+	if err := store.UpdateBYOKKey(ctx, k); err != nil {
+		t.Fatal(err)
+	}
+	if n := automated(); n != 1 {
+		t.Fatalf("a key with a rotation rule: listed %d times", n)
 	}
 	m := BYOKMaterial{ID: "bmat_1", TenantID: tenant, BYOKID: "byok_1", KMSVersion: 1, KCV: "ABCDEF", CloudMaterialID: "0Ax001",
 		State: MaterialCurrent, Scheme: "rsa-oaep-sha1", Source: SourceHSM, ImportedAt: time.Now().UTC()}

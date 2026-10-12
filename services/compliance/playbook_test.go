@@ -158,7 +158,7 @@ func newPlaybookHarness(t *testing.T) *playbookHarness {
 	platform := &platformRecorder{}
 	srv := httptest.NewServer(platform)
 	t.Cleanup(srv.Close)
-	urls := platformURLs{Keycore: srv.URL, Certs: srv.URL, Auth: srv.URL, Governance: srv.URL, Reporting: srv.URL, Posture: srv.URL}
+	urls := platformURLs{Keycore: srv.URL, Certs: srv.URL, Auth: srv.URL, Governance: srv.URL, Reporting: srv.URL, Posture: srv.URL, Cloud: srv.URL}
 	exec := NewPlaybookExecutor(store, urls, rec, vault, logger)
 	exec.ops = svc
 	authority := &fakeAuthority{active: true}
@@ -411,7 +411,7 @@ func TestPlaybookPlatformActionsCallRealEndpoints(t *testing.T) {
 	p := map[string]string{
 		"key_id": "k1", "cert_id": "c1", "policy_id": "rp1", "user_id": "u9", "api_key_id": "ak1", "client_id": "cl1",
 		"alert_id": "al1", "incident_id": "in1", "status": "investigating", "assigned_to": "u-oncall", "template_id": "evidence_pack",
-		"to": "soc@example.com,role:admin", "subject": "canary",
+		"to": "soc@example.com,role:admin", "subject": "canary", "byok_id": "byok_1",
 	}
 	want := map[string]string{
 		"rotate_key": "POST /keys/k1/rotate", "disable_key": "POST /keys/k1/disable", "deactivate_key": "POST /keys/k1/deactivate",
@@ -422,6 +422,8 @@ func TestPlaybookPlatformActionsCallRealEndpoints(t *testing.T) {
 		"resolve_alert": "PUT /alerts/al1/resolve", "set_incident_status": "PUT /incidents/in1/status",
 		"assign_incident": "PUT /incidents/in1/assign", "generate_report": "POST /reports/generate",
 		"run_posture_scan": "POST /posture/scan", "send_email": "POST /governance/notify/email",
+		"byok_rotate": "POST /cloud/byok/keys/byok_1/rotate", "byok_reimport": "POST /cloud/byok/keys/byok_1/reimport",
+		"byok_verify": "POST /cloud/byok/keys/byok_1/verify", "byok_revoke": "POST /cloud/byok/keys/byok_1/revoke",
 	}
 	for _, spec := range playbookActions {
 		w, ok := want[spec.Type]
@@ -1001,6 +1003,9 @@ func TestTriggerSubjectsAreEmitted(t *testing.T) {
 		"audit.cloud.byok_reimported":               {"services/cloud/byok_routes.go", `write("byok_reimported"`},
 		"audit.cloud.byok_restored":                 {"services/cloud/byok_routes.go", `write("byok_restored"`},
 		"audit.cloud.byok_revoked":                  {"services/cloud/byok_routes.go", `write("byok_revoked"`},
+		"audit.cloud.byok_verified":                 {"services/cloud/byok_routes.go", `write("byok_verified"`},
+		"audit.cloud.byok_material_expiring":        {"services/cloud/byok_automation.go", `"byok_material_expiring"`},
+		"audit.cloud.byok_rotation_due":             {"services/cloud/byok_automation.go", `"byok_rotation_due"`},
 		"audit.audit.chain_broken":                  {"services/audit/service.go", `s.publisher.Publish(ctx, evt.Action, payload)`},
 		"audit.discovery.secret_exposed":            {"services/discovery/service.go", `Emit(ctx, "secret_exposed"`},
 		"audit.compliance.private_endpoint_added":   {"services/compliance/private_endpoints.go", `Action: "private_endpoint_added"`},
@@ -1222,4 +1227,38 @@ func TestPlaybookCooldownUnavailableRefused(t *testing.T) {
 		t.Fatalf("events: %+v", ev)
 	}
 	wantRefused(t, ev[0], reasonCooldownUnavailable)
+}
+
+// A failure-only trigger fires on a cloud BYOK run that failed, not on one
+// that succeeded or was refused before it reached the cloud.
+func TestFailureOnlyTriggerFiresOnFailuresOnly(t *testing.T) {
+	trig := PlaybookTrigger{Type: "byok_operation_failed"}
+	for result, want := range map[string]bool{route.ResultFailure: true, route.ResultSuccess: false, route.ResultRefused: false, "": false} {
+		ev := RunEvent{Subject: "audit.cloud.byok_rotated", Result: result}
+		if got := triggerMatches(trig, playbookTriggers, ev, true); got != want {
+			t.Fatalf("result %q: fired %v, want %v", result, got, want)
+		}
+	}
+}
+
+// BYOK automation end to end inside compliance: the cloud's expiring event
+// fires the renewal playbook the dashboard creates, which calls the cloud's
+// reimport route for that key, with the rule's validity, as the compliance
+// service for the tenant.
+func TestBYOKRenewalPlaybookCallsReimport(t *testing.T) {
+	hs := newPlaybookHarness(t)
+	ctx := context.Background()
+	body := playbookBody("byok_material_expiring", true, act("byok_reimport", map[string]string{
+		"byok_id": "{{event.target_id}}", "validity_days": "{{event.details.validity_days}}"}))
+	createdID(t, hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, body))
+	hs.platform.reset(0, "")
+	hs.tl.handle(ctx, "audit.cloud.byok_material_expiring", hs.event("t1", "success", "byok_42", hs.now,
+		map[string]interface{}{"details": map[string]interface{}{"validity_days": 90, "key_id": "key-1"}}))
+	calls := hs.platform.all()
+	if len(calls) != 1 || calls[0].Method+" "+calls[0].Path != "POST /cloud/byok/keys/byok_42/reimport" || calls[0].Tenant != "t1" {
+		t.Fatalf("calls %+v", calls)
+	}
+	if calls[0].Body["validity_days"] != float64(90) {
+		t.Fatalf("body %v", calls[0].Body)
+	}
 }

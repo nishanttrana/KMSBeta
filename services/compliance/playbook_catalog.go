@@ -30,6 +30,9 @@ type TriggerSpec struct {
 	// SuccessOnly fires only on result "success": a refused rotate is not a
 	// rotated key.
 	SuccessOnly bool `json:"success_only,omitempty"`
+	// FailureOnly fires only on result "failure": a run that failed in a
+	// cloud, not one refused before it started.
+	FailureOnly bool `json:"failure_only,omitempty"`
 	// Platform events carry no tenant. They fire the platform tenant's
 	// playbooks.
 	Platform bool `json:"platform,omitempty"`
@@ -58,6 +61,9 @@ var playbookTriggers = []TriggerSpec{
 	{Type: "key_exported", Label: "Key exported", Group: "Key lifecycle", Subjects: []string{"audit.key.export"}, SuccessOnly: true},
 	{Type: "byok_material_imported", Label: "Key material imported into a cloud (BYOK)", Group: "Key lifecycle", Subjects: []string{"audit.cloud.byok_created", "audit.cloud.byok_rotated", "audit.cloud.byok_reimported", "audit.cloud.byok_restored"}, SuccessOnly: true},
 	{Type: "byok_material_revoked", Label: "Cloud key material revoked (BYOK kill switch)", Group: "Key lifecycle", Subjects: []string{"audit.cloud.byok_revoked"}, SuccessOnly: true},
+	{Type: "byok_material_expiring", Label: "Cloud key material expiring (BYOK automation)", Group: "Key lifecycle", Subjects: []string{"audit.cloud.byok_material_expiring"}},
+	{Type: "byok_rotation_due", Label: "Cloud key rotation due (BYOK automation)", Group: "Key lifecycle", Subjects: []string{"audit.cloud.byok_rotation_due"}},
+	{Type: "byok_operation_failed", Label: "Cloud BYOK operation failed", Group: "Incident response", Subjects: []string{"audit.cloud.byok_created", "audit.cloud.byok_rotated", "audit.cloud.byok_reimported", "audit.cloud.byok_restored", "audit.cloud.byok_verified"}, FailureOnly: true},
 	{Type: "key_access_refused", Label: "Key access refused", Group: "Key lifecycle", Subjects: []string{"audit.key.access_refused"}},
 	{Type: "key_request_replay_detected", Label: "Key request replay detected", Group: "Key lifecycle", Subjects: []string{"audit.key.request_replay_detected"}},
 	{Type: "key_hsm_refused", Label: "HSM refused a key operation", Group: "Key lifecycle", Subjects: []string{"audit.key.hsm_refused"}},
@@ -123,6 +129,10 @@ var playbookActions = []ActionSpec{
 	{Type: "deactivate_key", Label: "Deactivate key", Group: "Keys", Permission: "key.deactivate", Required: []string{"key_id"}, Approval: "required"},
 	{Type: "activate_key", Label: "Activate key", Group: "Keys", Permission: "key.activate", Required: []string{"key_id"}},
 	{Type: "trigger_rotation_policy", Label: "Run rotation policy", Group: "Keys", Permission: "key.rotation.write", Required: []string{"policy_id"}},
+	{Type: "byok_rotate", Label: "Rotate cloud BYOK key material", Group: "Cloud keys", Permission: "cloud.write", Required: []string{"byok_id"}, Optional: []string{"validity_days"}},
+	{Type: "byok_reimport", Label: "Renew cloud BYOK key material", Group: "Cloud keys", Permission: "cloud.write", Required: []string{"byok_id"}, Optional: []string{"validity_days"}},
+	{Type: "byok_verify", Label: "Verify cloud BYOK key", Group: "Cloud keys", Permission: "cloud.write", Required: []string{"byok_id"}},
+	{Type: "byok_revoke", Label: "Revoke cloud BYOK key material (kill switch)", Group: "Cloud keys", Permission: "cloud.write", Required: []string{"byok_id"}, Approval: "required"},
 	{Type: "renew_certificate", Label: "Renew certificate", Group: "Certificates", Permission: "cert.renew", Required: []string{"cert_id"}},
 	{Type: "revoke_certificate", Label: "Revoke certificate", Group: "Certificates", Permission: "cert.revoke", Required: []string{"cert_id"}, Optional: []string{"reason"}, Approval: "required"},
 	{Type: "disable_user", Label: "Disable user", Group: "Access", Permission: "auth.user.write", Required: []string{"user_id"}, Approval: "required", Delegated: true},

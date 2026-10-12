@@ -85,6 +85,11 @@ cloud,cloud,GET,/cloud/byok/providers,/cloud/byok/providers,False,serviceRequest
 cloud,cloud,GET,/cloud/byok/keys,/cloud/byok/keys,False,serviceRequest,web/dashboard/src/lib/byok.ts,126,cloud|GET|/cloud/byok/keys
 cloud,cloud,GET,/cloud/byok/keys/{param},/cloud/byok/keys/{param},True,serviceRequest,web/dashboard/src/lib/byok.ts,131,cloud|GET|/cloud/byok/keys/{param}
 cloud,cloud,GET,/cloud/byok/runs,/cloud/byok/runs,False,serviceRequest,web/dashboard/src/lib/byok.ts,135,cloud|GET|/cloud/byok/runs
+cloud,cloud,GET,/cloud/console/operations?account_id={param},/cloud/console/operations,True,serviceRequest,web/dashboard/src/lib/byok.ts,186,cloud|GET|/cloud/console/operations
+cloud,cloud,POST,/cloud/console/{param},/cloud/console/{param},True,serviceRequestRaw,web/dashboard/src/lib/byok.ts,191,cloud|POST|/cloud/console/{param}
+cloud,cloud,PUT,/cloud/byok/keys/{param}/automation,/cloud/byok/keys/{param}/automation,True,serviceRequest,web/dashboard/src/lib/byok.ts,207,cloud|PUT|/cloud/byok/keys/{param}/automation
+compliance,compliance,GET,/compliance/playbooks,/compliance/playbooks,False,serviceRequest,web/dashboard/src/lib/byok.ts,224,compliance|GET|/compliance/playbooks
+compliance,compliance,POST,/compliance/playbooks,/compliance/playbooks,False,serviceRequest,web/dashboard/src/lib/byok.ts,234,compliance|POST|/compliance/playbooks
 keycore,keycore,GET,/ceremony/guardians,/ceremony/guardians,False,serviceRequest,web/dashboard/src/lib/ceremony.ts,48,keycore|GET|/ceremony/guardians
 keycore,keycore,POST,/ceremony/guardians,/ceremony/guardians,False,serviceRequest,web/dashboard/src/lib/ceremony.ts,53,keycore|POST|/ceremony/guardians
 keycore,keycore,DELETE,/ceremony/guardians/{param},/ceremony/guardians/{param},True,serviceRequest,web/dashboard/src/lib/ceremony.ts,57,keycore|DELETE|/ceremony/guardians/{param}

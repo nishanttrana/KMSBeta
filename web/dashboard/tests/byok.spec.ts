@@ -1,10 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
+import { coveredControls } from "./fixtures/layout";
 
 // Cloud Key Control → BYOK: the console counts the tenant's cloud keys, every bar
 // lists exactly the keys it counts, a key opens its custody and runs, an
 // operation shows its steps with the CLI equivalent (a failed one too), and a
-// failed source reads "unavailable". Payloads have the shape the cloud
-// service returns (services/cloud/byok_routes.go).
+// failed source reads "unavailable". A key's settings, its automation rules
+// and the cloud console send catalogue operations only, and offer only what
+// the cloud has. Payloads have the shape the cloud service returns
+// (services/cloud/byok_routes.go, console.go).
 
 const SHOTS = process.env.BYOK_SHOTS_DIR || "";
 const DAY = 86400000;
@@ -39,15 +42,50 @@ const RUN_OK = { id: "brun_1", byok_id: "orders", operation: "rotate", status: "
 const RUN_FAIL = { ...RUN_OK, id: "brun_2", operation: "verify", status: "failed", error: "Verify the key in the cloud: KMSInvalidStateException",
   steps: [step("Verify the key in the cloud", "failed", "aws kms encrypt --key-id aws-orders ...", "KMSInvalidStateException: the key has no material")] };
 
-type Opts = { listDown?: boolean };
+// The catalogue as GET /cloud/console/operations returns it. This account's
+// cloud has no grants, so nothing about grants may be offered.
+const op = (name: string, label: string, group: string, o: Record<string, unknown> = {}) => ({ name, label, group, mutating: false, needs_key: true, supported: true, ...o });
+const OPS = [
+  op("list-keys", "List keys", "Keys", { needs_key: false }),
+  op("describe-key", "Describe key", "Keys"),
+  op("enable-key", "Enable", "State", { mutating: true }),
+  op("disable-key", "Disable", "State", { mutating: true, danger: true }),
+  op("list-tags", "List tags", "Tags"),
+  op("tag-key", "Set tag", "Tags", { mutating: true, params: [{ name: "tag_key", type: "string", required: true }, { name: "tag_value", type: "string" }] }),
+  op("untag-key", "Remove tag", "Tags", { mutating: true, params: [{ name: "tag_key", type: "string", required: true }] }),
+  op("encrypt", "Encrypt", "Try it", { params: [{ name: "plaintext_b64", type: "base64", required: true }] }),
+  op("decrypt", "Decrypt", "Try it", { params: [{ name: "ciphertext_b64", type: "base64", required: true }] }),
+  op("list-grants", "List grants", "Grants", { supported: false }),
+  op("create-grant", "Create grant", "Grants", { supported: false, mutating: true }),
+];
+const answer = (operation: string, result: unknown, cli: string) => json({ result, cli, operation, provider: "aws" });
+const CONSOLE: Record<string, ReturnType<typeof json>> = {
+  "list-keys": answer("list-keys", [{ KeyId: "aws-orders" }], "aws kms list-keys"),
+  "describe-key": answer("describe-key", { KeyState: "Enabled", Origin: "EXTERNAL" }, "aws kms describe-key --key-id aws-orders"),
+  "list-tags": answer("list-tags", { env: "prod" }, "aws kms list-resource-tags --key-id aws-orders"),
+  "tag-key": answer("tag-key", { tagged: "team" }, "aws kms tag-resource --key-id aws-orders --tags TagKey=team,TagValue=payments"),
+  encrypt: answer("encrypt", { ciphertext_b64: "Y2lwaGVy" }, "aws kms encrypt --key-id aws-orders --plaintext fileb://plaintext.bin"),
+  "disable-key": json({ error: { code: "cloud_error", message: "AccessDeniedException: not authorized to perform kms:DisableKey" }, cli: "aws kms disable-key --key-id aws-orders", operation: "disable-key" }, 502),
+};
+
+type Opts = { listDown?: boolean; bodies?: Record<string, unknown> };
 
 async function stub(page: Page, opts: Opts = {}, writes: string[] = []): Promise<void> {
+  const books: Record<string, unknown>[] = [];
   await page.route("**/auth/**", (r) => r.fulfill(json({})));
   await page.route("**/api/**", (r) => r.fulfill(json({})));
   await page.route("**/svc/**", (route) => {
     const req = route.request();
     const p = new URL(req.url()).pathname.replace(/^\/svc\/[a-z-]+/, "");
     if (req.method() !== "GET") writes.push(`${req.method()} ${p}`);
+    if (req.method() !== "GET" && opts.bodies) opts.bodies[p] = JSON.parse(req.postData() || "{}");
+    if (p === "/cloud/console/operations") return route.fulfill(json({ provider: "aws", items: OPS }));
+    if (p.startsWith("/cloud/console/")) return route.fulfill(CONSOLE[p.slice("/cloud/console/".length)] ?? json({ error: { code: "operation_not_supported", message: "not in this test's catalogue" } }, 409));
+    if (p === "/cloud/byok/keys/orders/automation") return route.fulfill(json({ key: KEYS[0], automation: opts.bodies?.[p] ?? {} }));
+    if (p === "/compliance/playbooks") {
+      if (req.method() === "POST") books.push({ id: `pb_${books.length + 1}`, enabled: true, ...(JSON.parse(req.postData() || "{}") as Record<string, unknown>) });
+      return route.fulfill(json({ data: books }));
+    }
     if (p === "/auth/tenants") return route.fulfill(json({ items: [{ id: "root", name: "root", status: "active" }] }));
     if (p === "/cloud/accounts") return route.fulfill(json({ items: [{ id: "acct_aws", provider: "aws", name: "aws-prod", default_region: "eu-west-1", status: "active", connection_id: "pbconn_aws" }] }));
     if (p === "/cloud/byok/providers") return route.fulfill(json({ items: PROVIDERS }));
@@ -125,4 +163,104 @@ test("a failed source reads unavailable, never zero keys", async ({ page }) => {
   await stub(page, { listDown: true });
   await open(page);
   await expect(page.getByText(/BYOK unavailable: cloud service unavailable/)).toBeVisible();
+});
+
+test("a key's settings show what its cloud has and send catalogue operations; a refused one shows the cloud's error", async ({ page }) => {
+  const writes: string[] = [];
+  const bodies: Record<string, unknown> = {};
+  await stub(page, { bodies }, writes);
+  await open(page);
+  await page.getByText("alias/orders").first().click();
+  await page.getByRole("button", { name: "Key settings", exact: true }).click();
+
+  // State is read from the cloud on opening, with its CLI equivalent.
+  await expect(page.getByText('"KeyState": "Enabled"')).toBeVisible();
+  await expect(page.getByText("aws kms describe-key --key-id aws-orders")).toBeVisible();
+  expect(bodies["/cloud/console/describe-key"]).toEqual({ account_id: "acct_aws", key: "aws-orders" });
+  // This cloud has no grants: neither the tab nor an action is offered.
+  await expect(page.getByRole("button", { name: "Grants", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Policy", exact: true })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Tags", exact: true }).click();
+  await expect(page.getByText("prod", { exact: true })).toBeVisible();
+  await page.getByPlaceholder("key", { exact: true }).fill("team");
+  await page.getByPlaceholder("value", { exact: true }).fill("payments");
+  await page.getByRole("button", { name: "Set tag", exact: true }).click();
+  await expect.poll(() => bodies["/cloud/console/tag-key"]).toEqual({ account_id: "acct_aws", key: "aws-orders", params: { tag_key: "team", tag_value: "payments" } });
+
+  await page.getByRole("button", { name: "Try it", exact: true }).click();
+  await page.getByPlaceholder("a message (text)").fill("hello");
+  await page.getByRole("button", { name: "Encrypt", exact: true }).click();
+  await expect(page.getByPlaceholder("ciphertext (base64)")).toHaveValue("Y2lwaGVy");
+  expect(bodies["/cloud/console/encrypt"]).toEqual({ account_id: "acct_aws", key: "aws-orders", params: { plaintext_b64: "aGVsbG8=" } });
+
+  // A change that stops applications asks first; the cloud's refusal is shown as it came.
+  await page.getByRole("button", { name: "State", exact: true }).click();
+  await page.getByRole("button", { name: "Disable", exact: true }).click();
+  expect(writes).not.toContain("POST /cloud/console/disable-key");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await expect(page.getByText("AccessDeniedException: not authorized to perform kms:DisableKey")).toBeVisible();
+  await expect(page.getByText("aws kms disable-key --key-id aws-orders")).toBeVisible();
+  if (SHOTS) {
+    for (const theme of ["dark", "light"]) {
+      await page.evaluate((t) => document.documentElement.setAttribute("data-theme", t), theme);
+      await page.screenshot({ path: `${SHOTS}/byok-settings-${theme}.png`, fullPage: true });
+    }
+  }
+});
+
+test("automation rules are saved on the key, and a playbook is created to act on them", async ({ page }) => {
+  const writes: string[] = [];
+  const bodies: Record<string, unknown> = {};
+  await stub(page, { bodies }, writes);
+  await open(page);
+  await page.getByText("alias/orders").first().click();
+  await page.getByRole("button", { name: "Automation", exact: true }).click();
+
+  await page.getByPlaceholder("30", { exact: true }).fill("30");
+  await page.getByPlaceholder("90", { exact: true }).fill("90");
+  await page.getByRole("button", { name: "Save rules" }).click();
+  await expect.poll(() => bodies["/cloud/byok/keys/orders/automation"]).toEqual({ renew_before_days: 30, renew_validity_days: 90, rotate_every_days: 0 });
+  expect(writes).toContain("PUT /cloud/byok/keys/orders/automation");
+
+  await expect(page.getByText("Cloud BYOK: renew expiring material")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Create playbook" })).toHaveCount(2);
+  await page.getByRole("button", { name: "Create playbook" }).first().click();
+  await expect.poll(() => bodies["/compliance/playbooks"]).toEqual({
+    name: "Cloud BYOK: renew expiring material", enabled: true, trigger: { type: "byok_material_expiring" },
+    actions: [{ type: "byok_reimport", parameters: { byok_id: "{{event.target_id}}", validity_days: "{{event.details.validity_days}}" } }],
+  });
+  await expect(page.getByText("active", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Create playbook" })).toHaveCount(1);
+  if (SHOTS) {
+    for (const theme of ["dark", "light"]) {
+      await page.evaluate((t) => document.documentElement.setAttribute("data-theme", t), theme);
+      await page.screenshot({ path: `${SHOTS}/byok-automation-${theme}.png`, fullPage: true });
+    }
+  }
+});
+
+test("the cloud console runs a catalogue operation and keeps its CLI equivalent", async ({ page }) => {
+  const bodies: Record<string, unknown> = {};
+  await stub(page, { bodies });
+  await open(page);
+  await page.getByRole("button", { name: "Cloud console", exact: true }).click();
+  const consoleBox = page.getByRole("dialog", { name: "Cloud console" });
+  await expect(consoleBox.getByRole("button", { name: "Run List keys" })).toBeEnabled();
+  await expect(consoleBox.getByRole("button", { name: "Export as script" })).toBeDisabled();
+  expect(await coveredControls(consoleBox)).toEqual([]);
+
+  await consoleBox.getByRole("button", { name: "Run List keys" }).click();
+  await expect(consoleBox.getByText("aws kms list-keys", { exact: true })).toBeVisible();
+  await expect(consoleBox.getByText("done", { exact: true })).toBeVisible();
+  await expect(consoleBox.getByText('"KeyId": "aws-orders"')).toBeVisible();
+  expect(bodies["/cloud/console/list-keys"]).toEqual({ account_id: "acct_aws", key: "", version: "", params: {} });
+  await expect(consoleBox.getByRole("button", { name: "Export as script" })).toBeEnabled();
+  expect(await coveredControls(consoleBox)).toEqual([]);
+  if (SHOTS) {
+    for (const theme of ["dark", "light"]) {
+      await page.evaluate((t) => document.documentElement.setAttribute("data-theme", t), theme);
+      await page.screenshot({ path: `${SHOTS}/byok-console-${theme}.png` });
+    }
+  }
 });
