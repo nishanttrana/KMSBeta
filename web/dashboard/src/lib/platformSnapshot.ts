@@ -27,7 +27,9 @@ async function opt<T>(p: Promise<T>): Promise<T | undefined> {
   }
 }
 
-export async function loadPlatformSnapshot(session: AuthSession, fipsEnabled?: boolean): Promise<PlatformSnapshot> {
+// clustered is false where the clustering feature is not deployed: there is
+// no cluster service to ask, and asking drew a 503 on every load.
+export async function loadPlatformSnapshot(session: AuthSession, fipsEnabled?: boolean, clustered = true): Promise<PlatformSnapshot> {
   const [keys, certs, rotationPolicies, backups, keyAccess, governancePolicies, pqc, postureFindings, postureRisk, cluster, users] =
     await Promise.all([
       opt(listKeys(session, { limit: 5000 })),
@@ -39,7 +41,7 @@ export async function loadPlatformSnapshot(session: AuthSession, fipsEnabled?: b
       opt(getPQCReadiness(session).then((r) => r ?? null)),
       opt(listPostureFindings(session, { limit: 500 })),
       opt(getPostureRisk(session)),
-      opt(getClusterOverview(session).then((c) => c?.summary)),
+      clustered ? opt(getClusterOverview(session).then((c) => c?.summary)) : Promise.resolve(undefined),
       opt(listAuthUsers(session)),
     ]);
   return {

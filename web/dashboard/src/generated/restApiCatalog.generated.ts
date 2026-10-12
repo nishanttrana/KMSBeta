@@ -4063,15 +4063,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-delete-cluster-nodes-id",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-delete-cluster-nodes-id",
+    "group": "Cluster Management (cluster)",
     "title": "DELETE /cluster/nodes/{id}",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "DELETE",
     "pathTemplate": "/cluster/nodes/{id}?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "DELETE /svc/cluster-manager/cluster/nodes/{id}?tenant_id={{tenant_id}}",
+    "requestExample": "DELETE /svc/cluster/cluster/nodes/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4091,15 +4091,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-delete-cluster-profiles-id",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-delete-cluster-profiles-id",
+    "group": "Cluster Management (cluster)",
     "title": "DELETE /cluster/profiles/{id}",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "DELETE",
     "pathTemplate": "/cluster/profiles/{id}?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "DELETE /svc/cluster-manager/cluster/profiles/{id}?tenant_id={{tenant_id}}",
+    "requestExample": "DELETE /svc/cluster/cluster/profiles/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4119,15 +4119,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-get-cluster-logs",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-get-cluster-logs",
+    "group": "Cluster Management (cluster)",
     "title": "GET /cluster/logs",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "GET",
     "pathTemplate": "/cluster/logs?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "GET /svc/cluster-manager/cluster/logs?tenant_id={{tenant_id}}",
+    "requestExample": "GET /svc/cluster/cluster/logs?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4147,15 +4147,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-get-cluster-members",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-get-cluster-members",
+    "group": "Cluster Management (cluster)",
     "title": "GET /cluster/members",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "GET",
     "pathTemplate": "/cluster/members?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "GET /svc/cluster-manager/cluster/members?tenant_id={{tenant_id}}",
+    "requestExample": "GET /svc/cluster/cluster/members?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4175,15 +4175,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-get-cluster-nodes",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-get-cluster-nodes",
+    "group": "Cluster Management (cluster)",
     "title": "GET /cluster/nodes",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "GET",
     "pathTemplate": "/cluster/nodes?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "GET /svc/cluster-manager/cluster/nodes?tenant_id={{tenant_id}}",
+    "requestExample": "GET /svc/cluster/cluster/nodes?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4203,15 +4203,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-get-cluster-overview",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-get-cluster-overview",
+    "group": "Cluster Management (cluster)",
     "title": "GET /cluster/overview",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "GET",
     "pathTemplate": "/cluster/overview?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "GET /svc/cluster-manager/cluster/overview?tenant_id={{tenant_id}}",
+    "requestExample": "GET /svc/cluster/cluster/overview?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4231,15 +4231,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-get-cluster-profiles",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-get-cluster-profiles",
+    "group": "Cluster Management (cluster)",
     "title": "GET /cluster/profiles",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "GET",
     "pathTemplate": "/cluster/profiles?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "GET /svc/cluster-manager/cluster/profiles?tenant_id={{tenant_id}}",
+    "requestExample": "GET /svc/cluster/cluster/profiles?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4259,15 +4259,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-get-cluster-replication-status",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-get-cluster-replication-status",
+    "group": "Cluster Management (cluster)",
     "title": "GET /cluster/replication/status",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "GET",
     "pathTemplate": "/cluster/replication/status?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "GET /svc/cluster-manager/cluster/replication/status?tenant_id={{tenant_id}}",
+    "requestExample": "GET /svc/cluster/cluster/replication/status?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4287,15 +4287,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-get-cluster-sync-checkpoint",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-get-cluster-sync-checkpoint",
+    "group": "Cluster Management (cluster)",
     "title": "GET /cluster/sync/checkpoint",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "GET",
     "pathTemplate": "/cluster/sync/checkpoint?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "GET /svc/cluster-manager/cluster/sync/checkpoint?tenant_id={{tenant_id}}",
+    "requestExample": "GET /svc/cluster/cluster/sync/checkpoint?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4315,15 +4315,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-get-cluster-sync-events",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-get-cluster-sync-events",
+    "group": "Cluster Management (cluster)",
     "title": "GET /cluster/sync/events",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "GET",
     "pathTemplate": "/cluster/sync/events?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "GET /svc/cluster-manager/cluster/sync/events?tenant_id={{tenant_id}}",
+    "requestExample": "GET /svc/cluster/cluster/sync/events?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4343,15 +4343,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-get-healthz",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-get-healthz",
+    "group": "Cluster Management (cluster)",
     "title": "GET /healthz",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "GET",
     "pathTemplate": "/healthz?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "GET /svc/cluster-manager/healthz?tenant_id={{tenant_id}}",
+    "requestExample": "GET /svc/cluster/healthz?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4371,15 +4371,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-post-cluster-join-complete",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-post-cluster-join-complete",
+    "group": "Cluster Management (cluster)",
     "title": "POST /cluster/join/complete",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "POST",
     "pathTemplate": "/cluster/join/complete?tenant_id={{tenant_id}}",
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "POST /svc/cluster-manager/cluster/join/complete?tenant_id={{tenant_id}}",
+    "requestExample": "POST /svc/cluster/cluster/join/complete?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4399,15 +4399,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-post-cluster-join-connect",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-post-cluster-join-connect",
+    "group": "Cluster Management (cluster)",
     "title": "POST /cluster/join/connect",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "POST",
     "pathTemplate": "/cluster/join/connect?tenant_id={{tenant_id}}",
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "POST /svc/cluster-manager/cluster/join/connect?tenant_id={{tenant_id}}",
+    "requestExample": "POST /svc/cluster/cluster/join/connect?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4427,15 +4427,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-post-cluster-join-exchange",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-post-cluster-join-exchange",
+    "group": "Cluster Management (cluster)",
     "title": "POST /cluster/join/exchange",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "POST",
     "pathTemplate": "/cluster/join/exchange?tenant_id={{tenant_id}}",
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "POST /svc/cluster-manager/cluster/join/exchange?tenant_id={{tenant_id}}",
+    "requestExample": "POST /svc/cluster/cluster/join/exchange?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4455,15 +4455,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-post-cluster-join-request",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-post-cluster-join-request",
+    "group": "Cluster Management (cluster)",
     "title": "POST /cluster/join/request",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "POST",
     "pathTemplate": "/cluster/join/request?tenant_id={{tenant_id}}",
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "POST /svc/cluster-manager/cluster/join/request?tenant_id={{tenant_id}}",
+    "requestExample": "POST /svc/cluster/cluster/join/request?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4483,15 +4483,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-post-cluster-nodes",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-post-cluster-nodes",
+    "group": "Cluster Management (cluster)",
     "title": "POST /cluster/nodes",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "POST",
     "pathTemplate": "/cluster/nodes?tenant_id={{tenant_id}}",
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "POST /svc/cluster-manager/cluster/nodes?tenant_id={{tenant_id}}",
+    "requestExample": "POST /svc/cluster/cluster/nodes?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4511,15 +4511,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-post-cluster-nodes-id-heartbeat",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-post-cluster-nodes-id-heartbeat",
+    "group": "Cluster Management (cluster)",
     "title": "POST /cluster/nodes/{id}/heartbeat",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "POST",
     "pathTemplate": "/cluster/nodes/{id}/heartbeat?tenant_id={{tenant_id}}",
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "POST /svc/cluster-manager/cluster/nodes/{id}/heartbeat?tenant_id={{tenant_id}}",
+    "requestExample": "POST /svc/cluster/cluster/nodes/{id}/heartbeat?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4539,15 +4539,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-post-cluster-nodes-id-role",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-post-cluster-nodes-id-role",
+    "group": "Cluster Management (cluster)",
     "title": "POST /cluster/nodes/{id}/role",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "POST",
     "pathTemplate": "/cluster/nodes/{id}/role?tenant_id={{tenant_id}}",
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "POST /svc/cluster-manager/cluster/nodes/{id}/role?tenant_id={{tenant_id}}",
+    "requestExample": "POST /svc/cluster/cluster/nodes/{id}/role?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4567,15 +4567,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-post-cluster-profiles",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-post-cluster-profiles",
+    "group": "Cluster Management (cluster)",
     "title": "POST /cluster/profiles",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "POST",
     "pathTemplate": "/cluster/profiles?tenant_id={{tenant_id}}",
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "POST /svc/cluster-manager/cluster/profiles?tenant_id={{tenant_id}}",
+    "requestExample": "POST /svc/cluster/cluster/profiles?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4595,15 +4595,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-post-cluster-sync-ack",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-post-cluster-sync-ack",
+    "group": "Cluster Management (cluster)",
     "title": "POST /cluster/sync/ack",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "POST",
     "pathTemplate": "/cluster/sync/ack?tenant_id={{tenant_id}}",
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "POST /svc/cluster-manager/cluster/sync/ack?tenant_id={{tenant_id}}",
+    "requestExample": "POST /svc/cluster/cluster/sync/ack?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4623,15 +4623,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-manager-post-cluster-sync-events",
-    "group": "Cluster Management (cluster-manager)",
+    "id": "cluster-post-cluster-sync-events",
+    "group": "Cluster Management (cluster)",
     "title": "POST /cluster/sync/events",
-    "service": "cluster-manager",
+    "service": "cluster",
     "method": "POST",
     "pathTemplate": "/cluster/sync/events?tenant_id={{tenant_id}}",
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "POST /svc/cluster-manager/cluster/sync/events?tenant_id={{tenant_id}}",
+    "requestExample": "POST /svc/cluster/cluster/sync/events?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -6335,7 +6335,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "confidential-get-confidential-releases",
@@ -6381,7 +6382,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "confidential-get-confidential-releases-id",
@@ -6425,7 +6427,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "confidential-get-confidential-summary",
@@ -6466,7 +6469,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "confidential-post-confidential-evaluate",
@@ -6521,7 +6525,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "confidential-post-confidential-release",
@@ -6583,7 +6588,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "dataprotect-delete-field-protection-profiles-id",
@@ -12391,7 +12397,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "auth-get-auth-clients-id",
@@ -12713,7 +12720,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "auth-get-auth-scim-groups",
@@ -13475,7 +13483,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 409,
         "meaning": "Replay nonce was already used inside the protected window"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "auth-post-auth-clients-id-revoke",
@@ -14232,7 +14241,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "auth-put-auth-groups-id-role",
@@ -21947,7 +21957,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "sbom-get-cbom-summary",
@@ -22148,7 +22159,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "sbom-post-sbom-generate",
@@ -22180,7 +22192,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "secrets-delete-secrets-id",
@@ -23717,7 +23730,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "workload-get-workload-identity-issuances",
@@ -23817,7 +23831,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "workload-get-workload-identity-summary",
@@ -23861,7 +23876,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "workload-get-workload-identity-usage",
@@ -23902,7 +23918,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "workload-post-workload-identity-federation",
@@ -23967,7 +23984,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "workload-post-workload-identity-registrations",
@@ -24013,7 +24031,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "workload-post-workload-identity-settings-rotate-signing-keys",
@@ -24084,7 +24103,8 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   },
   {
     "id": "workload-put-workload-identity-federation-id",
@@ -24173,6 +24193,7 @@ export const DISCOVERED_REST_API_CATALOG = [
         "code": 400,
         "meaning": "Request payload, path, or query parameters invalid"
       }
-    ]
+    ],
+    "handWritten": true
   }
 ];

@@ -339,53 +339,36 @@ KCVs are returned in key creation, import, and rotation responses. They are safe
 
 ### 5.1 Via Dashboard — Step by Step
 
-1. Navigate to **CORE → Keys** in the left sidebar.
-2. Click the **Create Key** button (top right, blue).
-3. Complete the **Key Details** form:
+The dialog offers only what keycore stores and acts on. A key is created in
+the tenant chosen in the top bar.
 
-   **Name** (required)
-   - Human-readable identifier for the key.
-   - Maximum 255 characters.
-   - No leading or trailing spaces.
-   - Allowed characters: letters, digits, hyphens, underscores, periods.
-   - Convention: `{app}-{environment}-{purpose}` (e.g., `payments-prod-dek`, `api-gateway-staging-signing-key`).
+1. Open **Key Management** in the sidebar (Keys & lifecycle) and click
+   **Create Key**.
+2. Fill in the dialog:
 
-   **Algorithm** (required)
-   - Select from dropdown. Groups: Symmetric, RSA, Elliptic Curve, EdDSA, Post-Quantum.
-   - Selecting an algorithm auto-populates the **Purpose** field with compatible values.
+   | Field | What it sets |
+   |---|---|
+   | **Key Name** (required) | The key's name. Convention: `{app}-{environment}-{purpose}`, for example `payments-prod-dek`. |
+   | **Description** | Up to 512 characters of display text. No access decision reads it. It can be changed later in the key's detail view. |
+   | **Algorithm Family**, **Algorithm**, **Key Strength** (required) | Symmetric, Asymmetric, Post-Quantum or HMAC, then the algorithm and its size or curve. Only algorithms keycore generates are listed. |
+   | **Purpose** (required) | What the key may be used for (encrypt/decrypt, sign/verify, wrap/unwrap, MAC, key agreement, derivation). |
+   | **Create in HSM** | Shown when an HSM is set up for keys (the tenant's HSM, or one added in Playbooks → Credentials). The key is generated in the HSM and never leaves it. |
+   | **Operation Limits** | A maximum number of operations per lifetime, day or month. 0 is unlimited. |
+   | **Rotation** | A schedule: every 30, 90, 180 or 365 days, or another interval. It creates a rotation policy for this key alone, listed in Rotation & Scheduling. Shown to users who hold `key.rotation.write`. For a key pair the schedule is on the private key and the public key follows it. |
+   | **Security Options** | Require a governance approval for operations; allow wrapped export. |
+   | **Activation** | Immediately, pre-active, or at a date and time. |
+   | **Tags** | Tags from the Administration catalogue. |
 
-   **Purpose** (required)
-   - `encrypt` — Key used for symmetric or asymmetric encryption/decryption.
-   - `sign` — Key used for digital signatures and verification.
-   - `wrap` — Key used to wrap (encrypt) other keys.
-   - `derive` — Key used as input to a KDF to produce child keys.
-   - `mac` — Key used for HMAC / MAC computation.
-   - `kem` — Key used for key encapsulation mechanisms (ML-KEM).
-   - `authenticate` — Key used for authentication (HMAC-based session tokens).
+3. Click **Create Key**. The key appears in the list; open it to see its
+   **Key ID**, which API calls need.
 
-   **Key Backend** (required)
-   - `software` — Key generated and stored in software (encrypted at rest using platform KEK).
-   - `hsm` — Key generated and stored inside HSM hardware. Never exposed in software memory.
+An asymmetric software key is stored as two keys with the same name: the
+private key and its public component. Rotating the private key renews both;
+a public key is not rotated on its own.
 
-4. Expand **Lifecycle Settings** (optional):
-   - **Activation Date:** ISO-8601 date/time. Key is created in `PreActive` state and automatically transitions to `Active` at this time.
-   - **Expiry Date:** Key automatically transitions to `Deactivated` at this time.
-   - **Destruction Date:** Key is automatically destroyed at this time (requires governance approval if configured).
-
-5. Expand **Labels** (optional):
-   - Click **Add Label** to add key-value pairs.
-   - Example: `env=production`, `team=platform`, `data-class=confidential`.
-
-6. Expand **Tags** (optional):
-   - Click **Add Tag** to add string tags.
-   - Example: `pci-scope`, `critical`, `high-availability`.
-
-7. Expand **Access Policy** (optional):
-   - Toggle **Deny by Default** ON for production keys.
-   - Click **Add Grant** to configure initial access grants.
-
-8. Click **Create Key**.
-9. The key detail page opens. Note the **Key ID** — you will need it for API calls.
+Labels, expiry and destroy dates and access grants are not set in this
+dialog. Access is set from the key's **Edit Key Policy**; a destroy date is
+set when the key is scheduled for destruction.
 
 ### 5.2 Via API — Full Field Reference
 

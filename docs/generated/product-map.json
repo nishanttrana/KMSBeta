@@ -20217,7 +20217,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "toggleCA(caID)} style={ }> {open? : } :",
-      "line": 1465,
+      "line": 1459,
       "tabs": [
         "certs"
       ],
@@ -20227,7 +20227,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actCRL(ca)} disabled= >",
-      "line": 1479,
+      "line": 1473,
       "tabs": [
         "certs"
       ],
@@ -20237,7 +20237,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actDeleteCA(ca)} disabled= >",
-      "line": 1480,
+      "line": 1474,
       "tabs": [
         "certs"
       ],
@@ -20247,7 +20247,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "toggleIssued(caID)} style={ }> {issuedOpen? : } Issued Certificates ( )",
-      "line": 1486,
+      "line": 1480,
       "tabs": [
         "certs"
       ],
@@ -20257,7 +20257,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "openProtocolModal(meta.name)}> Configure",
-      "line": 1628,
+      "line": 1622,
       "tabs": [
         "certs"
       ],
@@ -20267,7 +20267,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void runProtocolTest(meta.name)} >",
-      "line": 1629,
+      "line": 1623,
       "tabs": [
         "certs"
       ],
@@ -20277,7 +20277,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"acme-wizard\")}> ACME Wizard",
-      "line": 1637,
+      "line": 1631,
       "tabs": [
         "certs"
       ],
@@ -20287,7 +20287,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"acme-star\")}> STAR",
-      "line": 1638,
+      "line": 1632,
       "tabs": [
         "certs"
       ],
@@ -20297,7 +20297,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"est-wizard\")}> EST Enroll",
-      "line": 1639,
+      "line": 1633,
       "tabs": [
         "certs"
       ],
@@ -20307,7 +20307,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"scep-wizard\")}> SCEP Enroll",
-      "line": 1640,
+      "line": 1634,
       "tabs": [
         "certs"
       ],
@@ -20317,7 +20317,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"cmpv2-wizard\")}> CMPv2 Request",
-      "line": 1641,
+      "line": 1635,
       "tabs": [
         "certs"
       ],
@@ -20327,7 +20327,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCAStatusView(\"all\")} style={ }>{`All $ `}",
-      "line": 1657,
+      "line": 1651,
       "tabs": [
         "certs"
       ],
@@ -20337,7 +20337,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCAStatusView(\"active\")} style={ }>{`Active $ `}",
-      "line": 1658,
+      "line": 1652,
       "tabs": [
         "certs"
       ],
@@ -20347,7 +20347,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCAStatusView(\"revoked\")} style={ }>{`Revoked $ `}",
-      "line": 1659,
+      "line": 1653,
       "tabs": [
         "certs"
       ],
@@ -20357,7 +20357,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshCAs()} disabled= >",
-      "line": 1660,
+      "line": 1654,
       "tabs": [
         "certs"
       ],
@@ -20367,7 +20367,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"create-ca\")}> Create CA",
-      "line": 1661,
+      "line": 1655,
       "tabs": [
         "certs"
       ],
@@ -20377,7 +20377,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshRenewalIntel()} disabled= >",
-      "line": 1753,
+      "line": 1747,
       "tabs": [
         "certs"
       ],
@@ -20387,7 +20387,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshSTARIntel()} disabled= >",
-      "line": 1779,
+      "line": 1773,
       "tabs": [
         "certs"
       ],
@@ -20397,7 +20397,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"acme-star\")}>New",
-      "line": 1780,
+      "line": 1774,
       "tabs": [
         "certs"
       ],
@@ -20407,7 +20407,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actRefreshSTARSubscription(item,true)} disabled={rowActionBusy===`star-r...",
-      "line": 1808,
+      "line": 1802,
       "tabs": [
         "certs"
       ],
@@ -20417,7 +20417,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actDeleteSTARSubscription(item)} disabled={rowActionBusy===`star-delete-...",
-      "line": 1809,
+      "line": 1803,
       "tabs": [
         "certs"
       ],
@@ -20427,7 +20427,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"issue\")} style={ }> Issue Certificate",
-      "line": 1836,
+      "line": 1830,
       "tabs": [
         "certs"
       ],
@@ -20437,7 +20437,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"sign-csr\")} style={ }> Sign CSR",
-      "line": 1837,
+      "line": 1831,
       "tabs": [
         "certs"
       ],
@@ -20447,7 +20447,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"upload-3p\")} style={ }> Upload 3rd-Party",
-      "line": 1838,
+      "line": 1832,
       "tabs": [
         "certs"
       ],
@@ -20457,7 +20457,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"cert-alert-policy\")} style={ }> Alert Policy",
-      "line": 1839,
+      "line": 1833,
       "tabs": [
         "certs"
       ],
@@ -20467,7 +20467,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"cert-clm-policy\")} style={ }> CLM 47-Day",
-      "line": 1840,
+      "line": 1834,
       "tabs": [
         "certs"
       ],
@@ -20477,7 +20477,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertStatusView(\"all\")} style={ }> {`All ($ )`}",
-      "line": 1855,
+      "line": 1849,
       "tabs": [
         "certs"
       ],
@@ -20487,7 +20487,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertStatusView(\"active\")} style={ }> {`Active ($ )`}",
-      "line": 1858,
+      "line": 1852,
       "tabs": [
         "certs"
       ],
@@ -20497,7 +20497,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertStatusView(\"revoked\")} style={ }> {`Revoked ($ )`}",
-      "line": 1861,
+      "line": 1855,
       "tabs": [
         "certs"
       ],
@@ -20507,7 +20507,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshCerts()} disabled= >",
-      "line": 1865,
+      "line": 1859,
       "tabs": [
         "certs"
       ],
@@ -20517,7 +20517,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "openCertActionMenu(e,certID)} aria-label=\"Certificate actions\" style={{ backg...",
-      "line": 1896,
+      "line": 1890,
       "tabs": [
         "certs"
       ],
@@ -20527,7 +20527,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} onMouseEnter={(e)=> } onMouseLeave={(e)=> } style={ } > Download",
-      "line": 1928,
+      "line": 1922,
       "tabs": [
         "certs"
       ],
@@ -20537,7 +20537,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`renew-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } st...",
-      "line": 1942,
+      "line": 1936,
       "tabs": [
         "certs"
       ],
@@ -20547,7 +20547,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`revoke-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } s...",
-      "line": 1955,
+      "line": 1949,
       "tabs": [
         "certs"
       ],
@@ -20557,7 +20557,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`ocsp-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } sty...",
-      "line": 1968,
+      "line": 1962,
       "tabs": [
         "certs"
       ],
@@ -20567,7 +20567,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`delete-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } s...",
-      "line": 1983,
+      "line": 1977,
       "tabs": [
         "certs"
       ],
@@ -20577,7 +20577,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev",
-      "line": 2019,
+      "line": 2013,
       "tabs": [
         "certs"
       ],
@@ -20587,7 +20587,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertPageIndex((prev)=>Math.min(certTotalPages-1,prev+1))} disabled= >Next",
-      "line": 2021,
+      "line": 2015,
       "tabs": [
         "certs"
       ],
@@ -20597,7 +20597,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2066,
+      "line": 2060,
       "tabs": [
         "certs"
       ],
@@ -20607,7 +20607,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitCreateCA()} disabled= >",
-      "line": 2067,
+      "line": 2061,
       "tabs": [
         "certs"
       ],
@@ -20617,7 +20617,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2142,
+      "line": 2136,
       "tabs": [
         "certs"
       ],
@@ -20627,7 +20627,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitIssueCert()} disabled= >",
-      "line": 2143,
+      "line": 2137,
       "tabs": [
         "certs"
       ],
@@ -20637,7 +20637,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2203,
+      "line": 2197,
       "tabs": [
         "certs"
       ],
@@ -20647,7 +20647,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitSignCSR()} disabled= >",
-      "line": 2204,
+      "line": 2198,
       "tabs": [
         "certs"
       ],
@@ -20657,7 +20657,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2233,
+      "line": 2227,
       "tabs": [
         "certs"
       ],
@@ -20667,7 +20667,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitDownloadCert()} disabled= >",
-      "line": 2234,
+      "line": 2228,
       "tabs": [
         "certs"
       ],
@@ -20677,7 +20677,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2258,
+      "line": 2252,
       "tabs": [
         "certs"
       ],
@@ -20687,7 +20687,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitUpload()} disabled= >",
-      "line": 2259,
+      "line": 2253,
       "tabs": [
         "certs"
       ],
@@ -20697,7 +20697,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2278,
+      "line": 2272,
       "tabs": [
         "certs"
       ],
@@ -20707,7 +20707,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void saveAlertPolicy()} disabled= >",
-      "line": 2279,
+      "line": 2273,
       "tabs": [
         "certs"
       ],
@@ -20717,7 +20717,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2317,
+      "line": 2311,
       "tabs": [
         "certs"
       ],
@@ -20727,7 +20727,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void saveCLMPolicy()} disabled= >",
-      "line": 2318,
+      "line": 2312,
       "tabs": [
         "certs"
       ],
@@ -20737,7 +20737,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setProtocolConfigText(JSON.stringify(protocolDefaultConfigs[String(protocolNa...",
-      "line": 2344,
+      "line": 2338,
       "tabs": [
         "certs"
       ],
@@ -20747,7 +20747,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2346,
+      "line": 2340,
       "tabs": [
         "certs"
       ],
@@ -20757,7 +20757,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void saveProtocol()} disabled= >",
-      "line": 2347,
+      "line": 2341,
       "tabs": [
         "certs"
       ],
@@ -20767,7 +20767,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2421,
+      "line": 2415,
       "tabs": [
         "certs"
       ],
@@ -20777,7 +20777,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitCreateSTARSubscription()} disabled= >",
-      "line": 2422,
+      "line": 2416,
       "tabs": [
         "certs"
       ],
@@ -20787,7 +20787,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2458,
+      "line": 2452,
       "tabs": [
         "certs"
       ],
@@ -20796,8 +20796,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
-      "label": "{ if(!session||!activeCA)return; setSubmitting(true); try{ const email=String...",
-      "line": 2459,
+      "label": "{ const email=String((document.getElementById(\"acme-wiz-email\") as any)?.valu...",
+      "line": 2453,
       "tabs": [
         "certs"
       ],
@@ -20807,7 +20807,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2517,
+      "line": 2511,
       "tabs": [
         "certs"
       ],
@@ -20817,7 +20817,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ if(!session)return; try{ const attrs=await estCSRAttributes(session); onToa...",
-      "line": 2518,
+      "line": 2512,
       "tabs": [
         "certs"
       ],
@@ -20826,8 +20826,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
-      "label": "{ if(!session||!activeCA)return; setSubmitting(true); try{ const cn=String((d...",
-      "line": 2525,
+      "label": "{ const cn=String((document.getElementById(\"est-wiz-cn\") as any)?.value||\"\")....",
+      "line": 2519,
       "tabs": [
         "certs"
       ],
@@ -20837,7 +20837,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2577,
+      "line": 2572,
       "tabs": [
         "certs"
       ],
@@ -20847,7 +20847,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ if(!session||!activeCA)return; setSubmitting(true); try{ const msgType=scep...",
-      "line": 2578,
+      "line": 2573,
       "tabs": [
         "certs"
       ],
@@ -20857,7 +20857,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2640,
+      "line": 2635,
       "tabs": [
         "certs"
       ],
@@ -20866,8 +20866,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
-      "label": "{ if(!session||!activeCA)return; setSubmitting(true); try{ const msgType=cmpM...",
-      "line": 2641,
+      "label": "{ const msgType=cmpMsgType as \"ir\"|\"cr\"|\"kur\"|\"rr\",cn=String((document.getEle...",
+      "line": 2636,
       "tabs": [
         "certs"
       ],
@@ -21047,7 +21047,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "setOpen((v) => !v)} aria-expanded= style={ } > {r.frameworks.map((f) => ( ))}",
-      "line": 164,
+      "line": 166,
       "tabs": [
         "home",
         "recommendations"
@@ -21058,7 +21058,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "onNavigate(r.action.tab)} style={ } >",
-      "line": 180,
+      "line": 182,
       "tabs": [
         "home",
         "recommendations"
@@ -21069,7 +21069,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "setOpen((v) => !v)} aria-label=\"Details\" style={ }>",
-      "line": 187,
+      "line": 189,
       "tabs": [
         "home",
         "recommendations"
@@ -21080,7 +21080,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "onSnooze(r.id)} style={{ marginTop: 10, fontSize: 12, color: C.muted, backgro...",
-      "line": 202,
+      "line": 204,
       "tabs": [
         "home",
         "recommendations"
@@ -21091,7 +21091,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "void refresh()} disabled= style={{ display: \"inline-flex\", alignItems: \"cente...",
-      "line": 301,
+      "line": 303,
       "tabs": [
         "home",
         "recommendations"
@@ -21102,7 +21102,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "onNavigate(\"recommendations\")} style={ }>View all \u2192",
-      "line": 340,
+      "line": 342,
       "tabs": [
         "home",
         "recommendations"
@@ -21113,7 +21113,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "onNavigate(\"ops\")} style={ }> Operations dashboard",
-      "line": 355,
+      "line": 357,
       "tabs": [
         "home",
         "recommendations"
@@ -21124,7 +21124,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "void refresh()} disabled= style={ }>",
-      "line": 386,
+      "line": 388,
       "tabs": [
         "home",
         "recommendations"
@@ -21135,7 +21135,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "setSev(\"all\")}>All ( )",
-      "line": 391,
+      "line": 393,
       "tabs": [
         "home",
         "recommendations"
@@ -21146,7 +21146,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "setSev(s)}> ( )",
-      "line": 393,
+      "line": 395,
       "tabs": [
         "home",
         "recommendations"
@@ -21157,7 +21157,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "unsnoozeAll",
       "label": "Show snoozed",
-      "line": 400,
+      "line": 402,
       "tabs": [
         "home",
         "recommendations"
@@ -23612,7 +23612,7 @@
       "file": "web/dashboard/src/components/v3/tabs/RestAPITab.tsx",
       "handler": "executeRequest} disabled={running",
       "label": "(icon or dynamic label)",
-      "line": 478,
+      "line": 446,
       "tabs": [
         "restapi"
       ],
@@ -23622,7 +23622,7 @@
       "file": "web/dashboard/src/components/v3/tabs/RestAPITab.tsx",
       "handler": "",
       "label": "void loadClientSecurity(false)} disabled= >",
-      "line": 509,
+      "line": 477,
       "tabs": [
         "restapi"
       ],
@@ -23632,7 +23632,7 @@
       "file": "web/dashboard/src/components/v3/tabs/RestAPITab.tsx",
       "handler": "",
       "label": "setSelectedClientID(String(item?.id||\"\"))} style={{ textAlign:\"left\", border:...",
-      "line": 517,
+      "line": 485,
       "tabs": [
         "restapi"
       ],
@@ -23642,7 +23642,7 @@
       "file": "web/dashboard/src/components/v3/tabs/RestAPITab.tsx",
       "handler": "",
       "label": "setClientDraft(selectedClient? :null)}>Reset",
-      "line": 614,
+      "line": 582,
       "tabs": [
         "restapi"
       ],
@@ -23652,7 +23652,7 @@
       "file": "web/dashboard/src/components/v3/tabs/RestAPITab.tsx",
       "handler": "saveClientSecurity} disabled={clientSaving",
       "label": "(icon or dynamic label)",
-      "line": 615,
+      "line": 583,
       "tabs": [
         "restapi"
       ],
@@ -23662,7 +23662,7 @@
       "file": "web/dashboard/src/components/v3/tabs/RestAPITab.tsx",
       "handler": "buildPreview",
       "label": "Refresh cURL",
-      "line": 736,
+      "line": 705,
       "tabs": [
         "restapi"
       ],
@@ -23672,7 +23672,7 @@
       "file": "web/dashboard/src/components/v3/tabs/RestAPITab.tsx",
       "handler": "executeRequest} disabled={running",
       "label": "(icon or dynamic label)",
-      "line": 737,
+      "line": 706,
       "tabs": [
         "restapi"
       ],
@@ -33274,7 +33274,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-12T05:38:18Z",
+  "generated_at": "2026-10-12T10:22:11Z",
   "navigation": [
     {
       "group": "Overview",
@@ -68335,7 +68335,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 2903,
+          "line": 2941,
           "name": "Encrypt",
           "receiver_calls": [
             "s.meter.IncrementOps"
@@ -68447,7 +68447,7 @@
       "handler_internal_package_calls": [
         "pkg/tenantcheck.Enforce"
       ],
-      "handler_line": 521,
+      "handler_line": 525,
       "handler_name": "handleListKeys",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68529,7 +68529,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 2050,
+          "line": 2088,
           "name": "ListKeysCursor",
           "receiver_calls": [
             "s.cache.Delete",
@@ -68553,7 +68553,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 2020,
+          "line": 2058,
           "name": "ListKeys",
           "receiver_calls": [
             "s.cache.Delete",
@@ -68595,7 +68595,7 @@
         "renderKey"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 578,
+      "handler_line": 582,
       "handler_name": "handleGetKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68637,7 +68637,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 2080,
+          "line": 2118,
           "name": "GetKey",
           "receiver_calls": [
             "s.exists.TestString",
@@ -68693,7 +68693,7 @@
         "writeHSMError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 874,
+      "handler_line": 882,
       "handler_name": "handleExportKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68754,16 +68754,16 @@
         "newID",
         "RecordRotationMetric",
         "normalizeOldVersionAction",
+        "refusePublicRotation",
         "enforceFIPSKeyAlgorithm",
         "rotateHSMKey",
         "generateMaterialForCreate",
         "computeKCVStrict",
         "protectMaterial",
-        "RotateVersion",
-        "Delete",
-        "reconcileLifecycle",
-        "PurgeDueDestroyed",
-        "destroyHSMObjects"
+        "publicComponentOf",
+        "publicVersionFor",
+        "RotatePairVersions",
+        "RotateVersion"
       ],
       "service_internal_package_calls": [
         "pkg/crypto.Zeroize",
@@ -68820,11 +68820,15 @@
             "newID",
             "RecordRotationMetric",
             "normalizeOldVersionAction",
+            "refusePublicRotation",
             "enforceFIPSKeyAlgorithm",
             "rotateHSMKey",
             "generateMaterialForCreate",
             "computeKCVStrict",
             "protectMaterial",
+            "publicComponentOf",
+            "publicVersionFor",
+            "RotatePairVersions",
             "RotateVersion",
             "Delete",
             "reconcileLifecycle",
@@ -68992,7 +68996,7 @@
             "pkg/cryptocatalog.Lookup",
             "pkg/hsm.Random"
           ],
-          "line": 1676,
+          "line": 1683,
           "name": "ExportPublicComponentPlaintext",
           "receiver_calls": [
             "s.cache.Delete",
@@ -69009,6 +69013,7 @@
           ],
           "store_calls": [
             "RecordRotationMetric",
+            "RotatePairVersions",
             "RotateVersion",
             "PurgeDueDestroyed",
             "ActivateDueKeys",
@@ -69030,8 +69035,7 @@
             "ResetUsage",
             "SetApproval",
             "GetUsage",
-            "GetApproval",
-            "ListVersions"
+            "GetApproval"
           ]
         },
         {
@@ -69059,7 +69063,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 1755,
+          "line": 1762,
           "name": "ExportCurrentVersionWrapped",
           "receiver_calls": [],
           "store_calls": []
@@ -69080,6 +69084,7 @@
       ],
       "service_store_calls": [
         "RecordRotationMetric",
+        "RotatePairVersions",
         "RotateVersion",
         "PurgeDueDestroyed",
         "ActivateDueKeys",
@@ -69101,8 +69106,7 @@
         "ResetUsage",
         "SetApproval",
         "GetUsage",
-        "GetApproval",
-        "ListVersions"
+        "GetApproval"
       ]
     },
     {
@@ -69129,7 +69133,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 976,
+      "handler_line": 984,
       "handler_name": "handleListVersions",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69151,7 +69155,7 @@
           "file": "services/keycore/keycore.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2801,
+          "line": 2839,
           "name": "ListVersions",
           "receiver_calls": [],
           "store_calls": [
@@ -69182,7 +69186,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 994,
+      "handler_line": 1002,
       "handler_name": "handleGetVersion",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69208,7 +69212,7 @@
             "GetKey"
           ],
           "internal_package_calls": [],
-          "line": 2805,
+          "line": 2843,
           "name": "GetVersion",
           "receiver_calls": [],
           "store_calls": [
@@ -69238,7 +69242,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1050,
+      "handler_line": 1058,
       "handler_name": "handleGetKCV",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69280,7 +69284,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 2080,
+          "line": 2118,
           "name": "GetKey",
           "receiver_calls": [
             "s.exists.TestString",
@@ -69319,7 +69323,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1064,
+      "handler_line": 1072,
       "handler_name": "handleGetUsage",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69341,7 +69345,7 @@
           "file": "services/keycore/keycore.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2685,
+          "line": 2723,
           "name": "GetUsage",
           "receiver_calls": [],
           "store_calls": [
@@ -69368,7 +69372,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1239,
+      "handler_line": 1247,
       "handler_name": "handleGetApproval",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69390,7 +69394,7 @@
           "file": "services/keycore/keycore.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2797,
+          "line": 2835,
           "name": "GetApproval",
           "receiver_calls": [],
           "store_calls": [
@@ -69420,7 +69424,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1355,
+      "handler_line": 1363,
       "handler_name": "handleGetIVLog",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -69454,7 +69458,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1381,
+      "handler_line": 1389,
       "handler_name": "handleGetIVByRef",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -69495,7 +69499,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1274,
+      "handler_line": 1282,
       "handler_name": "handleListTags",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69531,7 +69535,7 @@
             "tagUsageCounts"
           ],
           "internal_package_calls": [],
-          "line": 2538,
+          "line": 2576,
           "name": "ListTagCatalog",
           "receiver_calls": [],
           "store_calls": [
@@ -69562,7 +69566,7 @@
         "handleEncryptWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1439,
+      "handler_line": 1447,
       "handler_name": "handleEncrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -69596,7 +69600,7 @@
         "handleDecryptWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1478,
+      "handler_line": 1486,
       "handler_name": "handleDecrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -69630,7 +69634,7 @@
         "handleSignWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1517,
+      "handler_line": 1525,
       "handler_name": "handleSign",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -69673,7 +69677,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1521,
+      "handler_line": 1529,
       "handler_name": "handleVerify",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69743,7 +69747,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3195,
+          "line": 3233,
           "name": "Verify",
           "receiver_calls": [
             "s.meter.IncrementOps"
@@ -69765,7 +69769,7 @@
         "handleEncryptWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1553,
+      "handler_line": 1561,
       "handler_name": "handleWrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -69792,7 +69796,7 @@
         "handleDecryptWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1557,
+      "handler_line": 1565,
       "handler_name": "handleUnwrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -69819,7 +69823,7 @@
         "handleSignWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1561,
+      "handler_line": 1569,
       "handler_name": "handleMAC",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -69863,7 +69867,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1565,
+      "handler_line": 1573,
       "handler_name": "handleDerive",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69939,7 +69943,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3650,
+          "line": 3688,
           "name": "Derive",
           "receiver_calls": [],
           "store_calls": []
@@ -69963,7 +69967,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1608,
+      "handler_line": 1616,
       "handler_name": "handleServiceDerive",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70022,7 +70026,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 2358,
+      "handler_line": 2366,
       "handler_name": "handleClusterJoinKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70084,7 +70088,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 2368,
+      "handler_line": 2376,
       "handler_name": "handleClusterMEKExport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70148,7 +70152,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 2387,
+      "handler_line": 2395,
       "handler_name": "handleClusterMEKImport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70242,7 +70246,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1638,
+      "handler_line": 1646,
       "handler_name": "handleKEMEncapsulate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70306,7 +70310,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3763,
+          "line": 3801,
           "name": "KEMEncapsulate",
           "receiver_calls": [],
           "store_calls": []
@@ -70340,7 +70344,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1678,
+      "handler_line": 1686,
       "handler_name": "handleKEMDecapsulate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70404,7 +70408,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3846,
+          "line": 3884,
           "name": "KEMDecapsulate",
           "receiver_calls": [],
           "store_calls": []
@@ -70437,7 +70441,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1717,
+      "handler_line": 1725,
       "handler_name": "handleHash",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70473,7 +70477,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 3554,
+          "line": 3592,
           "name": "Hash",
           "receiver_calls": [],
           "store_calls": []
@@ -70508,7 +70512,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1745,
+      "handler_line": 1753,
       "handler_name": "handleRandom",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70558,7 +70562,7 @@
             "pkg/crypto.Zeroize",
             "pkg/hsm.Random"
           ],
-          "line": 3589,
+          "line": 3627,
           "name": "Random",
           "receiver_calls": [
             "s.hsm.Random"
@@ -72650,8 +72654,8 @@
         "enforceFIPSKeyAlgorithm",
         "isPublicKeyType",
         "resolvePublicMaterialFromPair",
-        "generateMaterialForCreate",
         "publishAudit",
+        "generateMaterialForCreate",
         "Error",
         "createKeyFromMaterial"
       ],
@@ -72672,8 +72676,8 @@
             "enforceFIPSKeyAlgorithm",
             "isPublicKeyType",
             "resolvePublicMaterialFromPair",
-            "generateMaterialForCreate",
             "publishAudit",
+            "generateMaterialForCreate",
             "Error",
             "createKeyFromMaterial"
           ],
@@ -72716,7 +72720,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 321,
+      "handler_line": 325,
       "handler_name": "handleImportKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72760,7 +72764,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 873,
+          "line": 880,
           "name": "ImportKey",
           "receiver_calls": [],
           "store_calls": []
@@ -72796,7 +72800,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 359,
+      "handler_line": 363,
       "handler_name": "handleFormKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72860,7 +72864,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 1584,
+          "line": 1591,
           "name": "FormKey",
           "receiver_calls": [],
           "store_calls": []
@@ -72884,7 +72888,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 398,
+      "handler_line": 402,
       "handler_name": "handleBulkImport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72928,7 +72932,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 873,
+          "line": 880,
           "name": "ImportKey",
           "receiver_calls": [],
           "store_calls": []
@@ -72952,7 +72956,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 425,
+      "handler_line": 429,
       "handler_name": "handleBulkRotate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72978,7 +72982,7 @@
             "RotateKeyTo"
           ],
           "internal_package_calls": [],
-          "line": 1824,
+          "line": 1831,
           "name": "RotateKey",
           "receiver_calls": [],
           "store_calls": []
@@ -73002,7 +73006,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 460,
+      "handler_line": 464,
       "handler_name": "handleBulkDelete",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73062,7 +73066,7 @@
             "cloneKeyLabels"
           ],
           "internal_package_calls": [],
-          "line": 2275,
+          "line": 2313,
           "name": "ScheduleKeyDestroy",
           "receiver_calls": [
             "s.cache.Delete"
@@ -73094,7 +73098,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 598,
+      "handler_line": 602,
       "handler_name": "handleUpdateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73364,7 +73368,7 @@
             "pkg/crypto.OpenDetached",
             "pkg/hsm.Random"
           ],
-          "line": 2113,
+          "line": 2151,
           "name": "UpdateKey",
           "receiver_calls": [
             "s.cache.Delete",
@@ -73458,7 +73462,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 616,
+      "handler_line": 620,
       "handler_name": "handleRotateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73486,6 +73490,8 @@
         "GetKey",
         "isDeletedLike",
         "enforceKeyAccess",
+        "isPublicComponentKey",
+        "refusePublicRotation",
         "algorithmChangeProblem",
         "publishAudit",
         "enforceFIPSKeyAlgorithm",
@@ -73495,6 +73501,9 @@
         "generateMaterialForCreate",
         "computeKCVStrict",
         "protectMaterial",
+        "publicComponentOf",
+        "publicVersionFor",
+        "RotatePairVersions",
         "RotateVersion",
         "Delete"
       ],
@@ -73520,6 +73529,8 @@
             "GetKey",
             "isDeletedLike",
             "enforceKeyAccess",
+            "isPublicComponentKey",
+            "refusePublicRotation",
             "algorithmChangeProblem",
             "publishAudit",
             "enforceFIPSKeyAlgorithm",
@@ -73529,6 +73540,9 @@
             "generateMaterialForCreate",
             "computeKCVStrict",
             "protectMaterial",
+            "publicComponentOf",
+            "publicVersionFor",
+            "RotatePairVersions",
             "RotateVersion",
             "Delete"
           ],
@@ -73536,13 +73550,14 @@
             "pkg/crypto.Zeroize",
             "pkg/crypto.ConstantTimeEqual"
           ],
-          "line": 1854,
+          "line": 1861,
           "name": "RotateKeyTo",
           "receiver_calls": [
             "s.cache.Delete"
           ],
           "store_calls": [
             "RecordRotationMetric",
+            "RotatePairVersions",
             "RotateVersion"
           ]
         }
@@ -73552,6 +73567,7 @@
       ],
       "service_store_calls": [
         "RecordRotationMetric",
+        "RotatePairVersions",
         "RotateVersion"
       ]
     },
@@ -73588,7 +73604,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 659,
+      "handler_line": 667,
       "handler_name": "handleActivateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73638,7 +73654,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2143,
+          "line": 2181,
           "name": "ConfigureKeyActivation",
           "receiver_calls": [
             "s.cache.Delete"
@@ -73671,7 +73687,7 @@
         "keyStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 701,
+      "handler_line": 709,
       "handler_name": "handleDeactivateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -73705,7 +73721,7 @@
         "keyStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 704,
+      "handler_line": 712,
       "handler_name": "handleDisableKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -73758,7 +73774,7 @@
       "handler_internal_package_calls": [
         "pkg/clientip.From"
       ],
-      "handler_line": 707,
+      "handler_line": 715,
       "handler_name": "handleDestroyKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73821,7 +73837,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 2080,
+          "line": 2118,
           "name": "GetKey",
           "receiver_calls": [
             "s.exists.TestString",
@@ -73858,7 +73874,7 @@
             "cloneKeyLabels"
           ],
           "internal_package_calls": [],
-          "line": 2275,
+          "line": 2313,
           "name": "ScheduleKeyDestroy",
           "receiver_calls": [
             "s.cache.Delete"
@@ -73891,7 +73907,7 @@
             "buildDeletedItemsAudit"
           ],
           "internal_package_calls": [],
-          "line": 2351,
+          "line": 2389,
           "name": "DestroyKeyImmediately",
           "receiver_calls": [
             "s.cache.Delete"
@@ -73940,7 +73956,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1157,
+      "handler_line": 1165,
       "handler_name": "handleSetExportPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73986,7 +74002,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2452,
+          "line": 2490,
           "name": "SetExportAllowed",
           "receiver_calls": [
             "s.cache.Delete"
@@ -74012,7 +74028,7 @@
         "versionStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1009,
+      "handler_line": 1017,
       "handler_name": "handleActivateVersion",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -74039,7 +74055,7 @@
         "versionStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1012,
+      "handler_line": 1020,
       "handler_name": "handleDeactivateVersion",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -74075,7 +74091,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1031,
+      "handler_line": 1039,
       "handler_name": "handleDeleteVersion",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -74115,7 +74131,7 @@
             "Publish"
           ],
           "internal_package_calls": [],
-          "line": 2816,
+          "line": 2854,
           "name": "publishAudit",
           "receiver_calls": [
             "s.cluster.Publish"
@@ -74150,7 +74166,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1085,
+      "handler_line": 1093,
       "handler_name": "handleSetUsageLimit",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -74178,7 +74194,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2440,
+          "line": 2478,
           "name": "SetUsageLimit",
           "receiver_calls": [
             "s.cache.Delete"
@@ -74209,7 +74225,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1195,
+      "handler_line": 1203,
       "handler_name": "handleResetUsage",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -74237,7 +74253,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2643,
+          "line": 2681,
           "name": "ResetUsage",
           "receiver_calls": [
             "s.cache.Delete"
@@ -74272,7 +74288,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1208,
+      "handler_line": 1216,
       "handler_name": "handleSetApproval",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -74310,7 +74326,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2652,
+          "line": 2690,
           "name": "SetApproval",
           "receiver_calls": [
             "s.cache.Delete"
@@ -74344,7 +74360,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1253,
+      "handler_line": 1261,
       "handler_name": "handleSetIVMode",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -74384,7 +74400,7 @@
             "Publish"
           ],
           "internal_package_calls": [],
-          "line": 2816,
+          "line": 2854,
           "name": "publishAudit",
           "receiver_calls": [
             "s.cluster.Publish"
@@ -74465,7 +74481,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1299,
+      "handler_line": 1307,
       "handler_name": "handleUpsertTag",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -74507,7 +74523,7 @@
             "ListTagCatalog"
           ],
           "internal_package_calls": [],
-          "line": 2560,
+          "line": 2598,
           "name": "UpsertTag",
           "receiver_calls": [],
           "store_calls": [
@@ -74547,7 +74563,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1335,
+      "handler_line": 1343,
       "handler_name": "handleDeleteTag",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -74583,7 +74599,7 @@
             "tagUsageCounts"
           ],
           "internal_package_calls": [],
-          "line": 2590,
+          "line": 2628,
           "name": "DeleteTag",
           "receiver_calls": [],
           "store_calls": [
@@ -75016,7 +75032,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1106,
+      "handler_line": 1114,
       "handler_name": "handleMeterUsage",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -75070,7 +75086,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2743,
+          "line": 2781,
           "name": "MeterUsage",
           "receiver_calls": [
             "s.cache.Delete"
@@ -76156,7 +76172,7 @@
             "Publish"
           ],
           "internal_package_calls": [],
-          "line": 2816,
+          "line": 2854,
           "name": "publishAudit",
           "receiver_calls": [
             "s.cluster.Publish"
@@ -76555,7 +76571,7 @@
             "RotateKeyTo"
           ],
           "internal_package_calls": [],
-          "line": 1824,
+          "line": 1831,
           "name": "RotateKey",
           "receiver_calls": [],
           "store_calls": []
@@ -77252,7 +77268,7 @@
             "CreateRotationRun"
           ],
           "internal_package_calls": [],
-          "line": 102,
+          "line": 112,
           "name": "RunRotationPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -91274,6 +91290,7 @@
         "web/dashboard/src/lib/auth.ts",
         "web/dashboard/src/lib/authAdmin.ts",
         "web/dashboard/src/lib/certs.ts",
+        "web/dashboard/src/lib/restCatalog.ts",
         "web/dashboard/src/lib/restPlayground.ts",
         "web/dashboard/src/lib/secrets.ts"
       ]
@@ -110194,7 +110211,7 @@
         ],
         "handler": "handleListKeys",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 521,
+        "handlerLine": 525,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/tenantcheck.Enforce",
@@ -110240,7 +110257,7 @@
         "frontendSites": [],
         "handler": "handleGetKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 578,
+        "handlerLine": 582,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110305,7 +110322,7 @@
         ],
         "handler": "handleExportKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 874,
+        "handlerLine": 882,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -110344,6 +110361,7 @@
         ],
         "storeCalls": [
           "RecordRotationMetric",
+          "RotatePairVersions",
           "RotateVersion",
           "PurgeDueDestroyed",
           "ActivateDueKeys",
@@ -110365,8 +110383,7 @@
           "ResetUsage",
           "SetApproval",
           "GetUsage",
-          "GetApproval",
-          "ListVersions"
+          "GetApproval"
         ],
         "uiLabels": [
           "Operations",
@@ -110391,7 +110408,7 @@
         ],
         "handler": "handleListVersions",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 976,
+        "handlerLine": 984,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -110425,7 +110442,7 @@
         "frontendSites": [],
         "handler": "handleGetVersion",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 994,
+        "handlerLine": 1002,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110456,7 +110473,7 @@
         "frontendSites": [],
         "handler": "handleGetKCV",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1050,
+        "handlerLine": 1058,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110489,7 +110506,7 @@
         "frontendSites": [],
         "handler": "handleGetUsage",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1064,
+        "handlerLine": 1072,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110516,7 +110533,7 @@
         "frontendSites": [],
         "handler": "handleGetApproval",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1239,
+        "handlerLine": 1247,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110545,7 +110562,7 @@
         "frontendSites": [],
         "handler": "handleGetIVLog",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1355,
+        "handlerLine": 1363,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110570,7 +110587,7 @@
         "frontendSites": [],
         "handler": "handleGetIVByRef",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1381,
+        "handlerLine": 1389,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110606,7 +110623,7 @@
         ],
         "handler": "handleListTags",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1274,
+        "handlerLine": 1282,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -110644,7 +110661,7 @@
         ],
         "handler": "handleEncrypt",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1439,
+        "handlerLine": 1447,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -110677,7 +110694,7 @@
         ],
         "handler": "handleDecrypt",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1478,
+        "handlerLine": 1486,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -110710,7 +110727,7 @@
         ],
         "handler": "handleSign",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1517,
+        "handlerLine": 1525,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -110749,7 +110766,7 @@
         ],
         "handler": "handleVerify",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1521,
+        "handlerLine": 1529,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -110781,7 +110798,7 @@
         "frontendSites": [],
         "handler": "handleWrap",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1553,
+        "handlerLine": 1561,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -110804,7 +110821,7 @@
         "frontendSites": [],
         "handler": "handleUnwrap",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1557,
+        "handlerLine": 1565,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -110827,7 +110844,7 @@
         "frontendSites": [],
         "handler": "handleMAC",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1561,
+        "handlerLine": 1569,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -110866,7 +110883,7 @@
         ],
         "handler": "handleDerive",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1565,
+        "handlerLine": 1573,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -110898,7 +110915,7 @@
         "frontendSites": [],
         "handler": "handleServiceDerive",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1608,
+        "handlerLine": 1616,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -110925,7 +110942,7 @@
         "frontendSites": [],
         "handler": "handleClusterJoinKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 2358,
+        "handlerLine": 2366,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.NewKEMRecipient"
@@ -110955,7 +110972,7 @@
         "frontendSites": [],
         "handler": "handleClusterMEKExport",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 2368,
+        "handlerLine": 2376,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.KEMSeal"
@@ -110991,7 +111008,7 @@
         "frontendSites": [],
         "handler": "handleClusterMEKImport",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 2387,
+        "handlerLine": 2395,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -111033,7 +111050,7 @@
         ],
         "handler": "handleKEMEncapsulate",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1638,
+        "handlerLine": 1646,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -111076,7 +111093,7 @@
         ],
         "handler": "handleKEMDecapsulate",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1678,
+        "handlerLine": 1686,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -111117,7 +111134,7 @@
         ],
         "handler": "handleHash",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1717,
+        "handlerLine": 1725,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111158,7 +111175,7 @@
         ],
         "handler": "handleRandom",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1745,
+        "handlerLine": 1753,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -112620,7 +112637,7 @@
         ],
         "handler": "handleImportKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 321,
+        "handlerLine": 325,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -112666,7 +112683,7 @@
         ],
         "handler": "handleFormKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 359,
+        "handlerLine": 363,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -112699,7 +112716,7 @@
         "frontendSites": [],
         "handler": "handleBulkImport",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 398,
+        "handlerLine": 402,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -112726,7 +112743,7 @@
         "frontendSites": [],
         "handler": "handleBulkRotate",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 425,
+        "handlerLine": 429,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -112757,7 +112774,7 @@
         "frontendSites": [],
         "handler": "handleBulkDelete",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 460,
+        "handlerLine": 464,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -112803,7 +112820,7 @@
         "frontendSites": [],
         "handler": "handleUpdateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 598,
+        "handlerLine": 602,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -112860,7 +112877,7 @@
         ]
       },
       {
-        "complexity": 5,
+        "complexity": 6,
         "externalPackages": [
           "encoding/hex.EncodeToString",
           "errors.Is",
@@ -112882,7 +112899,7 @@
         ],
         "handler": "handleRotateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 616,
+        "handlerLine": 620,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -112903,6 +112920,7 @@
         ],
         "storeCalls": [
           "RecordRotationMetric",
+          "RotatePairVersions",
           "RotateVersion"
         ],
         "uiLabels": [
@@ -112936,7 +112954,7 @@
         ],
         "handler": "handleActivateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 659,
+        "handlerLine": 667,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -112975,7 +112993,7 @@
         ],
         "handler": "handleDeactivateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 701,
+        "handlerLine": 709,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -113008,7 +113026,7 @@
         ],
         "handler": "handleDisableKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 704,
+        "handlerLine": 712,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -113050,7 +113068,7 @@
         ],
         "handler": "handleDestroyKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 707,
+        "handlerLine": 715,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/clientip.From"
@@ -113103,7 +113121,7 @@
         ],
         "handler": "handleSetExportPolicy",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1157,
+        "handlerLine": 1165,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -113135,7 +113153,7 @@
         "frontendSites": [],
         "handler": "handleActivateVersion",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1009,
+        "handlerLine": 1017,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113158,7 +113176,7 @@
         "frontendSites": [],
         "handler": "handleDeactivateVersion",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1012,
+        "handlerLine": 1020,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113185,7 +113203,7 @@
         "frontendSites": [],
         "handler": "handleDeleteVersion",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1031,
+        "handlerLine": 1039,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "DELETE",
@@ -113221,7 +113239,7 @@
         ],
         "handler": "handleSetUsageLimit",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1085,
+        "handlerLine": 1093,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -113253,7 +113271,7 @@
         "frontendSites": [],
         "handler": "handleResetUsage",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1195,
+        "handlerLine": 1203,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113284,7 +113302,7 @@
         "frontendSites": [],
         "handler": "handleSetApproval",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1208,
+        "handlerLine": 1216,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -113315,7 +113333,7 @@
         "frontendSites": [],
         "handler": "handleSetIVMode",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1253,
+        "handlerLine": 1261,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -113396,7 +113414,7 @@
         ],
         "handler": "handleUpsertTag",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1299,
+        "handlerLine": 1307,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -113441,7 +113459,7 @@
         ],
         "handler": "handleDeleteTag",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1335,
+        "handlerLine": 1343,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -113786,7 +113804,7 @@
         "frontendSites": [],
         "handler": "handleMeterUsage",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1106,
+        "handlerLine": 1114,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -122822,7 +122840,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-12T05:38:18Z",
+    "generatedAt": "2026-10-12T10:22:11Z",
     "methods": [
       "DELETE",
       "GET",

@@ -10,6 +10,14 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, "../../..");
 const servicesRoot = path.join(repoRoot, "services");
 const outputPath = path.join(repoRoot, "web", "dashboard", "src", "generated", "restApiCatalog.generated.ts");
+// Every hand-written example (this script's overrides and
+// src/components/v3/restApiCatalog.ts) as data a Go test can read: a
+// service's rest_examples_test.go sends its examples to the real handlers.
+const examplesPath = path.join(repoRoot, "web", "dashboard", "src", "generated", "restApiExamples.generated.json");
+const handWrittenPath = path.join(repoRoot, "web", "dashboard", "src", "components", "v3", "restApiCatalog.ts");
+
+// A service directory whose edge prefix (/svc/<name>/) is another name.
+const EDGE_NAME = { "cluster-manager": "cluster" };
 
 const WITH_BODY = new Set(["POST", "PUT", "PATCH"]);
 
@@ -75,6 +83,14 @@ const SERVICE_LABEL = {
 };
 
 const ALLOWED_SERVICES = new Set(Object.keys(SERVICE_GROUP));
+
+async function loadHandWritten() {
+  const { default: ts } = await import("typescript");
+  const source = await fs.readFile(handWrittenPath, "utf8");
+  const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
+  const mod = await import(`data:text/javascript;base64,${Buffer.from(js).toString("base64")}`);
+  return mod.REST_API_CATALOG;
+}
 
 const ENDPOINT_OVERRIDES = {
   "auth|POST|/auth/client-token": {
@@ -497,19 +513,20 @@ function toCatalogItem(service, method, routePath) {
   const pathTemplate = normalizedPath.includes("?")
     ? normalizedPath
     : `${normalizedPath}?tenant_id={{tenant_id}}`;
-  const group = `${SERVICE_GROUP[service] || "Other"} (${service})`;
+  const edge = EDGE_NAME[service] || service;
+  const group = `${SERVICE_GROUP[service] || "Other"} (${edge})`;
   const serviceLabel = SERVICE_LABEL[service] || service;
-  const id = `${service}-${slug(method)}-${slug(normalizedPath)}`;
+  const id = `${edge}-${slug(method)}-${slug(normalizedPath)}`;
   const base = {
     id,
     group,
     title: `${method} ${normalizedPath}`,
-    service,
+    service: edge,
     method,
     pathTemplate,
     bodyTemplate: WITH_BODY.has(method) ? '{\n  "tenant_id": "{{tenant_id}}"\n}' : "",
     description: `Auto-discovered route from ${serviceLabel} service.`,
-    requestExample: `${method} /svc/${service}${pathTemplate}`,
+    requestExample: `${method} /svc/${edge}${pathTemplate}`,
     responseExample: {
       note: "Execute endpoint to inspect the live response payload."
     },
@@ -520,7 +537,9 @@ function toCatalogItem(service, method, routePath) {
     ]
   };
   const override = ENDPOINT_OVERRIDES[`${service}|${method}|${normalizedPath}`];
-  return override ? { ...base, ...override } : base;
+  // An override's bodies and responses are written by hand, like the
+  // catalogue's: the tab shows them as unchecked until the service's test covers them.
+  return override ? { ...base, ...override, handWritten: true } : base;
 }
 
 async function main() {
@@ -580,6 +599,13 @@ async function main() {
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
   await fs.writeFile(outputPath, banner + body, "utf8");
   process.stdout.write(`Generated ${items.length} routes -> ${outputPath}\n`);
+
+  const example = (item) => ({ id: item.id, service: item.service, method: item.method, pathTemplate: item.pathTemplate, bodyTemplate: item.bodyTemplate || "", responseExample: item.responseExample || {} });
+  const examples = [...(await loadHandWritten()), ...items.filter((item) => item.handWritten)]
+    .map(example)
+    .sort((a, b) => a.service.localeCompare(b.service) || a.id.localeCompare(b.id));
+  await fs.writeFile(examplesPath, `${JSON.stringify(examples, null, 2)}\n`, "utf8");
+  process.stdout.write(`Wrote ${examples.length} hand-written examples -> ${examplesPath}\n`);
 }
 
 main().catch((error) => {

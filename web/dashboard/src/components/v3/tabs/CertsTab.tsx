@@ -93,21 +93,15 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
   // made there (ECDSA P-256/P-384); "software": envelope-encrypted in certs.
   const [caBackend,setCABackend]=useState("software");
   const [caHSMConn,setCAHSMConn]=useState(""); // "" is the tenant's HSM; else an HSM credential
-  const [hsmKeysEnabled,setHsmKeysEnabled]=useState(false);
   const [hsmConfigured,setHsmConfigured]=useState(false);
-  const [hsmName,setHsmName]=useState("");
   const [showHSMCerts,setShowHSMCerts]=useState(false);
   const caHSMCapable=(alg:string)=>/ECDSA/i.test(String(alg||""))&&!/\+|521|BRAINPOOL/i.test(String(alg||""));
   useEffect(()=>{
     if(!session) return;
     getHSMOverview(session).then((o)=>{
-      const on=Boolean(o?.settings?.hsm_keys_enabled);
-      setHsmKeysEnabled(on);
       setHsmConfigured(Boolean(o?.hsm?.configured));
-      const h=o?.hsm;
-      setHsmName(h?.connected?`${[h.manufacturer,h.model].filter(Boolean).join(" ")}${h.token_label?`, token "${h.token_label}"`:""}`:"");
-      if(on) setCABackend("hsm");
-    }).catch(()=>{setHsmKeysEnabled(false);setHsmConfigured(false);});
+      if(o?.settings?.hsm_keys_enabled) setCABackend("hsm");
+    }).catch(()=>setHsmConfigured(false));
   },[session]);
   const [caPathLength,setCAPathLength]=useState("1");
   const [caKeyUsageSign,setCAKeyUsageSign]=useState(true);
@@ -2457,11 +2451,11 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
           <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
             <Btn onClick={()=>setModal(null)}>Cancel</Btn>
             <Btn primary disabled={!activeCA||submitting} onClick={async()=>{
+              const email=String((document.getElementById("acme-wiz-email") as any)?.value||"").trim(),cn=String((document.getElementById("acme-wiz-cn") as any)?.value||"").trim();
               if(!session||!activeCA)return;
+              if(!email||!cn){onToast?.("Enter the account email and the common name.");return;}
               setSubmitting(true);
               try{
-                const email=String((document.getElementById("acme-wiz-email") as any)?.value||"").trim()||`acme-${Date.now()}@example.com`;
-                const cn=String((document.getElementById("acme-wiz-cn") as any)?.value||"").trim()||`acme-${Date.now()}.local`;
                 const sansRaw=String((document.getElementById("acme-wiz-sans") as any)?.value||"").trim();
                 const sans=sansRaw?sansRaw.split(",").map(s=>s.trim()).filter(Boolean):[cn];
                 const account=await acmeNewAccount(session,email);
@@ -2523,10 +2517,11 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
               }catch(e){onToast?.(`CSR attrs failed: ${errMsg(e)}`);}
             }}>Query CSR Attrs</Btn>
             <Btn primary disabled={!activeCA||submitting} onClick={async()=>{
+              const cn=String((document.getElementById("est-wiz-cn") as any)?.value||"").trim();
               if(!session||!activeCA)return;
+              if(!cn){onToast?.("Enter the common name.");return;}
               setSubmitting(true);
               try{
-                const cn=String((document.getElementById("est-wiz-cn") as any)?.value||"").trim()||`est-device-${Date.now()}.local`;
                 const sansRaw=String((document.getElementById("est-wiz-sans") as any)?.value||"").trim();
                 const sans=sansRaw?sansRaw.split(",").map(s=>s.trim()).filter(Boolean):[cn];
                 const cert=await estServerKeygen(session,{ca_id:activeCA.id,subject_cn:cn,sans});
@@ -2639,11 +2634,11 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
           <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
             <Btn onClick={()=>setModal(null)}>Cancel</Btn>
             <Btn primary disabled={!activeCA||submitting} onClick={async()=>{
+              const msgType=cmpMsgType as "ir"|"cr"|"kur"|"rr",cn=String((document.getElementById("cmpv2-wiz-cn") as any)?.value||"").trim();
               if(!session||!activeCA)return;
+              if((msgType==="ir"||msgType==="cr")&&!cn){onToast?.("Enter the subject common name.");return;}
               setSubmitting(true);
               try{
-                const msgType=cmpMsgType as "ir"|"cr"|"kur"|"rr";
-                const cn=String((document.getElementById("cmpv2-wiz-cn") as any)?.value||"").trim()||`cmp-${Date.now()}.local`;
                 const certId=String((document.getElementById("cmpv2-wiz-certid") as any)?.value||"").trim();
                 const txnId=String((document.getElementById("cmpv2-wiz-txn") as any)?.value||"").trim()||`cmp-${Date.now()}`;
                 const cert=await cmpv2Request(session,{

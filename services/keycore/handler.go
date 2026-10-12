@@ -307,6 +307,10 @@ func (h *Handler) handleCreateKey(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusBadRequest, "description_invalid", err.Error(), reqID, req.TenantID)
 			return
 		}
+		if errors.Is(err, errPublicKeyAlone) {
+			writeErr(w, http.StatusBadRequest, "public_key_needs_private_key", err.Error(), reqID, req.TenantID)
+			return
+		}
 		writeErr(w, http.StatusBadRequest, "create_failed", err.Error(), reqID, req.TenantID)
 		return
 	}
@@ -629,6 +633,10 @@ func (h *Handler) handleRotateKey(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, errAlgorithmChangeRefused) {
 			writeErr(w, http.StatusConflict, "algorithm_change_refused", err.Error(), reqID, tenantID)
+			return
+		}
+		if errors.Is(err, errPublicKeyRotation) {
+			writeErr(w, http.StatusConflict, "public_key_not_rotatable", err.Error(), reqID, tenantID)
 			return
 		}
 		if writeHSMError(w, err, reqID, tenantID) {

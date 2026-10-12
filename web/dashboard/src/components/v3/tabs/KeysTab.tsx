@@ -937,7 +937,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
     }
   };
 
-  const canScheduleRotation=mayScheduleRotation(session)&&(inHSM||algoType!=="asymmetric");
+  const canScheduleRotation=mayScheduleRotation(session);
   const addCustomerKey=async()=>{
     const name=createName.trim();
     if(!name){
@@ -1061,7 +1061,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       setExportable(false);
       setInHSM(false);
       setModal(null);
-      onToast?.(algoType==="asymmetric"?`Asymmetric key pair created: ${name}`:`Key created: ${name}${scheduled}`);
+      onToast?.(`${algoType==="asymmetric"?"Asymmetric key pair":"Key"} created: ${name}${scheduled}`);
     }catch(error){
       onToast?.(`Create key failed: ${errMsg(error)}`);
     }finally{
@@ -1823,7 +1823,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
             const isDeletePending=normState==="destroy-pending";
             const isDeletedState=normState==="deleted";
             const isDeletedLike=isDeletePending||isDeletedState;
-            const canRotate=!isDeletedLike;
+            const canRotate=!isDeletedLike&&!isPublicComponentLike(k);
             const canExport=!isDeletedLike&&Boolean(k.exportAllowed);
             const canEditPolicy=normState==="active"||normState==="deactivated"||normState==="pre-active"||normState==="disabled";
             const canDelete=!isDeletedLike;
@@ -2412,7 +2412,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         const selectedNormState=normalizeKeyState(String(selectedKey.state||"unknown"));
         const selectedCanEditPolicy=selectedNormState==="active"||selectedNormState==="deactivated"||selectedNormState==="pre-active"||selectedNormState==="disabled";
         const selectedDeletedLike=selectedNormState==="deleted"||selectedNormState==="destroy-pending";
-        const selectedCanRotate=!selectedDeletedLike;
+        const selectedCanRotate=!selectedDeletedLike&&!isPublicComponentLike(selectedKey);
         const selectedCanExport=!selectedDeletedLike&&Boolean(selectedKey.exportAllowed);
         const selectedStateBusy=statusUpdatingId===selectedKey.id;
         return <><Row3>

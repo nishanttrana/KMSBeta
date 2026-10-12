@@ -481,6 +481,87 @@ test("a key is exported only with a reason, and its description is edited in pla
   expect(exported).toEqual({ wrapping_key_id: "key_kek", export_mode: "wrapped", reason: "Moving the ledger to the DR site" });
 });
 
+// A software key pair is two keys. Its schedule goes on the private key, and
+// keycore renews the public half with it (12.3.0-beta). A public key has no
+// rotation of its own, so none is offered.
+test("a key pair's rotation schedule is set on its private key, and a public key offers no rotation", async ({ page }) => {
+  const made: Array<Record<string, unknown>> = [];
+  let policy: Record<string, unknown> | null = null;
+  const keys = { items: [
+    keyRow("key_priv", "signer", "sign-verify", { algorithm: "ECDSA-P256", key_type: "asymmetric-private", labels: { pair_id: "p1", component_role: "private" } }),
+    keyRow("key_pub", "signer-public", "verify", { algorithm: "ECDSA-P256", key_type: "asymmetric-public", labels: { pair_id: "p1", component_role: "public" } })
+  ], has_more: false };
+  await page.route(/\/svc\/keycore\/keys\?/, (route) => (route.request().method() === "GET" ? route.fulfill(json(keys)) : route.fallback()));
+  await page.route(/\/svc\/keycore\/keys(\?|$)/, async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    made.push(route.request().postDataJSON());
+    await route.fulfill(json({ key_id: made.length === 1 ? "key_new_private" : "key_new_public", tenant_id: "root", kcv: "A1B2C3" }));
+  });
+  await page.route(/\/svc\/keycore\/rotation\/policies(\?|$)/, async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    policy = route.request().postDataJSON();
+    await route.fulfill(json({ policy: { id: "rp_1", ...policy } }));
+  });
+  await page.reload();
+  await page.getByText("Key Management", { exact: true }).first().click();
+
+  await page.getByText("signer-public", { exact: true }).first().click();
+  const publicDetail = page.getByRole("dialog", { name: "Key: signer-public" });
+  await expect(publicDetail.getByLabel("Key description")).toBeVisible();
+  await expect(publicDetail.getByRole("button", { name: /^Rotate/ })).toHaveCount(0);
+  await publicDetail.getByRole("button", { name: "Close" }).click();
+  await page.getByText("signer", { exact: true }).first().click();
+  const privateDetail = page.getByRole("dialog", { name: "Key: signer" });
+  await expect(privateDetail.getByRole("button", { name: /^Rotate/ })).toHaveCount(1);
+  await privateDetail.getByRole("button", { name: "Close" }).click();
+
+  await page.getByRole("button", { name: "Create Key" }).click();
+  const dialog = page.getByRole("dialog", { name: "Create New Key" });
+  await dialog.getByPlaceholder("Enter key name").fill("release-signer");
+  await dialog.getByText("Asymmetric", { exact: true }).click();
+  await dialog.getByRole("button", { name: "Rotation schedule" }).click();
+  await page.getByRole("option", { name: "Every 365 days" }).click();
+  await dialog.getByRole("button", { name: "Create Key" }).click();
+  await expect.poll(() => policy).not.toBeNull();
+  expect(made.map((k) => k.key_type)).toEqual(["asymmetric-private", "asymmetric-public"]);
+  expect(policy).toEqual({ name: "release-signer", target_filter: "id:key_new_private", interval_days: 365, auto_rotate: true });
+});
+
+// An enrollment wizard issues a certificate for the name that was typed. It
+// used to make one up (acme-<time>@example.com, <time>.local) when a field
+// was left empty (12.3.0-beta).
+test("the ACME wizard asks for the email and name instead of inventing them", async ({ page }) => {
+  let acme = 0;
+  await page.route(/\/svc\/certs\/certs\/ca(\?|$)/, (route) => (route.request().method() === "GET"
+    ? route.fulfill(json({ items: [{ id: "ca_1", tenant_id: "root", name: "issuing", ca_level: "root", algorithm: "ECDSA-P384", ca_type: "internal", key_backend: "software", cert_pem: "", status: "active" }] }))
+    : route.fallback()));
+  await page.route(/\/svc\/certs\/acme\//, async (route) => { acme += 1; await route.fulfill(json({})); });
+  await page.getByText("Certificates / PKI", { exact: true }).first().click();
+  await page.getByTestId("subnav-certs").getByRole("button", { name: "Enrollment Protocols", exact: true }).click();
+  await page.getByRole("button", { name: "ACME Wizard" }).click();
+  const wizard = page.getByRole("dialog", { name: /^ACME Certificate Enrollment/ });
+  const run = wizard.getByRole("button", { name: "Run Full ACME Flow" });
+  await expect(run).toBeEnabled();
+  await run.click();
+  await expect(page.getByText("Enter the account email and the common name.")).toBeVisible();
+  await expect(wizard).toBeVisible();
+  expect(acme).toBe(0);
+});
+
+// The REST API tab's hand-written examples are checked against the service
+// for keycore only (12.3.0-beta). Any other service's are shown as not
+// checked, rather than as fact.
+test("the REST API tab says which examples have not been checked against the service", async ({ page }) => {
+  await page.getByText("Workbench", { exact: true }).first().click();
+  await page.getByTestId("subnav-workbench").getByRole("button", { name: "REST API", exact: true }).click();
+  const search = page.getByPlaceholder("Search service, method, path or capability...");
+  await search.fill("List Keys");
+  await expect(page.getByText("Lists the tenant's keys the caller may see.", { exact: false }).first()).toBeVisible();
+  await expect(page.getByTestId("example-unverified")).toHaveCount(0);
+  await search.fill("Register EKM Database");
+  await expect(page.getByTestId("example-unverified")).toBeVisible();
+});
+
 // What the certs service answers (services/certs/internal_mtls.go, edge_tls.go),
 // with Go's zero time where a service has not reported.
 const ZERO = "0001-01-01T00:00:00Z";

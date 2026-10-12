@@ -850,9 +850,16 @@ func (s *Service) CreateKey(ctx context.Context, req CreateKeyRequest) (Key, err
 		raw []byte
 		err error
 	)
-	if isPublicKeyType(req.KeyType) && req.Labels != nil && strings.TrimSpace(req.Labels["pair_id"]) != "" {
+	switch {
+	case isPublicKeyType(req.KeyType) && strings.TrimSpace(req.Labels[labelPairID]) != "":
 		raw, err = s.resolvePublicMaterialFromPair(ctx, req)
-	} else {
+	case isPublicKeyType(req.KeyType):
+		// Generating one would make a pair and throw its private key away.
+		_ = s.publishAudit(ctx, "audit.key.create_refused", req.TenantID, map[string]any{
+			"name": req.Name, "algorithm": req.Algorithm, "result": "refused", "reason": "public_key_needs_private_key",
+		})
+		return Key{}, errPublicKeyAlone
+	default:
 		raw, err = generateMaterialForCreate(req.Algorithm, req.KeyType)
 	}
 	if errors.Is(err, errKeyAlgorithmUnsupported) {
@@ -1902,6 +1909,9 @@ func (s *Service) RotateKeyTo(ctx context.Context, tenantID string, keyID string
 	if err := s.enforceKeyAccess(ctx, key, "all"); err != nil {
 		return KeyVersion{}, err
 	}
+	if isPublicComponentKey(key) {
+		return KeyVersion{}, s.refusePublicRotation(ctx, key)
+	}
 	fromAlg, alg := key.Algorithm, key.Algorithm
 	if t := strings.TrimSpace(targetAlgorithm); t != "" && !strings.EqualFold(t, key.Algorithm) {
 		if problem := algorithmChangeProblem(key, t); problem != "" {
@@ -1929,7 +1939,11 @@ func (s *Service) RotateKeyTo(ctx context.Context, tenantID string, keyID string
 	}); err != nil {
 		return KeyVersion{}, err
 	}
-	var newVer KeyVersion
+	var (
+		newVer    KeyVersion
+		public    *Key // the public component that follows this private key (key_pair.go)
+		publicVer KeyVersion
+	)
 	if key.Labels[labelHSM] == labelHSMResident {
 		// The next version is a new key generated in the HSM (hsm.go).
 		if newVer, err = s.rotateHSMKey(ctx, key); err != nil {
@@ -1965,6 +1979,16 @@ func (s *Service) RotateKeyTo(ctx context.Context, tenantID string, keyID string
 		if err := s.protectMaterial(ctx, &newVer, raw); err != nil {
 			return KeyVersion{}, err
 		}
+		pub, paired, err := s.publicComponentOf(ctx, key)
+		if err != nil {
+			return KeyVersion{}, err
+		}
+		if paired {
+			if publicVer, err = s.publicVersionFor(ctx, pub, alg, raw, reason, alg != fromAlg); err != nil {
+				return KeyVersion{}, err
+			}
+			public = &pub
+		}
 	}
 	if reason == "" {
 		reason = "manual"
@@ -1973,11 +1997,25 @@ func (s *Service) RotateKeyTo(ctx context.Context, tenantID string, keyID string
 	if action == "" {
 		return KeyVersion{}, errors.New("old_version_action must be deactivate, keep-active, or destroy")
 	}
-	if err := s.store.RotateVersion(ctx, tenantID, keyID, newVer, reason, action); err != nil {
+	details := map[string]any{"key_id": keyID, "reason": reason, "old_version_action": action}
+	if public != nil {
+		// Both halves get their new version, or neither does.
+		err = s.store.RotatePairVersions(ctx, tenantID, keyID, newVer, public.ID, publicVer, reason, action)
+		details["public_key_id"] = public.ID
+	} else {
+		err = s.store.RotateVersion(ctx, tenantID, keyID, newVer, reason, action)
+	}
+	if err != nil {
 		return KeyVersion{}, err
 	}
 	_ = s.cache.Delete(ctx, tenantID, keyID)
-	_ = s.publishAudit(ctx, "audit.key.rotate", tenantID, map[string]any{"key_id": keyID, "reason": reason, "old_version_action": action})
+	_ = s.publishAudit(ctx, "audit.key.rotate", tenantID, details)
+	if public != nil {
+		_ = s.cache.Delete(ctx, tenantID, public.ID)
+		_ = s.publishAudit(ctx, "audit.key.rotate", tenantID, map[string]any{
+			"key_id": public.ID, "reason": reason, "old_version_action": action, "follows_key_id": keyID, "version": publicVer.Version,
+		})
+	}
 	if alg != fromAlg {
 		_ = s.publishAudit(ctx, "audit.key.algorithm_changed", tenantID, map[string]any{
 			"key_id": keyID, "from_algorithm": fromAlg, "to_algorithm": alg, "version": newVer.Version, "result": "success",

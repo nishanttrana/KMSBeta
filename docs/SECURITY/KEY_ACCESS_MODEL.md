@@ -224,6 +224,7 @@ key type" split.
 | Alternative names | Alternative Name (string, URI, email, DNS, IP, X.500, serial) | validated per type |
 | Aliases | additional Name values | unique per tenant; accepted wherever a key ID is |
 | Links | Link (previous, replacement, next, parent, child) | written by rotation and derivation, not free text |
+| Pair (12.3.0-beta) | Link (public key, private key) | a software key pair is a private key and a public component that share `pair_id`; the public key is derived, follows every rotation of its private key in the same transaction, and is never rotated or generated on its own |
 | Dates | Activation, Process Start, Protect Stop, Deactivation, Destroy, Compromise, Compromise Occurrence, Archive | Process Start and Protect Stop are **enforced** (section 7) |
 
 **Labels and custom attributes stay separate.** Labels select keys for label

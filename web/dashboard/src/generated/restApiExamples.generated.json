@@ -1,0 +1,3104 @@
+[
+  {
+    "id": "audit-chain-verify",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/audit/chain/verify?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "chain_valid": true,
+      "total_blocks": 45200,
+      "last_verified_block": 45200,
+      "last_hash": "sha256:def456...",
+      "verified_at": "2026-03-04T12:00:00Z"
+    }
+  },
+  {
+    "id": "audit-event-get",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/audit/events/{{id}}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "id": "evt_001",
+      "action": "key.created",
+      "actor": "admin@bank.com",
+      "actor_ip": "10.0.0.5",
+      "target": "key_123",
+      "target_type": "key",
+      "service": "keycore",
+      "timestamp": "2026-03-04T10:30:00Z",
+      "metadata": {
+        "algorithm": "AES-256-GCM",
+        "key_name": "prod-db-master"
+      },
+      "chain_hash": "sha256:abc123..."
+    }
+  },
+  {
+    "id": "audit-events-list",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/audit/events?tenant_id={{tenant_id}}&limit=100&offset=0",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "evt_001",
+          "action": "key.created",
+          "actor": "admin@bank.com",
+          "target": "key_123",
+          "timestamp": "2026-03-04T10:30:00Z",
+          "service": "keycore"
+        }
+      ],
+      "total": 4520,
+      "limit": 100,
+      "offset": 0
+    }
+  },
+  {
+    "id": "audit-search",
+    "service": "audit",
+    "method": "POST",
+    "pathTemplate": "/audit/search",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"query\": \"key.exported\",\n  \"from\": \"2026-01-01T00:00:00Z\",\n  \"to\": \"2026-12-31T23:59:59Z\",\n  \"limit\": 50\n}",
+    "responseExample": {
+      "items": [
+        {
+          "id": "evt_042",
+          "action": "key.exported",
+          "actor": "ops@bank.com",
+          "target": "key_456",
+          "timestamp": "2026-02-15T14:22:00Z"
+        }
+      ],
+      "total": 7,
+      "limit": 50
+    }
+  },
+  {
+    "id": "audit-timeline",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/audit/timeline/{{target_id}}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "target_id": "key_123",
+      "target_type": "key",
+      "events": [
+        {
+          "id": "evt_001",
+          "action": "key.created",
+          "actor": "admin@bank.com",
+          "timestamp": "2026-01-10T08:00:00Z"
+        },
+        {
+          "id": "evt_015",
+          "action": "key.rotated",
+          "actor": "admin@bank.com",
+          "timestamp": "2026-02-10T08:00:00Z"
+        },
+        {
+          "id": "evt_042",
+          "action": "key.exported",
+          "actor": "ops@bank.com",
+          "timestamp": "2026-02-15T14:22:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "id": "auth-change-password",
+    "service": "auth",
+    "method": "POST",
+    "pathTemplate": "/auth/change-password",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"current_password\": \"old\",\n  \"new_password\": \"new\"\n}",
+    "responseExample": {
+      "status": "ok",
+      "message": "Password changed successfully"
+    }
+  },
+  {
+    "id": "auth-clients-list",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/clients?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "client_01",
+          "name": "billing-svc",
+          "client_id": "svc_billing_abc",
+          "status": "active",
+          "created_at": "2026-01-15T10:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "id": "auth-get-auth-clients",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/clients?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "reg_123",
+          "client_name": "payments-sdk",
+          "status": "approved",
+          "auth_mode": "oauth_mtls",
+          "replay_protection_enabled": true,
+          "verified_request_count": 1487,
+          "replay_violation_count": 0,
+          "signature_failure_count": 0,
+          "unsigned_reject_count": 0
+        }
+      ]
+    }
+  },
+  {
+    "id": "auth-get-auth-rest-client-security-summary",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/rest-client-security/summary?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "summary": {
+        "tenant_id": "root",
+        "total_clients": 7,
+        "sender_constrained_clients": 5,
+        "oauth_mtls_clients": 2,
+        "dpop_clients": 2,
+        "http_message_signature_clients": 1,
+        "replay_protected_clients": 5,
+        "non_compliant_clients": 2,
+        "verified_requests": 2157,
+        "replay_violations": 1,
+        "signature_failures": 3,
+        "unsigned_rejects": 4,
+        "last_violation_at": "2026-03-20T10:15:00Z"
+      }
+    }
+  },
+  {
+    "id": "auth-identity-providers",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/identity/providers?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "idp_01",
+          "name": "corp-ldap",
+          "type": "LDAP",
+          "status": "active",
+          "host": "ldap.corp.local"
+        }
+      ]
+    }
+  },
+  {
+    "id": "auth-login",
+    "service": "auth",
+    "method": "POST",
+    "pathTemplate": "/auth/login",
+    "bodyTemplate": "{\n  \"username\": \"admin\",\n  \"password\": \"changeme\",\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "responseExample": {
+      "access_token": "eyJhbGciOi...",
+      "refresh_token": "dGhpcyBpcyBh...",
+      "token_type": "Bearer",
+      "expires_in": 3600
+    }
+  },
+  {
+    "id": "auth-logout",
+    "service": "auth",
+    "method": "POST",
+    "pathTemplate": "/auth/logout",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "responseExample": {
+      "status": "ok",
+      "message": "Session invalidated"
+    }
+  },
+  {
+    "id": "auth-password-policy-get",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/password-policy?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "min_length": 12,
+      "require_uppercase": true,
+      "require_number": true,
+      "require_special": true,
+      "max_age_days": 90
+    }
+  },
+  {
+    "id": "auth-password-policy-update",
+    "service": "auth",
+    "method": "PUT",
+    "pathTemplate": "/auth/password-policy",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"min_length\": 12,\n  \"require_uppercase\": true,\n  \"require_number\": true,\n  \"require_special\": true,\n  \"max_age_days\": 90\n}",
+    "responseExample": {
+      "status": "ok",
+      "message": "Password policy updated"
+    }
+  },
+  {
+    "id": "auth-post-auth-client-token",
+    "service": "auth",
+    "method": "POST",
+    "pathTemplate": "/auth/client-token?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"client_id\": \"reg_123\",\n  \"api_key\": \"vk_live_xxx\"\n}",
+    "responseExample": {
+      "access_token": "<jwt>",
+      "expires_in": 3600,
+      "token_type": "Bearer",
+      "sender_constrained": true,
+      "auth_mode": "dpop",
+      "replay_protection": true,
+      "request_id": "req_123"
+    }
+  },
+  {
+    "id": "auth-put-auth-clients-id",
+    "service": "auth",
+    "method": "PUT",
+    "pathTemplate": "/auth/clients/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"ip_whitelist\": [\"10.10.10.0/24\"],\n  \"rate_limit\": 1500,\n  \"auth_mode\": \"http_message_signature\",\n  \"replay_protection_enabled\": true,\n  \"http_signature_key_id\": \"sdk-signing-key-01\",\n  \"http_signature_public_key_pem\": \"-----BEGIN PUBLIC KEY-----\\n...\\n-----END PUBLIC KEY-----\",\n  \"http_signature_algorithm\": \"ed25519\"\n}",
+    "responseExample": {
+      "status": "ok",
+      "request_id": "req_123"
+    }
+  },
+  {
+    "id": "auth-refresh",
+    "service": "auth",
+    "method": "POST",
+    "pathTemplate": "/auth/refresh",
+    "bodyTemplate": "{\n  \"refresh_token\": \"REFRESH_TOKEN_HERE\",\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "responseExample": {
+      "access_token": "eyJhbGciOi...",
+      "token_type": "Bearer",
+      "expires_in": 3600
+    }
+  },
+  {
+    "id": "auth-scim-settings-get",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/scim/settings?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "settings": {
+        "tenant_id": "root",
+        "enabled": true,
+        "default_role": "readonly",
+        "default_status": "active",
+        "deprovision_mode": "disable",
+        "group_role_mappings_enabled": true,
+        "token_prefix": "scim_abcd1234"
+      }
+    }
+  },
+  {
+    "id": "auth-scim-settings-update",
+    "service": "auth",
+    "method": "PUT",
+    "pathTemplate": "/auth/scim/settings",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"enabled\": true,\n  \"default_role\": \"readonly\",\n  \"default_status\": \"active\",\n  \"default_must_change_password\": false,\n  \"deprovision_mode\": \"disable\",\n  \"group_role_mappings_enabled\": true\n}",
+    "responseExample": {
+      "settings": {
+        "tenant_id": "root",
+        "enabled": true,
+        "default_role": "readonly"
+      }
+    }
+  },
+  {
+    "id": "auth-scim-users-list",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/scim/users?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "usr_01",
+          "username": "alice.scim",
+          "email": "alice@example.com",
+          "external_id": "okta-user-01",
+          "status": "active"
+        }
+      ]
+    }
+  },
+  {
+    "id": "auth-security-policy-get",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/security-policy?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "max_failed_attempts": 5,
+      "lockout_duration_minutes": 15,
+      "session_timeout_minutes": 30,
+      "mfa_required": false
+    }
+  },
+  {
+    "id": "auth-security-policy-update",
+    "service": "auth",
+    "method": "PUT",
+    "pathTemplate": "/auth/security-policy",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"max_failed_attempts\": 5,\n  \"lockout_duration_minutes\": 15,\n  \"session_timeout_minutes\": 30,\n  \"mfa_required\": false\n}",
+    "responseExample": {
+      "status": "ok",
+      "message": "Security policy updated"
+    }
+  },
+  {
+    "id": "auth-sso-providers",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/sso/providers?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "sso_01",
+          "name": "corporate-okta",
+          "protocol": "OIDC",
+          "status": "active",
+          "issuer": "https://corp.okta.com"
+        }
+      ]
+    }
+  },
+  {
+    "id": "auth-tenants-create",
+    "service": "auth",
+    "method": "POST",
+    "pathTemplate": "/tenants",
+    "bodyTemplate": "{\n  \"name\": \"prod-tenant\",\n  \"admin_email\": \"admin@example.com\"\n}",
+    "responseExample": {
+      "tenant": {
+        "id": "tenant_02",
+        "name": "prod-tenant",
+        "admin_email": "admin@example.com",
+        "status": "active"
+      }
+    }
+  },
+  {
+    "id": "auth-tenants-list",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/tenants?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "tenant_01",
+          "name": "prod-tenant",
+          "admin_email": "admin@example.com",
+          "status": "active"
+        }
+      ]
+    }
+  },
+  {
+    "id": "auth-users-create",
+    "service": "auth",
+    "method": "POST",
+    "pathTemplate": "/auth/users",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"username\": \"newuser\",\n  \"password\": \"securepass\",\n  \"role\": \"operator\",\n  \"email\": \"user@example.com\"\n}",
+    "responseExample": {
+      "user": {
+        "id": "usr_02",
+        "username": "newuser",
+        "role": "operator",
+        "email": "user@example.com",
+        "status": "active"
+      }
+    }
+  },
+  {
+    "id": "auth-users-list",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/users?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "usr_01",
+          "username": "admin",
+          "role": "admin",
+          "email": "admin@example.com",
+          "status": "active"
+        }
+      ]
+    }
+  },
+  {
+    "id": "scim-groups-create",
+    "service": "auth",
+    "method": "POST",
+    "pathTemplate": "/scim/v2/Groups",
+    "bodyTemplate": "{\n  \"schemas\": [\"urn:ietf:params:scim:schemas:core:2.0:Group\"],\n  \"externalId\": \"okta-group-ops\",\n  \"displayName\": \"Operations\",\n  \"members\": [{\"value\": \"usr_01\"}]\n}",
+    "responseExample": {
+      "id": "grp_01",
+      "displayName": "Operations",
+      "externalId": "okta-group-ops",
+      "members": [
+        {
+          "value": "usr_01"
+        }
+      ]
+    }
+  },
+  {
+    "id": "scim-users-create",
+    "service": "auth",
+    "method": "POST",
+    "pathTemplate": "/scim/v2/Users",
+    "bodyTemplate": "{\n  \"schemas\": [\"urn:ietf:params:scim:schemas:core:2.0:User\"],\n  \"externalId\": \"okta-user-01\",\n  \"userName\": \"alice.scim\",\n  \"displayName\": \"Alice SCIM\",\n  \"active\": true,\n  \"emails\": [{\"value\": \"alice@example.com\", \"primary\": true}],\n  \"roles\": [{\"value\": \"readonly\"}]\n}",
+    "responseExample": {
+      "id": "usr_01",
+      "userName": "alice.scim",
+      "externalId": "okta-user-01",
+      "active": true
+    }
+  },
+  {
+    "id": "cert-issue",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/certs",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"ca_id\": \"ca_runtime\",\n  \"subject_cn\": \"service.tenant.local\",\n  \"sans\": [\"service.tenant.local\"],\n  \"cert_type\": \"tls-server\",\n  \"algorithm\": \"ECDSA-P384\",\n  \"server_keygen\": true,\n  \"validity_days\": 365,\n  \"protocol\": \"REST\"\n}",
+    "responseExample": {
+      "certificate": {
+        "id": "crt_99",
+        "status": "active",
+        "subject_cn": "service.tenant.local"
+      }
+    }
+  },
+  {
+    "id": "cert-star-create",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/certs/star/subscriptions",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"mesh-edge\",\n  \"ca_id\": \"ca_runtime\",\n  \"subject_cn\": \"edge.root.example\",\n  \"sans\": [\"edge.root.example\"],\n  \"validity_hours\": 24,\n  \"renew_before_minutes\": 120,\n  \"auto_renew\": true,\n  \"allow_delegation\": true,\n  \"delegated_subscriber\": \"spiffe://prod/ns/edge/sa/gateway\",\n  \"rollout_group\": \"mesh-us-east-1\"\n}",
+    "responseExample": {
+      "subscription": {
+        "id": "star_01",
+        "latest_cert_id": "crt_901",
+        "status": "active"
+      }
+    }
+  },
+  {
+    "id": "cert-star-delete",
+    "service": "certs",
+    "method": "DELETE",
+    "pathTemplate": "/certs/star/subscriptions/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "status": "deleted"
+    }
+  },
+  {
+    "id": "cert-star-list",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/certs/star/subscriptions?tenant_id={{tenant_id}}&limit=100",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "star_01",
+          "subject_cn": "edge.root.example",
+          "validity_hours": 24,
+          "auto_renew": true,
+          "status": "active"
+        }
+      ]
+    }
+  },
+  {
+    "id": "cert-star-refresh",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/certs/star/subscriptions/{id}/refresh",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"force\": true,\n  \"requested_by\": \"platform-ops\"\n}",
+    "responseExample": {
+      "subscription": {
+        "id": "star_01",
+        "latest_cert_id": "crt_902",
+        "issuance_count": 7,
+        "status": "active"
+      }
+    }
+  },
+  {
+    "id": "cert-star-summary",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/certs/star/summary?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "summary": {
+        "enabled": true,
+        "subscription_count": 12,
+        "due_soon_count": 2,
+        "mass_rollout_risk_count": 1
+      }
+    }
+  },
+  {
+    "id": "certs-ca-create",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/certs/ca",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"root-ca\",\n  \"algorithm\": \"ECDSA-P384\",\n  \"validity_years\": 10,\n  \"subject_cn\": \"Vecta Root CA\",\n  \"key_type\": \"internal\"\n}",
+    "responseExample": {
+      "ca": {
+        "id": "ca_01",
+        "name": "root-ca",
+        "algorithm": "ECDSA-P384",
+        "subject_cn": "Vecta Root CA",
+        "status": "active",
+        "validity_years": 10
+      }
+    }
+  },
+  {
+    "id": "certs-ca-list",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/certs/ca?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "ca_01",
+          "name": "root-ca",
+          "algorithm": "ECDSA-P384",
+          "subject_cn": "Vecta Root CA",
+          "status": "active"
+        }
+      ]
+    }
+  },
+  {
+    "id": "certs-download",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/certs/download/{{cert_id}}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "cert_id": "crt_01",
+      "format": "pem",
+      "data": "-----BEGIN CERTIFICATE-----\nMIIB...\n-----END CERTIFICATE-----"
+    }
+  },
+  {
+    "id": "certs-inventory",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/certs/inventory?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "total": 256,
+      "by_status": {
+        "active": 210,
+        "expired": 30,
+        "revoked": 16
+      },
+      "expiring_30d": 12,
+      "expiring_90d": 35,
+      "by_algorithm": {
+        "ECDSA-P384": 180,
+        "RSA-2048": 50,
+        "RSA-4096": 26
+      }
+    }
+  },
+  {
+    "id": "certs-list",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/certs?tenant_id={{tenant_id}}&limit=100&offset=0",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "crt_01",
+          "subject_cn": "api.bank.com",
+          "status": "active",
+          "algorithm": "ECDSA-P384"
+        }
+      ]
+    }
+  },
+  {
+    "id": "certs-profiles-list",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/certs/profiles?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "prof_tls",
+          "name": "TLS Server",
+          "cert_type": "tls-server",
+          "default_validity_days": 365
+        },
+        {
+          "id": "prof_client",
+          "name": "Client Auth",
+          "cert_type": "client-auth",
+          "default_validity_days": 180
+        },
+        {
+          "id": "prof_codesign",
+          "name": "Code Signing",
+          "cert_type": "code-signing",
+          "default_validity_days": 730
+        }
+      ]
+    }
+  },
+  {
+    "id": "certs-renew",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/certs/{{cert_id}}/renew",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"validity_days\": 365\n}",
+    "responseExample": {
+      "certificate": {
+        "id": "crt_01_v2",
+        "status": "active",
+        "not_before": "2026-03-04T00:00:00Z",
+        "not_after": "2027-03-04T00:00:00Z",
+        "renewed_from": "crt_01"
+      }
+    }
+  },
+  {
+    "id": "certs-revoke",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/certs/{{cert_id}}/revoke",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"reason\": \"key_compromise\"\n}",
+    "responseExample": {
+      "certificate": {
+        "id": "crt_01",
+        "status": "revoked",
+        "revocation_reason": "key_compromise",
+        "revoked_at": "2026-03-04T12:00:00Z"
+      }
+    }
+  },
+  {
+    "id": "certs-security-status",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/certs/security/status?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "posture_score": 87,
+      "weak_algorithms": [
+        {
+          "algorithm": "RSA-1024",
+          "count": 3,
+          "recommendation": "Upgrade to RSA-2048 or ECDSA-P384"
+        }
+      ],
+      "expiring_critical": 4,
+      "revocation_pending": 1,
+      "ca_health": {
+        "root_ca_valid": true,
+        "intermediate_ca_valid": true
+      }
+    }
+  },
+  {
+    "id": "hsm-create-ca",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/certs/ca",
+    "bodyTemplate": "{ \"name\": \"{{ca_name}}\", \"algorithm\": \"ECDSA-P384\", \"key_backend\": \"hsm\", \"key_ref\": \"{{hsm_key_id}}\", \"subject\": \"CN={{subject}}\", \"ca_level\": \"root\" }",
+    "responseExample": {
+      "id": "ca-001",
+      "name": "Prod Root CA",
+      "key_backend": "hsm",
+      "key_ref": "hsm-key-001",
+      "status": "active"
+    }
+  },
+  {
+    "id": "byok-accounts-list",
+    "service": "cloud",
+    "method": "GET",
+    "pathTemplate": "/cloud/accounts",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "acct_aws_01",
+          "provider": "aws",
+          "name": "aws-prod",
+          "default_region": "us-east-1",
+          "status": "active"
+        }
+      ]
+    }
+  },
+  {
+    "id": "byok-create",
+    "service": "cloud",
+    "method": "POST",
+    "pathTemplate": "/cloud/byok/keys",
+    "bodyTemplate": "{\n  \"account_id\": \"acct_aws_01\",\n  \"key_id\": \"{{key_id}}\",\n  \"alias\": \"orders-db\",\n  \"validity_days\": 365\n}",
+    "responseExample": {
+      "key": {
+        "id": "byok_01",
+        "provider": "aws",
+        "key_id": "key_123",
+        "source": "hsm",
+        "cloud_key_id": "1234abcd-...",
+        "material_state": "current"
+      },
+      "run": {
+        "status": "succeeded",
+        "steps": [
+          {
+            "name": "Wrap the key material inside the HSM",
+            "status": "succeeded"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "byok-rotate",
+    "service": "cloud",
+    "method": "POST",
+    "pathTemplate": "/cloud/byok/keys/{{byok_id}}/rotate",
+    "bodyTemplate": "{\n  \"validity_days\": 365\n}",
+    "responseExample": {
+      "key": {
+        "id": "byok_01",
+        "current_material_id": "mat-2"
+      },
+      "run": {
+        "status": "succeeded"
+      }
+    }
+  },
+  {
+    "id": "compliance-assessment-run",
+    "service": "compliance",
+    "method": "POST",
+    "pathTemplate": "/compliance/assessment/run",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"framework_id\": \"nist-sp800-57\"\n}",
+    "responseExample": {
+      "assessment": {
+        "id": "assess_01",
+        "framework_id": "nist-sp800-57",
+        "status": "running",
+        "started_at": "2026-03-04T12:00:00Z"
+      }
+    }
+  },
+  {
+    "id": "compliance-cbom-summary",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/cbom/summary?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "algorithms_in_use": [
+        {
+          "algorithm": "AES-256-GCM",
+          "usage_count": 245,
+          "pqc_safe": true
+        },
+        {
+          "algorithm": "RSA-2048",
+          "usage_count": 50,
+          "pqc_safe": false,
+          "migration_recommendation": "ML-KEM-768"
+        },
+        {
+          "algorithm": "ECDSA-P384",
+          "usage_count": 180,
+          "pqc_safe": false,
+          "migration_recommendation": "ML-DSA-65"
+        }
+      ],
+      "pqc_readiness_pct": 51,
+      "total_crypto_assets": 475,
+      "generated_at": "2026-03-04T12:00:00Z"
+    }
+  },
+  {
+    "id": "compliance-frameworks",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/frameworks?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "nist-sp800-57",
+          "name": "NIST SP 800-57",
+          "version": "Rev. 5",
+          "controls_count": 40
+        },
+        {
+          "id": "pci-dss-4.0",
+          "name": "PCI-DSS",
+          "version": "4.0",
+          "controls_count": 25
+        },
+        {
+          "id": "fips-140-3",
+          "name": "FIPS 140-3",
+          "version": "2019",
+          "controls_count": 18
+        }
+      ]
+    }
+  },
+  {
+    "id": "compliance-key-hygiene",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/keys/hygiene?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "rotation_overdue": [
+        {
+          "key_id": "key_42",
+          "name": "legacy-db-key",
+          "last_rotated": "2025-01-15T00:00:00Z",
+          "policy_max_days": 90
+        }
+      ],
+      "weak_algorithms": [
+        {
+          "key_id": "key_03",
+          "algorithm": "DES",
+          "recommendation": "Migrate to AES-256-GCM"
+        }
+      ],
+      "policy_violations": 5,
+      "total_keys_assessed": 320
+    }
+  },
+  {
+    "id": "compliance-orphaned-keys",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/keys/orphaned?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "key_id": "key_07",
+          "name": "decom-app-key",
+          "last_used": "2025-06-10T00:00:00Z",
+          "days_inactive": 267,
+          "status": "active"
+        },
+        {
+          "key_id": "key_11",
+          "name": "test-key-old",
+          "last_used": "2025-03-01T00:00:00Z",
+          "days_inactive": 368,
+          "status": "active"
+        }
+      ],
+      "total_orphaned": 2
+    }
+  },
+  {
+    "id": "compliance-posture",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/posture?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "overall_score": 92,
+      "by_framework": [
+        {
+          "framework": "NIST SP 800-57",
+          "score": 95,
+          "controls_passed": 38,
+          "controls_total": 40
+        },
+        {
+          "framework": "PCI-DSS",
+          "score": 88,
+          "controls_passed": 22,
+          "controls_total": 25
+        }
+      ],
+      "last_assessed": "2026-03-03T06:00:00Z"
+    }
+  },
+  {
+    "id": "compliance-posture-history",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/posture/history?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "trend": [
+        {
+          "date": "2026-01-01",
+          "score": 85
+        },
+        {
+          "date": "2026-02-01",
+          "score": 89
+        },
+        {
+          "date": "2026-03-01",
+          "score": 92
+        }
+      ]
+    }
+  },
+  {
+    "id": "confidential-get-confidential-policy",
+    "service": "confidential",
+    "method": "GET",
+    "pathTemplate": "/confidential/policy?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "policy": {
+        "tenant_id": "root",
+        "enabled": true,
+        "provider": "aws_nitro_enclaves",
+        "mode": "enforce",
+        "key_scopes": [
+          "payments-prod"
+        ],
+        "approved_images": [
+          "123456789012.dkr.ecr.us-east-1.amazonaws.com/payments/authorizer:v1.4.2"
+        ],
+        "approved_subjects": [
+          "spiffe://root/workloads/payments-authorizer"
+        ],
+        "allowed_attesters": [
+          "aws.nitro-enclaves"
+        ],
+        "required_measurements": {
+          "pcr0": "baseline-image-hash",
+          "pcr8": "secure-boot-chain-hash"
+        },
+        "required_claims": {
+          "environment": "prod",
+          "team": "payments"
+        },
+        "require_secure_boot": true,
+        "require_debug_disabled": true,
+        "max_evidence_age_sec": 300,
+        "cluster_scope": "node_allowlist",
+        "allowed_cluster_nodes": [
+          "vecta-kms-01",
+          "vecta-kms-02"
+        ],
+        "fallback_action": "deny",
+        "updated_at": "2026-03-18T11:00:00Z"
+      }
+    }
+  },
+  {
+    "id": "confidential-get-confidential-releases",
+    "service": "confidential",
+    "method": "GET",
+    "pathTemplate": "/confidential/releases?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "rel_01J123EXAMPLE",
+          "tenant_id": "root",
+          "key_id": "key-prod-root",
+          "key_scope": "payments-prod",
+          "provider": "aws_nitro_enclaves",
+          "workload_identity": "spiffe://root/workloads/payments-authorizer",
+          "cluster_node_id": "vecta-kms-01",
+          "decision": "release",
+          "allowed": true,
+          "cryptographically_verified": true,
+          "verification_issuer": "aws.nitro-enclaves",
+          "attestation_document_hash": "sha256:document-hash",
+          "measurement_hash": "sha256:measurement-hash",
+          "policy_version": "sha256:policy-version",
+          "created_at": "2026-03-18T11:16:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "id": "confidential-get-confidential-releases-id",
+    "service": "confidential",
+    "method": "GET",
+    "pathTemplate": "/confidential/releases/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "item": {
+        "id": "rel_01J123EXAMPLE",
+        "tenant_id": "root",
+        "key_id": "key-prod-root",
+        "key_scope": "payments-prod",
+        "provider": "aws_nitro_enclaves",
+        "decision": "release",
+        "allowed": true,
+        "cryptographically_verified": true,
+        "verification_issuer": "aws.nitro-enclaves",
+        "verification_mode": "aws_cose_sign1_x509",
+        "attestation_document_hash": "sha256:document-hash",
+        "measurement_hash": "sha256:measurement-hash",
+        "claims_hash": "sha256:claims-hash",
+        "policy_version": "sha256:policy-version",
+        "created_at": "2026-03-18T11:16:00Z"
+      }
+    }
+  },
+  {
+    "id": "confidential-get-confidential-summary",
+    "service": "confidential",
+    "method": "GET",
+    "pathTemplate": "/confidential/summary?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "summary": {
+        "tenant_id": "root",
+        "policy_enabled": true,
+        "provider": "aws_nitro_enclaves",
+        "approved_image_count": 2,
+        "key_scope_count": 1,
+        "release_count_24h": 14,
+        "deny_count_24h": 2,
+        "review_count_24h": 1,
+        "cryptographically_verified_count_24h": 13,
+        "unique_cluster_nodes": 2,
+        "latest_decision": "release",
+        "last_decision_at": "2026-03-18T11:15:00Z"
+      }
+    }
+  },
+  {
+    "id": "confidential-post-confidential-evaluate",
+    "service": "confidential",
+    "method": "POST",
+    "pathTemplate": "/confidential/evaluate?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"key_id\": \"key-prod-root\",\n  \"key_scope\": \"payments-prod\",\n  \"provider\": \"aws_nitro_enclaves\",\n  \"attestation_format\": \"cose_sign1\",\n  \"attestation_document\": \"{{base64_cose_sign1_attestation_document}}\",\n  \"audience\": \"kms-key-release\",\n  \"nonce\": \"nonce-demo-001\",\n  \"cluster_node_id\": \"vecta-kms-01\",\n  \"requester\": \"platform-ops\",\n  \"release_reason\": \"authorize payment enclave\",\n  \"dry_run\": true\n}",
+    "responseExample": {
+      "result": {
+        "release_id": "rel_01J123EXAMPLE",
+        "decision": "release",
+        "allowed": true,
+        "reasons": [],
+        "matched_claims": [
+          "environment",
+          "team"
+        ],
+        "matched_measurements": [
+          "pcr0",
+          "pcr8"
+        ],
+        "missing_claims": [],
+        "missing_measurements": [],
+        "measurement_hash": "sha256:measurement-hash",
+        "claims_hash": "sha256:claims-hash",
+        "policy_version": "sha256:policy-version",
+        "provider": "aws_nitro_enclaves",
+        "cluster_node_id": "vecta-kms-01",
+        "cryptographically_verified": true,
+        "verification_mode": "aws_cose_sign1_x509",
+        "verification_issuer": "aws.nitro-enclaves",
+        "verification_key_id": "02",
+        "attestation_document_hash": "sha256:document-hash",
+        "attestation_document_format": "cose_sign1",
+        "evaluated_at": "2026-03-18T11:16:00Z"
+      }
+    }
+  },
+  {
+    "id": "confidential-put-confidential-policy",
+    "service": "confidential",
+    "method": "PUT",
+    "pathTemplate": "/confidential/policy?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"enabled\": true,\n  \"provider\": \"aws_nitro_enclaves\",\n  \"mode\": \"enforce\",\n  \"key_scopes\": [\"payments-prod\"],\n  \"approved_images\": [\"123456789012.dkr.ecr.us-east-1.amazonaws.com/payments/authorizer:v1.4.2\"],\n  \"approved_subjects\": [\"spiffe://root/workloads/payments-authorizer\"],\n  \"allowed_attesters\": [\"aws.nitro-enclaves\"],\n  \"required_measurements\": { \"pcr0\": \"baseline-image-hash\", \"pcr8\": \"secure-boot-chain-hash\" },\n  \"required_claims\": { \"environment\": \"prod\", \"team\": \"payments\" },\n  \"require_secure_boot\": true,\n  \"require_debug_disabled\": true,\n  \"max_evidence_age_sec\": 300,\n  \"cluster_scope\": \"node_allowlist\",\n  \"allowed_cluster_nodes\": [\"vecta-kms-01\"],\n  \"fallback_action\": \"deny\"\n}",
+    "responseExample": {
+      "policy": {
+        "tenant_id": "root",
+        "enabled": true,
+        "provider": "aws_nitro_enclaves",
+        "mode": "enforce",
+        "updated_at": "2026-03-18T11:02:00Z"
+      }
+    }
+  },
+  {
+    "id": "dataprotect-detokenize",
+    "service": "dataprotect",
+    "method": "POST",
+    "pathTemplate": "/detokenize",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"token\": \"tok_abc123\"\n}",
+    "responseExample": {
+      "plaintext": "4111-1111-1111-1111",
+      "format": "credit_card"
+    }
+  },
+  {
+    "id": "dataprotect-envelope-decrypt",
+    "service": "dataprotect",
+    "method": "POST",
+    "pathTemplate": "/app/envelope-decrypt",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"key_id\": \"{{key_id}}\",\n  \"encrypted_dek\": \"base64...\",\n  \"ciphertext_base64\": \"base64...\",\n  \"iv\": \"base64...\",\n  \"tag\": \"base64...\",\n  \"aad\": \"context-string\"\n}",
+    "responseExample": {
+      "plaintext_base64": "SGVsbG8gV29ybGQ="
+    }
+  },
+  {
+    "id": "dataprotect-envelope-encrypt",
+    "service": "dataprotect",
+    "method": "POST",
+    "pathTemplate": "/app/envelope-encrypt",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"key_id\": \"{{key_id}}\",\n  \"plaintext_base64\": \"SGVsbG8gV29ybGQ=\",\n  \"aad\": \"context-string\"\n}",
+    "responseExample": {
+      "encrypted_dek": "base64...",
+      "ciphertext_base64": "base64...",
+      "iv": "base64...",
+      "tag": "base64...",
+      "aad": "context-string"
+    }
+  },
+  {
+    "id": "dataprotect-fpe-decrypt",
+    "service": "dataprotect",
+    "method": "POST",
+    "pathTemplate": "/fpe/decrypt",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"key_id\": \"{{key_id}}\",\n  \"ciphertext\": \"7293840185629374\",\n  \"alphabet\": \"numeric\",\n  \"tweak\": \"0000000000\"\n}",
+    "responseExample": {
+      "plaintext": "4111111111111111",
+      "alphabet": "numeric"
+    }
+  },
+  {
+    "id": "dataprotect-fpe-encrypt",
+    "service": "dataprotect",
+    "method": "POST",
+    "pathTemplate": "/fpe/encrypt",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"key_id\": \"{{key_id}}\",\n  \"plaintext\": \"4111111111111111\",\n  \"alphabet\": \"numeric\",\n  \"tweak\": \"0000000000\"\n}",
+    "responseExample": {
+      "ciphertext": "7293840185629374",
+      "alphabet": "numeric"
+    }
+  },
+  {
+    "id": "dataprotect-mask",
+    "service": "dataprotect",
+    "method": "POST",
+    "pathTemplate": "/mask",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"value\": \"4111-1111-1111-1111\",\n  \"policy_id\": \"mask_cc\"\n}",
+    "responseExample": {
+      "masked": "****-****-****-1111",
+      "policy_id": "mask_cc"
+    }
+  },
+  {
+    "id": "dataprotect-masking-policies-list",
+    "service": "dataprotect",
+    "method": "GET",
+    "pathTemplate": "/masking-policies?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "mask_cc",
+          "name": "Credit Card Mask",
+          "pattern": "credit_card",
+          "mask_char": "*",
+          "visible_last": 4,
+          "status": "active"
+        }
+      ]
+    }
+  },
+  {
+    "id": "dataprotect-redact",
+    "service": "dataprotect",
+    "method": "POST",
+    "pathTemplate": "/redact",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"text\": \"My SSN is 123-45-6789 and email is user@example.com\",\n  \"rules\": [\"ssn\", \"email\"]\n}",
+    "responseExample": {
+      "redacted": "My SSN is [REDACTED] and email is [REDACTED]",
+      "detections": [
+        {
+          "type": "ssn",
+          "count": 1
+        },
+        {
+          "type": "email",
+          "count": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "dataprotect-tokenize",
+    "service": "dataprotect",
+    "method": "POST",
+    "pathTemplate": "/tokenize",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"plaintext\": \"4111-1111-1111-1111\",\n  \"format\": \"credit_card\",\n  \"ttl\": \"24h\"\n}",
+    "responseExample": {
+      "token": "tok_abc123",
+      "format": "credit_card",
+      "expires_at": "2026-03-05T12:00:00Z"
+    }
+  },
+  {
+    "id": "dataprotect-tokenize-batch",
+    "service": "dataprotect",
+    "method": "POST",
+    "pathTemplate": "/tokenize/batch",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"items\": [\n    { \"plaintext\": \"4111-1111-1111-1111\", \"format\": \"credit_card\" },\n    { \"plaintext\": \"550000001234\", \"format\": \"credit_card\" }\n  ]\n}",
+    "responseExample": {
+      "tokens": [
+        {
+          "token": "tok_abc123",
+          "format": "credit_card"
+        },
+        {
+          "token": "tok_def456",
+          "format": "credit_card"
+        }
+      ]
+    }
+  },
+  {
+    "id": "discovery-assets-list",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/assets?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "asset_01",
+          "type": "kms_key",
+          "provider": "aws",
+          "region": "us-east-1",
+          "name": "prod-master-key",
+          "algorithm": "AES-256",
+          "status": "active",
+          "discovered_at": "2026-03-04T12:05:00Z"
+        }
+      ],
+      "total": 1247
+    }
+  },
+  {
+    "id": "discovery-scan-start",
+    "service": "discovery",
+    "method": "POST",
+    "pathTemplate": "/discovery/scan",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"scope\": \"full\",\n  \"targets\": [\"aws\", \"azure\", \"gcp\"],\n  \"depth\": \"deep\"\n}",
+    "responseExample": {
+      "scan": {
+        "id": "scan_01",
+        "status": "running",
+        "scope": "full",
+        "started_at": "2026-03-04T12:00:00Z",
+        "targets": [
+          "aws",
+          "azure",
+          "gcp"
+        ]
+      }
+    }
+  },
+  {
+    "id": "discovery-scans-list",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/scans?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "scan_01",
+          "status": "completed",
+          "scope": "full",
+          "started_at": "2026-03-04T12:00:00Z",
+          "completed_at": "2026-03-04T12:15:00Z",
+          "assets_found": 1247
+        }
+      ]
+    }
+  },
+  {
+    "id": "discovery-summary",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/summary?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "total_assets": 1247,
+      "by_provider": {
+        "aws": 523,
+        "azure": 412,
+        "gcp": 312
+      },
+      "by_type": {
+        "kms_key": 890,
+        "certificate": 234,
+        "secret": 123
+      },
+      "last_scan": "2026-03-04T12:15:00Z"
+    }
+  },
+  {
+    "id": "ekm-agent-delete",
+    "service": "ekm",
+    "method": "DELETE",
+    "pathTemplate": "/ekm/agents/{{agent_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "status": "deleted",
+      "agent_id": "agent-mssql-01"
+    }
+  },
+  {
+    "id": "ekm-agent-deploy",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/agents/{{agent_id}}/deploy",
+    "bodyTemplate": "",
+    "responseExample": {
+      "content_type": "application/zip",
+      "filename": "vecta-ekm-agent-mssql-01.zip"
+    }
+  },
+  {
+    "id": "ekm-agent-health",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/agents/{{agent_id}}/health",
+    "bodyTemplate": "",
+    "responseExample": {
+      "status": "healthy",
+      "tde_state": "enabled",
+      "pkcs11_ready": true,
+      "cpu_pct": 12.5,
+      "mem_pct": 45.2
+    }
+  },
+  {
+    "id": "ekm-agent-heartbeat",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/agents/{{agent_id}}/heartbeat",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"status\": \"connected\",\n  \"tde_state\": \"enabled\",\n  \"active_key_id\": \"tde-key-001\",\n  \"active_key_version\": \"v1\",\n  \"metadata_json\": \"{}\"\n}",
+    "responseExample": {
+      "status": "ack",
+      "server_time": "2026-03-05T12:00:00Z"
+    }
+  },
+  {
+    "id": "ekm-agent-logs",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/agents/{{agent_id}}/logs?limit={{limit}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "logs": [
+        {
+          "timestamp": "2026-03-05T12:00:00Z",
+          "level": "info",
+          "message": "heartbeat sent"
+        }
+      ]
+    }
+  },
+  {
+    "id": "ekm-agent-register",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/agents/register",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"mssql-prod-03\",\n  \"role\": \"ekm-agent\",\n  \"db_engine\": \"mssql\",\n  \"host\": \"10.0.0.15\",\n  \"version\": \"SQL Server 2022\",\n  \"heartbeat_interval_sec\": 30,\n  \"auto_provision_tde\": true\n}",
+    "responseExample": {
+      "agent": {
+        "id": "agent_03",
+        "name": "mssql-prod-03",
+        "status": "active",
+        "assigned_key_id": "key_tde_01"
+      }
+    }
+  },
+  {
+    "id": "ekm-agent-rotate",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/agents/{{agent_id}}/rotate",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"reason\": \"scheduled_rotation\",\n  \"force\": false\n}",
+    "responseExample": {
+      "status": "rotated",
+      "new_key_version": "v3",
+      "rotated_at": "2026-03-05T12:00:00Z"
+    }
+  },
+  {
+    "id": "ekm-agent-status",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/agents/{{agent_id}}/status",
+    "bodyTemplate": "",
+    "responseExample": {
+      "agent": {
+        "id": "agent-mssql-01",
+        "status": "connected",
+        "tde_state": "enabled",
+        "last_heartbeat": "2026-03-05T12:00:00Z"
+      }
+    }
+  },
+  {
+    "id": "ekm-agents-list",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/agents?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "agent_01",
+          "name": "mssql-prod-01",
+          "db_engine": "mssql",
+          "status": "active",
+          "host": "10.0.0.5"
+        }
+      ]
+    }
+  },
+  {
+    "id": "ekm-bitlocker-delete",
+    "service": "ekm",
+    "method": "DELETE",
+    "pathTemplate": "/ekm/bitlocker/clients/{{client_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "status": "deleted",
+      "client_id": "bl-win-01"
+    }
+  },
+  {
+    "id": "ekm-bitlocker-delete-preview",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/bitlocker/clients/{{client_id}}/delete-preview",
+    "bodyTemplate": "",
+    "responseExample": {
+      "client_id": "bl-win-01",
+      "recovery_keys_count": 2,
+      "warning": "Recovery keys will be orphaned"
+    }
+  },
+  {
+    "id": "ekm-bitlocker-deploy",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/bitlocker/clients/{{client_id}}/deploy",
+    "bodyTemplate": "",
+    "responseExample": {
+      "content_type": "application/zip",
+      "filename": "vecta-bitlocker-agent-bl-win-01.zip"
+    }
+  },
+  {
+    "id": "ekm-bitlocker-get",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/bitlocker/clients/{{client_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "client": {
+        "id": "bl-win-01",
+        "protection_status": "On",
+        "encryption_method": "XtsAes256",
+        "tpm_present": true,
+        "tpm_ready": true
+      }
+    }
+  },
+  {
+    "id": "ekm-bitlocker-heartbeat",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/bitlocker/clients/{{client_id}}/heartbeat",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"status\": \"connected\",\n  \"protection_status\": \"On\",\n  \"encryption_percentage\": 100\n}",
+    "responseExample": {
+      "status": "ack"
+    }
+  },
+  {
+    "id": "ekm-bitlocker-job-result",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/bitlocker/clients/{{client_id}}/jobs/{{job_id}}/result",
+    "bodyTemplate": "{\n  \"job_id\": \"job-abc123\",\n  \"status\": \"completed\",\n  \"result\": \"BitLocker enabled successfully\",\n  \"error\": \"\"\n}",
+    "responseExample": {
+      "status": "recorded"
+    }
+  },
+  {
+    "id": "ekm-bitlocker-jobs-next",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/bitlocker/clients/{{client_id}}/jobs/next",
+    "bodyTemplate": "",
+    "responseExample": {
+      "job_id": "job-abc123",
+      "operation": "enable",
+      "params": {
+        "mount_point": "C:",
+        "protector_type": "recovery_password"
+      }
+    }
+  },
+  {
+    "id": "ekm-bitlocker-list",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/bitlocker/clients?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "bl-win-01",
+          "name": "Desktop-Finance-01",
+          "protection_status": "On",
+          "last_heartbeat": "2026-03-05T12:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "id": "ekm-bitlocker-network-scan",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/bitlocker/network/scan",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"subnet\": \"10.0.1.0/24\",\n  \"timeout_sec\": 30\n}",
+    "responseExample": {
+      "discovered": [
+        {
+          "ip": "10.0.1.50",
+          "hostname": "DESKTOP-FIN01",
+          "os": "Windows 11 Pro",
+          "tpm_present": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "ekm-bitlocker-operations",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/bitlocker/clients/{{client_id}}/operations",
+    "bodyTemplate": "{\n  \"operation\": \"enable\",\n  \"mount_point\": \"C:\",\n  \"protector_type\": \"recovery_password\"\n}",
+    "responseExample": {
+      "job_id": "job-abc123",
+      "status": "queued",
+      "operation": "enable"
+    }
+  },
+  {
+    "id": "ekm-bitlocker-recovery",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/bitlocker/recovery?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "keys": [
+        {
+          "client_id": "bl-win-01",
+          "recovery_password": "123456-...",
+          "created_at": "2026-03-01T10:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "id": "ekm-bitlocker-register",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/bitlocker/clients/register",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"agent_id\": \"bl-win-01\",\n  \"name\": \"Desktop-Finance-01\",\n  \"host\": \"10.0.1.50\",\n  \"bitlocker_mount_point\": \"C:\",\n  \"bitlocker_protector_type\": \"recovery_password\"\n}",
+    "responseExample": {
+      "client": {
+        "id": "bl-win-01",
+        "status": "registered",
+        "assigned_protector": "recovery_password"
+      }
+    }
+  },
+  {
+    "id": "ekm-db-get",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/databases/{{database_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "database": {
+        "id": "db-001",
+        "name": "MSSQL-Prod",
+        "tde_state": "enabled",
+        "agent_id": "agent-mssql-01",
+        "key_id": "tde-key-001"
+      }
+    }
+  },
+  {
+    "id": "ekm-db-list",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/databases?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "db-001",
+          "name": "MSSQL-Prod",
+          "engine": "mssql",
+          "tde_state": "enabled"
+        }
+      ]
+    }
+  },
+  {
+    "id": "ekm-db-register",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/databases",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"MSSQL-Prod\",\n  \"engine\": \"mssql\",\n  \"host\": \"10.0.0.15\",\n  \"port\": 1433\n}",
+    "responseExample": {
+      "database": {
+        "id": "db-001",
+        "name": "MSSQL-Prod",
+        "engine": "mssql",
+        "status": "registered"
+      }
+    }
+  },
+  {
+    "id": "ekm-sdk-download",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/sdk/download?tenant_id={{tenant_id}}&provider=jca&os=all",
+    "bodyTemplate": "",
+    "responseExample": {
+      "artifact": {
+        "provider": "jca",
+        "filename": "vecta-jca-sdk-all.zip",
+        "content_type": "application/zip",
+        "encoding": "base64"
+      }
+    }
+  },
+  {
+    "id": "ekm-sdk-overview",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/sdk/overview",
+    "bodyTemplate": "",
+    "responseExample": {
+      "providers": [
+        {
+          "id": "jca",
+          "name": "Java JCA/JCE Provider",
+          "status": "available",
+          "capabilities": [
+            "Cipher AES/GCM/NoPadding",
+            "Signature SHA256withRSA",
+            "Signature SHA256withECDSA",
+            "KeyStore VectaKMS"
+          ]
+        }
+      ],
+      "mechanisms": [],
+      "clients": []
+    }
+  },
+  {
+    "id": "ekm-tde-create",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/tde/keys",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"mssql-prod-tde\",\n  \"algorithm\": \"RSA-3072\"\n}",
+    "responseExample": {
+      "key": {
+        "id": "tde-key-001",
+        "keycore_key_id": "key_...",
+        "name": "mssql-prod-tde",
+        "algorithm": "RSA-3072",
+        "status": "active",
+        "current_version": "1",
+        "created_at": "2026-03-05T12:00:00Z"
+      }
+    }
+  },
+  {
+    "id": "ekm-tde-public",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/tde/keys/{{key_id}}/public",
+    "bodyTemplate": "",
+    "responseExample": {
+      "public_key": {
+        "key_id": "tde-key-001",
+        "algorithm": "RSA-3072",
+        "public_key": "-----BEGIN PUBLIC KEY-----...",
+        "format": "pem",
+        "key_version": "3"
+      }
+    }
+  },
+  {
+    "id": "ekm-tde-rotate",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/tde/keys/{{key_id}}/rotate",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"reason\": \"compliance_rotation\"\n}",
+    "responseExample": {
+      "key": {
+        "key_id": "tde-key-001",
+        "version": 3,
+        "rotated_at": "2026-03-05T12:00:00Z"
+      }
+    }
+  },
+  {
+    "id": "ekm-tde-unwrap",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/tde/keys/{{key_id}}/unwrap",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"ciphertext\": \"{{base64_ciphertext}}\",\n  \"iv\": \"{{base64_iv}}\"\n}",
+    "responseExample": {
+      "plaintext": "base64..."
+    }
+  },
+  {
+    "id": "ekm-tde-wrap",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/tde/keys/{{key_id}}/wrap",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"plaintext\": \"{{base64_plaintext}}\"\n}",
+    "responseExample": {
+      "ciphertext": "base64...",
+      "iv": "base64..."
+    }
+  },
+  {
+    "id": "approval-vote",
+    "service": "governance",
+    "method": "POST",
+    "pathTemplate": "/governance/approve/{{request_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"request_id\": \"REQ_ID_HERE\",\n  \"vote\": \"approved\",\n  \"comment\": \"Approved after review\",\n  \"challenge_code\": \"\"\n}",
+    "responseExample": {
+      "request": {
+        "id": "req_01",
+        "status": "approved",
+        "current_approvals": 2,
+        "required_approvals": 2
+      }
+    }
+  },
+  {
+    "id": "gov-requests",
+    "service": "governance",
+    "method": "GET",
+    "pathTemplate": "/governance/requests?tenant_id={{tenant_id}}&status=pending",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "req_01",
+          "action": "key.export",
+          "status": "pending",
+          "required_approvals": 2,
+          "current_approvals": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "governance-backups-create",
+    "service": "governance",
+    "method": "POST",
+    "pathTemplate": "/governance/backups",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"scope\": \"system\",\n  \"bind_to_hsm\": false,\n  \"created_by\": \"admin\"\n}",
+    "responseExample": {
+      "backup": {
+        "id": "bkp_03",
+        "scope": "system",
+        "status": "in_progress",
+        "created_at": "2026-03-04T12:00:00Z",
+        "created_by": "admin",
+        "bind_to_hsm": false
+      }
+    }
+  },
+  {
+    "id": "governance-backups-list",
+    "service": "governance",
+    "method": "GET",
+    "pathTemplate": "/governance/backups?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "bkp_01",
+          "scope": "system",
+          "status": "completed",
+          "created_at": "2026-03-04T02:00:00Z",
+          "size_mb": 128,
+          "bind_to_hsm": false
+        },
+        {
+          "id": "bkp_02",
+          "scope": "system",
+          "status": "completed",
+          "created_at": "2026-03-03T02:00:00Z",
+          "size_mb": 125,
+          "bind_to_hsm": false
+        }
+      ]
+    }
+  },
+  {
+    "id": "governance-policies-create",
+    "service": "governance",
+    "method": "POST",
+    "pathTemplate": "/governance/policies",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"key-export-approval\",\n  \"action\": \"key.export\",\n  \"required_approvals\": 2,\n  \"approver_roles\": [\"admin\", \"security-officer\"]\n}",
+    "responseExample": {
+      "policy": {
+        "id": "pol_03",
+        "name": "key-export-approval",
+        "action": "key.export",
+        "required_approvals": 2,
+        "approver_roles": [
+          "admin",
+          "security-officer"
+        ],
+        "status": "active",
+        "created_at": "2026-03-04T12:00:00Z"
+      }
+    }
+  },
+  {
+    "id": "governance-policies-list",
+    "service": "governance",
+    "method": "GET",
+    "pathTemplate": "/governance/policies?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "pol_01",
+          "name": "key-export-approval",
+          "action": "key.export",
+          "required_approvals": 2,
+          "approver_roles": [
+            "admin",
+            "security-officer"
+          ],
+          "status": "active"
+        },
+        {
+          "id": "pol_02",
+          "name": "key-destroy-approval",
+          "action": "key.destroy",
+          "required_approvals": 3,
+          "approver_roles": [
+            "admin",
+            "security-officer",
+            "compliance-officer"
+          ],
+          "status": "active"
+        }
+      ]
+    }
+  },
+  {
+    "id": "governance-settings-get",
+    "service": "governance",
+    "method": "GET",
+    "pathTemplate": "/governance/settings?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "approval_expiry_minutes": 60,
+      "notify_email": true,
+      "notify_slack": false,
+      "smtp_host": "smtp.example.com",
+      "smtp_port": "587",
+      "default_approval_mode": "quorum",
+      "challenge_response_enabled": false
+    }
+  },
+  {
+    "id": "governance-settings-update",
+    "service": "governance",
+    "method": "PUT",
+    "pathTemplate": "/governance/settings",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"approval_expiry_minutes\": 60,\n  \"notify_email\": true,\n  \"notify_slack\": false,\n  \"smtp_host\": \"smtp.example.com\",\n  \"smtp_port\": \"587\"\n}",
+    "responseExample": {
+      "status": "updated",
+      "approval_expiry_minutes": 60,
+      "notify_email": true,
+      "notify_slack": false,
+      "smtp_host": "smtp.example.com",
+      "smtp_port": "587"
+    }
+  },
+  {
+    "id": "governance-system-state-get",
+    "service": "governance",
+    "method": "GET",
+    "pathTemplate": "/governance/system/state?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "fips_mode": "enabled",
+      "backup_schedule": "daily@02:00",
+      "backup_retention_days": 30,
+      "network_mode": "private",
+      "last_backup": "2026-03-04T02:00:00Z",
+      "hsm_status": "connected"
+    }
+  },
+  {
+    "id": "governance-system-state-update",
+    "service": "governance",
+    "method": "PUT",
+    "pathTemplate": "/governance/system/state",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"fips_mode\": \"enabled\",\n  \"backup_schedule\": \"daily@02:00\",\n  \"backup_retention_days\": 30\n}",
+    "responseExample": {
+      "status": "updated",
+      "fips_mode": "enabled",
+      "backup_schedule": "daily@02:00",
+      "backup_retention_days": 30
+    }
+  },
+  {
+    "id": "hyok-dke-publickey",
+    "service": "hyok",
+    "method": "GET",
+    "pathTemplate": "/hyok/dke/v1/keys/{{key_id}}/publickey?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "key": {
+        "key_id": "key_123",
+        "algorithm": "RSA-OAEP-2048",
+        "format": "pem",
+        "public_key": "-----BEGIN PUBLIC KEY-----..."
+      }
+    }
+  },
+  {
+    "id": "hyok-endpoints-list",
+    "service": "hyok",
+    "method": "GET",
+    "pathTemplate": "/hyok/v1/endpoints?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "protocol": "dke",
+          "enabled": true,
+          "auth_mode": "jwt",
+          "governance_required": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "crypto-hash",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/crypto/hash",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"algorithm\": \"sha-512\",\n  \"input\": \"aGVsbG8tdmVjdGE=\"\n}",
+    "responseExample": {
+      "algorithm": "sha-512",
+      "digest": "Z/2JXRtNr411VTCGlqE4sqwpwb9CbD/5b8z0X1W2qS3ypRM1WRgDwrRcK2NMrQP6/418GcPymwsv7G4gE+I21Q==",
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "crypto-random",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/crypto/random",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"length\": 32\n}",
+    "responseExample": {
+      "bytes": "+GaAWutvirlRBVaGNAwM6+xp0CCms5GGL0mtad8O+Co=",
+      "length": 32,
+      "source": "kms-csprng",
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "key-decrypt",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{{key_id}}/decrypt",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"ciphertext\": \"<ciphertext from encrypt>\",\n  \"iv\": \"<iv from encrypt>\"\n}",
+    "responseExample": {
+      "plaintext": "aGVsbG8tdmVjdGE=",
+      "key_id": "key_123",
+      "version": 1,
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "key-encrypt",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{{key_id}}/encrypt",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"plaintext\": \"aGVsbG8tdmVjdGE=\",\n  \"iv_mode\": \"internal\",\n  \"reference_id\": \"txn-001\"\n}",
+    "responseExample": {
+      "ciphertext": "9BEzxmi6v7I7BAMQAi/IfnvETLvoLQDr0+BL",
+      "iv": "AaWJlSbQQ50GHHnX",
+      "kcv": "",
+      "key_id": "key_123",
+      "version": 1,
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "key-sign",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{{key_id}}/sign",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"data\": \"aGVsbG8tdmVjdGE=\"\n}",
+    "responseExample": {
+      "signature": "MEQCICYCcLP6ajSG1S/mmleq6qo3/kC1Xm7JQUyJhCJY1fFhAiBK0XtgJeOAvpwVrjhOFgTcYNWeWWKdjGtJA1mcGIubEw==",
+      "key_id": "key_123",
+      "version": 1,
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "key-verify",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{{key_id}}/verify",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"data\": \"aGVsbG8tdmVjdGE=\",\n  \"signature\": \"<signature from sign>\"\n}",
+    "responseExample": {
+      "verified": true,
+      "key_id": "key_123",
+      "version": 1,
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "keys-activate",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{{key_id}}/activate",
+    "bodyTemplate": "{\n  \"mode\": \"immediate\"\n}",
+    "responseExample": {
+      "status": "active",
+      "activation_date": null,
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "keys-create",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"customer-key-name\",\n  \"description\": \"What this key protects\",\n  \"algorithm\": \"AES-256\",\n  \"key_type\": \"symmetric\",\n  \"purpose\": \"encrypt-decrypt\",\n  \"export_allowed\": false\n}",
+    "responseExample": {
+      "key_id": "key_123",
+      "tenant_id": "root",
+      "kcv": "63EF1D",
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "keys-deactivate",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{{key_id}}/deactivate",
+    "bodyTemplate": "{}",
+    "responseExample": {
+      "status": "deactivated",
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "keys-derive",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{{key_id}}/derive",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"algorithm\": \"hkdf-sha256\",\n  \"length_bits\": 256,\n  \"info\": \"aGVsbG8tdmVjdGE=\"\n}",
+    "responseExample": {
+      "key_id": "key_123",
+      "version": 1,
+      "algorithm": "hkdf-sha256",
+      "length_bits": 256,
+      "derived_key": "BASE64...",
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "keys-destroy",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{{key_id}}/destroy",
+    "bodyTemplate": "{\n  \"mode\": \"scheduled\",\n  \"destroy_after_days\": 30,\n  \"confirm_name\": \"<the key's name>\",\n  \"justification\": \"decommissioned\",\n  \"checks\": {\n    \"no_active_workloads\": true,\n    \"backup_completed\": true,\n    \"irreversible_ack\": true\n  }\n}",
+    "responseExample": {
+      "status": "destroy-pending",
+      "mode": "scheduled",
+      "destroy_at": "2026-11-11T05:38:09Z",
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "keys-export",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{{key_id}}/export",
+    "bodyTemplate": "{\n  \"wrapping_key_id\": \"{{wrapping_key_id}}\",\n  \"export_mode\": \"wrapped\",\n  \"reason\": \"why this key is leaving\"\n}",
+    "responseExample": {
+      "key_id": "key_123",
+      "kcv": "A1B2C3",
+      "wrapped_material": "BASE64...",
+      "material_iv": "BASE64...",
+      "wrapping_key_id": "key_kek",
+      "export_format": "aes-gcm-wrapped-by-kek"
+    }
+  },
+  {
+    "id": "keys-import",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/import",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"imported-key\",\n  \"algorithm\": \"AES-256\",\n  \"key_type\": \"symmetric\",\n  \"purpose\": \"encrypt-decrypt\",\n  \"import_method\": \"raw\",\n  \"material\": \"MDEyMzQ1Njc4OUFCQ0RFRjAxMjM0NTY3ODlBQkNERUY=\"\n}",
+    "responseExample": {
+      "key_id": "key_imp_01",
+      "tenant_id": "root",
+      "kcv": "AB0B21",
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "keys-list",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/keys?tenant_id={{tenant_id}}&limit=100&offset=0",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "key_123",
+          "tenant_id": "root",
+          "name": "prod-db-master",
+          "description": "",
+          "algorithm": "AES-256",
+          "key_type": "symmetric",
+          "purpose": "encrypt-decrypt",
+          "status": "active",
+          "current_version": 2,
+          "kcv": "63EF1D",
+          "export_allowed": false,
+          "tags": [],
+          "labels": {},
+          "created_at": "2026-01-15T00:00:00Z",
+          "updated_at": "2026-01-15T00:00:00Z"
+        }
+      ],
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "keys-mac",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{{key_id}}/mac",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"data\": \"aGVsbG8tdmVjdGE=\"\n}",
+    "responseExample": {
+      "signature": "J5NLTrg2CBpq5ax5BQuDuH/ZhlAJLc1td9TQat+5uzY=",
+      "key_id": "key_123",
+      "version": 1,
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "keys-rotate",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{{key_id}}/rotate",
+    "bodyTemplate": "{\n  \"reason\": \"scheduled\",\n  \"old_version_action\": \"deactivate\"\n}",
+    "responseExample": {
+      "status": "ok",
+      "version": 2,
+      "version_id": "kv_7f2f231eaddf36b2",
+      "algorithm": "",
+      "kcv": "CDE147",
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "keys-unwrap",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{{key_id}}/unwrap",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"ciphertext\": \"<ciphertext from wrap>\",\n  \"iv\": \"<iv from wrap>\"\n}",
+    "responseExample": {
+      "plaintext": "aGVsbG8tdmVjdGE=",
+      "key_id": "key_123",
+      "version": 1,
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "keys-usage",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/keys/{{key_id}}/usage?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "usage": {
+        "ops_total": 2,
+        "ops_encrypt": 1,
+        "ops_decrypt": 1,
+        "ops_sign": 0,
+        "ops_limit": 0,
+        "ops_limit_window": ""
+      },
+      "remaining": 0,
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "keys-usage-limit",
+    "service": "keycore",
+    "method": "PUT",
+    "pathTemplate": "/keys/{{key_id}}/usage/limit",
+    "bodyTemplate": "{\n  \"ops_limit\": 1000000,\n  \"window\": \"total\"\n}",
+    "responseExample": {
+      "status": "ok",
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "keys-versions",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/keys/{{key_id}}/versions?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "kv_7f2f231eaddf36b2",
+          "version": 2,
+          "status": "active",
+          "kcv": "CDE147",
+          "created_at": "2026-01-15T00:00:00Z"
+        },
+        {
+          "id": "kv_672f0bedd79a4d2e",
+          "version": 1,
+          "status": "deactivated",
+          "kcv": "9B708B",
+          "created_at": "2025-01-01T00:00:00Z"
+        }
+      ],
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "keys-wrap",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{{key_id}}/wrap",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"plaintext\": \"aGVsbG8tdmVjdGE=\"\n}",
+    "responseExample": {
+      "ciphertext": "t5EzPH/zuHJZ5K9XfRnabpJPDypkmSZkGrTg",
+      "iv": "O3ZfttdsCKbU589c",
+      "kcv": "",
+      "key_id": "key_123",
+      "version": 1,
+      "request_id": "req_3c8cb9866229e7f2"
+    }
+  },
+  {
+    "id": "kmip-client-create",
+    "service": "kmip",
+    "method": "POST",
+    "pathTemplate": "/kmip/clients",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"app-kmip-client-01\",\n  \"profile_id\": \"prof_01\",\n  \"role\": \"kmip-client\",\n  \"enrollment_mode\": \"internal\",\n  \"common_name\": \"app-kmip-client-01\"\n}",
+    "responseExample": {
+      "client": {
+        "id": "kmip_client_01",
+        "name": "app-kmip-client-01",
+        "status": "active",
+        "enrollment_mode": "internal"
+      }
+    }
+  },
+  {
+    "id": "kmip-client-delete",
+    "service": "kmip",
+    "method": "DELETE",
+    "pathTemplate": "/kmip/clients/{{id}}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "status": "deleted"
+    }
+  },
+  {
+    "id": "kmip-clients-list",
+    "service": "kmip",
+    "method": "GET",
+    "pathTemplate": "/kmip/clients?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "kmipc_01",
+          "name": "app-kmip-client-01",
+          "status": "active",
+          "enrollment_mode": "internal",
+          "role": "kmip-client"
+        }
+      ]
+    }
+  },
+  {
+    "id": "kmip-profile-delete",
+    "service": "kmip",
+    "method": "DELETE",
+    "pathTemplate": "/kmip/profiles/{{id}}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "status": "deleted"
+    }
+  },
+  {
+    "id": "kmip-profiles-list",
+    "service": "kmip",
+    "method": "GET",
+    "pathTemplate": "/kmip/profiles?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "prof_01",
+          "name": "default-kmip",
+          "role": "kmip-client",
+          "certificate_duration_days": 365
+        }
+      ]
+    }
+  },
+  {
+    "id": "posture-actions-list",
+    "service": "posture",
+    "method": "GET",
+    "pathTemplate": "/posture/actions?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "act_01",
+          "finding_id": "find_01",
+          "action": "rotate_key",
+          "status": "pending",
+          "priority": "high"
+        }
+      ]
+    }
+  },
+  {
+    "id": "posture-dashboard",
+    "service": "posture",
+    "method": "GET",
+    "pathTemplate": "/posture/dashboard?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "risk_score": 72,
+      "findings": {
+        "critical": 2,
+        "high": 8,
+        "warning": 15,
+        "info": 17
+      },
+      "top_recommendations": [
+        {
+          "title": "Rotate expired keys",
+          "impact": "high",
+          "effort": "low"
+        }
+      ]
+    }
+  },
+  {
+    "id": "posture-findings-list",
+    "service": "posture",
+    "method": "GET",
+    "pathTemplate": "/posture/findings?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "find_01",
+          "title": "Weak Key Algorithm",
+          "severity": "high",
+          "resource": "key_abc",
+          "category": "key-hygiene",
+          "status": "open",
+          "first_seen": "2026-03-01T10:00:00Z"
+        }
+      ],
+      "total": 42
+    }
+  },
+  {
+    "id": "posture-risk-history",
+    "service": "posture",
+    "method": "GET",
+    "pathTemplate": "/posture/risk/history?tenant_id={{tenant_id}}&days=30",
+    "bodyTemplate": "",
+    "responseExample": {
+      "points": [
+        {
+          "date": "2026-03-04",
+          "score": 72
+        },
+        {
+          "date": "2026-03-03",
+          "score": 70
+        },
+        {
+          "date": "2026-03-02",
+          "score": 68
+        }
+      ]
+    }
+  },
+  {
+    "id": "posture-risk-score",
+    "service": "posture",
+    "method": "GET",
+    "pathTemplate": "/posture/risk?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "score": 72,
+      "grade": "B",
+      "breakdown": {
+        "key_hygiene": 85,
+        "access_control": 70,
+        "compliance": 65,
+        "crypto_agility": 68
+      },
+      "trend": "improving"
+    }
+  },
+  {
+    "id": "reporting-ack-alert",
+    "service": "reporting",
+    "method": "PUT",
+    "pathTemplate": "/alerts/{{alert_id}}/acknowledge?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"actor\": \"admin@bank.com\"\n}",
+    "responseExample": {
+      "status": "ok"
+    }
+  },
+  {
+    "id": "reporting-alert-mttr",
+    "service": "reporting",
+    "method": "GET",
+    "pathTemplate": "/alerts/stats/mttr?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "mean_time_to_resolve_hours": 4.2,
+      "by_severity": {
+        "critical": 0.5,
+        "high": 2.1,
+        "warning": 6.8,
+        "info": 12.4
+      },
+      "period": "30d"
+    }
+  },
+  {
+    "id": "reporting-alert-rules-create",
+    "service": "reporting",
+    "method": "POST",
+    "pathTemplate": "/alerts/rules",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"High Failure Rate\",\n  \"condition\": \"threshold\",\n  \"pattern\": \"auth.login.failed\",\n  \"threshold\": 10,\n  \"window_seconds\": 300,\n  \"severity\": \"high\",\n  \"channels\": [\"email\", \"webhook\"]\n}",
+    "responseExample": {
+      "rule": {
+        "id": "rule_02",
+        "name": "High Failure Rate",
+        "condition": "threshold",
+        "enabled": true,
+        "created_at": "2026-03-04T12:00:00Z"
+      }
+    }
+  },
+  {
+    "id": "reporting-alert-rules-list",
+    "service": "reporting",
+    "method": "GET",
+    "pathTemplate": "/alerts/rules?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "rule_01",
+          "name": "High Failure Rate",
+          "condition": "threshold",
+          "pattern": "auth.login.failed",
+          "threshold": 10,
+          "window_seconds": 300,
+          "severity": "high",
+          "enabled": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "reporting-alert-stats",
+    "service": "reporting",
+    "method": "GET",
+    "pathTemplate": "/alerts/stats?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "total": 847,
+      "by_severity": {
+        "critical": 12,
+        "high": 89,
+        "warning": 234,
+        "info": 512
+      },
+      "open": 156,
+      "acknowledged": 691
+    }
+  },
+  {
+    "id": "reporting-alert-top-sources",
+    "service": "reporting",
+    "method": "GET",
+    "pathTemplate": "/alerts/stats/top-sources?tenant_id={{tenant_id}}&limit=5",
+    "bodyTemplate": "",
+    "responseExample": {
+      "sources": [
+        {
+          "source": "auth-service",
+          "count": 245
+        },
+        {
+          "source": "key-rotation",
+          "count": 189
+        }
+      ]
+    }
+  },
+  {
+    "id": "reporting-alerts-bulk-ack",
+    "service": "reporting",
+    "method": "POST",
+    "pathTemplate": "/alerts/bulk/acknowledge",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"alert_ids\": [\"alert_01\", \"alert_02\", \"alert_03\"],\n  \"note\": \"Investigated — false positive\"\n}",
+    "responseExample": {
+      "acknowledged": 3,
+      "failed": 0
+    }
+  },
+  {
+    "id": "reporting-alerts-list",
+    "service": "reporting",
+    "method": "GET",
+    "pathTemplate": "/alerts?tenant_id={{tenant_id}}&status=open&limit=100&offset=0",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "alert_01",
+          "severity": "critical",
+          "title": "Key rotation overdue",
+          "status": "open"
+        }
+      ]
+    }
+  },
+  {
+    "id": "reporting-generate-report",
+    "service": "reporting",
+    "method": "POST",
+    "pathTemplate": "/reports/generate?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"template_id\": \"key-rotation-summary\",\n  \"format\": \"pdf\",\n  \"filters\": {\n    \"date_from\": \"2026-01-01\",\n    \"date_to\": \"2026-12-31\"\n  }\n}",
+    "responseExample": {
+      "job": {
+        "id": "rep_job_01",
+        "template_id": "key-rotation-summary",
+        "status": "queued",
+        "format": "pdf"
+      }
+    }
+  },
+  {
+    "id": "reporting-report-jobs-list",
+    "service": "reporting",
+    "method": "GET",
+    "pathTemplate": "/reports/jobs?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "rpt_01",
+          "type": "compliance-summary",
+          "status": "completed",
+          "created_at": "2026-03-04T02:00:00Z",
+          "download_url": "/reports/download/rpt_01"
+        }
+      ]
+    }
+  },
+  {
+    "id": "reporting-scheduled-list",
+    "service": "reporting",
+    "method": "GET",
+    "pathTemplate": "/reports/scheduled?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "sched_01",
+          "name": "Weekly Compliance",
+          "type": "compliance-summary",
+          "cron": "0 2 * * MON",
+          "last_run": "2026-03-03T02:00:00Z",
+          "next_run": "2026-03-10T02:00:00Z",
+          "enabled": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "sbom-get-cbom-pqc-readiness",
+    "service": "sbom",
+    "method": "GET",
+    "pathTemplate": "/cbom/pqc-readiness?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "pqc_readiness": {
+        "total_assets": 42,
+        "pqc_ready_count": 8,
+        "pqc_readiness_percent": 19,
+        "deprecated_count": 4,
+        "algorithm_distribution": {
+          "AES": 16,
+          "RSA": 9,
+          "ECDSA": 9,
+          "ML-DSA": 8
+        },
+        "strength_histogram": {
+          "128": 8,
+          "256": 34
+        }
+      }
+    }
+  },
+  {
+    "id": "sbom-post-cbom-generate",
+    "service": "sbom",
+    "method": "POST",
+    "pathTemplate": "/cbom/generate?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"trigger\": \"manual\"\n}",
+    "responseExample": {
+      "status": "accepted",
+      "snapshot": {
+        "id": "cbom_20260311_001",
+        "tenant_id": "{{tenant_id}}",
+        "created_at": "2026-03-11T09:47:00Z"
+      }
+    }
+  },
+  {
+    "id": "sbom-post-sbom-generate",
+    "service": "sbom",
+    "method": "POST",
+    "pathTemplate": "/sbom/generate?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"trigger\": \"manual\"\n}",
+    "responseExample": {
+      "status": "accepted",
+      "snapshot": {
+        "id": "sbom_20260311_001",
+        "created_at": "2026-03-11T09:45:00Z"
+      }
+    }
+  },
+  {
+    "id": "secrets-create",
+    "service": "secrets",
+    "method": "POST",
+    "pathTemplate": "/secrets",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"db-password\",\n  \"secret_type\": \"password\",\n  \"value\": \"s3cret!\",\n  \"description\": \"Production database password\"\n}",
+    "responseExample": {
+      "secret": {
+        "id": "sec_02",
+        "name": "db-password",
+        "secret_type": "password",
+        "status": "active",
+        "version": 1
+      }
+    }
+  },
+  {
+    "id": "secrets-delete",
+    "service": "secrets",
+    "method": "DELETE",
+    "pathTemplate": "/secrets/{{secret_id}}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "status": "deleted",
+      "secret_id": "sec_01",
+      "deleted_at": "2026-03-04T12:00:00Z"
+    }
+  },
+  {
+    "id": "secrets-get",
+    "service": "secrets",
+    "method": "GET",
+    "pathTemplate": "/secrets/{{secret_id}}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "secret": {
+        "id": "sec_01",
+        "name": "db-password",
+        "secret_type": "password",
+        "status": "active",
+        "version": 3,
+        "created_at": "2026-01-01T00:00:00Z"
+      }
+    }
+  },
+  {
+    "id": "secrets-get-value",
+    "service": "secrets",
+    "method": "GET",
+    "pathTemplate": "/secrets/{{secret_id}}/value?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "secret_id": "sec_01",
+      "value": "s3cret!",
+      "version": 3
+    }
+  },
+  {
+    "id": "secrets-list",
+    "service": "secrets",
+    "method": "GET",
+    "pathTemplate": "/secrets?tenant_id={{tenant_id}}&limit=100&offset=0",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "id": "sec_01",
+          "name": "db-password",
+          "secret_type": "password",
+          "status": "active"
+        }
+      ]
+    }
+  },
+  {
+    "id": "secrets-rotate",
+    "service": "secrets",
+    "method": "POST",
+    "pathTemplate": "/secrets/{{secret_id}}/rotate",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "responseExample": {
+      "secret": {
+        "id": "sec_01",
+        "version": 5,
+        "status": "active",
+        "rotated_at": "2026-03-04T12:00:00Z"
+      }
+    }
+  },
+  {
+    "id": "secrets-stats",
+    "service": "secrets",
+    "method": "GET",
+    "pathTemplate": "/secrets/stats?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "total_secrets": 142,
+      "by_type": {
+        "password": 80,
+        "api_key": 35,
+        "certificate": 15,
+        "generic": 12
+      },
+      "rotation_overdue": 8,
+      "last_rotation": "2026-03-01T00:00:00Z"
+    }
+  },
+  {
+    "id": "secrets-update",
+    "service": "secrets",
+    "method": "PUT",
+    "pathTemplate": "/secrets/{{secret_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"value\": \"new-s3cret!\",\n  \"description\": \"Updated password\"\n}",
+    "responseExample": {
+      "secret": {
+        "id": "sec_01",
+        "name": "db-password",
+        "version": 4,
+        "status": "active",
+        "updated_at": "2026-03-04T12:00:00Z"
+      }
+    }
+  },
+  {
+    "id": "secrets-versions",
+    "service": "secrets",
+    "method": "GET",
+    "pathTemplate": "/secrets/{{secret_id}}/versions?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "version": 1,
+          "created_at": "2026-01-01T00:00:00Z",
+          "status": "superseded"
+        },
+        {
+          "version": 2,
+          "created_at": "2026-02-15T00:00:00Z",
+          "status": "active"
+        }
+      ]
+    }
+  },
+  {
+    "id": "workload-get-workload-identity-graph",
+    "service": "workload",
+    "method": "GET",
+    "pathTemplate": "/workload-identity/graph?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "graph": {
+        "tenant_id": "root",
+        "generated_at": "2026-03-19T09:10:00Z",
+        "nodes": [
+          {
+            "id": "workload:spiffe://root/workloads/payments-api",
+            "label": "spiffe://root/workloads/payments-api",
+            "kind": "workload",
+            "status": "enabled"
+          },
+          {
+            "id": "key:key_payments_prod",
+            "label": "key_payments_prod",
+            "kind": "key",
+            "status": "bound"
+          }
+        ],
+        "edges": [
+          {
+            "source": "workload:spiffe://root/workloads/payments-api",
+            "target": "key:key_payments_prod",
+            "label": "authorized",
+            "kind": "policy"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "workload-get-workload-identity-settings",
+    "service": "workload",
+    "method": "GET",
+    "pathTemplate": "/workload-identity/settings?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "settings": {
+        "tenant_id": "root",
+        "enabled": true,
+        "trust_domain": "root",
+        "federation_enabled": true,
+        "token_exchange_enabled": true,
+        "default_x509_ttl_seconds": 43200,
+        "default_jwt_ttl_seconds": 1800,
+        "rotation_window_seconds": 1800,
+        "allowed_audiences": [
+          "kms",
+          "kms-workload",
+          "kms-rest"
+        ],
+        "jwt_signer_key_id": "wid-root-1",
+        "updated_at": "2026-03-19T09:00:00Z"
+      }
+    }
+  },
+  {
+    "id": "workload-get-workload-identity-summary",
+    "service": "workload",
+    "method": "GET",
+    "pathTemplate": "/workload-identity/summary?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "summary": {
+        "tenant_id": "root",
+        "enabled": true,
+        "trust_domain": "root",
+        "registration_count": 4,
+        "enabled_registration_count": 4,
+        "federated_trust_domain_count": 1,
+        "issuance_count_24h": 8,
+        "token_exchange_count_24h": 21,
+        "key_usage_count_24h": 57,
+        "unique_workloads_using_keys_24h": 3,
+        "unique_keys_used_24h": 4,
+        "expiring_svid_count": 1,
+        "expired_svid_count": 0,
+        "over_privileged_count": 1,
+        "rotation_healthy": true
+      }
+    }
+  },
+  {
+    "id": "workload-get-workload-identity-usage",
+    "service": "workload",
+    "method": "GET",
+    "pathTemplate": "/workload-identity/usage?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "items": [
+        {
+          "event_id": "evt_01J123EXAMPLE",
+          "tenant_id": "root",
+          "workload_identity": "spiffe://root/workloads/payments-api",
+          "trust_domain": "root",
+          "key_id": "key_payments_prod",
+          "operation": "encrypt",
+          "interface_name": "rest",
+          "client_id": "wid_01J123EXAMPLE",
+          "result": "success",
+          "created_at": "2026-03-19T09:15:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "id": "workload-post-workload-identity-issue",
+    "service": "workload",
+    "method": "POST",
+    "pathTemplate": "/workload-identity/issue?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"registration_id\": \"wid_01J123EXAMPLE\",\n  \"svid_type\": \"jwt\",\n  \"audiences\": [\"kms\"],\n  \"ttl_seconds\": 1800\n}",
+    "responseExample": {
+      "issued": {
+        "issuance_id": "iss_01J123EXAMPLE",
+        "registration_id": "wid_01J123EXAMPLE",
+        "spiffe_id": "spiffe://root/workloads/payments-api",
+        "svid_type": "jwt",
+        "serial_or_key_id": "wid-root-1",
+        "expires_at": "2026-03-19T09:35:00Z",
+        "rotation_due_at": "2026-03-19T09:05:00Z",
+        "cryptographically_signed": true
+      }
+    }
+  },
+  {
+    "id": "workload-post-workload-identity-registrations",
+    "service": "workload",
+    "method": "POST",
+    "pathTemplate": "/workload-identity/registrations?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"payments-api\",\n  \"spiffe_id\": \"spiffe://root/workloads/payments-api\",\n  \"selectors\": [\"docker:image:payments-api\", \"env:prod\"],\n  \"allowed_interfaces\": [\"rest\", \"payment-tcp\"],\n  \"allowed_key_ids\": [\"key_payments_prod\"],\n  \"permissions\": [\"key.encrypt\", \"key.decrypt\", \"key.sign\"],\n  \"issue_jwt_svid\": true,\n  \"issue_x509_svid\": true,\n  \"enabled\": true\n}",
+    "responseExample": {
+      "registration": {
+        "id": "wid_01J123EXAMPLE",
+        "tenant_id": "root",
+        "name": "payments-api",
+        "spiffe_id": "spiffe://root/workloads/payments-api",
+        "allowed_interfaces": [
+          "rest"
+        ],
+        "allowed_key_ids": [
+          "key_payments_prod"
+        ],
+        "permissions": [
+          "key.encrypt",
+          "key.decrypt",
+          "key.sign"
+        ],
+        "enabled": true,
+        "created_at": "2026-03-19T09:05:00Z"
+      }
+    }
+  },
+  {
+    "id": "workload-post-workload-identity-token-exchange",
+    "service": "workload",
+    "method": "POST",
+    "pathTemplate": "/workload-identity/token/exchange?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"registration_id\": \"wid_01J123EXAMPLE\",\n  \"interface_name\": \"rest\",\n  \"audience\": \"kms\",\n  \"requested_permissions\": [\"key.encrypt\", \"key.decrypt\"],\n  \"requested_key_ids\": [\"key_payments_prod\"],\n  \"jwt_svid\": \"eyJhbGciOiJFZERTQSIsImtpZCI6IndpZC1yb290In0...\"\n}",
+    "responseExample": {
+      "exchange": {
+        "tenant_id": "root",
+        "registration_id": "wid_01J123EXAMPLE",
+        "spiffe_id": "spiffe://root/workloads/payments-api",
+        "trust_domain": "root",
+        "svid_type": "jwt",
+        "interface_name": "rest",
+        "allowed_permissions": [
+          "key.encrypt",
+          "key.decrypt"
+        ],
+        "allowed_key_ids": [
+          "key_payments_prod"
+        ],
+        "kms_access_token_expiry": "2026-03-19T09:20:00Z"
+      }
+    }
+  },
+  {
+    "id": "workload-put-workload-identity-settings",
+    "service": "workload",
+    "method": "PUT",
+    "pathTemplate": "/workload-identity/settings?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"enabled\": true,\n  \"trust_domain\": \"root\",\n  \"federation_enabled\": true,\n  \"token_exchange_enabled\": true,\n  \"default_x509_ttl_seconds\": 43200,\n  \"default_jwt_ttl_seconds\": 1800,\n  \"rotation_window_seconds\": 1800,\n  \"allowed_audiences\": [\"kms\", \"kms-workload\", \"kms-rest\"]\n}",
+    "responseExample": {
+      "settings": {
+        "tenant_id": "root",
+        "enabled": true,
+        "trust_domain": "root",
+        "updated_at": "2026-03-19T09:02:00Z"
+      }
+    }
+  }
+]

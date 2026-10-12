@@ -73,6 +73,7 @@ type Store interface {
 	ListKeyConsumers(ctx context.Context, tenantID, keyID string, since time.Time) ([]KeyConsumer, error)
 	GetVersion(ctx context.Context, tenantID string, keyID string, version int) (KeyVersion, error)
 	RotateVersion(ctx context.Context, tenantID string, keyID string, newVer KeyVersion, reason string, oldVersionAction string) error
+	RotatePairVersions(ctx context.Context, tenantID, privateID string, privateVer KeyVersion, publicID string, publicVer KeyVersion, reason, oldVersionAction string) error
 	UpdateVersionStatus(ctx context.Context, tenantID string, keyID string, version int, status string) error
 	DeleteVersion(ctx context.Context, tenantID string, keyID string, version int) error
 
@@ -865,65 +866,70 @@ WHERE tenant_id=$1 AND key_id=$2 AND version=$3
 
 func (s *SQLStore) RotateVersion(ctx context.Context, tenantID string, keyID string, newVer KeyVersion, reason string, oldVersionAction string) error {
 	return s.withTenantTx(ctx, tenantID, func(tx *sql.Tx) error {
-		var current int
-		var keyAlg string
-		if err := tx.QueryRowContext(ctx, `SELECT current_version, algorithm FROM keys WHERE tenant_id=$1 AND id=$2`, tenantID, keyID).Scan(&current, &keyAlg); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return errStoreNotFound
-			}
-			return err
+		return rotateVersionTx(ctx, tx, tenantID, keyID, newVer, reason, oldVersionAction)
+	})
+}
+
+// rotateVersionTx gives one key its next version inside tx.
+func rotateVersionTx(ctx context.Context, tx *sql.Tx, tenantID string, keyID string, newVer KeyVersion, reason string, oldVersionAction string) error {
+	var current int
+	var keyAlg string
+	if err := tx.QueryRowContext(ctx, `SELECT current_version, algorithm FROM keys WHERE tenant_id=$1 AND id=$2`, tenantID, keyID).Scan(&current, &keyAlg); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errStoreNotFound
 		}
-		newAlg := newVer.Algorithm
-		if newAlg != "" && newAlg != keyAlg {
-			// The key's algorithm changes: pin every older version to the
-			// algorithm its material belongs to before the key moves on.
-			if _, err := tx.ExecContext(ctx, `
+		return err
+	}
+	newAlg := newVer.Algorithm
+	if newAlg != "" && newAlg != keyAlg {
+		// The key's algorithm changes: pin every older version to the
+		// algorithm its material belongs to before the key moves on.
+		if _, err := tx.ExecContext(ctx, `
 UPDATE key_versions SET algorithm=$3
 WHERE tenant_id=$1 AND key_id=$2 AND (algorithm IS NULL OR algorithm='')
 `, tenantID, keyID, keyAlg); err != nil {
-				return err
-			}
-			if _, err := tx.ExecContext(ctx, `UPDATE keys SET algorithm=$3, kcv_algorithm=$4 WHERE tenant_id=$1 AND id=$2`,
-				tenantID, keyID, newAlg, newVer.KCVAlgorithm); err != nil {
-				return err
-			}
+			return err
 		}
-		switch strings.ToLower(strings.TrimSpace(oldVersionAction)) {
-		case "", "deactivate":
-			if _, err := tx.ExecContext(ctx, `
+		if _, err := tx.ExecContext(ctx, `UPDATE keys SET algorithm=$3, kcv_algorithm=$4 WHERE tenant_id=$1 AND id=$2`,
+			tenantID, keyID, newAlg, newVer.KCVAlgorithm); err != nil {
+			return err
+		}
+	}
+	switch strings.ToLower(strings.TrimSpace(oldVersionAction)) {
+	case "", "deactivate":
+		if _, err := tx.ExecContext(ctx, `
 UPDATE key_versions
 SET status='deactivated'
 WHERE tenant_id=$1 AND key_id=$2 AND version=$3
 `, tenantID, keyID, current); err != nil {
-				return err
-			}
-		case "keep-active":
-			// No-op: leave old version active for overlap period.
-		case "destroy":
-			if _, err := tx.ExecContext(ctx, `
+			return err
+		}
+	case "keep-active":
+		// No-op: leave old version active for overlap period.
+	case "destroy":
+		if _, err := tx.ExecContext(ctx, `
 UPDATE key_versions
 SET status='deleted'
 WHERE tenant_id=$1 AND key_id=$2 AND version=$3
 `, tenantID, keyID, current); err != nil {
-				return err
-			}
-		default:
-			return fmt.Errorf("invalid old_version_action: %s", oldVersionAction)
+			return err
 		}
-		_, err := tx.ExecContext(ctx, `
+	default:
+		return fmt.Errorf("invalid old_version_action: %s", oldVersionAction)
+	}
+	_, err := tx.ExecContext(ctx, `
 INSERT INTO key_versions (
     id, tenant_id, key_id, version, encrypted_material, material_iv, wrapped_dek, public_key, kcv,
     rotated_from, rotation_reason, status, created_at, protection, hsm_label, algorithm
 ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,CURRENT_TIMESTAMP,$13,$14,$15)
 `, newVer.ID, tenantID, keyID, current+1, newVer.EncryptedMaterial, newVer.MaterialIV, newVer.WrappedDEK, nullableBytes(newVer.PublicKey), newVer.KCV, current, reason, "active", protectionOf(newVer), newVer.HSMLabel, nullable(newAlg))
-		if err != nil {
-			return err
-		}
-		_, err = tx.ExecContext(ctx, `
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, `
 UPDATE keys SET current_version=$1, kcv=$2, updated_at=CURRENT_TIMESTAMP WHERE tenant_id=$3 AND id=$4
 `, current+1, newVer.KCV, tenantID, keyID)
-		return err
-	})
+	return err
 }
 
 func (s *SQLStore) UpdateVersionStatus(ctx context.Context, tenantID string, keyID string, version int, status string) error {

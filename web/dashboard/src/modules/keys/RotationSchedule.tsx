@@ -1,3 +1,4 @@
+import { hasPermission } from "../../config/moduleRegistry";
 import type { AuthSession } from "../../lib/auth";
 import { createPolicy } from "../../lib/rotationScheduler";
 import { FG, Inp, Sel } from "../../components/v3/legacyPrimitives";
@@ -19,7 +20,7 @@ export function rotationDays(value: string): number {
 }
 
 export function mayScheduleRotation(session: AuthSession | null): boolean {
-  return (session?.permissions || []).some((p) => p === "*" || p === "key.*" || p === "key.rotation.*" || p === "key.rotation.write");
+  return hasPermission(session, "key.rotation.write");
 }
 
 export async function scheduleRotation(session: AuthSession, keyId: string, keyName: string, days: number): Promise<void> {

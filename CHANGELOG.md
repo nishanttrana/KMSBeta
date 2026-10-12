@@ -4,6 +4,62 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [12.3.0-beta] — 2026-10-12
+
+### Fixed
+- **Rotating a key pair left its public key behind.** A software key pair
+  is two keys: the private key and its public component. A rotation renewed
+  the private key only, so the public component kept the old key and no
+  longer verified what the private key signed. Both now get their new
+  version in one transaction, with the public key derived from the new
+  private key. This applies to manual rotation, rotation policies and an
+  algorithm change.
+- **Pairs already out of step are brought back.** At start, on the primary,
+  keycore gives each such public component a version that matches its
+  private key and audits it (`audit.key.pair_public_resynced`). The older
+  version is kept, deactivated.
+- **A public key is no longer rotated on its own.** Doing so stored the
+  public half of a pair made for the purpose, whose private half was thrown
+  away. It is refused (`409 public_key_not_rotatable`, audited
+  `audit.key.rotate_refused`); the dashboard no longer offers it. A rotation
+  policy that sweeps keys up skips public components. Generating a public
+  key with no private key (`POST /keys`) is refused for the same reason
+  (`400 public_key_needs_private_key`); importing one is unchanged.
+- **The REST API tab's examples for keys were wrong.** 18 of the 21 showed a
+  request the service refuses or an answer it never gives (`message`,
+  `encoding`, `key_material`, a `valid` flag). All 21 are corrected, and a
+  keycore test now sends each one to the real handlers. Twelve entries for
+  routes no service registers are removed (QKD, MPC, a Vault-style secrets
+  API, two inventory routes, an HSM certificate store) and six that named
+  the wrong path or method are fixed.
+- **The enrollment wizards no longer invent a name.** ACME, EST and CMPv2
+  issued for a made-up address or common name (`acme-…@example.com`,
+  `….local`) when the field was left empty. They now ask for it.
+- **The Command Center no longer calls the cluster service where clustering
+  is not deployed** (a 503 on every load).
+
+### Changed
+- **A rotation schedule is offered for key pairs too** when creating a key;
+  it is set on the private key.
+- **Examples in the REST API tab that have not been checked against their
+  service say so.** keycore's are checked; the other 17 services' are
+  labelled until each has the same test.
+- **The REST playground may call the services that register routes**,
+  by the name the edge routes them under. Its list named four services that
+  do not exist and `cluster` under its directory name.
+
+### Removed
+- Five methods of the KMIP service's keycore client that nothing called;
+  four of them named routes keycore never had.
+- Dead state in the certificates tab.
+
+Enforced by `services/keycore/key_pair_test.go` (rotation, both refusals,
+policies, resync, member mode), `TestPairRotationPostgres` (one
+transaction, rolled back together), `TestRESTExamplesMatchTheService`,
+`TestKeycoreClientCallsRegisteredRoutes` (kmip),
+`web/dashboard/tests/unit/restCatalog.test.ts`, `platformSnapshot.test.ts`
+and three smoke tests.
+
 ## [12.2.0-beta] — 2026-10-12
 
 ### Fixed

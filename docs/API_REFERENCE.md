@@ -414,6 +414,7 @@ Permission `key.create`.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | name | string | Yes | Key name |
+| key_type | string | No | A public type (`asymmetric-public`) needs a `pair_id` label naming its private key; without one the request is refused (400 `public_key_needs_private_key`): import a public key instead |
 | description | string | No | Display text, up to 512 characters, no control characters (400 `description_invalid`). Also accepted by `POST /keys/import` and `POST /keys/form`; returned with the key. No access decision reads it |
 | algorithm | string | Yes | One keycore generates: AES-128/192/256[-mode], 3DES, HMAC-SHA256/384/512, RSA-2048/3072/4096/8192, ECDSA/ECDH P-256/P-384/P-521, Ed25519, X25519, ML-KEM-768/1024, ML-DSA-65/87, SLH-DSA-{SHA2,SHAKE}-{128,192,256}{s,f}. Anything else: `400 algorithm_unsupported` (audited `audit.key.create_refused`) |
 | purpose | string | No | Intended use (for example `encrypt`, `sign`, `wrap`) |
@@ -489,6 +490,15 @@ the target is unknown or weak, can't serve an operation the key serves (e.g.
 an encryption key to ML-DSA), or the key is HSM-resident. Success emits
 `audit.key.algorithm_changed` besides `audit.key.rotate`. Response:
 `version_id`, `version`, `algorithm` (set when it changed), `kcv`.
+
+**Key pairs (12.3.0-beta).** Rotating a private key that has a public
+component (the same `pair_id` label) gives the public key a version derived
+from the new private key in the same transaction; `audit.key.rotate` is
+emitted for both, the public key's with `follows_key_id`. A public key is
+not rotated on its own: `409 public_key_not_rotatable`, audited
+`audit.key.rotate_refused` with `reason`
+`public_key_follows_private_key` (and `private_key_id`) or
+`public_key_has_no_private_key`.
 
 ```bash
 curl -sk -X POST https://localhost/svc/keycore/keys/3fa85f64-5717-4562-b3fc-2c963f66afa6/rotate \
@@ -4015,7 +4025,7 @@ Common prefixes:
 
 Selected events with dedicated audit classification:
 - `audit.dataprotect.fpe_encrypted`, `audit.dataprotect.fpe_decrypted` (FF1), `audit.dataprotect.fpe_legacy_decrypted` (pre-1.26.0 migration), `audit.dataprotect.fpe_refused` (FF3-1, legacy encrypt, unknown; `result: refused`)
-- `audit.key.create_refused` (unsupported algorithm; `description_invalid` on create, import or form), `audit.key.export_refused` (`export_reason_required`, `export_reason_invalid`), `audit.key.description_updated` (kernel event; `changed`, `length`), `audit.key.algorithm_label_corrected` (startup relabel of faked key material), `audit.key.kdf_refused` (scrypt/Argon2id in strict mode)
+- `audit.key.create_refused` (unsupported algorithm; `description_invalid` on create, import or form; `public_key_needs_private_key`), `audit.key.rotate_refused` (a public key asked to rotate on its own), `audit.key.pair_public_resynced` (a public key brought back in step with its private key at start), `audit.key.export_refused` (`export_reason_required`, `export_reason_invalid`), `audit.key.description_updated` (kernel event; `changed`, `length`), `audit.key.algorithm_label_corrected` (startup relabel of faked key material), `audit.key.kdf_refused` (scrypt/Argon2id in strict mode)
 - `audit.crypto.random` (with the source that produced the bytes; `hsm_serial` for `hsm-trng`), `audit.crypto.random_refused` (QKD/QRNG/no HSM)
 - `audit.hsm.random_generated` (hsm-connector `POST /hsm/random`)
 - `audit.pqc.migration_step_executed` (per step: `successor_created` or `rotated`), `audit.pqc.migration_executed`, `audit.pqc.migration_failed`, `audit.pqc.migration_rolled_back`

@@ -32,6 +32,8 @@ import { C } from "../theme";
 type Props = {
   session: AuthSession | null;
   fipsMode?: string;
+  // False where the clustering feature is not deployed.
+  clustered?: boolean;
   onNavigate?: (tabId: string) => void;
 };
 
@@ -66,7 +68,7 @@ function writeSnoozed(tenant: string, v: Record<string, number>) {
 }
 
 // ── Shared data hook ─────────────────────────────────────────────────────
-export function useRecommendations(session: AuthSession | null, fipsMode?: string) {
+export function useRecommendations(session: AuthSession | null, fipsMode?: string, clustered = true) {
   const [snapshot, setSnapshot] = useState<PlatformSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -77,13 +79,13 @@ export function useRecommendations(session: AuthSession | null, fipsMode?: strin
     setLoading(true);
     setError("");
     try {
-      setSnapshot(await loadPlatformSnapshot(session, fipsMode === undefined ? undefined : isFipsModeEnabled(fipsMode)));
+      setSnapshot(await loadPlatformSnapshot(session, fipsMode === undefined ? undefined : isFipsModeEnabled(fipsMode), clustered));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
-  }, [session, fipsMode]);
+  }, [session, fipsMode, clustered]);
 
   useEffect(() => {
     void refresh();
@@ -273,8 +275,8 @@ function InventoryMix({ snapshot }: { snapshot: PlatformSnapshot | null }) {
 }
 
 // ── Command Center (home) ────────────────────────────────────────────────
-export const CommandCenterTab = ({ session, fipsMode, onNavigate }: Props) => {
-  const { snapshot, loading, error, refresh, visible, checks, score, snooze } = useRecommendations(session, fipsMode);
+export const CommandCenterTab = ({ session, fipsMode, clustered, onNavigate }: Props) => {
+  const { snapshot, loading, error, refresh, visible, checks, score, snooze } = useRecommendations(session, fipsMode, clustered);
   const now = snapshot?.now.getTime() ?? 0;
 
   const activeKeys = (snapshot?.keys || []).filter((k) => /active|enabled/i.test(k.status));
@@ -364,8 +366,8 @@ export const CommandCenterTab = ({ session, fipsMode, onNavigate }: Props) => {
 };
 
 // ── Full recommendations list ────────────────────────────────────────────
-export const RecommendationsTab = ({ session, fipsMode, onNavigate }: Props) => {
-  const { all, visible, loading, refresh, snooze, snoozed, unsnoozeAll } = useRecommendations(session, fipsMode);
+export const RecommendationsTab = ({ session, fipsMode, clustered, onNavigate }: Props) => {
+  const { all, visible, loading, refresh, snooze, snoozed, unsnoozeAll } = useRecommendations(session, fipsMode, clustered);
   const [sev, setSev] = useState<Severity | "all">("all");
   const [cat, setCat] = useState<RecCategory | "all">("all");
   const [q, setQ] = useState("");

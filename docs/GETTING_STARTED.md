@@ -831,22 +831,23 @@ curl https://localhost/svc/keycore/keys?tenant_id=acme-corp \
 
 ### 7.1 Via Dashboard — Step by Step
 
-1. **Navigate to Keys:** Click **CORE → Keys** in the left sidebar.
-2. **Click Create Key:** Blue button in the top right of the Keys page.
-3. **Key Details form:**
-   - **Name:** Enter a descriptive name (e.g., `app-database-encryption-key`). Max 255 chars. No leading/trailing spaces.
-   - **Algorithm:** Select from the dropdown. For data encryption, choose `AES-256`. For signing, choose `EC-P256` or `Ed25519`.
-   - **Purpose:** Auto-populated based on algorithm. Verify it matches your intent (`encrypt`, `sign`, etc.).
-   - **Key Backend:** `Software` (default) or `HSM` (requires HSM configured).
-4. **Lifecycle Settings (optional):**
-   - **Activation Date:** Leave blank to activate immediately, or set a future date (key starts in PreActive state).
-   - **Expiry Date:** Date when key automatically moves to Deactivated state.
-   - **Destruction Date:** Date when key is automatically destroyed.
-5. **Labels (optional):** Add key-value metadata (e.g., `env=production`, `team=platform`, `app=payments-service`).
-6. **Tags (optional):** Add string tags for grouping (e.g., `pci-scope`, `critical`).
-7. **Access Policy (optional):** Configure deny-by-default and initial grants now, or configure later.
-8. **Click Create Key.**
-9. The key appears in your key list with status **Active** (or **PreActive** if activation date is in the future).
+1. **Open the keys:** click **Key Management** in the sidebar (Keys & lifecycle). Keys are created in the tenant chosen in the top bar.
+2. **Click Create Key** (top right of the page).
+3. **Name and describe it:**
+   - **Key Name:** a descriptive name (for example `app-database-encryption-key`).
+   - **Description (optional):** what the key protects, up to 512 characters.
+4. **Choose what it is:**
+   - **Algorithm Family, Algorithm, Key Strength:** for data encryption choose Symmetric, AES, 256. For signing choose Asymmetric and ECDSA or RSA.
+   - **Purpose:** what the key may be used for. Check it matches your intent.
+   - **Create in HSM:** shown when an HSM is set up for keys; the key is then generated in the HSM and never leaves it.
+5. **Optional settings:**
+   - **Operation Limits:** a maximum number of operations (0 is unlimited).
+   - **Rotation:** a schedule in days. It appears in Rotation & Scheduling. Shown if you hold `key.rotation.write`.
+   - **Security Options:** require governance approval; allow wrapped export.
+   - **Activation:** immediately, pre-active, or at a date and time.
+   - **Tags:** from the Administration catalogue.
+6. **Click Create Key.**
+7. The key appears in your key list with status **Active** (or **Pre-active** if you chose a later activation).
 
 ### 7.2 Via API — Full Example
 

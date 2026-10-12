@@ -7,9 +7,8 @@ import {
 } from "../../../lib/authAdmin";
 import { listCertificates } from "../../../lib/certs";
 import { listSecrets } from "../../../lib/secrets";
-import { DISCOVERED_REST_API_CATALOG } from "../../../generated/restApiCatalog.generated";
+import { REST_API_CATALOG_FULL, normalizeRestPathTemplate } from "../../../lib/restCatalog";
 import { executeRestPlaygroundRequest } from "../../../lib/restPlayground";
-import { REST_API_CATALOG } from "../restApiCatalog";
 import { RestClientLifecycle, RestClientRegister } from "./RestClientLifecycle";
 import { B, Btn, Card, Chk, FG, Inp, Row2, Row3, Section, Sel, Stat, Txt } from "../legacyPrimitives";
 import { errMsg } from "../runtimeUtils";
@@ -35,16 +34,6 @@ function keyChoicesFromCatalog(keyCatalog: any[]): any[] {
   }
   return keyCatalog.filter((k: any) => String(k?.state || "").trim().toLowerCase() !== "deleted");
 }
-const normalizeRestPathTemplate=(raw:string)=>{
-  const value=String(raw||"");
-  return value.replace(/\{([a-zA-Z0-9_]+)\}/g,(match,param)=>{
-    const key=String(param||"").trim();
-    if(!key){
-      return match;
-    }
-    return `{{${key}}}`;
-  });
-};
 
 const restClientAuthModeLabel=(value:string)=>{
   const key=String(value||"api_key").trim().toLowerCase();
@@ -76,27 +65,6 @@ const fmtClientTS=(value:any)=>{
   return dt.toLocaleString();
 };
 
-const REST_API_CATALOG_FULL=(()=>{
-  const rows:any[]=[];
-  const seen=new Set<string>();
-  const add=(item:any)=>{
-    const service=String(item?.service||"").trim();
-    const method=String(item?.method||"GET").trim().toUpperCase();
-    const pathTemplate=normalizeRestPathTemplate(String(item?.pathTemplate||"/"));
-    if(!service){
-      return;
-    }
-    const key=`${service}|${method}|${pathTemplate}`;
-    if(seen.has(key)){
-      return;
-    }
-    seen.add(key);
-    rows.push({...item,method,pathTemplate});
-  };
-  (Array.isArray(REST_API_CATALOG)?REST_API_CATALOG:[]).forEach(add);
-  (Array.isArray(DISCOVERED_REST_API_CATALOG)?DISCOVERED_REST_API_CATALOG:[]).forEach(add);
-  return rows;
-})();
 
 // 
 // TAB: REST API (authenticated playground)
@@ -671,6 +639,7 @@ export const RestAPITab=({session,keyCatalog,onToast}: RestAPITabProps)=>{
           </FG>
           <FG label="Expected Success Response">
             <Txt rows={6} readOnly mono value={pretty(endpoint?.responseExample||{})}/>
+            {endpoint?.unverified&&<div data-testid="example-unverified" style={{fontSize:10.5,color:C.amberFg,marginTop:4}}>These examples have not been checked against the service.</div>}
           </FG>
           <FG label="Expected Error Codes">
             <div style={{display:"grid",gap:6}}>

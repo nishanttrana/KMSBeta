@@ -1,15 +1,11 @@
 import type { AuthSession } from "./auth";
+import { DISCOVERED_SERVICES } from "./restCatalog";
 import { serviceRequestRaw } from "./serviceApi";
 
-// Allowlist of services the playground is permitted to call.
-// Prevents SSRF to arbitrary internal services via user-controlled input.
-const ALLOWED_SERVICES = new Set([
-  "keycore", "secrets", "certs", "policy", "governance", "pqc",
-  "audit", "cloud", "compliance", "hyok", "ekm", "kmip", "reporting",
-  "posture", "ai", "qkd", "qrng", "confidential", "workload",
-  "autokey", "signing", "keyaccess", "sbom", "dataprotect", "mpc",
-  "cluster", "auth"
-]);
+// The playground may call the services that register routes, and no other
+// name: user input never reaches an arbitrary internal host. The list is the
+// discovered catalogue's (it named four services that do not exist).
+const ALLOWED_SERVICES = DISCOVERED_SERVICES;
 
 // Allowlist of HTTP methods
 const ALLOWED_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"]);

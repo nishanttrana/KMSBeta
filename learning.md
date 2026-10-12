@@ -5,6 +5,48 @@ Newest entries on top.
 
 ## 2026-10-12
 
+### The items I had listed as "found, not fixed" (12.3.0-beta)
+- **A public key rotated alone was worse than one left behind.**
+  `RotateKeyTo` called `generateMaterialForCreate(alg, key.KeyType)` for
+  every software key. For a public component that generates a whole pair
+  and keeps the public half: after "rotating" it, the stored public key
+  belonged to no private key anywhere. I had reported only the milder half
+  of this (the private key rotates, the public key stays). **Rule: when a
+  record is derived from another, read what an operation does to the
+  derived record on its own, not only to the source.**
+- **Two writes that must agree go in one transaction.** The store's
+  rotation was one transaction per key. The pair uses the same step twice
+  inside one (`rotateVersionTx`), and the Postgres test forces the second
+  insert to fail and checks the first rolled back. SQLite would have passed
+  a version that committed them separately.
+- **An example nobody runs is a guess.** The REST tab's keycore examples
+  were written from what such an API usually looks like. keycore decodes
+  with `DisallowUnknownFields`, so 15 of 21 were refused outright. Reading
+  18 handlers to correct them by hand would have produced a second guess;
+  sending each example to the real handler (`REST_EXAMPLES_DUMP=1 go test
+  -run TestRESTExamplesMatchTheService -v`) printed what the service
+  answers, and the examples were written from that. The same test now fails
+  when one drifts.
+- **Seventeen services still have unchecked examples.** They are labelled in
+  the tab, and `restCatalog.test.ts` holds the list, which only shrinks.
+  Labelling was chosen over deleting 137 entries or pretending they were
+  checked.
+- **A catalogue of services had three copies.** The REST playground's
+  allowlist, the generator's directory names and the edge's route prefixes
+  disagreed: the allowlist named `ai`, `qkd`, `qrng` and `mpc` (no such
+  services) and the generator called the cluster service `cluster-manager`,
+  a prefix the edge does not route. The allowlist is now the generator's
+  output, and the generator knows the edge name.
+- **Dead client code pointed at routes that never existed.** kmip's keycore
+  client had `CreateKeyPair`, `HMAC`, `HMACVerify`, `DeriveKey` and
+  `ExportKeyMaterial`, none called. The new test records every request the
+  client makes and looks each up in `docs/generated/backend-routes.csv`; it
+  also fails when a method is added without being exercised.
+- **Another session fixed one of the faults I found while I was reading it**
+  (the destroy handler taking the requester from the body, 12.1.0-beta).
+  Fetching before starting each item, not only before pushing, would have
+  saved the read.
+
 ### A backup that never restored, hidden by where its tests ran (12.2.0-beta)
 - **Restore named every column, and one table computes a column itself.**
   `INSERT INTO t SELECT * FROM json_populate_recordset(NULL::t, …)` supplies

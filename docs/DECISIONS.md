@@ -7,6 +7,44 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-12 — A key pair rotates as one; a public key never rotates alone
+**Decision:** rotating a private key that has a public component (same
+`pair_id`) gives both their new version in one transaction, the public key
+derived from the new private key. A public key is refused a rotation of its
+own, and `POST /keys` refuses to generate one without a private key. Pairs
+left out of step by earlier rotations are resynced at start on the primary,
+each audited (12.3.0-beta).
+**Why:** the public component is derived data. Rotating the private key
+alone left it stale; rotating it alone stored a public key whose private
+half had been discarded. Both made a key that verified nothing its pair
+signed.
+**Rejected:** rotating the public component as a second, separate call (two
+commits: a failure between them is the bug again); folding the pair into
+one key record (a per-key migration of every existing pair, and KMIP and the
+dashboard address the two by id today); leaving existing stale pairs until
+their next rotation (they stay wrong until then, silently).
+**Not done:** a private version rotated before the fix has no public
+version beside it; only the current one is restored.
+**Enforced by:** `key_pair_test.go`, `TestPairRotationPostgres`.
+
+## 2026-10-12 — A hand-written API example is sent to the handler, or labelled
+**Decision:** the REST API tab's hand-written examples are exported as data
+(`restApiExamples.generated.json`), and a service's
+`rest_examples_test.go` sends each to its real handlers: the route must
+exist, the body must decode, and a successful answer must contain every
+field the example shows. A service with that test is listed in
+`VERIFIED_EXAMPLE_SERVICES`; the examples of every other service carry a
+note that they have not been checked. keycore is the first (12.3.0-beta).
+**Why:** 18 of keycore's 21 examples were wrong and 18 entries named routes
+that do not exist; nothing compared them with the services.
+**Rejected:** correcting them by reading the handlers (a second guess, with
+no gate); deleting every unchecked entry (137 titles and descriptions lost);
+leaving them unlabelled.
+**Enforced by:** `TestRESTExamplesMatchTheService`,
+`tests/unit/restCatalog.test.ts` (routes registered, the exported copy
+current, the verified list tied to the test files, the unchecked list only
+shrinking).
+
 ## 2026-10-12 — The caller's address and the actor each have one reader
 **Decision:** the address a request came from is `clientip.From(r)`: the
 last `X-Forwarded-For` entry (the one the edge proxy appended), or the
@@ -81,16 +119,14 @@ names and which the dashboard cannot send back whole.
 **Decision:** the create dialog's schedule creates a keycore rotation policy
 with `target_filter: id:<key id>` and `auto_rotate`, after the key, through
 `POST /rotation/policies`. No field was added to the create request. The
-dialog offers it only to a caller holding `key.rotation.write`, and only
-where a rotation renews the whole key: symmetric keys and HSM keys.
+dialog offers it only to a caller holding `key.rotation.write`.
 **Why:** the rotation engine already schedules, runs, records and audits
 per-key policies; a second mechanism on the key would be a copy.
 **Rejected:** `rotation_interval_days` on `POST /keys` (two writes under one
 permission, and a schedule the Rotation page would not list unless it also
 became a policy).
-**Open:** rotating a software key pair renews the private key only; its
-public component is a second key that keeps the old material. Until that is
-fixed no schedule is offered for a software pair.
+**Since fixed (12.3.0-beta):** a pair now rotates as one (entry above), so
+the schedule is offered for software pairs too, on the private key.
 **Enforced by:** smoke tests "the create dialog sends a description and sets
 the rotation schedule it offers" and "the rotation schedule is offered only
 to a caller who may set one".

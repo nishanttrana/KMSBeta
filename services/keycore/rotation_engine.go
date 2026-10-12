@@ -65,6 +65,16 @@ func rotationFilterMatches(filter string, k Key) bool {
 	return ok
 }
 
+// rotationSelects is rotationFilterMatches for a run. A public key follows
+// its private key (key_pair.go): a filter that sweeps keys up skips it, and
+// only a policy that names it by id reaches it, to be told so.
+func rotationSelects(filter string, k Key) bool {
+	if !rotationFilterMatches(filter, k) {
+		return false
+	}
+	return !isPublicComponentKey(k) || strings.HasPrefix(strings.TrimSpace(filter), "id:")
+}
+
 // RotationOutcome summarises one policy run.
 type RotationOutcome struct {
 	Matched int           `json:"matched"`
@@ -83,7 +93,7 @@ func (s *Service) matchingActiveKeys(ctx context.Context, tenantID, filter strin
 			return nil, err
 		}
 		for _, k := range keys {
-			if strings.EqualFold(k.Status, "active") && rotationFilterMatches(filter, k) {
+			if strings.EqualFold(k.Status, "active") && rotationSelects(filter, k) {
 				out = append(out, k)
 			}
 		}

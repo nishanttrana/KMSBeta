@@ -55,7 +55,7 @@ function normalizePermissionTokens(session: unknown): Set<string> {
   );
 }
 
-function hasPermission(session: unknown, token: string): boolean {
+export function hasPermission(session: unknown, token: string): boolean {
   const want = String(token || "").trim().toLowerCase();
   if (!want) {
     return false;

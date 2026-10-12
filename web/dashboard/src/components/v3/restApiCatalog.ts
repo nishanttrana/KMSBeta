@@ -9,16 +9,15 @@ export const REST_API_CATALOG = [
     method: "GET",
     pathTemplate: "/keys?tenant_id={{tenant_id}}&limit=100&offset=0",
     bodyTemplate: "",
-    description: "Returns key inventory metadata for a tenant. This does not return plaintext key material.",
+    description: "Lists the tenant's keys the caller may see. Key material is never returned.",
     requestExample: "GET /svc/keycore/keys?tenant_id=root&limit=100&offset=0",
-    responseExample: {
-      items: [{ id: "key_01", name: "prod-db-master", algorithm: "AES-256-GCM", status: "active", version: 2 }]
-    },
+    responseExample: {"items": [{"id": "key_123", "tenant_id": "root", "name": "prod-db-master", "description": "", "algorithm": "AES-256", "key_type": "symmetric", "purpose": "encrypt-decrypt", "status": "active", "current_version": 2, "kcv": "63EF1D", "export_allowed": false, "tags": [], "labels": {}, "created_at": "2026-01-15T00:00:00Z", "updated_at": "2026-01-15T00:00:00Z"}], "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or invalid query parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller does not have list-keys permission" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode: keycore refuses a field it does not read) or the operation failed" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "permission_denied, access_denied or policy_denied" },
+      { code: 404, meaning: "Key not found, or not visible to the caller" }
+    ],
   },
   {
     id: "keys-create",
@@ -27,16 +26,17 @@ export const REST_API_CATALOG = [
     service: "keycore",
     method: "POST",
     pathTemplate: "/keys",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "customer-key-name",\n  "algorithm": "AES-256-GCM",\n  "purpose": "encrypt-decrypt",\n  "status": "active",\n  "export_allowed": false\n}',
-    description: "Creates a new cryptographic key object with policy attributes.",
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"customer-key-name\",\n  \"description\": \"What this key protects\",\n  \"algorithm\": \"AES-256\",\n  \"key_type\": \"symmetric\",\n  \"purpose\": \"encrypt-decrypt\",\n  \"export_allowed\": false\n}",
+    description: "Creates a key and responds with its id and KCV. Read the key with GET /keys/{id}.",
     requestExample: "POST /svc/keycore/keys",
-    responseExample: { key: { id: "key_123", name: "customer-key-name", algorithm: "AES-256-GCM", status: "active" } },
+    responseExample: {"key_id": "key_123", "tenant_id": "root", "kcv": "63EF1D", "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Invalid algorithm/payload" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 409, meaning: "Key name already exists for tenant" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode: keycore refuses a field it does not read) or the operation failed" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "permission_denied, access_denied or policy_denied" },
+      { code: 404, meaning: "Key not found, or not visible to the caller" }
+    ],
   },
   {
     id: "key-encrypt",
@@ -45,22 +45,17 @@ export const REST_API_CATALOG = [
     service: "keycore",
     method: "POST",
     pathTemplate: "/keys/{{key_id}}/encrypt",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "plaintext": "hello-vecta",\n  "encoding": "utf-8",\n  "aad": "context",\n  "aad_encoding": "utf-8",\n  "iv_mode": "internal",\n  "reference_id": "txn-001"\n}',
-    description: "Encrypts plaintext with selected key. For AEAD ciphers, AAD integrity is enforced.",
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"plaintext\": \"aGVsbG8tdmVjdGE=\",\n  \"iv_mode\": \"internal\",\n  \"reference_id\": \"txn-001\"\n}",
+    description: "Encrypts base64 plaintext under the key's current version. keycore generates the IV and returns it with the ciphertext and the version.",
     requestExample: "POST /svc/keycore/keys/{key_id}/encrypt",
-    responseExample: {
-      ciphertext: "BASE64...",
-      iv: "BASE64...",
-      key_id: "key_123",
-      version: 2,
-      reference_id: "txn-001"
-    },
+    responseExample: {"ciphertext": "9BEzxmi6v7I7BAMQAi/IfnvETLvoLQDr0+BL", "iv": "AaWJlSbQQ50GHHnX", "kcv": "", "key_id": "key_123", "version": 1, "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Payload invalid (encoding/AAD/IV mismatch)" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 422, meaning: "Key state/policy blocks encryption (disabled/deactivated/limit)" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode) or the operation failed for this key" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "access_denied, policy_denied or fips_mode_violation" },
+      { code: 429, meaning: "The key's operation limit is reached" }
+    ],
   },
   {
     id: "key-decrypt",
@@ -69,16 +64,17 @@ export const REST_API_CATALOG = [
     service: "keycore",
     method: "POST",
     pathTemplate: "/keys/{{key_id}}/decrypt",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "ciphertext": "BASE64...",\n  "binary_encoding": "base64",\n  "aad": "context",\n  "aad_encoding": "utf-8",\n  "iv": "BASE64...",\n  "output_encoding": "utf-8"\n}',
-    description: "Decrypts ciphertext and verifies AEAD tag when applicable.",
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"ciphertext\": \"<ciphertext from encrypt>\",\n  \"iv\": \"<iv from encrypt>\"\n}",
+    description: "Decrypts a ciphertext with the IV that encrypt returned. The plaintext is base64.",
     requestExample: "POST /svc/keycore/keys/{key_id}/decrypt",
-    responseExample: { plaintext: "hello-vecta", output_encoding: "utf-8", key_id: "key_123", version: 2 },
+    responseExample: {"plaintext": "aGVsbG8tdmVjdGE=", "key_id": "key_123", "version": 1, "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Ciphertext or IV format invalid" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 422, meaning: "Authentication/tag verification failed or wrong key/version" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode) or the operation failed for this key" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "access_denied, policy_denied or fips_mode_violation" },
+      { code: 429, meaning: "The key's operation limit is reached" }
+    ],
   },
   {
     id: "key-sign",
@@ -87,16 +83,17 @@ export const REST_API_CATALOG = [
     service: "keycore",
     method: "POST",
     pathTemplate: "/keys/{{key_id}}/sign",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "message": "payload-to-sign",\n  "encoding": "utf-8",\n  "algorithm": "ecdsa-sha384"\n}',
-    description: "Generates digital signature or MAC depending on key type/purpose.",
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"data\": \"aGVsbG8tdmVjdGE=\"\n}",
+    description: "Signs base64 data with the key's current version.",
     requestExample: "POST /svc/keycore/keys/{key_id}/sign",
-    responseExample: { signature: "BASE64...", algorithm: "ecdsa-sha384", key_id: "key_123", version: 2 },
+    responseExample: {"signature": "MEQCICYCcLP6ajSG1S/mmleq6qo3/kC1Xm7JQUyJhCJY1fFhAiBK0XtgJeOAvpwVrjhOFgTcYNWeWWKdjGtJA1mcGIubEw==", "key_id": "key_123", "version": 1, "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Algorithm/message invalid for selected key" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 422, meaning: "Key policy/state blocks signing" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode) or the operation failed for this key" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "access_denied, policy_denied or fips_mode_violation" },
+      { code: 429, meaning: "The key's operation limit is reached" }
+    ],
   },
   {
     id: "key-verify",
@@ -105,16 +102,17 @@ export const REST_API_CATALOG = [
     service: "keycore",
     method: "POST",
     pathTemplate: "/keys/{{key_id}}/verify",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "message": "payload-to-sign",\n  "signature": "BASE64...",\n  "encoding": "utf-8",\n  "algorithm": "ecdsa-sha384"\n}',
-    description: "Verifies signature validity for the supplied payload and key.",
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"data\": \"aGVsbG8tdmVjdGE=\",\n  \"signature\": \"<signature from sign>\"\n}",
+    description: "Verifies a signature over base64 data. verified says whether it holds.",
     requestExample: "POST /svc/keycore/keys/{key_id}/verify",
-    responseExample: { valid: true, algorithm: "ecdsa-sha384", key_id: "key_123" },
+    responseExample: {"verified": true, "key_id": "key_123", "version": 1, "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Signature/message format invalid" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 422, meaning: "Verification failed" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode) or the operation failed for this key" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "access_denied, policy_denied or fips_mode_violation" },
+      { code: 429, meaning: "The key's operation limit is reached" }
+    ],
   },
   {
     id: "crypto-hash",
@@ -123,15 +121,15 @@ export const REST_API_CATALOG = [
     service: "keycore",
     method: "POST",
     pathTemplate: "/crypto/hash",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "algorithm": "sha-512",\n  "input": "data-to-hash",\n  "encoding": "utf-8",\n  "binary_output_encoding": "base64"\n}',
-    description: "Runs backend hash function and returns digest.",
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"algorithm\": \"sha-512\",\n  \"input\": \"aGVsbG8tdmVjdGE=\"\n}",
+    description: "Hashes base64 input and returns the digest in base64.",
     requestExample: "POST /svc/keycore/crypto/hash",
-    responseExample: { algorithm: "sha-512", digest: "BASE64...", digest_encoding: "base64" },
+    responseExample: {"algorithm": "sha-512", "digest": "Z/2JXRtNr411VTCGlqE4sqwpwb9CbD/5b8z0X1W2qS3ypRM1WRgDwrRcK2NMrQP6/418GcPymwsv7G4gE+I21Q==", "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Unsupported hash algorithm or malformed input" },
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode) or an unsupported algorithm or source" },
+      { code: 401, meaning: "Token missing, invalid or expired" }
+    ],
   },
   {
     id: "crypto-random",
@@ -140,15 +138,15 @@ export const REST_API_CATALOG = [
     service: "keycore",
     method: "POST",
     pathTemplate: "/crypto/random",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "length": 32,\n  "source": "kms-csprng",\n  "binary_output_encoding": "base64"\n}',
-    description: "Generates cryptographically secure random bytes from backend entropy source.",
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"length\": 32\n}",
+    description: "Returns random bytes in base64 and the source that produced them.",
     requestExample: "POST /svc/keycore/crypto/random",
-    responseExample: { length: 32, random: "BASE64...", encoding: "base64", source: "kms-csprng" },
+    responseExample: {"bytes": "+GaAWutvirlRBVaGNAwM6+xp0CCms5GGL0mtad8O+Co=", "length": 32, "source": "kms-csprng", "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Length invalid or source unsupported" },
-      { code: 401, meaning: "JWT missing/invalid/expired" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode) or an unsupported algorithm or source" },
+      { code: 401, meaning: "Token missing, invalid or expired" }
+    ],
   },
   {
     id: "secrets-list",
@@ -509,83 +507,12 @@ export const REST_API_CATALOG = [
     ]
   },
   {
-    id: "qkd-overview",
-    group: "QKD",
-    title: "QKD Overview",
-    service: "qkd",
-    method: "GET",
-    pathTemplate: "/qkd/v1/overview?tenant_id={{tenant_id}}",
-    bodyTemplate: "",
-    description: "Returns ETSI QKD interface status, pool metrics, and link telemetry for tenant.",
-    requestExample: "GET /svc/qkd/qkd/v1/overview?tenant_id=root",
-    responseExample: { overview: { status: { active: true, link_status: "up", key_rate: 1200 }, pool: { available_keys: 847293, pool_fill_pct: 68 } } },
-    errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 503, meaning: "QKD interface disabled/unavailable" }
-    ]
-  },
-  {
-    id: "qkd-test-generate",
-    group: "QKD",
-    title: "Generate Test QKD Keys",
-    service: "qkd",
-    method: "POST",
-    pathTemplate: "/qkd/v1/test/generate",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "slave_sae_id": "sae-node-b",\n  "device_id": "qkd-node-b",\n  "count": 8,\n  "key_size_bits": 256,\n  "qber_min": 1.2,\n  "qber_max": 2.8\n}',
-    description: "Generates QKD test keys through the QKD service flow for validation and pool testing.",
-    requestExample: "POST /svc/qkd/qkd/v1/test/generate",
-    responseExample: { result: { accepted_count: 8, discarded_count: 0, accepted_key_ids: ["qkd_01", "qkd_02"] } },
-    errorCodes: [
-      { code: 400, meaning: "Invalid QKD test generation parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 422, meaning: "QBER/pool policy rejected generated keys" }
-    ]
-  },
-  {
-    id: "mpc-dkg-initiate",
-    group: "MPC",
-    title: "Initiate MPC DKG Ceremony",
-    service: "mpc",
-    method: "POST",
-    pathTemplate: "/mpc/dkg/initiate",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "key_name": "custody-btc-hot",\n  "algorithm": "ECDSA-P256-GG20",\n  "threshold": 3,\n  "participants": ["alice@bank.com", "bob@bank.com", "hsm-partition"]\n}',
-    description: "Starts distributed key generation with threshold policy. Produces no single full private key holder.",
-    requestExample: "POST /svc/mpc/mpc/dkg/initiate",
-    responseExample: { ceremony: { id: "cer_01", type: "dkg", status: "pending", required_contributors: 3 } },
-    errorCodes: [
-      { code: 400, meaning: "Threshold/participant/algorithm combination invalid" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 422, meaning: "Governance/quorum policy blocked ceremony" }
-    ]
-  },
-  {
-    id: "mpc-sign-initiate",
-    group: "MPC",
-    title: "Initiate MPC Signing",
-    service: "mpc",
-    method: "POST",
-    pathTemplate: "/mpc/sign/initiate",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "key_id": "{{key_id}}",\n  "message_hash": "BASE64_OR_HEX_HASH",\n  "participants": ["alice@bank.com", "bob@bank.com"]\n}',
-    description: "Starts threshold signing ceremony for existing MPC key.",
-    requestExample: "POST /svc/mpc/mpc/sign/initiate",
-    responseExample: { ceremony: { id: "cer_sign_01", type: "sign", status: "pending" } },
-    errorCodes: [
-      { code: 400, meaning: "Message hash/key payload invalid" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 422, meaning: "MPC key not ready or insufficient eligible participants" }
-    ]
-  },
-  {
     id: "approval-vote",
     group: "Approvals",
     title: "Vote Approval Request",
     service: "governance",
     method: "POST",
-    pathTemplate: "/governance/approve/REQ_ID_HERE",
+    pathTemplate: "/governance/approve/{{request_id}}",
     bodyTemplate:
       '{\n  "tenant_id": "{{tenant_id}}",\n  "request_id": "REQ_ID_HERE",\n  "vote": "approved",\n  "comment": "Approved after review",\n  "challenge_code": ""\n}',
     description: "Submits governance vote for pending request; supports challenge-response when enabled.",
@@ -619,7 +546,7 @@ export const REST_API_CATALOG = [
     title: "Acknowledge Alert",
     service: "reporting",
     method: "PUT",
-    pathTemplate: "/alerts/ALERT_ID_HERE/acknowledge?tenant_id={{tenant_id}}",
+    pathTemplate: "/alerts/{{alert_id}}/acknowledge?tenant_id={{tenant_id}}",
     bodyTemplate:
       '{\n  "actor": "admin@bank.com"\n}',
     description: "Acknowledges an active alert and updates alert center counters/channels state.",
@@ -1055,17 +982,17 @@ export const REST_API_CATALOG = [
     service: "keycore",
     method: "POST",
     pathTemplate: "/keys/import",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "imported-key",\n  "algorithm": "AES-256-GCM",\n  "key_material": "BASE64_KEY_MATERIAL",\n  "encoding": "base64"\n}',
-    description: "Imports external key material into the KMS.",
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"imported-key\",\n  \"algorithm\": \"AES-256\",\n  \"key_type\": \"symmetric\",\n  \"purpose\": \"encrypt-decrypt\",\n  \"import_method\": \"raw\",\n  \"material\": \"MDEyMzQ1Njc4OUFCQ0RFRjAxMjM0NTY3ODlBQkNERUY=\"\n}",
+    description: "Imports key material (base64; raw unless import_method says otherwise). Responds as create does.",
     requestExample: "POST /svc/keycore/keys/import",
-    responseExample: { key: { id: "key_imp_01", name: "imported-key", algorithm: "AES-256-GCM", status: "active", origin: "imported" } },
+    responseExample: {"key_id": "key_imp_01", "tenant_id": "root", "kcv": "AB0B21", "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Invalid key material or algorithm mismatch" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks key-import privilege" },
-      { code: 404, meaning: "Tenant not found" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode: keycore refuses a field it does not read) or the operation failed" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "permission_denied, access_denied or policy_denied" },
+      { code: 404, meaning: "Key not found, or not visible to the caller" }
+    ],
   },
   {
     id: "keys-rotate",
@@ -1074,17 +1001,17 @@ export const REST_API_CATALOG = [
     service: "keycore",
     method: "POST",
     pathTemplate: "/keys/{{key_id}}/rotate",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}"\n}',
-    description: "Rotates key to a new version. Previous versions remain for decryption.",
+    bodyTemplate: 
+      "{\n  \"reason\": \"scheduled\",\n  \"old_version_action\": \"deactivate\"\n}",
+    description: "Gives the key a new version; older versions keep their own material. A key pair's public key follows its private key.",
     requestExample: "POST /svc/keycore/keys/{key_id}/rotate",
-    responseExample: { key: { id: "key_123", version: 3, status: "active", rotated_at: "2026-03-04T12:00:00Z" } },
+    responseExample: {"status": "ok", "version": 2, "version_id": "kv_7f2f231eaddf36b2", "algorithm": "", "kcv": "CDE147", "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or key_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks key-rotate privilege" },
-      { code: 404, meaning: "Key not found" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode: keycore refuses a field it does not read) or the operation failed" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "permission_denied, access_denied or policy_denied" },
+      { code: 404, meaning: "Key not found, or not visible to the caller" }
+    ],
   },
   {
     id: "keys-export",
@@ -1111,17 +1038,17 @@ export const REST_API_CATALOG = [
     service: "keycore",
     method: "POST",
     pathTemplate: "/keys/{{key_id}}/destroy",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}"\n}',
-    description: "Permanently destroys key material. Irreversible.",
+    bodyTemplate: 
+      "{\n  \"mode\": \"scheduled\",\n  \"destroy_after_days\": 30,\n  \"confirm_name\": \"<the key's name>\",\n  \"justification\": \"decommissioned\",\n  \"checks\": {\n    \"no_active_workloads\": true,\n    \"backup_completed\": true,\n    \"irreversible_ack\": true\n  }\n}",
+    description: "Schedules the key for destruction. confirm_name must be the key's name and every check true.",
     requestExample: "POST /svc/keycore/keys/{key_id}/destroy",
-    responseExample: { status: "destroyed", key_id: "key_123", destroyed_at: "2026-03-04T12:00:00Z" },
+    responseExample: {"status": "destroy-pending", "mode": "scheduled", "destroy_at": "2026-11-11T05:38:09Z", "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or key_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks key-destroy privilege or governance approval required" },
-      { code: 404, meaning: "Key not found" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode: keycore refuses a field it does not read) or the operation failed" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "permission_denied, access_denied or policy_denied" },
+      { code: 404, meaning: "Key not found, or not visible to the caller" }
+    ],
   },
   {
     id: "keys-activate",
@@ -1130,17 +1057,17 @@ export const REST_API_CATALOG = [
     service: "keycore",
     method: "POST",
     pathTemplate: "/keys/{{key_id}}/activate",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}"\n}',
-    description: "Transitions key to active state for cryptographic operations.",
+    bodyTemplate: 
+      "{\n  \"mode\": \"immediate\"\n}",
+    description: "Activates the key now, or at activation_date with mode scheduled.",
     requestExample: "POST /svc/keycore/keys/{key_id}/activate",
-    responseExample: { key: { id: "key_123", status: "active", activated_at: "2026-03-04T12:00:00Z" } },
+    responseExample: {"status": "active", "activation_date": null, "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or key_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Key not found" },
-      { code: 422, meaning: "Key state does not allow activation" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode: keycore refuses a field it does not read) or the operation failed" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "permission_denied, access_denied or policy_denied" },
+      { code: 404, meaning: "Key not found, or not visible to the caller" }
+    ],
   },
   {
     id: "keys-deactivate",
@@ -1149,17 +1076,16 @@ export const REST_API_CATALOG = [
     service: "keycore",
     method: "POST",
     pathTemplate: "/keys/{{key_id}}/deactivate",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}"\n}',
-    description: "Deactivates key. Existing ciphertext can still be decrypted.",
+    bodyTemplate: "{}",
+    description: "Deactivates the key. What it protected can still be decrypted and verified.",
     requestExample: "POST /svc/keycore/keys/{key_id}/deactivate",
-    responseExample: { key: { id: "key_123", status: "deactivated", deactivated_at: "2026-03-04T12:00:00Z" } },
+    responseExample: {"status": "deactivated", "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or key_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Key not found" },
-      { code: 422, meaning: "Key state does not allow deactivation" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode: keycore refuses a field it does not read) or the operation failed" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "permission_denied, access_denied or policy_denied" },
+      { code: 404, meaning: "Key not found, or not visible to the caller" }
+    ],
   },
   {
     id: "keys-versions",
@@ -1169,19 +1095,15 @@ export const REST_API_CATALOG = [
     method: "GET",
     pathTemplate: "/keys/{{key_id}}/versions?tenant_id={{tenant_id}}",
     bodyTemplate: "",
-    description: "Lists all versions of a key with activation timestamps.",
+    description: "Lists the key's versions with their status and KCV.",
     requestExample: "GET /svc/keycore/keys/{key_id}/versions?tenant_id=root",
-    responseExample: {
-      items: [
-        { version: 1, status: "deactivated", created_at: "2025-01-01T00:00:00Z" },
-        { version: 2, status: "active", created_at: "2026-01-15T00:00:00Z" }
-      ]
-    },
+    responseExample: {"items": [{"id": "kv_7f2f231eaddf36b2", "version": 2, "status": "active", "kcv": "CDE147", "created_at": "2026-01-15T00:00:00Z"}, {"id": "kv_672f0bedd79a4d2e", "version": 1, "status": "deactivated", "kcv": "9B708B", "created_at": "2025-01-01T00:00:00Z"}], "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or key_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Key not found" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode: keycore refuses a field it does not read) or the operation failed" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "permission_denied, access_denied or policy_denied" },
+      { code: 404, meaning: "Key not found, or not visible to the caller" }
+    ],
   },
   {
     id: "keys-usage",
@@ -1191,20 +1113,15 @@ export const REST_API_CATALOG = [
     method: "GET",
     pathTemplate: "/keys/{{key_id}}/usage?tenant_id={{tenant_id}}",
     bodyTemplate: "",
-    description: "Returns key usage counters and limit configuration.",
+    description: "Returns the key's operation counters, its limit and what remains of it.",
     requestExample: "GET /svc/keycore/keys/{key_id}/usage?tenant_id=root",
-    responseExample: {
-      key_id: "key_123",
-      total_operations: 45230,
-      total_bytes: 1048576,
-      max_operations: 1000000,
-      max_bytes: 0
-    },
+    responseExample: {"usage": {"ops_total": 2, "ops_encrypt": 1, "ops_decrypt": 1, "ops_sign": 0, "ops_limit": 0, "ops_limit_window": ""}, "remaining": 0, "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Missing tenant_id or key_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Key not found" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode: keycore refuses a field it does not read) or the operation failed" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "permission_denied, access_denied or policy_denied" },
+      { code: 404, meaning: "Key not found, or not visible to the caller" }
+    ],
   },
   {
     id: "keys-usage-limit",
@@ -1213,17 +1130,17 @@ export const REST_API_CATALOG = [
     service: "keycore",
     method: "PUT",
     pathTemplate: "/keys/{{key_id}}/usage/limit",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "max_operations": 1000000,\n  "max_bytes": 0\n}',
-    description: "Sets operational usage limits on a key.",
+    bodyTemplate: 
+      "{\n  \"ops_limit\": 1000000,\n  \"window\": \"total\"\n}",
+    description: "Sets the key's operation limit (0 is unlimited) and its window: total, daily or monthly.",
     requestExample: "PUT /svc/keycore/keys/{key_id}/usage/limit",
-    responseExample: { status: "ok", key_id: "key_123", max_operations: 1000000, max_bytes: 0 },
+    responseExample: {"status": "ok", "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Invalid limit parameters" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks key-policy-update privilege" },
-      { code: 404, meaning: "Key not found" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode: keycore refuses a field it does not read) or the operation failed" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "permission_denied, access_denied or policy_denied" },
+      { code: 404, meaning: "Key not found, or not visible to the caller" }
+    ],
   },
   {
     id: "keys-wrap",
@@ -1232,17 +1149,17 @@ export const REST_API_CATALOG = [
     service: "keycore",
     method: "POST",
     pathTemplate: "/keys/{{key_id}}/wrap",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "plaintext_key": "BASE64...",\n  "encoding": "base64"\n}',
-    description: "Wraps (encrypts) a key using the selected wrapping key.",
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"plaintext\": \"aGVsbG8tdmVjdGE=\"\n}",
+    description: "Wraps base64 key material under this key. Responds with the ciphertext and the IV to unwrap it with.",
     requestExample: "POST /svc/keycore/keys/{key_id}/wrap",
-    responseExample: { wrapped_key: "BASE64...", wrapping_key_id: "key_123", wrapping_key_version: 2 },
+    responseExample: {"ciphertext": "t5EzPH/zuHJZ5K9XfRnabpJPDypkmSZkGrTg", "iv": "O3ZfttdsCKbU589c", "kcv": "", "key_id": "key_123", "version": 1, "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Invalid plaintext key or encoding" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Key policy does not allow wrapping" },
-      { code: 404, meaning: "Wrapping key not found" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode) or the operation failed for this key" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "access_denied, policy_denied or fips_mode_violation" },
+      { code: 429, meaning: "The key's operation limit is reached" }
+    ],
   },
   {
     id: "keys-unwrap",
@@ -1251,17 +1168,17 @@ export const REST_API_CATALOG = [
     service: "keycore",
     method: "POST",
     pathTemplate: "/keys/{{key_id}}/unwrap",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "wrapped_key": "BASE64...",\n  "encoding": "base64"\n}',
-    description: "Unwraps (decrypts) a previously wrapped key.",
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"ciphertext\": \"<ciphertext from wrap>\",\n  \"iv\": \"<iv from wrap>\"\n}",
+    description: "Unwraps what wrap returned. The plaintext is base64.",
     requestExample: "POST /svc/keycore/keys/{key_id}/unwrap",
-    responseExample: { plaintext_key: "BASE64...", wrapping_key_id: "key_123", wrapping_key_version: 2 },
+    responseExample: {"plaintext": "aGVsbG8tdmVjdGE=", "key_id": "key_123", "version": 1, "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Invalid wrapped key or encoding" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Key policy does not allow unwrapping" },
-      { code: 404, meaning: "Wrapping key not found" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode) or the operation failed for this key" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "access_denied, policy_denied or fips_mode_violation" },
+      { code: 429, meaning: "The key's operation limit is reached" }
+    ],
   },
   {
     id: "keys-mac",
@@ -1270,17 +1187,17 @@ export const REST_API_CATALOG = [
     service: "keycore",
     method: "POST",
     pathTemplate: "/keys/{{key_id}}/mac",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "message": "data-to-mac",\n  "encoding": "utf-8",\n  "algorithm": "hmac-sha256"\n}',
-    description: "Computes HMAC/CMAC over the provided message.",
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"data\": \"aGVsbG8tdmVjdGE=\"\n}",
+    description: "Computes a MAC over base64 data. The MAC is returned as signature.",
     requestExample: "POST /svc/keycore/keys/{key_id}/mac",
-    responseExample: { mac: "BASE64...", algorithm: "hmac-sha256", key_id: "key_123", version: 2 },
+    responseExample: {"signature": "J5NLTrg2CBpq5ax5BQuDuH/ZhlAJLc1td9TQat+5uzY=", "key_id": "key_123", "version": 1, "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Invalid message, encoding, or algorithm" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Key not found" },
-      { code: 422, meaning: "Key type/state incompatible with MAC operation" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode) or the operation failed for this key" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "access_denied, policy_denied or fips_mode_violation" },
+      { code: 429, meaning: "The key's operation limit is reached" }
+    ],
   },
   {
     id: "keys-derive",
@@ -1289,17 +1206,17 @@ export const REST_API_CATALOG = [
     service: "keycore",
     method: "POST",
     pathTemplate: "/keys/{{key_id}}/derive",
-    bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "algorithm": "hkdf-sha256",\n  "context": "app-context",\n  "length": 32\n}',
-    description: "Derives a new key from the master key using KDF.",
+    bodyTemplate: 
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"algorithm\": \"hkdf-sha256\",\n  \"length_bits\": 256,\n  \"info\": \"aGVsbG8tdmVjdGE=\"\n}",
+    description: "Derives key material from this key (HKDF). length_bits and base64 info select the output.",
     requestExample: "POST /svc/keycore/keys/{key_id}/derive",
-    responseExample: { derived_key: "BASE64...", algorithm: "hkdf-sha256", length: 32, source_key_id: "key_123" },
+    responseExample: {"key_id": "key_123", "version": 1, "algorithm": "hkdf-sha256", "length_bits": 256, "derived_key": "BASE64...", "request_id": "req_3c8cb9866229e7f2"},
     errorCodes: [
-      { code: 400, meaning: "Invalid KDF algorithm, context, or length" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Key not found" },
-      { code: 422, meaning: "Key type/state incompatible with derivation" }
-    ]
+      { code: 400, meaning: "bad_request (the body does not decode) or the operation failed for this key" },
+      { code: 401, meaning: "Token missing, invalid or expired" },
+      { code: 403, meaning: "access_denied, policy_denied or fips_mode_violation" },
+      { code: 429, meaning: "The key's operation limit is reached" }
+    ],
   },
 
   /* ── Secret Vault ────────────────────────────────────────────────── */
@@ -2704,7 +2621,7 @@ export const REST_API_CATALOG = [
     title: "Get Agent Status",
     service: "ekm",
     method: "GET",
-    pathTemplate: "/ekm/agents/{{agent_id}}",
+    pathTemplate: "/ekm/agents/{{agent_id}}/status",
     bodyTemplate: "",
     description: "Returns full status, configuration, and last heartbeat data for a specific EKM agent.",
     requestExample: "GET /svc/ekm/ekm/agents/agent-mssql-01",
@@ -2933,11 +2850,11 @@ export const REST_API_CATALOG = [
     group: "BitLocker",
     title: "Poll Next BitLocker Job",
     service: "ekm",
-    method: "GET",
+    method: "POST",
     pathTemplate: "/ekm/bitlocker/clients/{{client_id}}/jobs/next",
     bodyTemplate: "",
     description: "Agent polls for the next pending job. Returns empty if no jobs are queued.",
-    requestExample: "GET /svc/ekm/ekm/bitlocker/clients/bl-win-01/jobs/next",
+    requestExample: "POST /svc/ekm/ekm/bitlocker/clients/bl-win-01/jobs/next",
     responseExample: { job_id: "job-abc123", operation: "enable", params: { mount_point: "C:", protector_type: "recovery_password" } },
     errorCodes: [
       { code: 401, meaning: "JWT missing/invalid/expired" },
@@ -3102,10 +3019,10 @@ export const REST_API_CATALOG = [
     title: "Register EKM Database",
     service: "ekm",
     method: "POST",
-    pathTemplate: "/ekm/databases/register",
+    pathTemplate: "/ekm/databases",
     bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "MSSQL-Prod",\n  "engine": "mssql",\n  "host": "10.0.0.15",\n  "port": 1433\n}',
     description: "Registers a database instance for EKM key management and TDE monitoring.",
-    requestExample: "POST /svc/ekm/ekm/databases/register",
+    requestExample: "POST /svc/ekm/ekm/databases",
     responseExample: { database: { id: "db-001", name: "MSSQL-Prod", engine: "mssql", status: "registered" } },
     errorCodes: [
       { code: 400, meaning: "Invalid database parameters" },
@@ -3178,119 +3095,18 @@ export const REST_API_CATALOG = [
   },
 
   /* ── Vault Hierarchy (OpenBao-compatible) ── */
-  {
-    id: "vault-list-path",
-    group: "Vault Hierarchy",
-    title: "List Secrets at Path",
-    service: "secrets",
-    method: "GET",
-    pathTemplate: "/v1/secret/metadata/{{path}}?list=true",
-    bodyTemplate: "",
-    description: "Lists secrets and subfolders at the specified path. OpenBao/Vault KV v2 compatible.",
-    requestExample: "GET /svc/secrets/v1/secret/metadata/engineering/?list=true",
-    responseExample: { keys: ["api-keys/", "database/", "prod-stripe-key"] },
-    errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Path access denied by ACL policy" }
-    ]
-  },
-  {
-    id: "vault-read-path",
-    group: "Vault Hierarchy",
-    title: "Read Secret at Path",
-    service: "secrets",
-    method: "GET",
-    pathTemplate: "/v1/secret/data/{{path}}",
-    bodyTemplate: "",
-    description: "Reads a secret at the specified path. Returns versioned KV v2 data with metadata.",
-    requestExample: "GET /svc/secrets/v1/secret/data/engineering/api-keys/stripe-prod",
-    responseExample: { data: { data: { value: "sk_live_..." }, metadata: { version: 3, created_time: "2026-03-05T10:00:00Z" } } },
-    errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Path access denied by ACL policy" },
-      { code: 404, meaning: "Secret not found at path" }
-    ]
-  },
-  {
-    id: "vault-write-path",
-    group: "Vault Hierarchy",
-    title: "Write Secret at Path",
-    service: "secrets",
-    method: "POST",
-    pathTemplate: "/v1/secret/data/{{path}}",
-    bodyTemplate: '{ "data": { "value": "{{secret_value}}" }, "options": { "cas": 0 } }',
-    description: "Creates or updates a secret at the specified path. Supports check-and-set (CAS) for optimistic locking.",
-    requestExample: 'POST /svc/secrets/v1/secret/data/engineering/api-keys/stripe-prod\n{"data":{"value":"sk_live_new..."}}',
-    responseExample: { data: { version: 4, created_time: "2026-03-05T10:05:00Z" } },
-    errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Write access denied by ACL policy" },
-      { code: 409, meaning: "CAS version mismatch" }
-    ]
-  },
-  {
-    id: "vault-delete-path",
-    group: "Vault Hierarchy",
-    title: "Delete Secret Versions",
-    service: "secrets",
-    method: "POST",
-    pathTemplate: "/v1/secret/delete/{{path}}",
-    bodyTemplate: '{ "versions": [1, 2] }',
-    description: "Soft-deletes specific versions of a secret. Versions can be restored with undelete.",
-    requestExample: 'POST /svc/secrets/v1/secret/delete/engineering/api-keys/old-key\n{"versions":[1,2]}',
-    responseExample: {},
-    errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Delete access denied" },
-      { code: 404, meaning: "Secret not found" }
-    ]
-  },
-  {
-    id: "vault-undelete-path",
-    group: "Vault Hierarchy",
-    title: "Undelete Secret Versions",
-    service: "secrets",
-    method: "POST",
-    pathTemplate: "/v1/secret/undelete/{{path}}",
-    bodyTemplate: '{ "versions": [1, 2] }',
-    description: "Restores previously soft-deleted secret versions.",
-    requestExample: 'POST /svc/secrets/v1/secret/undelete/engineering/api-keys/old-key\n{"versions":[1]}',
-    responseExample: {},
-    errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Secret or versions not found" }
-    ]
-  },
 
   /* ── HSM Certificate Operations ── */
-  {
-    id: "hsm-store-cert",
-    group: "HSM Certificates",
-    title: "Store Certificate in HSM",
-    service: "certs",
-    method: "POST",
-    pathTemplate: "/certs/certificates/{{cert_id}}/hsm-store",
-    bodyTemplate: '{ "hsm_provider": "{{provider_name}}", "partition_label": "{{partition}}", "slot_id": "{{slot_id}}" }',
-    description: "Stores a certificate as a PKCS#11 CKO_CERTIFICATE object on the HSM. The private key must already exist in the HSM.",
-    requestExample: 'POST /svc/certs/certificates/cert-001/hsm-store\n{"hsm_provider":"customer-hsm","partition_label":"prod-partition"}',
-    responseExample: { stored: true, hsm_object_handle: 42, partition: "prod-partition" },
-    errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Certificate not found" },
-      { code: 409, meaning: "Certificate already stored in HSM" },
-      { code: 502, meaning: "HSM communication failure" }
-    ]
-  },
   {
     id: "hsm-create-ca",
     group: "HSM Certificates",
     title: "Create HSM-Backed CA",
     service: "certs",
     method: "POST",
-    pathTemplate: "/certs/cas",
+    pathTemplate: "/certs/ca",
     bodyTemplate: '{ "name": "{{ca_name}}", "algorithm": "ECDSA-P384", "key_backend": "hsm", "key_ref": "{{hsm_key_id}}", "subject": "CN={{subject}}", "ca_level": "root" }',
     description: "Creates a certificate authority with its signing key stored in the HSM. All signing operations are delegated to the HSM via PKCS#11.",
-    requestExample: 'POST /svc/certs/cas\n{"name":"Prod Root CA","algorithm":"ECDSA-P384","key_backend":"hsm","key_ref":"hsm-key-001","subject":"CN=Prod Root CA,O=Acme"}',
+    requestExample: 'POST /svc/certs/ca\n{"name":"Prod Root CA","algorithm":"ECDSA-P384","key_backend":"hsm","key_ref":"hsm-key-001","subject":"CN=Prod Root CA,O=Acme"}',
     responseExample: { id: "ca-001", name: "Prod Root CA", key_backend: "hsm", key_ref: "hsm-key-001", status: "active" },
     errorCodes: [
       { code: 401, meaning: "JWT missing/invalid/expired" },
@@ -3301,36 +3117,4 @@ export const REST_API_CATALOG = [
   },
 
   /* ── Crypto Inventory ── */
-  {
-    id: "inventory-scan",
-    group: "Crypto Inventory",
-    title: "Run Inventory Scan",
-    service: "compliance",
-    method: "POST",
-    pathTemplate: "/compliance/inventory/scan",
-    bodyTemplate: '{ "include_keys": true, "include_certs": true, "include_hsm": true }',
-    description: "Triggers a full cryptographic inventory scan across keys, certificates, and HSM objects. Returns risk findings and scores.",
-    requestExample: 'POST /svc/compliance/inventory/scan\n{"include_keys":true,"include_certs":true}',
-    responseExample: { scan_id: "scan-001", total_keys: 150, total_certs: 45, risk_findings: 12, score: 82 },
-    errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 429, meaning: "Scan already in progress" }
-    ]
-  },
-  {
-    id: "inventory-report",
-    group: "Crypto Inventory",
-    title: "Get Inventory Report",
-    service: "compliance",
-    method: "GET",
-    pathTemplate: "/compliance/inventory/report?format={{format}}",
-    bodyTemplate: "",
-    description: "Returns the latest cryptographic inventory report with algorithm distribution, age analysis, PQC readiness, and risk findings.",
-    requestExample: "GET /svc/compliance/inventory/report?format=json",
-    responseExample: { score: 82, total_keys: 150, total_certs: 45, pqc_ready: 12, classical: 133, hybrid: 5, findings: [{ risk: "critical", reason: "Weak algorithm" }] },
-    errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "No inventory scan has been run yet" }
-    ]
-  }
 ];

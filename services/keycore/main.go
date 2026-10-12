@@ -183,6 +183,13 @@ func main() {
 		} else if n > 0 {
 			logger.Printf("corrected %d key records to the algorithm their material actually is", n)
 		}
+		// Public keys left behind by a rotation of their private key
+		// (key_pair.go) are brought back, each audited.
+		if n, err := svc.ResyncPairPublicKeys(fixCtx); err != nil {
+			logger.Printf("key pair resync: %v", err)
+		} else if n > 0 {
+			logger.Printf("gave %d public keys the key their private key now holds", n)
+		}
 	}()
 	// The customer's HSM, through the hsm-connector (HSM_CONNECTOR_URL).
 	// Unused until a tenant turns on its tenant key or HSM keys.

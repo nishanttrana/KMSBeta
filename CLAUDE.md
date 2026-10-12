@@ -455,6 +455,11 @@ changes code without touching CHANGELOG.md or learning.md.
     a dialog acts in the tenant chosen in the top bar and doesn't show it
     again. A control's value lives in state, never read from the DOM by
     id. `tests/unit/controlsAreReal.test.ts` enforces this.
+  - An example of an API is checked by a test or says it isn't. A
+    hand-written request or response (the REST API tab, a doc) is sent to
+    the real handler by the service's `rest_examples_test.go`; until a
+    service has that test its examples are labelled as not checked
+    (`VERIFIED_EXAMPLE_SERVICES`, `tests/unit/restCatalog.test.ts`).
   - A layout is rendered and tested in every state it has: collapsed and
     open, empty and crowded (a count of 4,200, not 3). A badge sits beside
     its icon, never over it. The smoke tests' `coveredControls` sweep
