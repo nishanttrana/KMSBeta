@@ -4,6 +4,24 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.7.0-beta] — 2026-10-13
+
+### Fixed
+- **CI passed for the first time**, on 13.6.0-beta (commit `36ee776b5`, run
+  38299770169): every job, including the three FIPS-mode test jobs with
+  the HSM tests running, the Postgres integration job with the AWS KMS
+  emulator and NATS steps, and the vulnerability scan.
+- `scripts/ci-status.sh --wait` used up GitHub's allowance of 60
+  unauthenticated calls an hour while waiting, and reported "did not
+  answer". It now asks once a minute and reports once.
+
+### Still open
+- **One test fails now and then.** On 13.5.0-beta the FIPS mode `on` test
+  job failed once (run 38299060688) and passed on the next commit with no
+  change to the code under test. Five runs of the same job in a Linux
+  container did not reproduce it. The next time it happens the job names
+  the test (13.6.0-beta); until then it is not identified.
+
 ## [13.6.0-beta] — 2026-10-13
 
 ### Added

@@ -5,6 +5,19 @@ Newest entries on top.
 
 ## 2026-10-13
 
+### The first green run, and what it does not show (13.7.0-beta)
+- Run 38299770169 on `36ee776b5` is the first of 277 to pass.
+- The run before it failed one job of three on code that then passed
+  unchanged, and that five local runs passed too. **A test suite that
+  passes most of the time has a fault in it; green is not the end of the
+  work.** The fault is unnamed because the job could not say which test
+  failed; it can now.
+- **A helper must fit the limit of what it calls.** `ci-status.sh --wait`
+  made about five API calls every 30 seconds against an allowance of 60 an
+  hour, and spent it in six minutes. The verdict arrived only because the
+  allowance reset while it was still waiting.
+
+
 ### A red job that cannot say why (13.6.0-beta)
 - With the install fixed, one test job of three failed and the other two
   passed on the same commit: a test that fails sometimes, or only in that

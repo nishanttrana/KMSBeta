@@ -4,7 +4,7 @@
 # looked, and CI had failed on all 274 runs it ever made.
 #
 #   scripts/ci-status.sh [commit]         default: origin/main
-#   scripts/ci-status.sh --wait [commit]  poll until the runs finish (30 min)
+#   scripts/ci-status.sh --wait [commit]  poll until the runs finish (40 min)
 #
 # Exits 0 when every run for the commit succeeded, 1 when one failed, 2 when
 # none is finished (or none exists yet). It reads GitHub's public API, so it
@@ -89,14 +89,19 @@ if [ -z "$WAIT" ]; then
   report
   exit $?
 fi
+# GitHub allows 60 calls an hour without a login. Waiting costs one call a
+# minute (the list of runs); the full report is made once, at the end. The
+# first version polled the whole report every 30 seconds and was cut off.
 tries=0
-while :; do
-  out="$(report)"
-  rc=$?
-  if [ "$rc" -ne 2 ] || [ "$tries" -ge 60 ]; then
-    printf '%s\n' "$out"
-    exit "$rc"
+while [ "$tries" -lt 40 ]; do
+  pending="$(api "actions/runs?head_sha=${SHA}&per_page=50" 2>/dev/null | python3 -c 'import json,sys
+runs = json.load(sys.stdin).get("workflow_runs", [])
+print("none" if not runs else sum(1 for r in runs if r["status"] != "completed"))' 2>/dev/null)"
+  if [ "$pending" = "0" ]; then
+    break
   fi
   tries=$((tries + 1))
-  sleep 30
+  sleep 60
 done
+report
+exit $?
