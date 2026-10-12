@@ -4,6 +4,84 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.4.0-beta] — 2026-10-13
+
+### Security
+- **Every service was built on a Go toolchain with 11 known
+  vulnerabilities in its standard library**, among them an HTTP/2 server
+  crash, HTTP/2 memory exhaustion and HTTP/1 connection desynchronisation
+  (`GO-2026-6617`, `-6613`, `-6612`, `-6611`, `-6610`, `-6608`, `-6607`,
+  `-6605`, `-6603`, `-6600`, `-6599`). Go is now 1.27.2 and
+  `golang.org/x/net` 0.60.0 everywhere (`go.mod`, all 28 Dockerfiles, both
+  installers). The certified cryptographic module is the same snapshot
+  (`v1.0.0-c2097c7c`). **Rebuild and redeploy to pick this up.** Before and
+  after: [docs/SECURITY/govulncheck-2026-10-13.txt](docs/SECURITY/govulncheck-2026-10-13.txt).
+- **The reconciler's built-in addresses were plain http**, to host names
+  that do not exist and with the policy service's port wrong. The
+  deployment always overrode them, so nothing called them. They are now the
+  real `https://` addresses, and the reconciler refuses to start with an
+  address that is not `https://`.
+
+### Fixed
+- **CI had never passed.** All 274 runs since it was set up failed, and
+  nobody could see it from where the work was done. Three causes, each
+  hidden behind the one before:
+  1. The "runtime config validation" gate looked for three words in
+     `main.go` and so failed four services that validate through
+     `platform.Boot`, and the customer-side agent, which validates its own
+     file. Every step after it in that job (conformance, `go vet`, the
+     tests, the vulnerability scan) never ran. The gate now recognises a
+     real validation call anywhere in the service. Two services it named
+     really did not check their port before starting, the watchdog and the
+     reconciler; both do now.
+  2. Three HSM tests failed in every FIPS mode since 10.0.0-beta: cloud
+     BYOK wraps a key inside the HSM with RSA-OAEP and SHA-256, and the
+     SoftHSM that CI installed (Ubuntu's 2.6.1) cannot. Neither can the
+     2.7.0 release; the support is on SoftHSM's main branch only. CI now
+     builds SoftHSM from one pinned commit (`scripts/install-softhsm.sh`).
+  3. The vulnerability scan, once it could run, failed on the toolchain
+     above.
+- **An HSM test could pass in CI by not running.** A missing or too-old
+  SoftHSM was a skip. CI now sets `VECTA_REQUIRE_SOFTHSM=1`, which makes it
+  a failure; the in-HSM AES unwrap test, skipped in CI since 9.0.0-beta,
+  now runs there.
+- **A test that needs a NATS server ran nowhere.** The secrets service's
+  audit-event watcher test now runs in CI against a real NATS.
+
+### Added
+- `scripts/ci-status.sh [--wait] [commit]` prints what GitHub Actions made
+  of a commit, job by job, with the step that failed. It needs no login for
+  this repository.
+- **Cloud BYOK of a private key is tested.** Until now every BYOK test
+  imported an AES key. An RSA-3072 private key now goes into the Azure Key
+  Vault stand-in as PKCS#8, signs there, and the signature is checked under
+  the KMS key's public half (`TestBYOKAzureRSAPrivateKey`).
+- **The real-cloud run covers two more cases**
+  ([docs/SECURITY/CLOUD_BYOK_LIVE_VERIFICATION.md](docs/SECURITY/CLOUD_BYOK_LIVE_VERIFICATION.md)):
+  Azure Key Vault Premium (an RSA-3072 private key, which signs and
+  verifies there) and Salesforce Shield (import only: Shield takes one
+  upload a day and deletes none, so a tenant secret stays in the org).
+- **BYOK is checked on every push against an AWS KMS implementation this
+  code was not written for.** LocalStack unwraps what is imported and
+  encrypts with it; the import, use, rotation and revoke pass. It checks no
+  request signature and takes no material back, so the altered-credential
+  step, the renewal and the restore still need AWS itself.
+
+### Changed
+- The permissions listed for a real-cloud run are checked against each
+  vendor's documentation and are narrower: Google needs *Cloud KMS Admin*
+  and *CryptoKey Encrypter/Decrypter* (not *Importer*), Azure Managed HSM
+  needs *Crypto User* only.
+- Documented: AWS allows 25 on-demand rotations per key, so a BYOK key in
+  AWS can be rotated 25 times.
+
+### Still open
+- **No cloud has been run for real.** It needs cloud accounts; none is
+  configured on the build machine or, as far as can be seen from it, in the
+  repository's secrets.
+- OCI and Alibaba permission lists are read from the code's calls, not
+  checked against their documentation.
+
 ## [13.3.0-beta] — 2026-10-12
 
 ### Added

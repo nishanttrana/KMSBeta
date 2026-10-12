@@ -71,6 +71,17 @@ func ValidateHTTPPort(portRaw string) error {
 	return nil
 }
 
+// ValidateServiceURL checks the address of another platform service: https
+// with a host. Every internal connection is mTLS (CLAUDE.md rule 10), so a
+// plain-http address is a misconfiguration to refuse at startup, not to
+// find out about on the first call.
+func ValidateServiceURL(name, raw string) error {
+	if !isValidURLWithSchemes(strings.TrimSpace(raw), "https") {
+		return fmt.Errorf("%s must be an https:// URL with a host", strings.TrimSpace(name))
+	}
+	return nil
+}
+
 // ValidateDurationFloor ensures scheduler/interval knobs are non-zero and sane.
 func ValidateDurationFloor(name string, d time.Duration, min time.Duration) error {
 	if d < min {

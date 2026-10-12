@@ -143,7 +143,10 @@ func TestAESImportByUnwrapInTheHSM(t *testing.T) {
 		if ev := rec.Last(t); ev.Event.Result != "refused" {
 			t.Fatalf("refusal audit: %+v", ev.Event)
 		}
-		t.Skipf("this PKCS#11 library does not unwrap with RSA-OAEP and SHA-256 (SoftHSM2 before 2.7 supports SHA-1 only): %s", errorMessage(out))
+		if softhsmRequired() {
+			t.Fatalf("VECTA_REQUIRE_SOFTHSM=1 and this library does not unwrap with RSA-OAEP and SHA-256 (build it with scripts/install-softhsm.sh): %s", errorMessage(out))
+		}
+		t.Skipf("this PKCS#11 library does not unwrap with RSA-OAEP and SHA-256 (SoftHSM releases up to 2.7.0 take SHA-1 only): %s", errorMessage(out))
 	}
 	if code != http.StatusCreated || out["import_method"] != "unwrap" {
 		t.Fatalf("unwrap import: %d %v", code, out)

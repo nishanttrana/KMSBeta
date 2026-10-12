@@ -25,6 +25,7 @@ import (
 	pkgevents "vecta-kms/pkg/events"
 	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	pkgreconciler "vecta-kms/pkg/reconciler"
+	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 	"vecta-kms/pkg/servicetoken"
 )
 
@@ -35,6 +36,16 @@ func main() {
 	// (http_helpers.go authorize); keycore refuses anonymous key use.
 	servicetoken.SetDefault(servicetoken.FromEnv("kms-reconciler"))
 	cfg := pkgconfig.Load()
+	// Checked before anything is enrolled, called or served. The defaults
+	// are the compose addresses; until 13.4.0-beta they were plain-http
+	// addresses of hosts that do not exist, with policy's port wrong.
+	port := envOr("HTTP_PORT", "8470")
+	keycoreURL := envOr("KEYCORE_URL", "https://keycore:8010")
+	policyURL := envOr("POLICY_URL", "https://policy:8040")
+	if err := errors.Join(pkgruntimecfg.ValidateHTTPPort(port),
+		pkgruntimecfg.ValidateServiceURL("KEYCORE_URL", keycoreURL), pkgruntimecfg.ValidateServiceURL("POLICY_URL", policyURL)); err != nil {
+		logger.Fatalf("refusing to start: %v", err)
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -43,9 +54,6 @@ func main() {
 	if _, err := pkgsvctls.Init(ctx, "kms-reconciler", pkgsvctls.Options{Logger: logger}); err != nil {
 		logger.Fatalf("internal mTLS enrolment failed: %v", err)
 	}
-
-	keycoreURL := envOr("KEYCORE_URL", "http://kms-keycore:8010")
-	policyURL := envOr("POLICY_URL", "http://kms-policy:8050")
 
 	client := &http.Client{Timeout: 10 * time.Second}
 
@@ -74,7 +82,6 @@ func main() {
 	}
 	handler := pkgjwtauth.MustWrapRouter("RECONCILER", cfg.JWTIssuer, cfg.JWTAudience, newRouter(runner.Status, audit, logger), logger)
 
-	port := envOr("HTTP_PORT", "8470")
 	srv := pkgconfig.NewHTTPServer(port, handler)
 	go func() {
 		logger.Printf("https (mTLS) listening on :%s", port)

@@ -1,0 +1,61 @@
+# govulncheck ./... — 2026-10-13 — before and after the toolchain and x/net update (13.4.0-beta)
+# Raw output of golang.org/x/vuln/cmd/govulncheck@latest, symbol results, run in the repository root.
+
+## Before: go1.27.1, golang.org/x/net v0.59.0 (exit 3)
+
+Vulnerability #1: GO-2026-6617
+    HTTP/2 server crash due to HPACK encoder race in net/http
+Vulnerability #2: GO-2026-6613
+    HTTP/1 server connection desynchronization after 2xx CONNECT response in
+Vulnerability #3: GO-2026-6612
+    Double flow control refund on HTTP/2 server streams in net/http
+Vulnerability #4: GO-2026-6611
+    Excessive CPU consumption from repeated initial window changes in net/http
+Vulnerability #5: GO-2026-6610
+    HTTP/2 transport accepts malformed framing-related headers in net/http
+Vulnerability #6: GO-2026-6608
+    Memory limit bypass when parsing MIME headers in net/textproto,
+Vulnerability #7: GO-2026-6607
+    Reject malformed ECH outer extension references in crypto/tls
+Vulnerability #8: GO-2026-6605
+    HTTP/1 client connection desynchronization after CONNECT rejection in
+Vulnerability #9: GO-2026-6603
+    HTTP/2 server memory exhaustion due to Trailer headers in net/http
+Vulnerability #10: GO-2026-6600
+    Recognize yield as regexp preceder keyword in html/template
+Vulnerability #11: GO-2026-6599
+    Reset context tracking on consecutive template expressions in html/template
+
+   1     Fixed in: crypto/tls@go1.27.2
+   5     Fixed in: golang.org/x/net@v0.60.0
+   2     Fixed in: html/template@go1.27.2
+   5     Fixed in: net/http/internal/http2@go1.27.2
+   2     Fixed in: net/http@go1.27.2
+   1     Fixed in: net/textproto@go1.27.2
+   1     Found in: crypto/tls@go1.27.1
+   5     Found in: golang.org/x/net@v0.59.0
+   2     Found in: html/template@go1.27.1
+   5     Found in: net/http/internal/http2@go1.27.1
+   2     Found in: net/http@go1.27.1
+   1     Found in: net/textproto@go1.27.1
+   5   Module: golang.org/x/net
+  11   Standard library
+
+
+Your code is affected by 11 vulnerabilities from the Go standard library.
+This scan also found 2 vulnerabilities in packages you import and 1
+vulnerability in modules you require, but your code doesn't appear to call these
+vulnerabilities.
+Use '-show verbose' for more details.
+
+## After: go1.27.2, golang.org/x/net v0.60.0 (exit 0)
+
+=== Symbol Results ===
+
+No vulnerabilities found.
+
+Your code is affected by 0 vulnerabilities.
+This scan also found 0 vulnerabilities in packages you import and 1
+vulnerability in modules you require, but your code doesn't appear to call these
+vulnerabilities.
+Use '-show verbose' for more details.

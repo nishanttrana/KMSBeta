@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"crypto/aes"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -40,7 +43,21 @@ func newTestKeycore() *testKeycore {
 func (k *testKeycore) Seed(tenantID, keyID, algorithm string) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
-	k.keys[tenantID+"/"+keyID] = &testKey{algorithm: algorithm, exportOK: true, versions: [][]byte{randomBytes(32)}}
+	k.keys[tenantID+"/"+keyID] = &testKey{algorithm: algorithm, exportOK: true, versions: [][]byte{newMaterial(algorithm)}}
+}
+
+// newMaterial is a fresh key version: 32 random bytes, or for "RSA-<bits>" a
+// private key in PKCS#8, which is what keycore wraps for a private key.
+func newMaterial(algorithm string) []byte {
+	if !strings.HasPrefix(algorithm, "RSA-") {
+		return randomBytes(32)
+	}
+	bits, _ := strconv.Atoi(strings.TrimPrefix(algorithm, "RSA-"))
+	der, err := x509.MarshalPKCS8PrivateKey(must(rsa.GenerateKey(pkgcrypto.Reader, bits)))
+	if err != nil {
+		panic(err)
+	}
+	return der
 }
 
 func randomBytes(n int) []byte {
@@ -61,6 +78,9 @@ func (k *testKeycore) material(tenantID, keyID string, v int) []byte {
 }
 
 func kcvOf(material []byte) string {
+	if len(material) != 32 { // a private key has no AES check value
+		return strings.ToUpper(hex.EncodeToString(pkgcrypto.SHA256(material)[:3]))
+	}
 	block, _ := aes.NewCipher(material)
 	out := make([]byte, 16)
 	block.Encrypt(out, make([]byte, 16))
@@ -78,8 +98,12 @@ func (k *testKeycore) KeyInfo(_ context.Context, tenantID, keyID string) (map[st
 	if key.hsm {
 		labels["hsm"] = "resident"
 	}
+	purpose := "encrypt-decrypt"
+	if strings.HasPrefix(key.algorithm, "RSA-") {
+		purpose = "sign-verify"
+	}
 	return map[string]interface{}{"id": keyID, "algorithm": key.algorithm, "export_allowed": key.exportOK,
-		"purpose": "encrypt-decrypt", "labels": labels, "current_version": len(key.versions)}, nil
+		"purpose": purpose, "labels": labels, "current_version": len(key.versions)}, nil
 }
 
 func (k *testKeycore) CloudWrap(_ context.Context, tenantID, keyID string, wrappingKey []byte, scheme string, version int, digest bool) (CloudWrapResult, []byte, []byte, error) {
@@ -121,7 +145,7 @@ func (k *testKeycore) RotateForBYOK(_ context.Context, tenantID, keyID, _ string
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	key := k.keys[tenantID+"/"+keyID]
-	key.versions = append(key.versions, randomBytes(32))
+	key.versions = append(key.versions, newMaterial(key.algorithm))
 	return len(key.versions), nil
 }
 

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rsa"
@@ -65,6 +66,7 @@ type azureVersion struct {
 	id       string
 	material []byte
 	enabled  bool
+	rsa      *rsa.PrivateKey // set for an RSA-HSM key: material is its PKCS#8
 }
 
 func newAzureDouble(t *testing.T) *azureDouble {
@@ -152,6 +154,15 @@ func (d *azureDouble) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		v := azureVersion{id: fmt.Sprintf("ver%d", len(d.versions[name])+1), material: material, enabled: true}
+		if key["kty"] == "RSA-HSM" {
+			parsed, err := x509.ParsePKCS8PrivateKey(material)
+			priv, ok := parsed.(*rsa.PrivateKey)
+			if err != nil || !ok {
+				writeJSONT(w, 400, map[string]interface{}{"error": map[string]string{"code": "BadParameter", "message": "the transfer blob holds no RSA private key in PKCS#8"}})
+				return
+			}
+			v.rsa = priv
+		}
 		d.versions[name] = append(d.versions[name], v)
 		writeJSONT(w, 200, map[string]interface{}{"key": map[string]interface{}{"kid": d.url + "/keys/" + name + "/" + v.id}, "attributes": map[string]interface{}{"enabled": true}})
 	case r.Method == http.MethodPatch && len(parts) == 3:
@@ -164,7 +175,11 @@ func (d *azureDouble) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodGet && len(parts) == 2:
 		vs := d.versions[name]
 		last := vs[len(vs)-1]
-		writeJSONT(w, 200, map[string]interface{}{"key": map[string]interface{}{"kid": d.url + "/keys/" + name + "/" + last.id, "kty": "oct-HSM"},
+		kty := "oct-HSM"
+		if last.rsa != nil {
+			kty = "RSA-HSM"
+		}
+		writeJSONT(w, 200, map[string]interface{}{"key": map[string]interface{}{"kid": d.url + "/keys/" + name + "/" + last.id, "kty": kty},
 			"attributes": map[string]interface{}{"enabled": last.enabled}, "tags": d.tags[name]})
 	case r.Method == http.MethodPost && len(parts) == 4:
 		var v *azureVersion
@@ -175,6 +190,25 @@ func (d *azureDouble) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if v == nil || !v.enabled {
 			writeJSONT(w, 403, map[string]interface{}{"error": map[string]string{"code": "Forbidden", "message": "key version disabled"}})
+			return
+		}
+		if parts[3] == "sign" || parts[3] == "verify" {
+			if v.rsa == nil || body["alg"] != "PS256" {
+				writeJSONT(w, 400, map[string]interface{}{"error": map[string]string{"code": "BadParameter", "message": "this key does not sign with " + fmt.Sprint(body["alg"])}})
+				return
+			}
+			pss := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash, Hash: crypto.SHA256}
+			if parts[3] == "sign" {
+				sig, err := rsa.SignPSS(pkgcrypto.Reader, v.rsa, crypto.SHA256, must(b64.DecodeString(body["value"].(string))), pss)
+				if err != nil {
+					writeJSONT(w, 400, map[string]interface{}{"error": map[string]string{"code": "BadParameter", "message": err.Error()}})
+					return
+				}
+				writeJSONT(w, 200, map[string]interface{}{"value": b64.EncodeToString(sig)})
+				return
+			}
+			err := rsa.VerifyPSS(&v.rsa.PublicKey, crypto.SHA256, must(b64.DecodeString(body["digest"].(string))), must(b64.DecodeString(body["value"].(string))), pss)
+			writeJSONT(w, 200, map[string]interface{}{"value": err == nil})
 			return
 		}
 		in := must(b64.DecodeString(body["value"].(string)))
@@ -230,6 +264,65 @@ func TestBYOKAzureTransferBlob(t *testing.T) {
 	}
 	if _, key, err = svc.RunBYOK(ctx, "t1", key.ID, OpRestore, "alice", BYOKOperationRequest{}); err != nil || !d.versions["payments"][1].enabled || len(d.versions["payments"]) != 2 {
 		t.Fatalf("restore (re-enable, no new version): %v", err)
+	}
+}
+
+// An RSA private key goes into Key Vault as PKCS#8 under the same transfer
+// blob: Azure holds exactly the KMS version's key, the key signs there (the
+// run's own verification), the console signs and verifies with it, and a
+// rotation imports the next version. Until 13.4.0-beta no test imported
+// anything but an AES key into any cloud.
+func TestBYOKAzureRSAPrivateKey(t *testing.T) {
+	fipstest.SkipIfStrict(t, "CKM_RSA_AES_KEY_WRAP (SHA-1, KWP) done by the KMS rather than an HSM")
+	svc, _, kc, _ := newCloudService(t)
+	d := newAzureDouble(t)
+	setCred(svc, "cred-azure-double", "azure", map[string]string{"vault_url": d.url, "access_token": "azure-test-token"})
+	acct, err := svc.RegisterAccount(attachCtx("t1"), RegisterCloudAccountRequest{TenantID: "t1", Provider: ProviderAzure, Name: "kv", DefaultRegion: "eastus", ConnectionID: "cred-azure-double"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	kc.Seed("t1", "key-rsa", "RSA-3072")
+	ctx := context.Background()
+	run, key, err := svc.CreateBYOK(ctx, "t1", "alice", CreateBYOKRequest{AccountID: acct.ID, KeyID: "key-rsa", Alias: "signer"})
+	if err != nil || run.Status != "succeeded" {
+		t.Fatalf("create: %v %v", err, stepNames(run))
+	}
+	if key.KeySpec != SpecRSA3072 || key.Usage != "sign" {
+		t.Fatalf("key %+v", key)
+	}
+	got := d.versions["signer"][0]
+	if got.rsa == nil || string(got.material) != string(kc.material("t1", "key-rsa", 1)) {
+		t.Fatal("Azure unwrapped a different private key than KMS version 1")
+	}
+	rt, _ := consoleRouter(svc)
+	op := func(name string, params map[string]string) (int, consoleOut) {
+		return runOp(t, rt, rw, name, map[string]interface{}{"account_id": acct.ID, "key": key.CloudKeyID, "version": key.CurrentMatID, "params": params})
+	}
+	var signed struct {
+		S string `json:"signature_b64"`
+	}
+	code, out := op("sign", map[string]string{"message_b64": b64s("an invoice")})
+	_ = json.Unmarshal(out.Result, &signed)
+	if code != 200 || signed.S == "" {
+		t.Fatalf("sign %d %+v", code, out)
+	}
+	// Checked here under the KMS key's public half, not only by the cloud.
+	kmsKey, _ := x509.ParsePKCS8PrivateKey(kc.material("t1", "key-rsa", 1))
+	sig, _ := base64.StdEncoding.DecodeString(signed.S)
+	if err := rsa.VerifyPSS(&kmsKey.(*rsa.PrivateKey).PublicKey, crypto.SHA256, pkgcrypto.SHA256([]byte("an invoice")), sig, &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash, Hash: crypto.SHA256}); err != nil {
+		t.Fatalf("the cloud's signature does not verify under the KMS key: %v", err)
+	}
+	if _, out := op("verify", map[string]string{"message_b64": b64s("an invoice"), "signature_b64": signed.S}); !strings.Contains(string(out.Result), "true") {
+		t.Fatalf("verify %s", out.Result)
+	}
+	if _, out := op("verify", map[string]string{"message_b64": b64s("another invoice"), "signature_b64": signed.S}); strings.Contains(string(out.Result), "true") {
+		t.Fatal("a signature verified for a different message")
+	}
+	if run, key, err = svc.RunBYOK(ctx, "t1", key.ID, OpRotate, "alice", BYOKOperationRequest{}); err != nil || key.CurrentMatID != "ver2" {
+		t.Fatalf("rotate: %v %v", err, stepNames(run))
+	}
+	if string(d.versions["signer"][1].material) != string(kc.material("t1", "key-rsa", 2)) {
+		t.Fatal("rotation imported a different private key than KMS version 2")
 	}
 }
 

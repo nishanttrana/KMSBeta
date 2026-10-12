@@ -95,7 +95,21 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
   tenant and permission, and audits each request and refusal. Enforced by
   `make conformance` (`route-kernel`).
 
-## Latest scan — 2026-09-25 (v1.2.0-beta)
+## Latest scan — 2026-10-13 (13.4.0-beta)
+
+Raw output: [`govulncheck-2026-10-13.txt`](govulncheck-2026-10-13.txt).
+
+| Scope | Before | After | How |
+|---|---|---|---|
+| Go stdlib (toolchain) | 11 advisories on go1.27.1 | 0 | go1.27.2 |
+| Go modules | 5 on `golang.org/x/net` 0.59.0 (the same HTTP/2 faults) | 0 | 0.60.0 |
+| Required but not called | 1 (`golang.org/x/crypto`, GO-2026-5932, no fixed version) | 1 | none available |
+
+CI's scan had not run since the workflow was written: an earlier step of
+its job always failed (CHANGELOG 13.4.0-beta). `scripts/ci-status.sh` shows
+whether it ran.
+
+## Scan of 2026-09-25 (v1.2.0-beta)
 
 Raw output: [`govulncheck-2026-09-25.txt`](govulncheck-2026-09-25.txt).
 

@@ -7,6 +7,27 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-13 — CI's verdict is read after every push; a test that cannot run in CI fails
+**Decision:** after a push, `scripts/ci-status.sh --wait` is run and a red
+run is fixed before other work. In CI a test never passes by skipping: a
+missing dependency is a failure there (`VECTA_REQUIRE_SOFTHSM`,
+`VECTA_REQUIRE_JDK`, `VECTA_REQUIRE_CERTIFIED_MODULE`), and a test gated on
+an environment variable has a CI step that sets it. SoftHSM for the HSM
+tests is built from one pinned commit of its main branch
+(`scripts/install-softhsm.sh`) until a release contains RSA-OAEP with
+SHA-256.
+**Why:** CI failed on all 274 of its runs and nobody read it; one failing
+gate hid a vulnerable toolchain behind it; HSM tests passed locally and in
+part of CI only because they skipped.
+**Rejected:** skipping the SHA-256 wrap tests on older SoftHSM (the feature
+would then be tested nowhere); mocking PKCS#11 (CLAUDE.md: HSM tests use a
+real library); the distribution package (2.6.1) or the 2.7.0 release
+(neither has the mechanism); a login-only tool for reading CI (the public
+API needs none).
+**Enforced by:** `scripts/ci-status.sh`; the `VECTA_REQUIRE_*` variables in
+`.github/workflows/ci-quality.yml`; `infra/scripts/check-runtimecfg.sh`,
+which fails when a service's validation call is removed.
+
 ## 2026-10-12 — The cloud console is a fixed catalogue; BYOK automation announces and playbooks act
 **Decision:** the cloud console is a list of named key operations
 (`services/cloud/console.go`), each its own kernel route with a permission,
@@ -537,7 +558,7 @@ then is what was built, and can be overturned.
   wrapping key (no KDF), and unwrapping private keys (needs AES key wrap
   with padding outside the certified module). *Enforced by:*
   `TestImportedPrivateKeySignsInHSM`, `TestAESImportByUnwrapInTheHSM`
-  (SoftHSM2 2.7.0), `TestImportPrivateKeyIntoHSM`.
+  (SoftHSM at the commit in `scripts/install-softhsm.sh`), `TestImportPrivateKeyIntoHSM`.
 
 ---
 

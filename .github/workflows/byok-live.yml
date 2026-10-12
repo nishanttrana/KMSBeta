@@ -42,6 +42,8 @@ jobs:
       VECTA_TEST_BYOK_GCP_KEY_RING: ${{ secrets.BYOK_LIVE_GCP_KEY_RING }}
       # Azure Managed HSM
       VECTA_TEST_BYOK_AZURE_VAULT_URL: ${{ secrets.BYOK_LIVE_AZURE_VAULT_URL }}
+      # Azure Key Vault Premium (an RSA-3072 private key; same app registration)
+      VECTA_TEST_BYOK_AZURE_KV_VAULT_URL: ${{ secrets.BYOK_LIVE_AZURE_KV_VAULT_URL }}
       VECTA_TEST_BYOK_AZURE_TENANT_ID: ${{ secrets.BYOK_LIVE_AZURE_TENANT_ID }}
       VECTA_TEST_BYOK_AZURE_CLIENT_ID: ${{ secrets.BYOK_LIVE_AZURE_CLIENT_ID }}
       VECTA_TEST_BYOK_AZURE_CLIENT_SECRET: ${{ secrets.BYOK_LIVE_AZURE_CLIENT_SECRET }}
@@ -58,6 +60,15 @@ jobs:
       VECTA_TEST_BYOK_ALIBABA_ACCESS_KEY: ${{ secrets.BYOK_LIVE_ALIBABA_ACCESS_KEY }}
       VECTA_TEST_BYOK_ALIBABA_SECRET_KEY: ${{ secrets.BYOK_LIVE_ALIBABA_SECRET_KEY }}
       VECTA_TEST_BYOK_ALIBABA_REGION: ${{ secrets.BYOK_LIVE_ALIBABA_REGION }}
+      # Salesforce Shield (import only; leaves a tenant secret in the org)
+      VECTA_TEST_BYOK_SALESFORCE_INSTANCE_URL: ${{ secrets.BYOK_LIVE_SALESFORCE_INSTANCE_URL }}
+      VECTA_TEST_BYOK_SALESFORCE_CLIENT_ID: ${{ secrets.BYOK_LIVE_SALESFORCE_CLIENT_ID }}
+      VECTA_TEST_BYOK_SALESFORCE_CLIENT_SECRET: ${{ secrets.BYOK_LIVE_SALESFORCE_CLIENT_SECRET }}
+      VECTA_TEST_BYOK_SALESFORCE_USERNAME: ${{ secrets.BYOK_LIVE_SALESFORCE_USERNAME }}
+      VECTA_TEST_BYOK_SALESFORCE_PASSWORD: ${{ secrets.BYOK_LIVE_SALESFORCE_PASSWORD }}
+      VECTA_TEST_BYOK_SALESFORCE_SECURITY_TOKEN: ${{ secrets.BYOK_LIVE_SALESFORCE_SECURITY_TOKEN }}
+      VECTA_TEST_BYOK_SALESFORCE_CERTIFICATE_NAME: ${{ secrets.BYOK_LIVE_SALESFORCE_CERTIFICATE_NAME }}
+      BYOK_LIVE_SALESFORCE_CERTIFICATE_PEM: ${{ secrets.BYOK_LIVE_SALESFORCE_CERTIFICATE_PEM }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -78,10 +89,14 @@ jobs:
             printf '%s\n' "$BYOK_LIVE_OCI_PRIVATE_KEY_PEM" > "$RUNNER_TEMP/byok-oci-key.pem"
             echo "VECTA_TEST_BYOK_OCI_PRIVATE_KEY_FILE=$RUNNER_TEMP/byok-oci-key.pem" >> "$GITHUB_ENV"
           fi
+          if [ -n "$BYOK_LIVE_SALESFORCE_CERTIFICATE_PEM" ]; then
+            printf '%s\n' "$BYOK_LIVE_SALESFORCE_CERTIFICATE_PEM" > "$RUNNER_TEMP/byok-sf-cert.pem"
+            echo "VECTA_TEST_BYOK_SALESFORCE_CERTIFICATE_FILE=$RUNNER_TEMP/byok-sf-cert.pem" >> "$GITHUB_ENV"
+          fi
 
       - name: Verify
         run: scripts/verify-byok-live.sh --from-env
 
       - name: Remove the key files
         if: always()
-        run: rm -f "$RUNNER_TEMP/byok-gcp-sa.json" "$RUNNER_TEMP/byok-oci-key.pem"
+        run: rm -f "$RUNNER_TEMP/byok-gcp-sa.json" "$RUNNER_TEMP/byok-oci-key.pem" "$RUNNER_TEMP/byok-sf-cert.pem"

@@ -41,11 +41,19 @@ else
 fi
 
 configured=""
-[ -n "${VECTA_TEST_BYOK_AWS_ACCESS_KEY:-}" ] && configured="$configured aws"
+if [ -n "${VECTA_TEST_BYOK_AWS_ACCESS_KEY:-}" ]; then
+  if [ "${VECTA_TEST_BYOK_AWS_EMULATOR:-}" = "1" ]; then
+    configured="$configured aws-emulator(not-AWS)"
+  else
+    configured="$configured aws"
+  fi
+fi
 [ -n "${VECTA_TEST_BYOK_GCP_SERVICE_ACCOUNT_FILE:-}" ] && configured="$configured google-cloud"
 [ -n "${VECTA_TEST_BYOK_AZURE_VAULT_URL:-}" ] && configured="$configured azure-managed-hsm"
+[ -n "${VECTA_TEST_BYOK_AZURE_KV_VAULT_URL:-}" ] && configured="$configured azure-key-vault-premium-rsa"
 [ -n "${VECTA_TEST_BYOK_OCI_TENANCY:-}" ] && configured="$configured oci"
 [ -n "${VECTA_TEST_BYOK_ALIBABA_ACCESS_KEY:-}" ] && configured="$configured alibaba"
+[ -n "${VECTA_TEST_BYOK_SALESFORCE_INSTANCE_URL:-}" ] && configured="$configured salesforce-shield(import-only)"
 if [ -z "$configured" ]; then
   echo "Nothing to check: $FILE names no cloud." >&2
   exit 2

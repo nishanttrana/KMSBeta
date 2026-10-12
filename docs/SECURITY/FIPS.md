@@ -87,7 +87,7 @@ that stops for a mode change stays stopped. Restart it by hand.
 ## The build: always the certified module
 
 - Every Go Dockerfile sets `ENV GOFIPS140=v1.0.0`. So do the `Makefile` and `run-local.sh`.
-- `v1.0.0` is the snapshot listed in `$(go env GOROOT)/lib/fips140/certified.txt` for the Go 1.27.1 toolchain (`v1.0.0-c2097c7c`). The binary records it (`go version -m <binary>` shows `GOFIPS140=v1.0.0-c2097c7c` and `DefaultGODEBUG=fips140=on`).
+- `v1.0.0` is the snapshot listed in `$(go env GOROOT)/lib/fips140/certified.txt` for the Go 1.27.2 toolchain (`v1.0.0-c2097c7c`). The binary records it (`go version -m <binary>` shows `GOFIPS140=v1.0.0-c2097c7c` and `DefaultGODEBUG=fips140=on`).
 - The pinned value lives in one place, `pkg/fips.CertifiedModuleVersion`, and conformance checks every Dockerfile against it.
 - Look up the module's certificate on the NIST CMVP site ("Go Cryptographic Module"). Don't write a certificate number into this repo without the certificate in hand.
 - **Upgrading the module:** when a newer snapshot moves from `inprocess.txt` to `certified.txt` (at the time of writing, `v1.26.0` is in process), change `CertifiedModuleVersion` and the Dockerfiles together, then run `make test-fips-modes`.

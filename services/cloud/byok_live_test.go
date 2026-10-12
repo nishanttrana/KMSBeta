@@ -32,15 +32,27 @@ import (
 // credential.
 //
 //	AWS KMS:      VECTA_TEST_BYOK_AWS_ACCESS_KEY, _SECRET_KEY, _REGION
-//	              (_SESSION_TOKEN, _ROLE_ARN, _EXTERNAL_ID optional)
+//	              (_SESSION_TOKEN, _ROLE_ARN, _EXTERNAL_ID optional;
+//	              _ENDPOINT for a VPC endpoint. _EMULATOR=1 says the
+//	              endpoint is an emulator such as LocalStack, not AWS: it
+//	              checks no signature and takes no material back, so the
+//	              altered credential, the renewal and the restore are left
+//	              out and nothing it passes is AWS verified)
 //	Google Cloud: VECTA_TEST_BYOK_GCP_SERVICE_ACCOUNT_FILE (path of the JSON
 //	              key file), _PROJECT, _LOCATION, _KEY_RING
-//	Azure:        VECTA_TEST_BYOK_AZURE_VAULT_URL (a Managed HSM: Key Vault
-//	              takes no AES key), _TENANT_ID, _CLIENT_ID, _CLIENT_SECRET
+//	Azure:        VECTA_TEST_BYOK_AZURE_TENANT_ID, _CLIENT_ID, _CLIENT_SECRET
+//	              with _VAULT_URL (a Managed HSM, for the AES-256 key) and/or
+//	              _KV_VAULT_URL (a Key Vault Premium, which takes no AES key:
+//	              an RSA-3072 private key is imported there and signs)
 //	OCI Vault:    VECTA_TEST_BYOK_OCI_TENANCY, _USER, _FINGERPRINT,
 //	              _PRIVATE_KEY_FILE, _REGION, _COMPARTMENT,
 //	              _MANAGEMENT_ENDPOINT, _CRYPTO_ENDPOINT
 //	Alibaba:      VECTA_TEST_BYOK_ALIBABA_ACCESS_KEY, _SECRET_KEY, _REGION
+//	Salesforce:   VECTA_TEST_BYOK_SALESFORCE_INSTANCE_URL, _CLIENT_ID,
+//	              _CLIENT_SECRET, _USERNAME, _PASSWORD, _SECURITY_TOKEN,
+//	              _CERTIFICATE_NAME and _CERTIFICATE_FILE (the org's BYOK
+//	              certificate, PEM). Import only: Shield takes one upload per
+//	              day and deletes none, so a secret stays in the org.
 type liveCloud struct {
 	name     string
 	provider string
@@ -48,8 +60,18 @@ type liveCloud struct {
 	region   string
 	// wrong returns the credential altered so the cloud must refuse it.
 	wrong func(map[string]string) map[string]string
+	// algorithm of the KMS key to import; AES-256 when empty.
+	algorithm string
 	// reimport: renewing the same material is part of this cloud's protocol.
 	reimport bool
+	// emulator: not the cloud itself. No altered-credential step, no renewal,
+	// and the run stops once the revoked key has stopped working.
+	emulator bool
+	// importOnly: stop after the import and its custody record, and schedule
+	// nothing for deletion (Salesforce Shield offers neither).
+	importOnly bool
+	// certificate the cloud wraps to, where a person supplies it (Salesforce).
+	certificateName, certificatePEM string
 	// versioned: deletion is per key version (Google Cloud).
 	versioned bool
 	// left says what the cloud keeps after the run.
@@ -82,11 +104,15 @@ func liveClouds(t *testing.T) []liveCloud {
 	}
 	var out []liveCloud
 	if env("AWS_ACCESS_KEY") != "" {
-		out = append(out, liveCloud{name: "AWS KMS", provider: ProviderAWS, region: env("AWS_REGION"), reimport: true,
+		aws := liveCloud{name: "AWS KMS", provider: ProviderAWS, region: env("AWS_REGION"), reimport: true,
 			fields: map[string]string{"access_key_id": env("AWS_ACCESS_KEY"), "secret_access_key": env("AWS_SECRET_KEY"), "session_token": env("AWS_SESSION_TOKEN"),
-				"region": env("AWS_REGION"), "role_arn": env("AWS_ROLE_ARN"), "external_id": env("AWS_EXTERNAL_ID")},
+				"region": env("AWS_REGION"), "role_arn": env("AWS_ROLE_ARN"), "external_id": env("AWS_EXTERNAL_ID"), "endpoint_url": env("AWS_ENDPOINT")},
 			wrong: alter("secret_access_key"),
-			left:  "the key, pending deletion for 7 days (AWS's shortest wait)"})
+			left:  "the key, pending deletion for 7 days (AWS's shortest wait)"}
+		if env("AWS_EMULATOR") == "1" {
+			aws.name, aws.emulator, aws.wrong, aws.reimport, aws.left = "AWS KMS emulator (not AWS)", true, nil, false, "whatever the emulator keeps"
+		}
+		out = append(out, aws)
 	}
 	if env("GCP_SERVICE_ACCOUNT_FILE") != "" {
 		out = append(out, liveCloud{name: "Google Cloud KMS", provider: ProviderGCP, region: env("GCP_LOCATION"), versioned: true,
@@ -115,6 +141,12 @@ func liveClouds(t *testing.T) []liveCloud {
 			wrong:  alter("client_secret"),
 			left:   "the key, soft-deleted until the vault's retention period ends"})
 	}
+	if env("AZURE_KV_VAULT_URL") != "" {
+		out = append(out, liveCloud{name: "Azure Key Vault Premium (RSA-3072)", provider: ProviderAzure, algorithm: "RSA-3072",
+			fields: map[string]string{"vault_url": env("AZURE_KV_VAULT_URL"), "tenant_id": env("AZURE_TENANT_ID"), "client_id": env("AZURE_CLIENT_ID"), "client_secret": env("AZURE_CLIENT_SECRET")},
+			wrong:  alter("client_secret"),
+			left:   "the key, soft-deleted until the vault's retention period ends"})
+	}
 	if env("OCI_TENANCY") != "" {
 		out = append(out, liveCloud{name: "OCI Vault", provider: ProviderOCI, region: env("OCI_REGION"),
 			fields: map[string]string{"tenancy_ocid": env("OCI_TENANCY"), "user_ocid": env("OCI_USER"), "fingerprint": env("OCI_FINGERPRINT"), "private_key_pem": file("OCI_PRIVATE_KEY_FILE"),
@@ -128,6 +160,14 @@ func liveClouds(t *testing.T) []liveCloud {
 			fields: map[string]string{"access_key_id": env("ALIBABA_ACCESS_KEY"), "access_key_secret": env("ALIBABA_SECRET_KEY"), "region": env("ALIBABA_REGION")},
 			wrong:  alter("access_key_secret"),
 			left:   "the key, pending deletion for 7 days (Alibaba's shortest wait)"})
+	}
+	if env("SALESFORCE_INSTANCE_URL") != "" {
+		out = append(out, liveCloud{name: "Salesforce Shield", provider: ProviderSalesforce, importOnly: true,
+			certificateName: env("SALESFORCE_CERTIFICATE_NAME"), certificatePEM: file("SALESFORCE_CERTIFICATE_FILE"),
+			fields: map[string]string{"instance_url": env("SALESFORCE_INSTANCE_URL"), "client_id": env("SALESFORCE_CLIENT_ID"), "client_secret": env("SALESFORCE_CLIENT_SECRET"),
+				"username": env("SALESFORCE_USERNAME"), "password": env("SALESFORCE_PASSWORD"), "security_token": env("SALESFORCE_SECURITY_TOKEN")},
+			wrong: alter("client_secret"),
+			left:  "one tenant secret, now the org's active one of its type: Shield deletes none"})
 	}
 	for i := range out {
 		for k, v := range out[i].fields {
@@ -190,14 +230,24 @@ func liveBYOK(t *testing.T, c liveCloud) {
 	}
 
 	// Import.
-	kc.Seed("t1", "key-live", "AES-256")
+	algorithm := c.algorithm
+	if algorithm == "" {
+		algorithm = "AES-256"
+	}
+	kc.Seed("t1", "key-live", algorithm)
 	req := CreateBYOKRequest{AccountID: acct.ID, KeyID: "key-live", Alias: "vecta-live-" + time.Now().UTC().Format("20060102-150405"),
-		Description: "Vecta KMS BYOK live verification; safe to delete"}
+		Description: "Vecta KMS BYOK live verification; safe to delete", CertificateName: c.certificateName, CertificatePEM: c.certificatePEM}
 	if caps.Expiry {
 		req.ValidityDays = 2 // the material expires by itself if the clean-up below cannot run
 	}
 	run, key, err := svc.CreateBYOK(ctx, "t1", "live-check", req)
 	t.Cleanup(func() {
+		if c.importOnly {
+			if key.CloudKeyID != "" || key.CurrentMatID != "" {
+				t.Logf("%s: nothing can be cleaned up. Left in the account: %s", c.name, c.left)
+			}
+			return
+		}
 		liveCleanup(t, svc, c, key, func(version string) (int, consoleOut) {
 			return op(acct, "schedule-key-deletion", key.CloudKeyID, version, map[string]string{"pending_days": "7"})
 		})
@@ -213,18 +263,40 @@ func liveBYOK(t *testing.T, c liveCloud) {
 	if caps.Expiry && key.ExpiresAt == nil {
 		t.Fatal("an expiry was asked for and none is recorded")
 	}
+	if c.importOnly {
+		return
+	}
 
 	// The key works in the cloud, asked through the console.
 	if code, out := op(acct, "describe-key", key.CloudKeyID, "", nil); code != 200 {
 		t.Fatalf("describe: HTTP %d %s: %s", code, out.Error.Code, out.Error.Message)
 	}
 	roundTrip := func(when string) {
-		if !has("encrypt") || !has("decrypt") {
-			return
-		}
 		version := ""
 		if c.provider == ProviderAzure { // Azure addresses a key version
 			version = key.CurrentMatID
+		}
+		if key.Usage == "sign" {
+			// A private key: the cloud signs with it and verifies; a
+			// signature for another message must not verify.
+			code, out := op(acct, "sign", key.CloudKeyID, version, map[string]string{"message_b64": b64s("vecta live check")})
+			var signed map[string]interface{}
+			_ = json.Unmarshal(out.Result, &signed)
+			sig := anyToString(signed["signature_b64"])
+			if code != 200 || sig == "" {
+				t.Fatalf("sign %s: HTTP %d %s: %s", when, code, out.Error.Code, out.Error.Message)
+			}
+			if code, out = op(acct, "verify", key.CloudKeyID, version, map[string]string{"message_b64": b64s("vecta live check"), "signature_b64": sig}); code != 200 || !strings.Contains(string(out.Result), "true") {
+				t.Fatalf("verify %s: HTTP %d %s: %s", when, code, out.Error.Code, out.Error.Message)
+			}
+			if _, out = op(acct, "verify", key.CloudKeyID, version, map[string]string{"message_b64": b64s("another message"), "signature_b64": sig}); strings.Contains(string(out.Result), "true") {
+				t.Fatalf("%s: a signature verified for a different message", when)
+			}
+			t.Logf("%s: the cloud signs and verifies with the key %s", c.name, when)
+			return
+		}
+		if !has("encrypt") || !has("decrypt") {
+			return
 		}
 		code, out := op(acct, "encrypt", key.CloudKeyID, version, map[string]string{"plaintext_b64": b64s("vecta live check")})
 		if code != 200 {
@@ -297,6 +369,10 @@ func liveBYOK(t *testing.T, c liveCloud) {
 			}
 			t.Logf("%s: the revoked key no longer works in the cloud", c.name)
 		}
+		if c.emulator {
+			t.Logf("%s: restore not tried: the emulator takes no material back", c.name)
+			return
+		}
 		step(OpRestore, BYOKOperationRequest{})
 		if caps.Verify {
 			step(OpVerify, BYOKOperationRequest{})
@@ -366,4 +442,18 @@ func TestLiveFlowRunsOnTheDoubles(t *testing.T) {
 			}
 		}
 	})
+}
+
+// The same on the Azure stand-in with an RSA private key, as the run does for
+// a Key Vault Premium.
+func TestLiveFlowRunsOnTheAzureDoubleWithAnRSAKey(t *testing.T) {
+	fipstest.SkipIfStrict(t, "CKM_RSA_AES_KEY_WRAP (SHA-1, KWP) done by the KMS rather than an HSM")
+	d := newAzureDouble(t)
+	t.Run("run", func(t *testing.T) {
+		liveBYOK(t, liveCloud{name: "Azure double (RSA-3072)", provider: ProviderAzure, algorithm: "RSA-3072",
+			fields: map[string]string{"vault_url": d.url, "access_token": "azure-test-token"}})
+	})
+	if len(d.versions) != 0 || len(d.deleted) != 1 {
+		t.Fatalf("the run left %d live keys and %d soft-deleted, not one soft-deleted", len(d.versions), len(d.deleted))
+	}
 }

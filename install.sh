@@ -682,7 +682,7 @@ ensure_local_build_base_images() {
   esac
 
 	local -a base_images=(
-	  "vecta-local/golang:1.27.1-alpine|golang:1.27.1-alpine"
+	  "vecta-local/golang:1.27.2-alpine|golang:1.27.2-alpine"
 	  "vecta-local/alpine:3.24|alpine:3.24"
 	  "vecta-local/node:24.21.0-alpine|node:24.21.0-alpine"
 	  "vecta-local/nginx:1.30.5-alpine|nginx:1.30.5-alpine"

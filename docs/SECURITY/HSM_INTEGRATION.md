@@ -377,7 +377,9 @@ normal setup. A node-local HSM would not see objects made on the primary.
 - **Import limits:** a private key can't be imported into an HSM that
   forbids `C_CreateObject` (AES material can, by unwrap). The unwrap needs
   an HSM that supports RSA-OAEP with SHA-256; it is verified against
-  SoftHSM2 2.7.0, and SoftHSM2 2.6 (SHA-1 only) refuses it cleanly. No
+  SoftHSM built from its main branch at the commit pinned in
+  `scripts/install-softhsm.sh` (the mechanism is in no SoftHSM release up
+  to and including 2.7.0, which take SHA-1 only and refuse it cleanly). No
   vendor HSM has been tried.
 - **A key can't be moved between HSMs**, and the KMS does not replicate
   keys across HSM credentials: availability is the vendor's HA group.

@@ -27,6 +27,11 @@ var (
 	provider *hsmconnector.Provider
 )
 
+// Required reports whether a missing SoftHSM, or one too old for a test, is a
+// failure instead of a skip. CI sets VECTA_REQUIRE_SOFTHSM=1: until
+// 13.4.0-beta an HSM test there could pass by not running.
+func Required() bool { return os.Getenv("VECTA_REQUIRE_SOFTHSM") == "1" }
+
 // setup creates one token for the test process: SoftHSM2 reads its
 // configuration once, at C_Initialize.
 func setup() {
@@ -36,7 +41,7 @@ func setup() {
 	}
 	real, err := filepath.EvalSymlinks(lib)
 	if err != nil {
-		initErr = fmt.Errorf("SoftHSM2 not installed (apt install softhsm2): %w", err)
+		initErr = fmt.Errorf("SoftHSM not installed (scripts/install-softhsm.sh, then SOFTHSM_LIB): %w", err)
 		return
 	}
 	dir, err := os.MkdirTemp("", "softhsmtest")
@@ -116,6 +121,9 @@ func StartWith(t testing.TB, caller string, conns Connections, tenants ...string
 	t.Helper()
 	once.Do(setup)
 	if initErr != nil {
+		if Required() {
+			t.Fatalf("VECTA_REQUIRE_SOFTHSM=1: %v", initErr)
+		}
 		t.Skip(initErr.Error())
 	}
 	configs := Configs{}

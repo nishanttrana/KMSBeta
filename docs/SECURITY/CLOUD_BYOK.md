@@ -71,6 +71,12 @@ listed in `pkg/fips/impact.go`.
 | Alibaba Cloud KMS | `CreateKey` origin EXTERNAL | `GetParametersForImport` (RSA-2048) → `ImportKeyMaterial` | not supported by Alibaba: refused | `DeleteKeyMaterial` | reimport | yes | encrypt/decrypt |
 | Salesforce Shield | the BYOK certificate from Setup (public, given with the request) | `TenantSecret` with `SecretValue`, `SecretValueCertificate`, `SecretValueHash` (SHA-256 of the secret, computed in keycore or with `C_DigestKey` in the HSM) | a new tenant secret | not offered (Setup only) | not offered | no | not offered (no API) |
 
+AWS allows 25 on-demand rotations per key (`RotateKeyOnDemand`), so a BYOK
+key in AWS can take new material 25 times; after that AWS refuses, the run
+fails with its error and `byok_operation_failed` fires. A rule to rotate
+every 30 days reaches the limit in about two years. The product does not
+warn before it.
+
 An operation a cloud doesn't support is refused (`operation_not_supported`)
 and not offered in the dashboard. Key specs per cloud are listed by
 `GET /cloud/byok/providers`; AES-256 goes everywhere.
@@ -186,7 +192,9 @@ values), and the sweep's `byok_material_expiring` / `byok_rotation_due`
 - `pkg/crypto`: RFC 5649 vectors, round trips per scheme, strict-mode refusals
   (`TestKWPRFC5649Vectors`, `TestWrapForCloudImportRoundTrips`,
   `TestCloudWrapRefusedInStrictMode`).
-- `pkg/hsmconnector` on SoftHSM2 2.7: every scheme wrapped inside the HSM and
+- `pkg/hsmconnector` on SoftHSM built from its main branch (the commit in
+  `scripts/install-softhsm.sh`; no release has RSA-OAEP with SHA-256 yet):
+  every scheme wrapped inside the HSM and
   unwrapped to the HSM key's KCV, C_DigestKey, refusals
   (`TestBYOKWrapInsideHSM`, `TestBYOKWrapRefusals`).
 - keycore: KMS and HSM paths, versions, caller and policy refusals, strict mode
@@ -200,6 +208,13 @@ values), and the sweep's `byok_material_expiring` / `byok_rotation_due`
   `TestBYOKSalesforceTenantSecret`); routes and audit
   (`TestBYOKRoutesAuditEachOperation`, `TestBYOKRoutesRefusalsAudited`);
   Postgres storage (`TestBYOKStorePostgres`, including the sweep's query).
+  A private key: RSA-3072 as PKCS#8 into the Azure double, signing there,
+  the signature checked under the KMS key (`TestBYOKAzureRSAPrivateKey`).
+  No other cloud has a private-key test.
+- An AWS KMS implementation not written here (LocalStack, in CI on every
+  push): import, use, rotation and revoke. Not the restore, the renewal or
+  the refusal of a wrong credential, which it does not implement
+  ([CLOUD_BYOK_LIVE_VERIFICATION.md](CLOUD_BYOK_LIVE_VERIFICATION.md)).
 - Console: every AWS operation through the unmodified SDK
   (`TestConsoleAWSOperations`), Google Cloud, OCI, Azure and Alibaba
   (`TestConsoleGoogleCloud`, `TestConsoleOCI`, `TestConsoleAzure`,

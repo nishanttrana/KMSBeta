@@ -3,6 +3,64 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-10-13
+
+### CI had failed 274 times out of 274 (13.4.0-beta)
+- **How it stayed unseen.** The work is done from a terminal with no
+  GitHub login, so "I can't see CI" was written at the end of report after
+  report, and accepted. The repository is public: its Actions results are
+  one unauthenticated API call away. **Rule: "I can't see it" is a claim to
+  test, like any other.** `scripts/ci-status.sh` now prints the verdict;
+  it is run after every push (CLAUDE.md).
+- **A gate that always fails is the same as no gate, and worse: it hides
+  the ones behind it.** The runtime-config gate failed from the day four
+  services moved to `platform.Boot`. It was step 5 of 9 in its job, so
+  conformance, `go vet`, the tests and the vulnerability scan never ran in
+  CI. When it was fixed, the scan failed at once on a toolchain with 11
+  advisories. **Rule: when a job is red, read which steps did not run.**
+- **The gate matched words, not behaviour.** It looked for
+  `ValidateServiceConfig(` in `main.go`. A service that validates inside
+  the shared boot code failed it; a `func validateConfig` nobody called
+  would have passed it. It now looks for a call (not a definition, not a
+  comment) in the service's non-test files, and is shown to fail when the
+  call is removed.
+- **"Passes on my machine" was true and beside the point.** The HSM tests
+  need SoftHSM, which this Mac does not have, so they skipped locally and
+  every local run was green. The earlier Linux runs used a SoftHSM built
+  from the head of its main branch and recorded it as "2.7.0", which is
+  what that build calls itself. The 2.7.0 *release* cannot do RSA-OAEP with
+  SHA-256 either: the support (SoftHSMv2 #833) came after it. **Rule: pin a
+  dependency built from source by commit, and write the commit down, not
+  the version string it prints.**
+- **A skip is a pass.** `go test` reports a skipped test as ok. In CI a
+  test that cannot run must fail: `VECTA_REQUIRE_SOFTHSM=1`, like
+  `VECTA_REQUIRE_JDK` and `VECTA_REQUIRE_CERTIFIED_MODULE` before it. One
+  test (`TestWatchSubjectsNATS`) had no job that gave it what it needs and
+  ran nowhere.
+- **A relocated build is not the same build.** `softhsm2-util` loads its
+  library from the prefix it was compiled for. A copy restored to another
+  path installs "successfully" and fails every test, so the install script
+  records the prefix beside the commit and rebuilds when either differs.
+
+### What an emulator did and did not tell us about BYOK (13.4.0-beta)
+- **The first check by code we did not write.** Our AWS stand-in and the
+  product share an author; if both misread the protocol, the tests agree.
+  LocalStack's KMS is someone else's reading of it: it unwraps the import
+  with its own RSA key and encrypts with the result. Import, use, rotation
+  and revoke pass there.
+- **It also showed where our stand-in was too kind.** After a revoke ours
+  accepts any material back. LocalStack fails the restore, for a reason of
+  its own (it treats every import as new material waiting for a rotation,
+  whatever `ImportType` says), so that step is evidence of nothing either
+  way and is left out in emulator mode, in so many words.
+- **No test imported a private key into any cloud.** The engine has
+  offered RSA and EC specs since 10.0.0-beta; every test used AES-256. The
+  Azure path worked the first time it was tried, which is luck, not proof
+  that it was tested.
+- **A vendor limit found by reading, not running.** AWS allows 25
+  on-demand rotations per key. A "rotate every 30 days" rule reaches it in
+  about two years. Now in the BYOK document; the product does not yet warn.
+
 ## 2026-10-12
 
 ### A run against real clouds, and a claim that was not checked (13.3.0-beta)

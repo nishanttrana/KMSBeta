@@ -348,7 +348,9 @@ fi
 internal_hosts=$(sed -n 's/^[[:space:]]*"[a-z-]*":[[:space:]]*"\([a-z-]*\)",.*/\1/p' pkg/svctls/svctls.go | sort -u | paste -sd'|' -)
 tls_hits=$( {
   grep -rnE '\.ListenAndServe\(\)|insecure\.NewCredentials\(' services pkg --include='*.go' 2>/dev/null | grep -v '_test\.go:'
-  grep -rnE "http://(${internal_hosts})[:/\"]" services pkg --include='*.go' 2>/dev/null | grep -v '_test\.go:'
+  # Also under the kms-<name> identity: the reconciler's defaults were
+  # http://kms-keycore and http://kms-policy until 13.4.0-beta and passed.
+  grep -rnE "http://(kms-)?(${internal_hosts})[:/\"]" services pkg --include='*.go' 2>/dev/null | grep -v '_test\.go:'
   grep -nE "http://(${internal_hosts})[:/}\"[:space:]]" docker-compose*.yml infra/envoy/envoy.yaml web/dashboard/nginx.conf infra/scripts/*.sh deploy-local.sh install.sh 2>/dev/null
 } || true)
 # No plain-HTTP listener at the edge either, not even a redirect to HTTPS

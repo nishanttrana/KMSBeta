@@ -76,10 +76,17 @@ func (staticConfigs) Load(_ context.Context, tenant string) (TenantConfig, error
 	return Resolve(TenantConfig{TenantID: tenant, Provider: "softhsm2", Library: softhsmLib, TokenLabel: token, PINEnvVar: "TEST_HSM_PIN"})
 }
 
+// softhsmRequired: CI sets VECTA_REQUIRE_SOFTHSM=1, so a missing library or
+// one too old for a test fails instead of skipping (as softhsmtest.Required).
+func softhsmRequired() bool { return os.Getenv("VECTA_REQUIRE_SOFTHSM") == "1" }
+
 func newTestHandler(t *testing.T) (*Handler, *routetest.Recorder) {
 	t.Helper()
 	if softhsmLib == "" {
-		t.Skip("SoftHSM2 not installed (apt install softhsm2); CI runs these")
+		if softhsmRequired() {
+			t.Fatal("VECTA_REQUIRE_SOFTHSM=1 and no SoftHSM library at SOFTHSM_LIB (scripts/install-softhsm.sh)")
+		}
+		t.Skip("SoftHSM not installed (scripts/install-softhsm.sh, then SOFTHSM_LIB); CI runs these")
 	}
 	rec := &routetest.Recorder{}
 	return NewHandler(staticConfigs{}, sharedProvider, rec, nil), rec
@@ -290,7 +297,10 @@ func TestTenantKey(t *testing.T) {
 
 func TestLibraryAndPINAreConfined(t *testing.T) {
 	if softhsmLib == "" {
-		t.Skip("SoftHSM2 not installed")
+		if softhsmRequired() {
+			t.Fatal("VECTA_REQUIRE_SOFTHSM=1 and no SoftHSM library at SOFTHSM_LIB (scripts/install-softhsm.sh)")
+		}
+		t.Skip("SoftHSM not installed (scripts/install-softhsm.sh, then SOFTHSM_LIB)")
 	}
 	if _, err := checkLibrary("/usr/lib/x86_64-linux-gnu/libc.so.6"); err == nil {
 		t.Fatal("a library outside the allowed roots was accepted")

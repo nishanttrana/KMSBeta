@@ -485,6 +485,16 @@ changes code without touching CHANGELOG.md or learning.md.
     (`web/dashboard/tests/fixtures/layout.ts`) fails when one control is
     drawn over another.
 
+- **CI's verdict is read after every push** (2026-10-13: CI had failed on
+  every one of its 274 runs and nobody had looked). Run
+  `scripts/ci-status.sh --wait`; it needs no login. A red run is fixed
+  before anything else, and when a job is red, check which of its later
+  steps never ran. Before pushing a change to HSM, PKCS#11 or build files,
+  run CI's Go job in a Linux container with `scripts/install-softhsm.sh`:
+  the HSM tests skip on a Mac.
+- **A test never passes in CI by skipping.** A dependency a test needs is
+  required there (`VECTA_REQUIRE_SOFTHSM=1`, `VECTA_REQUIRE_JDK=1`), and a
+  test that waits for an environment variable has a CI step that sets it.
 - `make conformance` passes. It enforces rules 1–3 and 5, that routes use
   the `pkg/route` kernel, that every shell script parses under macOS
   bash 3.2, and that every route a doc or OpenAPI spec names is registered

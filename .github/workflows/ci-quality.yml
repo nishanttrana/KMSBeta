@@ -34,6 +34,8 @@ jobs:
       GOFIPS140: v1.0.0
       GODEBUG: fips140=${{ matrix.mode }}
       VECTA_REQUIRE_CERTIFIED_MODULE: "1"
+      # An HSM test fails without the library; it never passes by skipping.
+      VECTA_REQUIRE_SOFTHSM: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -43,11 +45,17 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Install SoftHSM2 (a real PKCS#11 library for the HSM connector tests)
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends softhsm2
+      # Built from a pinned commit: the Ubuntu package (2.6.1) and the 2.7.0
+      # release cannot do the SHA-256 wrap cloud BYOK uses, and three HSM
+      # tests failed on every push for it (scripts/install-softhsm.sh).
+      - name: Install SoftHSM (a real PKCS#11 library for the HSM tests)
+        run: |
+          scripts/install-softhsm.sh "$HOME/softhsm"
+          echo "SOFTHSM_LIB=$HOME/softhsm/lib/softhsm/libsofthsm2.so" >> "$GITHUB_ENV"
+          echo "$HOME/softhsm/bin" >> "$GITHUB_PATH"
 
       - name: Setup OpenJDK (the JCA provider's real-consumer test)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -110,6 +118,7 @@ jobs:
           --health-interval 2s --health-timeout 5s --health-retries 20
     env:
       GOFIPS140: v1.0.0
+      VECTA_REQUIRE_SOFTHSM: "1"
       VECTA_TEST_POSTGRES_DSN: postgres://postgres:ci-disposable-6f1d2c9a7b4e@localhost:5432/vecta_it?sslmode=disable
     steps:
       - name: Checkout
@@ -120,11 +129,44 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Install SoftHSM2 (real PKCS#11 library for the HSM tests)
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends softhsm2
+      # Built from a pinned commit: the Ubuntu package (2.6.1) and the 2.7.0
+      # release cannot do the SHA-256 wrap cloud BYOK uses, and three HSM
+      # tests failed on every push for it (scripts/install-softhsm.sh).
+      - name: Install SoftHSM (a real PKCS#11 library for the HSM tests)
+        run: |
+          scripts/install-softhsm.sh "$HOME/softhsm"
+          echo "SOFTHSM_LIB=$HOME/softhsm/lib/softhsm/libsofthsm2.so" >> "$GITHUB_ENV"
+          echo "$HOME/softhsm/bin" >> "$GITHUB_PATH"
 
       - name: Integration tests (run serially; they share the database)
         run: go test -count=1 -p 1 -run 'Postgres|Preview|Simulated' ./services/auth ./services/dataprotect ./services/discovery ./services/compliance ./services/cloud ./services/ekm ./services/governance ./services/signing ./services/backup ./services/secrets ./services/keycore ./services/audit ./services/workload ./services/posture ./services/reporting ./pkg/mek ./pkg/clusterstate
+
+      # Needs a NATS server, so it skipped in every other job: until
+      # 13.4.0-beta nothing in CI ran it.
+      - name: The audit-event watcher on a real NATS server (secrets)
+        run: |
+          docker run -d --name ci-nats -p 127.0.0.1:4222:4222 nats:2.14.7-alpine -js
+          for i in $(seq 1 30); do (echo > /dev/tcp/127.0.0.1/4222) 2>/dev/null && break; sleep 1; done
+          VECTA_TEST_NATS_URL=nats://127.0.0.1:4222 go test -count=1 -run '^TestWatchSubjectsNATS$' -v ./services/secrets | tee "$RUNNER_TEMP/nats-test.log"
+          grep -q -- '--- PASS: TestWatchSubjectsNATS' "$RUNNER_TEMP/nats-test.log"
+
+      # An AWS KMS implementation this code was not written against: it
+      # unwraps what is imported and encrypts with it. It checks no request
+      # signature and takes no material back, so the altered credential, the
+      # renewal and the restore are left to a run on AWS itself
+      # (docs/SECURITY/CLOUD_BYOK_LIVE_VERIFICATION.md).
+      - name: Cloud BYOK import, use, rotation and revoke on an AWS KMS emulator (LocalStack)
+        env:
+          VECTA_TEST_BYOK_AWS_EMULATOR: "1"
+          VECTA_TEST_BYOK_AWS_ENDPOINT: http://127.0.0.1:4566
+          VECTA_TEST_BYOK_AWS_ACCESS_KEY: test
+          VECTA_TEST_BYOK_AWS_SECRET_KEY: test-only-0000000000000000000000000000000
+          VECTA_TEST_BYOK_AWS_REGION: us-east-1
+        run: |
+          docker run -d --name ci-localstack -e SERVICES=kms -p 127.0.0.1:4566:4566 localstack/localstack:4.14.0
+          for i in $(seq 1 60); do curl -s http://127.0.0.1:4566/_localstack/health | grep -q '"kms"' && break; sleep 2; done
+          go test ./services/cloud/ -run '^TestLiveCloudBYOK$' -count=1 -v | tee "$RUNNER_TEMP/byok-emulator.log"
+          grep -q -- '--- PASS: TestLiveCloudBYOK' "$RUNNER_TEMP/byok-emulator.log"
 
       - name: Edge key exchange through a real Envoy (hot restart, measured by handshake)
         env:

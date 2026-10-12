@@ -21,12 +21,17 @@ import (
 	pkgconfig "vecta-kms/pkg/config"
 	pkgevents "vecta-kms/pkg/events"
 	pkgjwtauth "vecta-kms/pkg/jwtauth"
+	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
 var logger = log.New(os.Stdout, "[watchdog] ", log.LstdFlags|log.Lmicroseconds)
 
 func main() {
 	cfg := pkgconfig.Load()
+	port := envOr("HTTP_PORT", "8480")
+	if err := pkgruntimecfg.ValidateHTTPPort(port); err != nil {
+		logger.Fatalf("refusing to start: HTTP_PORT: %v", err)
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -64,7 +69,6 @@ func main() {
 	router := newRouter(probe.Snapshot, pb.Incidents, audit, logger)
 	handler := pkgjwtauth.MustWrapRouter("WATCHDOG", cfg.JWTIssuer, cfg.JWTAudience, router, logger)
 
-	port := envOr("HTTP_PORT", "8480")
 	srv := pkgconfig.NewHTTPServer(port, handler)
 	go func() {
 		logger.Printf("https (mTLS) listening on :%s", port)
