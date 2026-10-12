@@ -57,6 +57,9 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
 - [STORAGE_LIVE_VERIFICATION.md](STORAGE_LIVE_VERIFICATION.md): which
   object storage scans have been run against a real service, and
   `scripts/verify-storage-live.sh` for running the rest with your accounts.
+- [CLOUD_BYOK_LIVE_VERIFICATION.md](CLOUD_BYOK_LIVE_VERIFICATION.md): which
+  clouds BYOK has been run against for real (none yet), what a run does,
+  costs and leaves behind, and `scripts/verify-byok-live.sh` for running it.
 - [CONNECTIONS.md](CONNECTIONS.md): every outbound URL and credential
   (Slack, Teams, webhooks, Jira, ServiceNow, SIEMs) lives only in sealed
   compliance connections; who can open one, TLS for every call, and the

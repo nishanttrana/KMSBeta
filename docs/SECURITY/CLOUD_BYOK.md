@@ -201,8 +201,9 @@ values), and the sweep's `byok_material_expiring` / `byok_rotation_due`
   (`TestBYOKRoutesAuditEachOperation`, `TestBYOKRoutesRefusalsAudited`);
   Postgres storage (`TestBYOKStorePostgres`, including the sweep's query).
 - Console: every AWS operation through the unmodified SDK
-  (`TestConsoleAWSOperations`), Google Cloud and OCI
-  (`TestConsoleGoogleCloud`, `TestConsoleOCI`), refusals and what each cloud
+  (`TestConsoleAWSOperations`), Google Cloud, OCI, Azure and Alibaba
+  (`TestConsoleGoogleCloud`, `TestConsoleOCI`, `TestConsoleAzure`,
+  `TestConsoleAlibaba`), refusals and what each cloud
   is offered (`TestConsoleRefusals`, `TestConsoleOperationsListSupport`,
   `TestConsoleRoutesRefusalsAudited`).
 - Automation: rules, refusals, a member's sweep doing nothing, one
@@ -215,11 +216,12 @@ values), and the sweep's `byok_material_expiring` / `byok_rotation_due`
 ## Open
 
 - **Not yet run against real cloud accounts.** The protocol doubles prove the
-  wire format and the cryptography; a manual workflow against real accounts
-  (as for storage credentials in 9.3.0-beta) is next.
+  wire format and the cryptography. The run that checks a real account
+  exists (13.3.0-beta: `scripts/verify-byok-live.sh` and the manual
+  workflow "Cloud BYOK — live verification") and has not been started with
+  credentials yet. What it does, what it costs and its status per cloud:
+  [CLOUD_BYOK_LIVE_VERIFICATION.md](CLOUD_BYOK_LIVE_VERIFICATION.md).
 - The Azure scheme is `CKM_RSA_AES_KEY_WRAP` with SHA-1 OAEP as Key Vault's
   BYOK specification describes; Managed HSM's SHA-256 variant is not offered.
-- The console's Azure and Alibaba operations have no test of their own
-  against a double; AWS, Google Cloud and OCI do.
 - Asymmetric BYOK of KMS private keys needs PKCS#8 material and a KWP scheme,
   so it is refused in strict mode unless the key is in an HSM.

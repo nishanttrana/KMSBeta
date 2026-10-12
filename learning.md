@@ -5,6 +5,38 @@ Newest entries on top.
 
 ## 2026-10-12
 
+### A run against real clouds, and a claim that was not checked (13.3.0-beta)
+- **"There is no test for X" is a claim like any other.** The 13.2.0-beta
+  BYOK document said the console's Azure and Alibaba operations had no
+  test against a stand-in. Both tests exist, in the file that holds those
+  two stand-ins rather than in `console_test.go`, where I had looked.
+  **Rule: before writing that a test is missing, search every test file
+  for the function, not the file where it would be expected**
+  (`grep -rn 'func Test' services/<svc>`).
+- **The live sequence is tested where it is free.** A live check runs
+  rarely and against accounts that cost money, so a mistake in its own
+  order of steps would first show as a key left in somebody's account.
+  `TestLiveFlowRunsOnTheDoubles` runs the same function on the AWS and
+  Alibaba stand-ins in every test run, and checks the key ends pending
+  deletion.
+- **That found a stand-in unlike its cloud.** The Alibaba stand-in returned
+  a ciphertext of the form `<key id>.<base64>`. Alibaba returns one base64
+  blob, and the console checks that a ciphertext is base64 before sending
+  it, so decrypting through the console failed on the stand-in and no test
+  had tried it. The stand-in now returns one base64 blob. **Rule: a
+  stand-in's outputs have the shape of the real service's, or the code that
+  consumes them is not tested.**
+- **A cleanup registered in the function under test runs after the
+  caller's.** Go runs `t.Cleanup` functions last in, first out. A check
+  that the key was scheduled for deletion, registered by the caller, ran
+  before the deletion itself. The run now has a subtest of its own, and the
+  caller looks once it has finished.
+- **The wrong-credential step is the one part only a real cloud
+  exercises.** The stand-ins do not verify request signatures. The altered
+  credential keeps its length and alphabet so the request is well formed
+  and only the cloud can tell it is wrong.
+
+
 ### BYOK console, key settings and automation (13.2.0-beta)
 - **A create that verifies must fail when the verification fails.**
   `CreateBYOK` ran its steps, recorded the failed verify in the run, and

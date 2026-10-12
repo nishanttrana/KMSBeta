@@ -1,0 +1,87 @@
+name: Cloud BYOK — live verification
+
+# Runs cloud BYOK against real cloud accounts
+# (docs/SECURITY/CLOUD_BYOK_LIVE_VERIFICATION.md). It never runs by itself on
+# a push: start it from the Actions tab once the repository secrets below
+# exist. For each cloud whose secrets are set it imports fresh key material
+# into a new key, uses the key in the cloud, rotates, revokes (the key must
+# stop working) and restores it, checks that an altered credential is
+# refused, and schedules the key for deletion. No secret is printed.
+#
+# It creates a real key in each cloud. Use test accounts.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'create keys' to confirm this run creates a real key in each configured cloud"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  byok-live:
+    name: Import, use, rotate, revoke and restore a key in real clouds
+    if: ${{ inputs.confirm == 'create keys' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GOFIPS140: v1.0.0
+      # AWS KMS
+      VECTA_TEST_BYOK_AWS_ACCESS_KEY: ${{ secrets.BYOK_LIVE_AWS_ACCESS_KEY }}
+      VECTA_TEST_BYOK_AWS_SECRET_KEY: ${{ secrets.BYOK_LIVE_AWS_SECRET_KEY }}
+      VECTA_TEST_BYOK_AWS_REGION: ${{ secrets.BYOK_LIVE_AWS_REGION }}
+      VECTA_TEST_BYOK_AWS_SESSION_TOKEN: ${{ secrets.BYOK_LIVE_AWS_SESSION_TOKEN }}
+      VECTA_TEST_BYOK_AWS_ROLE_ARN: ${{ secrets.BYOK_LIVE_AWS_ROLE_ARN }}
+      VECTA_TEST_BYOK_AWS_EXTERNAL_ID: ${{ secrets.BYOK_LIVE_AWS_EXTERNAL_ID }}
+      # Google Cloud KMS
+      BYOK_LIVE_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.BYOK_LIVE_GCP_SERVICE_ACCOUNT_JSON }}
+      VECTA_TEST_BYOK_GCP_PROJECT: ${{ secrets.BYOK_LIVE_GCP_PROJECT }}
+      VECTA_TEST_BYOK_GCP_LOCATION: ${{ secrets.BYOK_LIVE_GCP_LOCATION }}
+      VECTA_TEST_BYOK_GCP_KEY_RING: ${{ secrets.BYOK_LIVE_GCP_KEY_RING }}
+      # Azure Managed HSM
+      VECTA_TEST_BYOK_AZURE_VAULT_URL: ${{ secrets.BYOK_LIVE_AZURE_VAULT_URL }}
+      VECTA_TEST_BYOK_AZURE_TENANT_ID: ${{ secrets.BYOK_LIVE_AZURE_TENANT_ID }}
+      VECTA_TEST_BYOK_AZURE_CLIENT_ID: ${{ secrets.BYOK_LIVE_AZURE_CLIENT_ID }}
+      VECTA_TEST_BYOK_AZURE_CLIENT_SECRET: ${{ secrets.BYOK_LIVE_AZURE_CLIENT_SECRET }}
+      # OCI Vault
+      VECTA_TEST_BYOK_OCI_TENANCY: ${{ secrets.BYOK_LIVE_OCI_TENANCY }}
+      VECTA_TEST_BYOK_OCI_USER: ${{ secrets.BYOK_LIVE_OCI_USER }}
+      VECTA_TEST_BYOK_OCI_FINGERPRINT: ${{ secrets.BYOK_LIVE_OCI_FINGERPRINT }}
+      BYOK_LIVE_OCI_PRIVATE_KEY_PEM: ${{ secrets.BYOK_LIVE_OCI_PRIVATE_KEY_PEM }}
+      VECTA_TEST_BYOK_OCI_REGION: ${{ secrets.BYOK_LIVE_OCI_REGION }}
+      VECTA_TEST_BYOK_OCI_COMPARTMENT: ${{ secrets.BYOK_LIVE_OCI_COMPARTMENT }}
+      VECTA_TEST_BYOK_OCI_MANAGEMENT_ENDPOINT: ${{ secrets.BYOK_LIVE_OCI_MANAGEMENT_ENDPOINT }}
+      VECTA_TEST_BYOK_OCI_CRYPTO_ENDPOINT: ${{ secrets.BYOK_LIVE_OCI_CRYPTO_ENDPOINT }}
+      # Alibaba Cloud KMS
+      VECTA_TEST_BYOK_ALIBABA_ACCESS_KEY: ${{ secrets.BYOK_LIVE_ALIBABA_ACCESS_KEY }}
+      VECTA_TEST_BYOK_ALIBABA_SECRET_KEY: ${{ secrets.BYOK_LIVE_ALIBABA_SECRET_KEY }}
+      VECTA_TEST_BYOK_ALIBABA_REGION: ${{ secrets.BYOK_LIVE_ALIBABA_REGION }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Write the key files (only for the secrets that are set)
+        run: |
+          umask 077
+          if [ -n "$BYOK_LIVE_GCP_SERVICE_ACCOUNT_JSON" ]; then
+            printf '%s' "$BYOK_LIVE_GCP_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/byok-gcp-sa.json"
+            echo "VECTA_TEST_BYOK_GCP_SERVICE_ACCOUNT_FILE=$RUNNER_TEMP/byok-gcp-sa.json" >> "$GITHUB_ENV"
+          fi
+          if [ -n "$BYOK_LIVE_OCI_PRIVATE_KEY_PEM" ]; then
+            printf '%s\n' "$BYOK_LIVE_OCI_PRIVATE_KEY_PEM" > "$RUNNER_TEMP/byok-oci-key.pem"
+            echo "VECTA_TEST_BYOK_OCI_PRIVATE_KEY_FILE=$RUNNER_TEMP/byok-oci-key.pem" >> "$GITHUB_ENV"
+          fi
+
+      - name: Verify
+        run: scripts/verify-byok-live.sh --from-env
+
+      - name: Remove the key files
+        if: always()
+        run: rm -f "$RUNNER_TEMP/byok-gcp-sa.json" "$RUNNER_TEMP/byok-oci-key.pem"

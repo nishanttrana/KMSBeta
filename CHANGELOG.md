@@ -4,6 +4,33 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.3.0-beta] — 2026-10-12
+
+### Added
+- **Cloud BYOK can be checked against your real cloud accounts in one
+  click.** A manual workflow, "Cloud BYOK — live verification", and
+  `scripts/verify-byok-live.sh` for a checkout. For each cloud whose
+  credentials are given (AWS KMS, Google Cloud KMS, Azure Managed HSM, OCI
+  Vault, Alibaba Cloud KMS) the run imports fresh key material into a new
+  key, uses the key in the cloud, rotates, revokes (the key must stop
+  working) and restores it, requires an altered credential to be refused,
+  and schedules the key for deletion. It never starts by itself and prints
+  no secret. **It creates a real key in each cloud**, which the cloud keeps
+  for its shortest waiting period; the workflow asks for a typed
+  confirmation. What it does, costs and leaves behind, and the permissions
+  each test credential needs:
+  [docs/SECURITY/CLOUD_BYOK_LIVE_VERIFICATION.md](docs/SECURITY/CLOUD_BYOK_LIVE_VERIFICATION.md).
+
+### Fixed
+- The BYOK document said the cloud console's Azure and Alibaba operations
+  had no test against a stand-in. They have (`TestConsoleAzure`,
+  `TestConsoleAlibaba`); the line was wrong and is removed.
+
+### Still open
+- **No cloud has been run for real yet.** The run above exists and has not
+  been started with credentials. Azure Key Vault Premium (RSA and EC keys)
+  and Salesforce Shield are not covered by it.
+
 ## [13.2.0-beta] — 2026-10-12
 
 ### Added

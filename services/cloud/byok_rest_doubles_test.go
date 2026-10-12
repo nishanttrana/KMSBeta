@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
@@ -322,18 +323,33 @@ func (d *alibabaDouble) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSONT(w, 200, map[string]string{})
 	case "DescribeKey":
 		writeJSONT(w, 200, map[string]interface{}{"KeyMetadata": map[string]string{"KeyId": id, "KeyState": d.state[id]}})
+	case "ListKeys":
+		keys := []map[string]string{}
+		for k := range d.state {
+			keys = append(keys, map[string]string{"KeyId": k})
+		}
+		writeJSONT(w, 200, map[string]interface{}{"Keys": map[string]interface{}{"Key": keys}})
+	case "ScheduleKeyDeletion":
+		d.state[id] = "PendingDeletion"
+		writeJSONT(w, 200, map[string]string{})
 	case "Encrypt":
 		m := d.material[id]
 		if m == nil || d.state[id] != "Enabled" {
 			writeJSONT(w, 400, map[string]string{"Code": "Forbidden.KeyNotEnabled"})
 			return
 		}
-		writeJSONT(w, 200, map[string]string{"CiphertextBlob": id + "." + base64.StdEncoding.EncodeToString(gcmSeal(m, []byte(q.Get("Plaintext"))))})
+		// As Alibaba returns it: one base64 blob that names the key inside.
+		writeJSONT(w, 200, map[string]string{"CiphertextBlob": base64.StdEncoding.EncodeToString(append([]byte(id+"."), gcmSeal(m, []byte(q.Get("Plaintext")))...))})
 	case "Decrypt":
-		parts := strings.SplitN(q.Get("CiphertextBlob"), ".", 2)
-		pt, err := gcmOpen(d.material[parts[0]], must(base64.StdEncoding.DecodeString(parts[1])))
-		if d.material[parts[0]] == nil || err != nil {
+		blob, _ := base64.StdEncoding.DecodeString(q.Get("CiphertextBlob"))
+		parts := bytes.SplitN(blob, []byte("."), 2)
+		if len(parts) != 2 || d.material[string(parts[0])] == nil {
 			writeJSONT(w, 400, map[string]string{"Code": "Forbidden.KeyNotEnabled"})
+			return
+		}
+		pt, err := gcmOpen(d.material[string(parts[0])], parts[1])
+		if err != nil {
+			writeJSONT(w, 400, map[string]string{"Code": "InvalidParameter"})
 			return
 		}
 		writeJSONT(w, 200, map[string]string{"Plaintext": string(pt)})

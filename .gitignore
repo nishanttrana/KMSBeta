@@ -107,3 +107,6 @@ Claude outputs/
 
 # Settings for scripts/verify-storage-live.sh (real storage credentials)
 .storage-live.env
+
+# Settings for scripts/verify-byok-live.sh (real cloud credentials)
+.byok-live.env
