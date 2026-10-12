@@ -33,6 +33,7 @@ type Store interface {
 	GetKey(ctx context.Context, tenantID string, keyID string) (Key, error)
 	UpdateKeyMetadata(ctx context.Context, tenantID string, keyID string, req UpdateKeyRequest) error
 	UpdateIVMode(ctx context.Context, tenantID string, keyID string, ivMode string) error
+	SetKeyDescription(ctx context.Context, tenantID string, keyID string, description string) error
 	SetKeyStatus(ctx context.Context, tenantID string, keyID string, status string) error
 	GetSystemKey(ctx context.Context, clientID, purpose string) (string, bool, error)
 	InsertSystemKey(ctx context.Context, clientID, purpose, tenantID, keyID string) error
@@ -199,6 +200,7 @@ type Key struct {
 	ID               string     `json:"id"`
 	TenantID         string     `json:"tenant_id"`
 	Name             string     `json:"name"`
+	Description      string     `json:"description"`
 	Algorithm        string     `json:"algorithm"`
 	KeyType          string     `json:"key_type"`
 	Purpose          string     `json:"purpose"`
@@ -335,10 +337,10 @@ func (s *SQLStore) CreateKeyWithVersion(ctx context.Context, key Key, ver KeyVer
 INSERT INTO keys (
     id, tenant_id, name, algorithm, key_type, purpose, status, current_version, kcv, kcv_algorithm,
     iv_mode, owner, cloud, region, compliance, labels, tags, export_allowed, activation_date, expiry_date, ops_total, ops_encrypt, ops_decrypt, ops_sign,
-    ops_limit, ops_limit_window, ops_last_reset, approval_required, approval_policy_id, created_by, created_at, updated_at
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,0,0,0,0,$21,$22,CURRENT_TIMESTAMP,$23,$24,$25,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+    ops_limit, ops_limit_window, ops_last_reset, approval_required, approval_policy_id, created_by, created_at, updated_at, description
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,0,0,0,0,$21,$22,CURRENT_TIMESTAMP,$23,$24,$25,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,$26)
 `, key.ID, key.TenantID, key.Name, key.Algorithm, key.KeyType, key.Purpose, key.Status, key.CurrentVersion, key.KCV, key.KCVAlgorithm,
-			key.IVMode, key.Owner, key.Cloud, key.Region, compliance, labels, tags, key.ExportAllowed, nullableTime(key.ActivationDate), nullableTime(key.ExpiryDate), key.OpsLimit, key.OpsLimitWindow, key.ApprovalRequired, nullable(key.ApprovalPolicyID), key.CreatedBy)
+			key.IVMode, key.Owner, key.Cloud, key.Region, compliance, labels, tags, key.ExportAllowed, nullableTime(key.ActivationDate), nullableTime(key.ExpiryDate), key.OpsLimit, key.OpsLimitWindow, key.ApprovalRequired, nullable(key.ApprovalPolicyID), key.CreatedBy, key.Description)
 		if err != nil {
 			return err
 		}
@@ -413,7 +415,7 @@ func (s *SQLStore) listKeys(ctx context.Context, tenantID string, scope *KeyScop
 SELECT id, tenant_id, name, algorithm, key_type, purpose, status, destroy_date, current_version, kcv, kcv_algorithm, iv_mode,
        owner, cloud, region, compliance, labels, tags, export_allowed, activation_date, expiry_date, ops_total, ops_encrypt, ops_decrypt, ops_sign,
        ops_limit, COALESCE(ops_limit_window, ''), ops_last_reset, approval_required,
-       COALESCE(approval_policy_id,''), created_by, created_at, updated_at
+       COALESCE(approval_policy_id,''), created_by, created_at, updated_at, description
 FROM keys WHERE `+where+`
 ORDER BY created_at DESC, id DESC`+page, args...)
 	if err != nil {
@@ -436,7 +438,7 @@ func (s *SQLStore) GetKey(ctx context.Context, tenantID string, keyID string) (K
 SELECT id, tenant_id, name, algorithm, key_type, purpose, status, destroy_date, current_version, kcv, kcv_algorithm, iv_mode,
        owner, cloud, region, compliance, labels, tags, export_allowed, activation_date, expiry_date, ops_total, ops_encrypt, ops_decrypt, ops_sign,
        ops_limit, COALESCE(ops_limit_window, ''), ops_last_reset, approval_required,
-       COALESCE(approval_policy_id,''), created_by, created_at, updated_at
+       COALESCE(approval_policy_id,''), created_by, created_at, updated_at, description
 FROM keys WHERE tenant_id=$1 AND id=$2
 `, tenantID, keyID)
 	k, err := scanKey(row)
@@ -455,6 +457,19 @@ UPDATE keys
 SET name=$1, purpose=$2, owner=$3, cloud=$4, region=$5, labels=$6, compliance=$7, tags=$8, iv_mode=$9, updated_at=CURRENT_TIMESTAMP
 WHERE tenant_id=$10 AND id=$11
 `, req.Name, req.Purpose, req.Owner, req.Cloud, req.Region, labels, compliance, tags, req.IVMode, tenantID, keyID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errStoreNotFound
+	}
+	return nil
+}
+
+func (s *SQLStore) SetKeyDescription(ctx context.Context, tenantID string, keyID string, description string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE keys SET description=$1, updated_at=CURRENT_TIMESTAMP WHERE tenant_id=$2 AND id=$3
+`, description, tenantID, keyID)
 	if err != nil {
 		return err
 	}
@@ -1009,7 +1024,7 @@ func (s *SQLStore) RunCryptoTxAt(ctx context.Context, tenantID string, keyID str
 SELECT id, tenant_id, name, algorithm, key_type, purpose, status, destroy_date, current_version, kcv, kcv_algorithm, iv_mode,
        owner, cloud, region, compliance, labels, tags, export_allowed, activation_date, expiry_date, ops_total, ops_encrypt, ops_decrypt, ops_sign,
        ops_limit, COALESCE(ops_limit_window, ''), ops_last_reset, approval_required,
-       COALESCE(approval_policy_id,''), created_by, created_at, updated_at
+       COALESCE(approval_policy_id,''), created_by, created_at, updated_at, description
 FROM keys WHERE tenant_id=$1 AND id=$2
 `, tenantID, keyID)
 	key, err := scanKey(row)
@@ -1309,7 +1324,7 @@ func (s *SQLStore) collectKeyDeletionRecordTx(ctx context.Context, tx *sql.Tx, t
 SELECT id, tenant_id, name, algorithm, key_type, purpose, status, destroy_date, current_version, kcv, kcv_algorithm, iv_mode,
        owner, cloud, region, compliance, labels, tags, export_allowed, activation_date, expiry_date, ops_total, ops_encrypt, ops_decrypt, ops_sign,
        ops_limit, COALESCE(ops_limit_window, ''), ops_last_reset, approval_required,
-       COALESCE(approval_policy_id,''), created_by, created_at, updated_at
+       COALESCE(approval_policy_id,''), created_by, created_at, updated_at, description
 FROM keys WHERE tenant_id=$1 AND id=$2
 `, tenantID, keyID)
 	key, err := scanKey(row)
@@ -1408,7 +1423,7 @@ func scanKey(scanner interface {
 	err := scanner.Scan(
 		&k.ID, &k.TenantID, &k.Name, &k.Algorithm, &k.KeyType, &k.Purpose, &k.Status, &rawDestroy, &k.CurrentVersion, &k.KCV, &k.KCVAlgorithm,
 		&k.IVMode, &k.Owner, &k.Cloud, &k.Region, &rawComp, &rawLabels, &rawTags, &k.ExportAllowed, &rawAct, &rawExpiry, &k.OpsTotal, &k.OpsEncrypt, &k.OpsDecrypt, &k.OpsSign,
-		&k.OpsLimit, &rawWindow, &rawOpsTime, &k.ApprovalRequired, &rawPolicy, &k.CreatedBy, &k.CreatedAt, &k.UpdatedAt,
+		&k.OpsLimit, &rawWindow, &rawOpsTime, &k.ApprovalRequired, &rawPolicy, &k.CreatedBy, &k.CreatedAt, &k.UpdatedAt, &k.Description,
 	)
 	if err != nil {
 		return Key{}, err

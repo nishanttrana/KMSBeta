@@ -93,6 +93,11 @@ decision checks both.
 | Use | `encrypt`, `decrypt`, `wrap`, `unwrap`, `sign`, `verify`, `mac`, `mac-verify`, `derive`, `kem`, `agree`, and the delegated usages below |
 | Material | `export`, `wrapped-export` |
 
+**Material leaves with a reason (12.0.0-beta).** A wrapped export is refused
+without a stated `reason` (`export_reason_required`), which is recorded in
+`audit.key.export`. The reason is a record, not a credential: it grants
+nothing, and the grant and `export_allowed` still decide.
+
 ### Usage mask, and where each usage is enforced
 
 A usage appears in the UI **only** if an operation that enforces it exists.
@@ -212,6 +217,7 @@ key type" split.
 | Field | KMIP attribute | Rules |
 |---|---|---|
 | Owner | (Vecta) | a user, group or client ID; change-owner is its own audited route |
+| Description (12.0.0-beta) | (Vecta) | up to 512 characters, no control characters; set at creation or by its own route (`PUT /keys/{id}/description`, `key.update`); audit records that it changed and its length, not the text; **never** read by an access decision |
 | Contact information | Contact Information | length-limited; audit records that it changed, not the text (may be PII) |
 | App namespaces | Application Specific Information (namespace + data) | indexed so KMIP `Locate` can filter on it |
 | Custom attributes | `x-` custom attributes | returned to clients, **never** read by an access decision; size and count limits |

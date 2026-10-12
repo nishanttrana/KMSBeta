@@ -4,6 +4,52 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [12.0.0-beta] — 2026-10-12
+
+### Breaking
+- **Exporting key material needs a reason.** `POST /keys/{id}/export` in
+  wrapped mode now refuses a request without `reason` (400
+  `export_reason_required`). The reason (up to 256 characters, no control
+  characters) is recorded in `audit.key.export` as `export_reason`. A public
+  component (`export_mode: "public-plaintext"`) may give one and is not
+  refused without it. API clients that export wrapped keys must send
+  `reason`; the dashboard asks for it.
+
+### Added
+- **Keys have a description.** `description` (up to 512 characters) on
+  create, import and form; returned with the key; changed with
+  `PUT /keys/{id}/description` (permission `key.update`). It is display
+  text: no access decision reads it. The dashboard has the field in the
+  three dialogs and edits it in place in the key's detail view.
+- **A rotation schedule can be set while creating a key.** The create dialog
+  offers 30, 90, 180, 365 days or another interval; it creates one of
+  keycore's rotation policies for that key alone (`id:<key id>`, automatic),
+  so it runs, is listed in Rotation & Scheduling and is audited like any
+  other. It is offered to callers who hold `key.rotation.write`, for
+  symmetric keys and HSM keys.
+- **Audit:** `audit.key.export_refused` (missing or malformed reason),
+  `audit.key.description_updated` (that the text changed and its length,
+  never the text), and `audit.key.create_refused` with
+  `reason: description_invalid`.
+
+### Fixed
+- **The REST API tab described a key export that does not exist**: `format`
+  and `encoding` fields, plaintext `key_material` in the response, and an
+  "Export Key from HSM" entry. HSM keys never leave through this route. The
+  entry now shows the real request and response.
+
+### Not offered, on purpose
+- A rotation schedule for a software key pair. Its public half is stored as
+  a second key that a rotation of the private key does not renew (open, see
+  docs/DECISIONS.md).
+
+Enforced by `services/keycore/key_text_test.go` (`TestExportNeedsAReason`,
+`TestKeyDescriptionIsStoredReturnedAndUpdated`, `TestKeyDescriptionRefused`),
+`TestKeyDescriptionPostgres` (migration 035 on real Postgres) and three
+smoke tests: the create dialog's request and the rotation policy it makes,
+no schedule without the permission, and an export that cannot be sent
+without a reason.
+
 ## [11.7.0-beta] — 2026-10-12
 
 ### Added

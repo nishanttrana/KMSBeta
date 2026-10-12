@@ -41,7 +41,7 @@ SELECT id, tenant_id, name, algorithm, key_type, purpose, status, destroy_date, 
        kcv, kcv_algorithm, iv_mode, owner, cloud, region, compliance, labels, tags,
        export_allowed, activation_date, expiry_date, ops_total, ops_encrypt, ops_decrypt, ops_sign,
        ops_limit, COALESCE(ops_limit_window,''), ops_last_reset, approval_required,
-       COALESCE(approval_policy_id,''), created_by, created_at, updated_at
+       COALESCE(approval_policy_id,''), created_by, created_at, updated_at, description
 FROM keys
 WHERE tenant_id = $1 AND algorithm = $2
 ORDER BY created_at DESC

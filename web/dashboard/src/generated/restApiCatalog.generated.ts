@@ -19611,6 +19611,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "keycore-put-keys-id-description",
+    "group": "Key Management (keycore)",
+    "title": "PUT /keys/{id}/description",
+    "service": "keycore",
+    "method": "PUT",
+    "pathTemplate": "/keys/{id}/description?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "PUT /svc/keycore/keys/{id}/description?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "keycore-put-keys-id-export-policy",
     "group": "Key Management (keycore)",
     "title": "PUT /keys/{id}/export-policy",

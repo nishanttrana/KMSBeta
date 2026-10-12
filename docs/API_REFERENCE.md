@@ -414,6 +414,7 @@ Permission `key.create`.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | name | string | Yes | Key name |
+| description | string | No | Display text, up to 512 characters, no control characters (400 `description_invalid`). Also accepted by `POST /keys/import` and `POST /keys/form`; returned with the key. No access decision reads it |
 | algorithm | string | Yes | One keycore generates: AES-128/192/256[-mode], 3DES, HMAC-SHA256/384/512, RSA-2048/3072/4096/8192, ECDSA/ECDH P-256/P-384/P-521, Ed25519, X25519, ML-KEM-768/1024, ML-DSA-65/87, SLH-DSA-{SHA2,SHAKE}-{128,192,256}{s,f}. Anything else: `400 algorithm_unsupported` (audited `audit.key.create_refused`) |
 | purpose | string | No | Intended use (for example `encrypt`, `sign`, `wrap`) |
 | key_type | string | No | Derived from the algorithm when omitted |
@@ -942,10 +943,26 @@ Body: `data`, `operation` (generate/verify), `mac` (for verify), `algorithm` (HM
 
 ---
 
+### PUT /svc/keycore/keys/{id}/description
+
+Permission `key.update`. Body: `description` (up to 512 characters, no
+control characters; empty clears it). Responds `status`, `description` (as
+stored). 400 `description_invalid`, 404 for a key the caller cannot see, 409
+`key_deleted`. Audited as `audit.key.description_updated` with `changed` and
+`length`, never the text. The metadata update `PUT /keys/{id}` does not
+carry a description.
+
+---
+
 ### POST /svc/keycore/keys/{id}/export
 
-Body: `wrapping_key_id` (a KEK in the same tenant) or `export_mode:
-"public-plaintext"` (public half of an asymmetric key only). Needs the key's
+Body: `wrapping_key_id` (a KEK in the same tenant) with `reason`, or
+`export_mode: "public-plaintext"` (public half of an asymmetric key only).
+**A wrapped export needs `reason`** (12.0.0-beta): up to 256 characters, no
+control characters, recorded in `audit.key.export` as `export_reason`.
+Without it the request is refused with 400 `export_reason_required`; a
+malformed one, in either mode, with 400 `export_reason_invalid`. Both are
+audited as `audit.key.export_refused`. Needs the key's
 `export_allowed`. Wrapped export responds `wrapped_material`, `material_iv`,
 `kcv`, `wrapping_key_id`, `wrapping_key_kcv`, `export_format:
 "aes-gcm-wrapped-by-kek"`. Public export responds `public_key_plaintext`,
@@ -1075,6 +1092,7 @@ roles need the permission named here. Service principals are allowed.
 | `POST /keys/import`, `POST /keys/bulk-import` | `key.import` | `import_requested`, `bulk_import_requested` |
 | `POST /keys/form` | `key.form` | `form_requested` |
 | `PUT /keys/{id}`, `PUT /keys/{id}/iv-mode` | `key.update` | `update_requested`, `iv_mode_update_requested` |
+| `PUT /keys/{id}/description` | `key.update` | `description_updated` |
 | `POST /keys/{id}/rotate`, `POST /keys/bulk-rotate` | `key.rotate` | `rotate_requested`, `bulk_rotate_requested` |
 | `POST /keys/{id}/activate`, `POST /keys/{id}/versions/{ver}/activate` | `key.activate` | `activate_requested`, `version_activate_requested` |
 | `POST /keys/{id}/deactivate`, `POST /keys/{id}/versions/{ver}/deactivate` | `key.deactivate` | `deactivate_requested`, `version_deactivate_requested` |
@@ -3987,7 +4005,7 @@ Common prefixes:
 
 Selected events with dedicated audit classification:
 - `audit.dataprotect.fpe_encrypted`, `audit.dataprotect.fpe_decrypted` (FF1), `audit.dataprotect.fpe_legacy_decrypted` (pre-1.26.0 migration), `audit.dataprotect.fpe_refused` (FF3-1, legacy encrypt, unknown; `result: refused`)
-- `audit.key.create_refused` (unsupported algorithm), `audit.key.algorithm_label_corrected` (startup relabel of faked key material), `audit.key.kdf_refused` (scrypt/Argon2id in strict mode)
+- `audit.key.create_refused` (unsupported algorithm; `description_invalid` on create, import or form), `audit.key.export_refused` (`export_reason_required`, `export_reason_invalid`), `audit.key.description_updated` (kernel event; `changed`, `length`), `audit.key.algorithm_label_corrected` (startup relabel of faked key material), `audit.key.kdf_refused` (scrypt/Argon2id in strict mode)
 - `audit.crypto.random` (with the source that produced the bytes; `hsm_serial` for `hsm-trng`), `audit.crypto.random_refused` (QKD/QRNG/no HSM)
 - `audit.hsm.random_generated` (hsm-connector `POST /hsm/random`)
 - `audit.pqc.migration_step_executed` (per step: `successor_created` or `rotated`), `audit.pqc.migration_executed`, `audit.pqc.migration_failed`, `audit.pqc.migration_rolled_back`
@@ -4008,7 +4026,7 @@ Selected events with dedicated audit classification:
 - `audit.reporting.incident_opened` (a new incident: target the incident, `title`, `severity`), `audit.reporting.alert_created` (target the alert; `severity`, `incident_id`, `source_*`): playbook triggers (2.5.0-beta)
 - `audit.watchdog.heartbeats_listed`, `audit.watchdog.incidents_listed`, `audit.reconciler.status_read` (kernel events, permission `health.read`; refusals `unauthenticated`, `permission_denied`): platform health reads (1.39.0-beta)
 - `audit.key.encrypt`, `audit.key.decrypt`, `audit.key.wrap`, `audit.key.unwrap`, `audit.key.sign`, `audit.key.verify`, `audit.key.mac`, `audit.key.derive`, `audit.key.kem_encapsulate`, `audit.key.kem_decapsulate`: every key operation, named after the operation that ran, with `duration_ms` and `result` `success` / `refused` (`reason`) / `failure` / `pending_approval` (2.1.0-beta; these feed the Operations metrics)
-- `audit.key.rotate`, `audit.key.destroy`, `audit.key.export`
+- `audit.key.rotate`, `audit.key.destroy`, `audit.key.export` (with `export_reason`, the caller's stated reason), `audit.key.export_public`
 - `audit.dataprotect.<op>_refused`, `audit.dataprotect.<op>_failed` (`op`: `tokenize`, `detokenize`, `fpe_encrypt`, `fpe_decrypt`, `field_encrypt`, `field_decrypt`, `envelope_encrypt`, `envelope_decrypt`, `searchable_encrypt`, `searchable_decrypt`)
 - `audit.cert.cert_issue_failed`, `audit.cert.ocsp_sign_failed`
 - Metered operations (`metered_op` in details) feed the Operations metrics; see "Operations metrics"
@@ -4808,6 +4826,7 @@ from the code; do not edit by hand.
 - `POST /svc/keycore/keys/{id}/deactivate`
 - `POST /svc/keycore/keys/{id}/decrypt`
 - `POST /svc/keycore/keys/{id}/derive`
+- `PUT /svc/keycore/keys/{id}/description`
 - `POST /svc/keycore/keys/{id}/destroy`
 - `POST /svc/keycore/keys/{id}/destruction-check`
 - `POST /svc/keycore/keys/{id}/disable`

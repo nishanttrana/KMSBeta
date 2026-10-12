@@ -133,7 +133,7 @@ func (h *HTTPKeyCoreSigner) CreateHSMSigningKey(ctx context.Context, tenantID, a
 	var exported struct {
 		PublicKey string `json:"public_key_plaintext"`
 	}
-	if err := h.post(ctx, tenantID, "/keys/"+created.KeyID+"/export", map[string]interface{}{"export_mode": "public-plaintext"}, &exported); err != nil {
+	if err := h.post(ctx, tenantID, "/keys/"+created.KeyID+"/export", map[string]interface{}{"export_mode": "public-plaintext", "reason": "public key for the CA certificate"}, &exported); err != nil {
 		return "", nil, err
 	}
 	pub, err := base64.StdEncoding.DecodeString(exported.PublicKey)

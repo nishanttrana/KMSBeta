@@ -1094,15 +1094,14 @@ export const REST_API_CATALOG = [
     method: "POST",
     pathTemplate: "/keys/{{key_id}}/export",
     bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "format": "raw",\n  "encoding": "base64"\n}',
-    description: "Exports key material (requires export_allowed policy).",
-    requestExample: "POST /svc/keycore/keys/{key_id}/export",
-    responseExample: { key_material: "BASE64...", format: "raw", encoding: "base64", key_id: "key_123", version: 2 },
+      '{\n  "wrapping_key_id": "{{wrapping_key_id}}",\n  "export_mode": "wrapped",\n  "reason": "why this key is leaving"\n}',
+    description: "Exports the key's material wrapped under another key. Needs export_allowed and a reason, which is recorded in the audit event. export_mode public-plaintext returns a public component instead and needs no reason. HSM keys do not leave through this route.",
+    requestExample: 'POST /svc/keycore/keys/{key_id}/export\n{"wrapping_key_id":"key_kek","export_mode":"wrapped","reason":"why this key is leaving"}',
+    responseExample: { key_id: "key_123", kcv: "A1B2C3", wrapped_material: "BASE64...", material_iv: "BASE64...", wrapping_key_id: "key_kek", export_format: "aes-gcm-wrapped-by-kek" },
     errorCodes: [
-      { code: 400, meaning: "Invalid format or encoding parameter" },
+      { code: 400, meaning: "export_reason_required, export_reason_invalid, or the export failed (export disabled, wrapping key not usable)" },
       { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Key export not allowed by policy" },
-      { code: 404, meaning: "Key not found" }
+      { code: 403, meaning: "Access or policy denied" }
     ]
   },
   {
@@ -3298,24 +3297,6 @@ export const REST_API_CATALOG = [
       { code: 400, meaning: "Invalid CA configuration" },
       { code: 404, meaning: "HSM key_ref not found" },
       { code: 502, meaning: "HSM communication failure" }
-    ]
-  },
-  {
-    id: "hsm-export-key",
-    group: "HSM Certificates",
-    title: "Export Key from HSM",
-    service: "keycore",
-    method: "POST",
-    pathTemplate: "/keys/{{key_id}}/export",
-    bodyTemplate: '{ "wrapping_key_id": "{{wrapping_key_id}}", "export_mode": "aes-gcm-wrapped-by-kek" }',
-    description: "Exports an HSM key wrapped by a KEK. Requires: export_allowed=true, CKA_EXTRACTABLE=true, and hsm_non_exportable!=true. Approval may be required.",
-    requestExample: 'POST /svc/keycore/keys/key-001/export\n{"wrapping_key_id":"kek-001","export_mode":"aes-gcm-wrapped-by-kek"}',
-    responseExample: { wrapped_key: "base64...", algorithm: "AES-256-GCM", wrapping_key_id: "kek-001" },
-    errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Export denied by key policy or HSM attributes" },
-      { code: 404, meaning: "Key not found" },
-      { code: 409, meaning: "Pending approval required" }
     ]
   },
 

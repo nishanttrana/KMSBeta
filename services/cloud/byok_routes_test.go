@@ -59,7 +59,12 @@ func TestBYOKRoutesAuditEachOperation(t *testing.T) {
 		e.Event.Details["key_id"] != "key-1" || e.Event.Details["cloud_key_id"] != out.Key.CloudKeyID || e.Event.Details["source"] != SourceKMS {
 		t.Fatalf("create event %+v", e.Event)
 	}
-	for op, action := range map[string]string{"rotate": "byok_rotated", "verify": "byok_verified", "sync": "byok_synced", "revoke": "byok_revoked", "restore": "byok_restored"} {
+	// In this order: a restore needs the revoke before it (a map here ran
+	// them in random order and failed about one run in five).
+	for _, step := range []struct{ op, action string }{
+		{"rotate", "byok_rotated"}, {"verify", "byok_verified"}, {"sync", "byok_synced"}, {"revoke", "byok_revoked"}, {"restore", "byok_restored"},
+	} {
+		op, action := step.op, step.action
 		if rr := serveBYOK(rt, http.MethodPost, "/cloud/byok/keys/"+out.Key.ID+"/"+op, nil); rr.Code != http.StatusOK {
 			t.Fatalf("%s: %d %s", op, rr.Code, rr.Body)
 		}

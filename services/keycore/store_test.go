@@ -47,6 +47,7 @@ func createSchemaForTest(conn *pkgdb.DB) error {
 			ops_total INTEGER DEFAULT 0, ops_encrypt INTEGER DEFAULT 0, ops_decrypt INTEGER DEFAULT 0, ops_sign INTEGER DEFAULT 0,
 			ops_limit INTEGER DEFAULT 0, ops_limit_window TEXT, ops_last_reset TIMESTAMP, approval_required BOOLEAN DEFAULT 0,
 			approval_policy_id TEXT, created_by TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			description TEXT NOT NULL DEFAULT '',
 			PRIMARY KEY (tenant_id, id)
 		);`,
 		`CREATE TABLE key_versions (

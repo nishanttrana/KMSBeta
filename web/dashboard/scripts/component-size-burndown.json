@@ -14,7 +14,7 @@
   "src/components/v3/tabs/GovernanceTab.tsx": 632,
   "src/components/v3/tabs/HSMTab.tsx": 562,
   "src/components/v3/tabs/HYOKTab.tsx": 680,
-  "src/components/v3/tabs/KeysTab.tsx": 2789,
+  "src/components/v3/tabs/KeysTab.tsx": 2698,
   "src/components/v3/tabs/KMIPTab.tsx": 977,
   "src/components/v3/tabs/PlaybooksTab.tsx": 671,
   "src/components/v3/tabs/PostureTab.tsx": 1327,

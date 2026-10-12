@@ -5,6 +5,46 @@ Newest entries on top.
 
 ## 2026-10-12
 
+### Three fields the dialog used to fake, built for real (12.0.0-beta)
+- **A "replace everything" update can't carry one new field safely.**
+  `PUT /keys/{id}` rewrites name, purpose, owner, cloud, region, labels,
+  compliance and tags from the request. The dashboard cannot send a key
+  back whole: the key response has no owner, cloud, region or compliance,
+  so an edit from the UI would blank them. The description therefore has
+  its own route, like export policy, approval and IV mode. **Rule: a field
+  edited on its own gets its own route; a replace-all update is not a
+  place to add an optional field.**
+- **Rotation renews half of a software key pair.** The dashboard creates a
+  pair as two keys (private, and a public component with a `pair_id`).
+  `RotateKeyTo` makes new private material and never touches the second
+  key, so the stored public key no longer matches. Found while deciding
+  where a schedule may be offered; it is why the create dialog offers none
+  for a software pair. Not fixed here: it predates this change and affects
+  manual rotation too.
+- **keycore's SQLite test schema is written by hand** (`store_test.go`),
+  not built from `migrations/`. A new column passes every unit test with
+  the migration file missing or wrong. Only the Postgres test runs the
+  migration; `TestKeyDescriptionPostgres` is what proves `035`.
+- **A caller's reason and a refusal's reason are different facts.** The
+  first draft recorded the export reason under `reason`, the key refusals
+  use for *why keycore said no*. Anything reading events by that key would
+  have read a justification as a refusal cause. It is `export_reason`.
+- **The schedule needed no new keycore code.** Rotation policies already
+  take `id:<key id>`. The create dialog makes the key, then the policy,
+  through the routes an API client would use; the question "does this need
+  a backend change" was answered by reading the engine, not assumed.
+- **Dead code that looks like a caller.** `kmip`'s `ExportKeyMaterial` sends
+  `GET /keys/{id}/export` to a POST-only route and nothing calls it. It
+  would have looked like a client to update for the new required field.
+- **The dashboard's REST catalogue is written by hand and drifts**: its
+  export entries named fields and an HSM export that never existed.
+- **A test that ranged over a map of ordered steps.**
+  `TestBYOKRoutesAuditEachOperation` (cloud) ran rotate, verify, sync,
+  revoke and restore from a map literal; Go starts a map's iteration at a
+  random element, so restore sometimes ran before revoke and the suite
+  failed about one run in five. It showed up only in the full three-mode
+  run. Steps that depend on order go in a slice.
+
 ### EKM clients: three fakes on the page being replaced, and what the rebuild taught (11.7.0-beta)
 - **"Deploy Agent" recorded a connection that never happened.** The dialog
   called `POST /ekm/agents/register`, which stamps `status: connected` and

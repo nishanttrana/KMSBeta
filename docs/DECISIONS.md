@@ -7,6 +7,56 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-12 — Key material leaves only with a stated reason
+**Decision:** a wrapped export (`POST /keys/{id}/export`) is refused without
+`reason`; the reason is recorded in `audit.key.export` as `export_reason`
+(12.0.0-beta, breaking). A public component may be exported without one.
+The check is in the service, before the key is read, and its refusals are
+audited as `audit.key.export_refused`.
+**Why:** owner, 2026-10-12, asked for the export reason to be built for
+real after the dialog's unrecorded "Justification (required for audit)" was
+removed in 11.6.0-beta. Export is the one operation that takes key material
+out of the KMS; a reviewer reading the audit trail should find why.
+**Rejected:** an optional reason (the dashboard would mark a field required
+that the API does not require: a UI-only rule); a per-tenant switch (a
+setting that lets the audit trail lose the answer); recording it under
+`reason` (that key means why keycore refused).
+**Cost:** API clients exporting wrapped keys must send `reason`.
+**Enforced by:** `TestExportNeedsAReason`; smoke test "a key is exported
+only with a reason".
+
+## 2026-10-12 — A key's description is its own field and its own route
+**Decision:** `keys.description` (migration 035), set on create, import and
+form and changed by `PUT /keys/{id}/description` (`key.update`). Up to 512
+characters, no control characters. The audit event says that it changed and
+its length, never the text. No access decision reads it
+(docs/SECURITY/KEY_ACCESS_MODEL.md section 6).
+**Why:** owner, 2026-10-12. A label `description` would be replaced by any
+metadata update and is selected on by label policies; a description must
+never change who can use a key.
+**Rejected:** carrying it in `PUT /keys/{id}`, which replaces every field it
+names and which the dashboard cannot send back whole.
+**Enforced by:** `TestKeyDescriptionIsStoredReturnedAndUpdated`,
+`TestKeyDescriptionRefused`, `TestKeyDescriptionPostgres`.
+
+## 2026-10-12 — A rotation schedule at creation is a per-key rotation policy
+**Decision:** the create dialog's schedule creates a keycore rotation policy
+with `target_filter: id:<key id>` and `auto_rotate`, after the key, through
+`POST /rotation/policies`. No field was added to the create request. The
+dialog offers it only to a caller holding `key.rotation.write`, and only
+where a rotation renews the whole key: symmetric keys and HSM keys.
+**Why:** the rotation engine already schedules, runs, records and audits
+per-key policies; a second mechanism on the key would be a copy.
+**Rejected:** `rotation_interval_days` on `POST /keys` (two writes under one
+permission, and a schedule the Rotation page would not list unless it also
+became a policy).
+**Open:** rotating a software key pair renews the private key only; its
+public component is a second key that keeps the old material. Until that is
+fixed no schedule is offered for a software pair.
+**Enforced by:** smoke tests "the create dialog sends a description and sets
+the rotation schedule it offers" and "the rotation schedule is offered only
+to a caller who may set one".
+
 ## 2026-10-12 — EKM database clients enrol with a one-time token and check in with their own key
 **Decision:** a database client is created pending by an administrator, who
 issues a one-time registration token (256 random bits, 24 hours, stored as
@@ -95,8 +145,9 @@ keycore's create request in this change (new stored fields and enforcement:
 their own change if wanted; rotation schedules already exist in Rotation &
 Scheduling); wiring the export Justification to the audit event (a keycore
 change; open, see below).
-**Open:** an export reason recorded in `audit.key.export` if the owner
-wants one.
+**Since built (12.0.0-beta):** the export reason, the description and a
+rotation schedule at creation, each with the code behind it (entries above).
+Key derivation and the FIPS box stay removed.
 **Enforced by:** `controlsAreReal.test.ts` and smoke test "the key dialogs
 offer only what keycore is sent".
 

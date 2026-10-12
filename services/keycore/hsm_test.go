@@ -100,7 +100,7 @@ func TestHSMResidentKeyLifecycle(t *testing.T) {
 	}
 
 	// Anything that needs the material is refused and audited.
-	if _, err := svc.ExportCurrentVersionWrapped(ctx, "t1", key.ID, ""); err == nil {
+	if _, err := svc.ExportCurrentVersionWrapped(ctx, "t1", key.ID, "", "test"); err == nil {
 		t.Fatal("an HSM key was exported")
 	}
 	if _, err := svc.decryptMaterial(ver); hsmRefusalReason(err) != "hsm_operation_unsupported" {
@@ -178,7 +178,7 @@ func TestHSMResidentSigningKeys(t *testing.T) {
 			}
 		}
 		// The public half can be exported (for verifiers outside the KMS).
-		if exp, err := svc.ExportPublicComponentPlaintext(ctx, "t1", key.ID); err != nil || exp.PublicKeyPlaintext != b64(ver.PublicKey) {
+		if exp, err := svc.ExportPublicComponentPlaintext(ctx, "t1", key.ID, ""); err != nil || exp.PublicKeyPlaintext != b64(ver.PublicKey) {
 			t.Fatalf("%s public export: %v", alg, err)
 		}
 		// The public-key route serves the key the HSM returned.

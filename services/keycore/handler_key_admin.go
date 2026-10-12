@@ -43,6 +43,7 @@ func (h *Handler) keyAdminRouter(audit route.Emitter) *route.Router {
 	r.Handle("POST /keys/{id}/usage/reset", route.Spec{Action: "usage_reset_requested", Permission: "key.usage_limit_update", Resource: "key", TargetParam: "id", Severity: "warning"}, legacy(h.handleResetUsage))
 	r.Handle("PUT /keys/{id}/approval", route.Spec{Action: "approval_update_requested", Permission: "key.approval_update", Resource: "key", TargetParam: "id", Severity: "warning"}, legacy(h.handleSetApproval))
 	r.Handle("PUT /keys/{id}/iv-mode", route.Spec{Action: "iv_mode_update_requested", Permission: "key.update", Resource: "key", TargetParam: "id"}, legacy(h.handleSetIVMode))
+	r.Handle("PUT /keys/{id}/description", route.Spec{Action: "description_updated", Permission: "key.update", Resource: "key", TargetParam: "id"}, h.setKeyDescription)
 	r.Handle("POST /tags", route.Spec{Action: "tag_upsert_requested", Permission: "key.tags.write", Resource: "key"}, legacy(h.handleUpsertTag))
 	r.Handle("DELETE /tags/{name}", route.Spec{Action: "tag_delete_requested", Permission: "key.tags.write", Resource: "key", TargetParam: "name"}, legacy(h.handleDeleteTag))
 	return r

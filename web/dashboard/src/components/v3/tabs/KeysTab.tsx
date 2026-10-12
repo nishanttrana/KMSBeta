@@ -7,7 +7,6 @@ import {
   deactivateKey,
   destroyKey,
   disableKey,
-  exportKey,
   formKey,
   getKeyPublicKey,
   importKey,
@@ -35,6 +34,9 @@ import { HSMPartitionTable } from "../../../modules/hsm/HSMPartitionTable";
 import { HSMKeyCheckPanel } from "../../../modules/hsm/HSMKeyCheckPanel";
 import { HSMTargetPicker } from "../../../modules/hsm/HSMTargetPicker";
 import { KeyHistoryPanel } from "../../../modules/keys/KeyHistoryPanel";
+import { ExportKeyDialog } from "../../../modules/keys/ExportKeyDialog";
+import { KeyDescription, MAX_KEY_DESCRIPTION } from "../../../modules/keys/KeyDescription";
+import { NO_ROTATION, RotationScheduleField, mayScheduleRotation, rotationDays, scheduleRotation } from "../../../modules/keys/RotationSchedule";
 import { CanaryKeysPanel } from "./CanaryKeysPanel";
 
 function normalizeKeyState(state: string): string {
@@ -235,6 +237,7 @@ function toViewKey(k: any) {
     tags: Array.isArray(k.tags) ? k.tags.map((t) => String(t)) : [],
     exportAllowed: Boolean(k.export_allowed),
     tenant: String(k.tenant_id || ""),
+    description: String(k.description || ""),
     purpose: String(k.purpose || "encrypt-decrypt"),
     labels,
     inHSM: String(labels.hsm || "") === "resident",
@@ -456,9 +459,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
   const [rotateType,setRotateType]=useState("standard");
   const [rotateOldVersionAction,setRotateOldVersionAction]=useState("deactivate");
   const [rotateTargetAlgorithm,setRotateTargetAlgorithm]=useState("");
-  const [exporting,setExporting]=useState(false);
-  const [exportWrappingKeyId,setExportWrappingKeyId]=useState("");
-  const [exportMode,setExportMode]=useState("wrapped");
+  const [createDescription,setCreateDescription]=useState(""),[formDescription,setFormDescription]=useState(""),[importDescription,setImportDescription]=useState(""),[rotationEvery,setRotationEvery]=useState(NO_ROTATION);
   const [keyVersions,setKeyVersions]=useState([]);
   const [statusUpdatingId,setStatusUpdatingId]=useState("");
   const [openActionMenuId,setOpenActionMenuId]=useState("");
@@ -567,7 +568,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
 
   const resetImportForm=()=>{
     setImportMethod("raw");
-    setImportName("");
+    setImportName("");setImportDescription("");
     setImportMaterial("");
     setImportAlgorithm("auto");
     setImportWrappingKeyId("");
@@ -852,29 +853,6 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
   },[pageIndex,totalPages]);
 
   useEffect(()=>{
-    if(modal!=="export"){
-      return;
-    }
-    if(exportWrappingKeyId&&wrappingKeyChoices.some((item)=>item.id===exportWrappingKeyId)){
-      return;
-    }
-    const fallback=wrappingKeyChoices[0]?.id||"";
-    setExportWrappingKeyId(fallback);
-  },[modal,wrappingKeyChoices,exportWrappingKeyId]);
-
-  useEffect(()=>{
-    if(modal!=="export"){
-      return;
-    }
-    if(isPublicComponentLike(selectedKey)){
-      setExportMode("public-plaintext");
-      return;
-    }
-    setExportMode("wrapped");
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
-  },[modal,selectedKey?.id]);
-
-  useEffect(()=>{
     if(modal!=="import"){
       return;
     }
@@ -959,6 +937,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
     }
   };
 
+  const canScheduleRotation=mayScheduleRotation(session)&&(inHSM||algoType!=="asymmetric");
   const addCustomerKey=async()=>{
     const name=createName.trim();
     if(!name){
@@ -981,6 +960,11 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       onToast?.("Missing active session.");
       return;
     }
+    const description=createDescription.trim(),everyDays=canScheduleRotation?rotationDays(rotationEvery):0;
+    if(Number.isNaN(everyDays)){
+      onToast?.("Rotation interval must be 1 to 3650 days.");
+      return;
+    }
     setCreating(true);
     try{
       const keyType=algoType==="symmetric"||algoType==="hmac"?"symmetric":"asymmetric";
@@ -988,7 +972,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       if(inHSM){
         // One key in the HSM holds both halves of a pair; it never leaves the HSM.
         const createdKey=await createKey(session,{
-          name,
+          name,description,
           algorithm:algo,
           key_type:keyType==="asymmetric"?"asymmetric-private":keyType,
           purpose,
@@ -1007,7 +991,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       }else if(algoType==="asymmetric"){
         const pairId=`pair_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
         const common={
-          name,
+          name,description,
           algorithm:algo,
           tags:createTags,
           activation_mode:createActivationMode==="pre-active"?"pre-active":createActivationMode==="scheduled"?"scheduled":"immediate",
@@ -1043,7 +1027,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         focusKeyId=privateKey.key_id;
       }else{
         const createdKey=await createKey(session,{
-          name,
+          name,description,
           algorithm:algo,
           key_type:keyType,
           purpose,
@@ -1064,7 +1048,9 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       if(created){
         setSelectedKey(created);
       }
-      setCreateName("");
+      // The schedule is a rotation policy for this key alone; the key exists either way.
+      const scheduled=everyDays>0?await scheduleRotation(session,focusKeyId,name,everyDays).then(()=>`, rotating every ${everyDays} days`,(e)=>`; rotation schedule not set: ${errMsg(e)}`):"";
+      setCreateName("");setCreateDescription("");setRotationEvery(NO_ROTATION);
       setOpsLimitInput("");
       setOpsLimitWindow("total");
       setCreateActivationMode("immediate");
@@ -1075,7 +1061,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       setExportable(false);
       setInHSM(false);
       setModal(null);
-      onToast?.(algoType==="asymmetric"?`Asymmetric key pair created: ${name}`:`Key created: ${name}`);
+      onToast?.(algoType==="asymmetric"?`Asymmetric key pair created: ${name}`:`Key created: ${name}${scheduled}`);
     }catch(error){
       onToast?.(`Create key failed: ${errMsg(error)}`);
     }finally{
@@ -1131,7 +1117,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
     setForming(true);
     try{
       const response=await formKey(session,{
-        name,
+        name,description:formDescription.trim(),
         algorithm:formAlgorithm,
         key_type:"symmetric",
         purpose:formPurpose,
@@ -1164,7 +1150,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       }else{
         onToast?.(`Key formed: ${name}`);
       }
-      setFormName("");
+      setFormName("");setFormDescription("");
       setFormAlgorithm("AES-256-GCM");
       setFormPurpose("encrypt-decrypt");
       setFormComponentMode("clear-generated");
@@ -1235,7 +1221,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
     setImporting(true);
     try{
       const response=await importKey(session,{
-        name,
+        name,description:importDescription.trim(),
         algorithm:algorithmValue,
         key_type:keyTypeValue,
         purpose:importPurpose.trim(),
@@ -1389,62 +1375,6 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       onToast?.(`Public key downloaded: ${selectedKey.name} v${out.version}`);
     }catch(error){
       onToast?.(`Public key unavailable: ${errMsg(error)}`);
-    }
-  };
-
-  const exportSelectedKey=async()=>{
-    if(!session||!selectedKey?.id){
-      return;
-    }
-    const mode=exportMode==="public-plaintext"?"public-plaintext":"wrapped";
-    const wrappingKeyId=String(exportWrappingKeyId||"").trim();
-    if(mode==="wrapped"){
-      if(!wrappingKeyId){
-        onToast?.("Select a wrapping KEK.");
-        return;
-      }
-      if(wrappingKeyId===selectedKey.id){
-        onToast?.("Wrapping key cannot be the same as exported key.");
-        return;
-      }
-    }
-    setExporting(true);
-    try{
-      const payload=await exportKey(session,selectedKey.id,{
-        export_mode:mode as any,
-        wrapping_key_id:wrappingKeyId
-      });
-      const artifact={
-        key_id:payload.key_id,
-        tenant_id:session.tenantId,
-        kcv:payload.kcv,
-        wrapped_material:payload.wrapped_material,
-        material_iv:payload.material_iv,
-        wrapped_dek:payload.wrapped_dek,
-        public_key_plaintext:payload.public_key_plaintext||"",
-        plaintext_encoding:payload.plaintext_encoding||"",
-        component_type:payload.component_type||"",
-        wrapping_key_id:payload.wrapping_key_id||wrappingKeyId,
-        wrapping_key_kcv:payload.wrapping_key_kcv||"",
-        export_format:payload.export_format||mode,
-        exported_at:new Date().toISOString()
-      };
-      const blob=new Blob([JSON.stringify(artifact,null,2)],{type:"application/json"});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement("a");
-      const safeName=String(selectedKey.name||payload.key_id||"key-export").replace(/[^a-z0-9._-]+/gi,"-");
-      a.href=url;
-      a.download=mode==="public-plaintext"?`${safeName}.public.json`:`${safeName}.wrapped.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      setModal(null);
-      onToast?.(mode==="public-plaintext"?`Public key exported: ${selectedKey.name}`:`Key exported: ${selectedKey.name}`);
-    }catch(error){
-      onToast?.(`Export key failed: ${errMsg(error)}`);
-    }finally{
-      setExporting(false);
     }
   };
 
@@ -2072,8 +2002,6 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                         e.stopPropagation();
                         setOpenActionMenuId("");
                         setSelectedKey(k);
-                        setExportWrappingKeyId("");
-                        setExportMode(isPublicComponentLike(k)?"public-plaintext":"wrapped");
                         setModal("export");
                       }}
                       style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:3}}
@@ -2132,6 +2060,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         The key's material will be encrypted by this tenant's key in the HSM{hsmName?` (${hsmName})`:""}.
       </div>}
       <FG label="Key Name" required><Inp placeholder="Enter key name" value={createName} onChange={e=>setCreateName(e.target.value)}/></FG>
+      <FG label="Description"><Inp aria-label="Description" placeholder="What this key protects" maxLength={MAX_KEY_DESCRIPTION} value={createDescription} onChange={(e)=>setCreateDescription(e.target.value)}/></FG>
       <FG label="Algorithm Family" required>
         <div style={{display:"flex",gap:8,marginBottom:8}}>
           {[["symmetric","Symmetric"],["asymmetric","Asymmetric"],["pqc","Post-Quantum"],["hmac","HMAC"]].map(([v,l])=>
@@ -2177,6 +2106,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
           </Sel>
         </Row2>
       </FG>
+      {canScheduleRotation&&<RotationScheduleField value={rotationEvery} onChange={setRotationEvery}/>}
       <Row2>
         <FG label="Security Options">
           <Chk label="Require governance approval for all operations" checked={approvalReq} onChange={()=>setApprovalReq(!approvalReq)}/>
@@ -2252,6 +2182,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       <HSMTargetPicker session={session} material="imported" supported={/^AES-(128|192|256)/i.test(formAlgorithm)} unsupportedReason="Only AES-128/192/256 keys can be placed in an HSM."
         checked={matHSM.on} onChecked={(on)=>setMatHSM((p)=>({...p,on}))} connection={matHSM.conn} onConnection={(conn)=>setMatHSM((p)=>({...p,conn}))} onNavigate={onNavigate}/>
       <FG label="Key Name" required><Inp placeholder="Enter key name" value={formName} onChange={(e)=>setFormName(e.target.value)}/></FG>
+      <FG label="Description"><Inp aria-label="Description" placeholder="What this key protects" maxLength={MAX_KEY_DESCRIPTION} value={formDescription} onChange={(e)=>setFormDescription(e.target.value)}/></FG>
       <Row2>
         <FG label="Algorithm" required>
           <Sel value={formAlgorithm} onChange={(e)=>setFormAlgorithm(e.target.value)}>
@@ -2384,6 +2315,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         </div>
       </FG>
       <FG label="Key Name" required><Inp placeholder="Enter key name" value={importName} onChange={(e)=>setImportName(e.target.value)}/></FG>
+      <FG label="Description"><Inp aria-label="Description" placeholder="What this key protects" maxLength={MAX_KEY_DESCRIPTION} value={importDescription} onChange={(e)=>setImportDescription(e.target.value)}/></FG>
       <FG label="Key Material" required hint="Key material is envelope-encrypted immediately upon import. Plaintext never touches disk.">
         <Txt
           placeholder={
@@ -2489,6 +2421,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         <FG label="KCV"><div style={{fontFamily:"var(--font-mono)",fontSize:11,color:C.greenFg}}>{selectedKey.kcv}</div></FG>
       </Row3>
       <FG label="Size / Curve"><div style={{fontSize:11,color:C.text,fontFamily:"var(--font-mono)"}}>{selectedKey.algoSizeCurve||"-"}</div></FG>
+      <KeyDescription session={session} keyItem={selectedKey} readOnly={selectedDeletedLike} onSaved={(description)=>{setSelectedKey((k)=>k?{...k,description}:k);void refreshKeyCatalog(selectedKey.id);}} onToast={onToast}/>
       <Row3>
         <FG label="State"><B c={keyStateTone(selectedNormState)}>{keyStateLabel(selectedNormState)}</B></FG>
         <FG label="Version"><div style={{fontSize:11,color:C.text}}>{selectedKey.ver}</div></FG>
@@ -2553,7 +2486,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       <KeyHistoryPanel session={session} keyID={selectedKey.id}/>
       <div style={{display:"flex",gap:6,marginTop:12}}>
         {selectedCanRotate&&<Btn primary onClick={()=>{setRotateOldVersionAction("deactivate");setRotateTargetAlgorithm("");setRotateType("standard");setModal("rotate");}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>Rotate</span></Btn>}
-        {selectedCanExport&&<Btn onClick={()=>{setExportWrappingKeyId("");setExportMode(isPublicComponentLike(selectedKey)?"public-plaintext":"wrapped");setModal("export");}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><ExternalLink size={12}/>Export</span></Btn>}
+        {selectedCanExport&&<Btn onClick={()=>setModal("export")}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><ExternalLink size={12}/>Export</span></Btn>}
         {isAsymmetricKeyLike(selectedKey)&&!selectedDeletedLike&&<Btn onClick={downloadSelectedPublicKey}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><ArrowDownToLine size={12}/>Public key (PEM)</span></Btn>}
         {selectedCanEditPolicy&&<Btn onClick={()=>openPolicyEditor(selectedKey)}>Edit Key Policy</Btn>}
         {selectedNormState==="active"&&<Btn onClick={()=>updateKeyStatus(selectedKey,"deactivated")} disabled={selectedStateBusy}>{selectedStateBusy?"Updating...":"Deactivate"}</Btn>}
@@ -2695,31 +2628,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
     </Modal>
 
     {/*  EXPORT KEY MODAL  */}
-    <Modal open={modal==="export"} onClose={()=>setModal(null)} title={`Export Key: ${selectedKey?.name||""}`}>
-      <div style={{background:C.amberDim,border:`1px solid ${C.amber}`,borderRadius:4,padding:10,marginBottom:12,fontSize:10,color:C.amberFg}}>
-        {exportMode==="public-plaintext"
-          ?"Warning: public key will be exported in plaintext (not wrapped)."
-          :"Warning: key material will be exported wrapped. This is a HIGH severity audit event."}
-      </div>
-      <FG label="Export Mode" required>
-        <Sel value={exportMode} onChange={(e)=>setExportMode(e.target.value)}>
-          <option value="wrapped">Wrapped with KEK (default)</option>
-          {isPublicComponentLike(selectedKey)&&<option value="public-plaintext">Public key plaintext export</option>}
-        </Sel>
-      </FG>
-      {exportMode==="wrapped"&&<FG label="Wrapping Key (KEK)" required hint="The exported key material will be encrypted with this KEK. Self-wrapping is blocked.">
-        <Sel value={exportWrappingKeyId} onChange={(e)=>setExportWrappingKeyId(e.target.value)}>
-          <option value="">Select wrapping key...</option>
-          {wrappingKeyChoices.map((item)=><option key={item.id} value={item.id}>{`${item.name} (${item.id})`}</option>)}
-        </Sel>
-        {!wrappingKeyChoices.length&&<div style={{marginTop:6,fontSize:10,color:C.amberFg}}>No active wrap/unwrap key available.</div>}
-      </FG>}
-      <FG label="Export Format"><div style={{fontSize:11,color:C.text}}>{exportMode==="public-plaintext"?"Public key, plaintext (base64)":"Raw, wrapped (base64)"}</div></FG>
-      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8}}>
-        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
-        <Btn primary onClick={exportSelectedKey} disabled={exporting}>{exporting?"Exporting...":"Export Key"}</Btn>
-      </div>
-    </Modal>
+    <ExportKeyDialog session={session} open={modal==="export"} keyItem={selectedKey} publicComponent={isPublicComponentLike(selectedKey)} wrappingKeys={wrappingKeyChoices} onClose={()=>setModal(null)} onToast={onToast}/>
 
     {/*  DESTROY KEY MODAL  */}
     <Modal open={modal==="destroy"} onClose={()=>setModal(null)} title={`Destroy Key: ${selectedKey?.name||""}`}>

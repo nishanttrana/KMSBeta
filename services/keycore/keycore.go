@@ -153,6 +153,7 @@ func (s *Service) SetClusterSyncPublisher(pub clustersync.Publisher) {
 type CreateKeyRequest struct {
 	TenantID         string            `json:"tenant_id"`
 	Name             string            `json:"name"`
+	Description      string            `json:"description"`
 	Algorithm        string            `json:"algorithm"`
 	KeyType          string            `json:"key_type"`
 	Purpose          string            `json:"purpose"`
@@ -617,6 +618,10 @@ func (s *Service) createKeyFromMaterial(
 	if req.TenantID == "" || req.Name == "" || req.Algorithm == "" {
 		return Key{}, errors.New("tenant_id, name, algorithm are required")
 	}
+	var derr error
+	if req.Description, derr = s.keyDescription(ctx, req.TenantID, "audit.key.create_refused", map[string]any{"name": req.Name, "operation": firstNonEmptyString(policyOperation, "key.create")}, req.Description); derr != nil {
+		return Key{}, derr
+	}
 	if req.HSM || strings.TrimSpace(req.HSMConnectionID) != "" {
 		return s.importHSMKey(ctx, req, raw, expectedKCV, firstNonEmptyString(policyOperation, "key.create"), auditSubject)
 	}
@@ -667,6 +672,7 @@ func (s *Service) createKeyFromMaterial(
 		ID:               keyID,
 		TenantID:         req.TenantID,
 		Name:             req.Name,
+		Description:      req.Description,
 		Algorithm:        req.Algorithm,
 		KeyType:          req.KeyType,
 		Purpose:          req.Purpose,
@@ -826,6 +832,10 @@ func (s *Service) resolvePublicMaterialFromPair(ctx context.Context, req CreateK
 }
 
 func (s *Service) CreateKey(ctx context.Context, req CreateKeyRequest) (Key, error) {
+	var derr error
+	if req.Description, derr = s.keyDescription(ctx, req.TenantID, "audit.key.create_refused", map[string]any{"name": req.Name, "operation": "key.create"}, req.Description); derr != nil {
+		return Key{}, derr
+	}
 	if req.HSM || strings.TrimSpace(req.HSMConnectionID) != "" {
 		return s.createHSMKey(ctx, req)
 	}
@@ -1663,7 +1673,11 @@ func isPublicComponentKey(key Key) bool {
 	return false
 }
 
-func (s *Service) ExportPublicComponentPlaintext(ctx context.Context, tenantID string, keyID string) (PlaintextExportResult, error) {
+func (s *Service) ExportPublicComponentPlaintext(ctx context.Context, tenantID string, keyID string, reason string) (PlaintextExportResult, error) {
+	reason, err := s.exportReason(ctx, tenantID, keyID, "public-plaintext", reason, false)
+	if err != nil {
+		return PlaintextExportResult{}, err
+	}
 	key, err := s.GetKey(ctx, tenantID, keyID)
 	if err != nil {
 		return PlaintextExportResult{}, err
@@ -1724,7 +1738,8 @@ func (s *Service) ExportPublicComponentPlaintext(ctx context.Context, tenantID s
 	}
 	plainB64 := base64.StdEncoding.EncodeToString(plain)
 	_ = s.publishAudit(ctx, "audit.key.export_public", tenantID, map[string]any{
-		"key_id": key.ID,
+		"key_id":        key.ID,
+		"export_reason": reason,
 	})
 	return PlaintextExportResult{
 		KeyID:               key.ID,
@@ -1735,7 +1750,13 @@ func (s *Service) ExportPublicComponentPlaintext(ctx context.Context, tenantID s
 	}, nil
 }
 
-func (s *Service) ExportCurrentVersionWrapped(ctx context.Context, tenantID string, keyID string, wrappingKeyID string) (WrappedExportResult, error) {
+// ExportCurrentVersionWrapped hands out the key's material wrapped under
+// another key. It needs a stated reason, which is recorded in audit.key.export.
+func (s *Service) ExportCurrentVersionWrapped(ctx context.Context, tenantID string, keyID string, wrappingKeyID string, reason string) (WrappedExportResult, error) {
+	reason, rerr := s.exportReason(ctx, tenantID, keyID, "wrapped", reason, true)
+	if rerr != nil {
+		return WrappedExportResult{}, rerr
+	}
 	wrappingKeyID = strings.TrimSpace(wrappingKeyID)
 	if wrappingKeyID == "" {
 		return WrappedExportResult{}, errors.New("wrapping_key_id is required")
@@ -1788,6 +1809,7 @@ func (s *Service) ExportCurrentVersionWrapped(ctx context.Context, tenantID stri
 	_ = s.publishAudit(ctx, "audit.key.export", tenantID, map[string]any{
 		"key_id":          key.ID,
 		"wrapping_key_id": wrappingKeyID,
+		"export_reason":   reason,
 	})
 	return WrappedExportResult{
 		KeyID:          key.ID,

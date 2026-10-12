@@ -244,6 +244,7 @@ export type DestroyKeyInput = {
 
 export type CreateKeyInput = {
   name: string;
+  description?: string;
   algorithm: string;
   key_type: string;
   purpose: string;
@@ -277,6 +278,7 @@ export type FormKeyInput = CreateKeyInput & {
 
 export type ImportKeyInput = {
   name: string;
+  description?: string;
   algorithm?: string;
   key_type?: string;
   purpose?: string;
@@ -374,6 +376,8 @@ export type TextEncoding = "utf-8" | "base64" | "hex";
 export type ExportKeyInput = {
   wrapping_key_id?: string;
   export_mode?: "wrapped" | "public-plaintext";
+  // Recorded in the audit event; keycore refuses a wrapped export without it.
+  reason?: string;
 };
 
 export type EncryptInputOptions = {
@@ -557,6 +561,7 @@ export async function createKey(session: AuthSession, input: CreateKeyInput): Pr
     body: JSON.stringify({
       tenant_id: session.tenantId,
       name: input.name,
+      description: input.description || "",
       algorithm: input.algorithm,
       key_type: input.key_type,
       purpose: input.purpose,
@@ -682,6 +687,7 @@ export async function formKey(session: AuthSession, input: FormKeyInput): Promis
     body: JSON.stringify({
       tenant_id: session.tenantId,
       name: input.name,
+      description: input.description || "",
       algorithm: input.algorithm,
       key_type: input.key_type,
       purpose: input.purpose,
@@ -715,6 +721,7 @@ export async function importKey(session: AuthSession, input: ImportKeyInput): Pr
     body: JSON.stringify({
       tenant_id: session.tenantId,
       name: input.name,
+      description: input.description || "",
       algorithm: input.algorithm || "",
       key_type: input.key_type || "",
       purpose: input.purpose || "",
@@ -739,6 +746,16 @@ export async function importKey(session: AuthSession, input: ImportKeyInput): Pr
       origin: input.origin || ""
     })
   });
+}
+
+// setKeyDescription replaces a key's description and returns the stored text.
+export async function setKeyDescription(session: AuthSession, keyId: string, description: string): Promise<string> {
+  const out = await apiRequest<{ description?: string }>(
+    session,
+    `/keys/${encodeURIComponent(keyId)}/description?tenant_id=${encodeURIComponent(session.tenantId)}`,
+    { method: "PUT", body: JSON.stringify({ description }) }
+  );
+  return String(out?.description || "");
 }
 
 export async function rotateKey(
@@ -1079,7 +1096,8 @@ export async function exportKey(
       method: "POST",
       body: JSON.stringify({
         wrapping_key_id: input?.wrapping_key_id || "",
-        export_mode: mode
+        export_mode: mode,
+        reason: input?.reason || ""
       })
     }
   );

@@ -303,6 +303,10 @@ func (h *Handler) handleCreateKey(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusBadRequest, "algorithm_unsupported", err.Error(), reqID, req.TenantID)
 			return
 		}
+		if errors.Is(err, errKeyDescriptionInvalid) {
+			writeErr(w, http.StatusBadRequest, "description_invalid", err.Error(), reqID, req.TenantID)
+			return
+		}
 		writeErr(w, http.StatusBadRequest, "create_failed", err.Error(), reqID, req.TenantID)
 		return
 	}
@@ -337,6 +341,10 @@ func (h *Handler) handleImportKey(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
 			return
 		}
+		if errors.Is(err, errKeyDescriptionInvalid) {
+			writeErr(w, http.StatusBadRequest, "description_invalid", err.Error(), reqID, req.TenantID)
+			return
+		}
 		writeErr(w, http.StatusBadRequest, "import_failed", err.Error(), reqID, req.TenantID)
 		return
 	}
@@ -369,6 +377,10 @@ func (h *Handler) handleFormKey(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.As(err, new(*accessRefusal)) {
 			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
+			return
+		}
+		if errors.Is(err, errKeyDescriptionInvalid) {
+			writeErr(w, http.StatusBadRequest, "description_invalid", err.Error(), reqID, req.TenantID)
 			return
 		}
 		writeErr(w, http.StatusBadRequest, "form_failed", err.Error(), reqID, req.TenantID)
@@ -858,6 +870,9 @@ func (h *Handler) handleExportKey(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		WrappingKeyID string `json:"wrapping_key_id"`
 		ExportMode    string `json:"export_mode"`
+		// Reason is recorded in the audit event. Key material (wrapped) is
+		// refused without one; a public component may give one.
+		Reason string `json:"reason"`
 	}
 	if err := decodeJSON(r, &req); err != nil && !errors.Is(err, io.EOF) {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
@@ -868,8 +883,11 @@ func (h *Handler) handleExportKey(w http.ResponseWriter, r *http.Request) {
 		mode = "wrapped"
 	}
 	if mode == "public-plaintext" {
-		publicResult, err := h.svc.ExportPublicComponentPlaintext(r.Context(), tenantID, r.PathValue("id"))
+		publicResult, err := h.svc.ExportPublicComponentPlaintext(r.Context(), tenantID, r.PathValue("id"), req.Reason)
 		if err != nil {
+			if writeExportReasonError(w, err, reqID, tenantID) {
+				return
+			}
 			var denied policyDeniedError
 			if errors.As(err, &denied) {
 				writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, tenantID)
@@ -897,8 +915,11 @@ func (h *Handler) handleExportKey(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	result, err := h.svc.ExportCurrentVersionWrapped(r.Context(), tenantID, r.PathValue("id"), req.WrappingKeyID)
+	result, err := h.svc.ExportCurrentVersionWrapped(r.Context(), tenantID, r.PathValue("id"), req.WrappingKeyID, req.Reason)
 	if err != nil {
+		if writeExportReasonError(w, err, reqID, tenantID) {
+			return
+		}
 		if writeHSMError(w, err, reqID, tenantID) {
 			return
 		}
@@ -926,6 +947,20 @@ func (h *Handler) handleExportKey(w http.ResponseWriter, r *http.Request) {
 		"envelope_material": false,
 		"request_id":        reqID,
 	})
+}
+
+// writeExportReasonError answers an export refused for its reason; the
+// service has already audited it.
+func writeExportReasonError(w http.ResponseWriter, err error, reqID, tenantID string) bool {
+	switch {
+	case errors.Is(err, errExportReasonRequired):
+		writeErr(w, http.StatusBadRequest, "export_reason_required", err.Error(), reqID, tenantID)
+	case errors.Is(err, errExportReasonInvalid):
+		writeErr(w, http.StatusBadRequest, "export_reason_invalid", err.Error(), reqID, tenantID)
+	default:
+		return false
+	}
+	return true
 }
 
 func (h *Handler) handleListVersions(w http.ResponseWriter, r *http.Request) {
@@ -2236,6 +2271,7 @@ func renderKey(k Key) map[string]any {
 		"id":                 k.ID,
 		"tenant_id":          k.TenantID,
 		"name":               k.Name,
+		"description":        k.Description,
 		"algorithm":          k.Algorithm,
 		"key_type":           k.KeyType,
 		"purpose":            k.Purpose,

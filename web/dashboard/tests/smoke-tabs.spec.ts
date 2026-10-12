@@ -369,28 +369,116 @@ test("the unread count sits beside the bell, however many alerts there are", asy
   }
 });
 
-// A dialog offers only what its request sends (11.6.0-beta). The create
-// dialog showed a one-option Tenant selector, and a derivation, a rotation
-// schedule, a description and a FIPS box that keycore never received.
-test("the key dialogs offer only what keycore is sent", async ({ page }) => {
+// A dialog offers only what its request sends (11.6.0-beta): no one-option
+// Tenant selector, no derivation or FIPS box keycore never received.
+// Description and a rotation schedule came back in 12.0.0-beta with the code
+// behind them: the description is in the create request, and the schedule is
+// a keycore rotation policy for the new key alone.
+test("the create dialog sends a description and sets the rotation schedule it offers", async ({ page }) => {
+  let created: Record<string, unknown> | null = null;
+  let policy: Record<string, unknown> | null = null;
+  await page.route(/\/svc\/keycore\/keys(\?|$)/, async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    created = route.request().postDataJSON();
+    await route.fulfill(json({ key_id: "key_1", tenant_id: "root", kcv: "A1B2C3" }));
+  });
+  await page.route(/\/svc\/keycore\/rotation\/policies(\?|$)/, async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    policy = route.request().postDataJSON();
+    await route.fulfill(json({ policy: { id: "rp_1", ...policy } }));
+  });
   await page.getByText("Key Management", { exact: true }).first().click();
   await page.getByRole("button", { name: "Create Key" }).click();
   const dialog = page.getByRole("dialog", { name: "Create New Key" });
-  await expect(dialog.getByPlaceholder("Enter key name")).toBeVisible();
   await expect(dialog.getByText(/^Key Name( ?\*)?$/)).toHaveCount(1);
-  for (const gone of ["Tenant", "Key Derivation", "Auto-Rotation", "Description", "FIPS-only algorithms enforced"]) {
+  for (const gone of ["Tenant", "Key Derivation", "Auto-Rotation", "FIPS-only algorithms enforced"]) {
     await expect(dialog.getByText(new RegExp(`^${gone}( ?\\*)?$`))).toHaveCount(0);
   }
-  let sent: Record<string, unknown> | null = null;
+  await dialog.getByPlaceholder("Enter key name").fill("smoke-key");
+  await dialog.getByLabel("Description").fill("  Ledger envelope key  ");
+  await dialog.getByRole("button", { name: "Rotation schedule" }).click();
+  await page.getByRole("option", { name: "Every 90 days" }).click();
+  await dialog.getByRole("button", { name: "Create Key" }).click();
+  await expect.poll(() => policy).not.toBeNull();
+  expect(created).toMatchObject({ tenant_id: "root", name: "smoke-key", description: "Ledger envelope key" });
+  expect(policy).toEqual({ name: "smoke-key", target_filter: "id:key_1", interval_days: 90, auto_rotate: true });
+});
+
+// Without key.rotation.write the schedule is not offered, and a key created
+// without one makes no policy.
+test("the rotation schedule is offered only to a caller who may set one", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem("vecta_ui_session", JSON.stringify({ tenantId: "root", username: "key-maker", token: "smoke-token", mode: "local", mustChangePassword: false, role: "admin", permissions: ["key.create", "key.read"] }));
+  });
+  let policies = 0;
+  let created = 0;
+  await page.route(/\/svc\/keycore\/rotation\/policies(\?|$)/, async (route) => {
+    if (route.request().method() === "POST") policies += 1;
+    await route.fulfill(json({ items: [] }));
+  });
   await page.route(/\/svc\/keycore\/keys(\?|$)/, async (route) => {
     if (route.request().method() !== "POST") return route.fallback();
-    sent = route.request().postDataJSON();
-    await route.fulfill(json({ key: { id: "key_1", name: "smoke-key" } }));
+    created += 1;
+    await route.fulfill(json({ key_id: "key_2", tenant_id: "root", kcv: "A1B2C3" }));
   });
-  await dialog.getByPlaceholder("Enter key name").fill("smoke-key");
+  await page.reload();
+  await page.getByText("Key Management", { exact: true }).first().click();
+  await page.getByRole("button", { name: "Create Key" }).click();
+  const dialog = page.getByRole("dialog", { name: "Create New Key" });
+  await expect(dialog.getByLabel("Description")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Rotation schedule" })).toHaveCount(0);
+  await dialog.getByPlaceholder("Enter key name").fill("no-schedule");
   await dialog.getByRole("button", { name: "Create Key" }).click();
-  await expect.poll(() => sent).not.toBeNull();
-  expect(sent).toMatchObject({ tenant_id: "root", name: "smoke-key" });
+  await expect.poll(() => created).toBe(1);
+  await expect(dialog).toHaveCount(0);
+  expect(policies).toBe(0);
+});
+
+const keyRow = (id: string, name: string, purpose: string, more: Record<string, unknown> = {}) => ({
+  id, tenant_id: "root", name, description: "", algorithm: "AES-256", key_type: "symmetric", purpose, status: "active", current_version: 1,
+  kcv: "A1B2C3", kcv_algorithm: "aes-ecb-zero", iv_mode: "internal", export_allowed: false, tags: [], labels: {}, ops_total: 0,
+  created_at: new Date(Date.now() - 3 * 86_400_000).toISOString(), updated_at: new Date(Date.now() - 3 * 86_400_000).toISOString(), ...more
+});
+
+// Key material leaves only with a stated reason (keycore refuses it without
+// one, 12.0.0-beta): the dialog cannot send the request until one is given.
+// A key's description is edited in place through its own route.
+test("a key is exported only with a reason, and its description is edited in place", async ({ page }) => {
+  const keys = { items: [keyRow("key_data", "ledger-dek", "encrypt-decrypt", { description: "Ledger envelope key", export_allowed: true }), keyRow("key_kek", "transport-kek", "wrap-unwrap")], has_more: false };
+  let exported: Record<string, unknown> | null = null;
+  let described: Record<string, unknown> | null = null;
+  await page.route(/\/svc\/keycore\/keys\?/, (route) => (route.request().method() === "GET" ? route.fulfill(json(keys)) : route.fallback()));
+  await page.route(/\/svc\/keycore\/keys\/key_data\/export(\?|$)/, async (route) => {
+    exported = route.request().postDataJSON();
+    await route.fulfill(json({ key_id: "key_data", kcv: "A1B2C3", wrapped_material: "d3JhcHBlZA==", material_iv: "aXY=", wrapped_dek: "", wrapping_key_id: "key_kek", wrapping_key_kcv: "", export_format: "aes-gcm-wrapped-by-kek" }));
+  });
+  await page.route(/\/svc\/keycore\/keys\/key_data\/description(\?|$)/, async (route) => {
+    described = route.request().postDataJSON();
+    await route.fulfill(json({ status: "ok", description: "Retired" }));
+  });
+  await page.reload(); // the shell lists the keys once, at start
+  await page.getByText("Key Management", { exact: true }).first().click();
+  await page.getByText("ledger-dek", { exact: true }).first().click();
+  const detail = page.getByRole("dialog", { name: "Key: ledger-dek" });
+  const field = detail.getByLabel("Key description");
+  await expect(field).toHaveValue("Ledger envelope key");
+  await expect(detail.getByRole("button", { name: "Save" })).toBeDisabled();
+  await field.fill("Retired");
+  await detail.getByRole("button", { name: "Save" }).click();
+  await expect.poll(() => described).toEqual({ description: "Retired" });
+
+  await detail.getByRole("button", { name: /^Export/ }).click();
+  const dialog = page.getByRole("dialog", { name: "Export Key: ledger-dek" });
+  const go = dialog.getByRole("button", { name: "Export Key" });
+  await expect(dialog.getByRole("button", { name: "Wrapping key" })).toContainText("transport-kek");
+  await expect(go).toBeDisabled();
+  await dialog.getByLabel("Reason for the export").fill("   ");
+  await expect(go).toBeDisabled();
+  await dialog.getByLabel("Reason for the export").fill("Moving the ledger to the DR site");
+  const download = page.waitForEvent("download");
+  await go.click();
+  await download;
+  expect(exported).toEqual({ wrapping_key_id: "key_kek", export_mode: "wrapped", reason: "Moving the ledger to the DR site" });
 });
 
 // What the certs service answers (services/certs/internal_mtls.go, edge_tls.go),

@@ -328,7 +328,7 @@ func (s *Service) createHSMKey(ctx context.Context, req CreateKeyRequest) (Key, 
 		labels[labelHSMCloudImport] = "allowed"
 	}
 	key := Key{
-		ID: keyID, TenantID: req.TenantID, Name: req.Name, Algorithm: req.Algorithm, KeyType: req.KeyType,
+		ID: keyID, TenantID: req.TenantID, Name: req.Name, Description: req.Description, Algorithm: req.Algorithm, KeyType: req.KeyType,
 		Purpose: req.Purpose, Status: initialStatus, ActivationDate: activationAt, CurrentVersion: 1,
 		KCV: kcv, KCVAlgorithm: kcvMethod, IVMode: req.IVMode, Owner: req.Owner, Cloud: req.Cloud, Region: req.Region,
 		Compliance: req.Compliance, Tags: req.Tags, Labels: labels,
