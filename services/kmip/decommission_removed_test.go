@@ -16,7 +16,7 @@ import (
 // client's status.
 func TestDecommissionRoutesRemoved(t *testing.T) {
 	t.Setenv(internalauth.EnvVar, "internal-test-token")
-	h := (&Handler{}).HTTPHandler()
+	h := (&Handler{}).HTTPRouter(nil, nil)
 	req := httptest.NewRequest(http.MethodPost, "/kmip/clients/c1/decommission", strings.NewReader(`{"action":"revoke","tenant_id":"t1"}`))
 	req.Header.Set(internalauth.HeaderName, "internal-test-token")
 	w := httptest.NewRecorder()

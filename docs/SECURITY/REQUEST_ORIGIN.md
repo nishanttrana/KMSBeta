@@ -9,9 +9,11 @@ the caller wrote.
 |---|---|---|
 | Address | `clientip.From(r)` (`pkg/clientip`) | the first `X-Forwarded-For` entry, `X-Real-IP`, a body field, `r.RemoteAddr` |
 | Actor | `pkgauth.Actor(ctx)` (`pkg/auth`), or `route.Call.Actor()` on a kernel route | an `X-Actor` / `X-User-*` header, a query parameter, a body field |
+| Who a request is made for | `tenantcheck.ActingFor(ctx, named)`; for a requester, `tenantcheck.Requester(r, id, email, ip)` | a body field, unless the caller is a platform service |
 
 `make conformance` fails on a second reader of either (`client-address`,
-`caller-named-actor`).
+`caller-named-actor`) and on a handler that takes a person from the request
+body (`body-named-person`).
 
 ## The address
 
@@ -91,16 +93,50 @@ verified caller. A platform service (a `kms-*` identity in the platform
 tenant, `tenantcheck.IsServicePrincipal`) may still name the person it acts
 for, as a playbook does.
 
+## Who a request is made for (13.0.0-beta)
+
+Request bodies across the services carried fields naming a person:
+`requested_by`, `updated_by`, `created_by`, `approved_by`, `actor`,
+`requester_id`, `requester_email`, `requester_ip`. About forty handlers
+used them as written.
+
+| Kind | Where | Effect of writing somebody else's name |
+|---|---|---|
+| The requester of something others approve | autokey key requests; ekm TDE wrap, unwrap, rotate; cloud sync; hyok; governance key approvals (email, address) | governance kept the *named* person from approving, so the real requester could approve their own request |
+| Who created a key | keycore `POST /keys` | the creator's standing over the key went to the named person; the record of who made it was false |
+| Who changed or approved something | settings, policies and profiles in autokey, signing, certs, dataprotect, governance, policy; dataprotect wrapper registration (`approved_by`); signing records (`requested_by`); ekm TDE keys and BitLocker operations; key rotation metrics | a false record |
+
+Each is now set in the handler:
+
+- `tenantcheck.ActingFor(ctx, named)` is the verified caller
+  (`pkgauth.Actor`). A platform service (`IsServicePrincipal`) may name the
+  person it acts for, as a playbook does. Empty without a token.
+- `tenantcheck.Requester(r, id, email, ip)` is the caller, no email, and
+  `clientip.From(r)`. A platform service's statement is taken as given.
+  Governance resolves a user's email from the account, not from the caller.
+- HYOK authenticates its caller in the endpoint's own mode, so its
+  requester is that verified identity.
+
+`scripts/check-body-named-people.py` reads every handler that decodes a
+body and fails unless each such field is assigned before use. Fields that
+are data and not the caller are in
+`scripts/body-named-people-allowlist.txt` with a reason: a key's and a
+CARAF asset's `owner`, the actor of an ingested posture event, keyaccess
+`evaluate` (callable only by the ekm, cloud and hyok platform identities),
+and two handlers that bind through a helper the script can't follow.
+
+The values recorded are IDs from the token (a user ID or client ID). The
+token carries no username or email.
+
 ## Still open
 
 - **Trusted proxies in front of the edge** (above). Needs a deployment
   setting and the same rule applied in Envoy.
-- **Other "who asked" fields in request bodies.** `requested_by`,
-  `created_by` and `requester_id` are accepted in several services' bodies
-  (certs, signing, autokey, hyok, ekm, cloud, keyaccess, posture). Some are
-  the end requester in an upstream system, stated by an authenticated
-  integration, and belong there; others should be the verified caller. They
-  have not been reviewed one by one.
+- **The dashboard still sends `updated_by`, `created_by` and requester
+  fields.** They are ignored. Screens that show "updated by" now show the
+  caller's ID, not a name.
+- **A platform service's statement of who it acts for is taken as given**
+  everywhere, as in governance below.
 - **Governance's own `POST /governance/requests`** binds a user's requester
   ID, email and (now) address to the caller. A platform service's statement
   is taken as given.

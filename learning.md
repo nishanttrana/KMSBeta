@@ -5,6 +5,63 @@ Newest entries on top.
 
 ## 2026-10-12
 
+### A service with no token check, and two that never compared the tenant (13.0.0-beta)
+- **How it was found.** Reviewing which body fields name a person, I asked
+  the running stack, signed in as a user with one permission, for every
+  dashboard route *for a tenant the user is not in*. 19 of 192 answered
+  200. Then with no token: KMIP's four answered 200. Nothing in the test
+  suite, conformance or the live check asked either question.
+- **KMIP: nothing verified a token.** `services/kmip/main.go` passed its
+  mux straight to the audit middleware. Every other service wraps its
+  handler with `pkgjwtauth.MustWrap`. The handlers did call
+  `tenantcheck.Enforce`, which is why it looked guarded when read.
+- **`tenantcheck.Enforce` passes when the context has no claims.** It
+  compares a tenant with a token; with no token there is nothing to compare
+  and it returns nil. It is a tenant check, never an authentication check.
+  **Rule: a guard that needs a precondition must fail without it, or its
+  name must say what it doesn't do.** The kernel refuses in both cases; the
+  legacy helper is left as it is for the thirteen files that still use it,
+  each behind `MustWrap`.
+- **Autokey: the guard existed and was never called.** `mustTenantChecked`
+  was defined in the handler file and used by no handler. A grep for the
+  function finds it and reads as "this service checks the tenant". **Rule:
+  count a guard's callers, not its definition.**
+- **Signing: the dangerous routes were guarded, so the rest looked done.**
+  `bindTenant` covered sign and verify (added after an earlier finding).
+  Settings, profiles, records and summary were never looked at again.
+  **Rule: a fix to one route of a service is a reason to list every route
+  of that service, not a reason to stop.**
+- **What now fails if this returns.** Conformance `server-verifies-tokens`
+  (a service starting an HTTP server with no verifier; the old KMIP has
+  none). `scripts/live-check.py` asks every dashboard GET with no token and
+  for another tenant; on 12.3.0-beta it prints the 18 faults. Per service,
+  `routetest.RefusalsAudited`. The first is a presence check and proves
+  little alone; the live check is the one that asks the real question.
+- **`route.Legacy` moved 38 handlers behind the kernel without rewriting
+  them.** The kernel resolves and checks the tenant (query, header and the
+  body's top-level `tenant_id`), then the adapter writes it to
+  `X-Tenant-ID`, where the old handlers already look. Each handler's
+  tenant helper was reduced to read only that header. The handlers still
+  emit their own domain events, so a call produces the kernel's event and
+  the service's; the kernel's action names differ so nothing counts twice.
+
+### Who asked (13.0.0-beta)
+- **Forty body fields, three kinds.** A record of who did something
+  (`updated_by`, `created_by`): falsifiable, and a key's creator has
+  standing over the key. A requester that governance acts on: the named
+  person is the one kept from approving, so naming somebody else let the
+  real requester approve. And data that is not the caller at all (a key's
+  `owner`, the actor of an ingested event), which stays and is listed with
+  its reason in `scripts/body-named-people-allowlist.txt`.
+- **The dashboard sent `session.username`; the token carries a user ID.**
+  keycore matches a key's creator against the token's user ID, so a key
+  created in the dashboard never matched its creator unless the two were
+  equal. Binding the creator to the token fixes that as a side effect.
+- **A scanner reading source with regular expressions needs the binding
+  where it can see it.** Three handlers were already right but passed the
+  verified value as an argument; they now assign the field first. One that
+  binds in a helper is on the allowlist.
+
 ### The items I had listed as "found, not fixed" (12.3.0-beta)
 - **A public key rotated alone was worse than one left behind.**
   `RotateKeyTo` called `generateMaterialForCreate(alg, key.KeyType)` for

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"vecta-kms/pkg/clientip"
 
 	"vecta-kms/pkg/tenantcheck"
 )
@@ -133,8 +132,9 @@ func (h *Handler) handleSync(w http.ResponseWriter, r *http.Request) {
 	if !bodyTenantAllowed(w, r, req.TenantID, reqID) {
 		return
 	}
-	// The address is the one the edge saw, not one the body or a header names.
-	req.RequesterIP = clientip.From(r)
+	// The requester is the verified caller at the address the edge saw, not
+	// one the body names: an approval this sync needs is asked in their name.
+	req.RequesterID, req.RequesterEmail, req.RequesterIP = tenantcheck.Requester(r, req.RequesterID, req.RequesterEmail, req.RequesterIP)
 	out, err := h.svc.SyncCloudKeys(r.Context(), req)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, req.TenantID, "sync_failed")

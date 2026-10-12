@@ -1,0 +1,19 @@
+# Body fields that name a person and are not the caller. Each row:
+#   <file> <handler> <Field>  # why it is data, or where it is bound
+# Checked by scripts/check-body-named-people.py. This list only shrinks.
+
+services/governance/handler.go handleCreateRequest RequesterID     # bound in bindRequester (approval_auth.go)
+services/governance/handler.go handleCreateRequest RequesterEmail  # bound in bindRequester
+services/governance/handler.go handleCreateRequest RequesterIP     # bound in bindRequester
+services/keyaccess/handler.go evaluate RequesterID     # only the ekm, cloud and hyok platform identities may call; they pass the requester they bound
+services/keyaccess/handler.go evaluate RequesterEmail  # as above
+services/keyaccess/handler.go evaluate RequesterIP     # as above
+services/keycore/handler.go handleDestroyKey RequesterID     # bound to the verified actor through locals; a platform service may name who it acts for
+services/keycore/handler.go handleDestroyKey RequesterEmail  # as above
+services/keycore/handler.go handleDestroyKey RequesterIP     # as above
+services/keycore/handler.go handleCreateKey Owner            # a label the tenant gives the key, not who acted
+services/keycore/handler.go handleUpdateKey Owner            # as above
+services/keycore/handler_caraf.go createCarafAsset Owner     # the asset's owner, a label
+services/keycore/handler_caraf.go updateCarafAsset Owner     # as above
+services/keycore/handler_caraf.go setCarafDecision Owner     # who the decision is assigned to; who decided is c.Actor()
+services/posture/handler.go handleIngestEvent Actor          # the actor of the reported event, not who reports it

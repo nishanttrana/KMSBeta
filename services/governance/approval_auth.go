@@ -98,14 +98,20 @@ func (h *Handler) bindRequester(r *http.Request, claims *pkgauth.Claims, in *Cre
 		}
 		return
 	}
-	in.RequesterID = firstNonEmpty(claims.UserID, claims.ClientID)
-	in.RequesterEmail = ""
-	in.RequesterIP = clientip.From(r)
-	if callerIsUser(claims) {
-		if email, err := h.svc.store.UserEmail(r.Context(), in.TenantID, claims.UserID); err == nil {
-			in.RequesterEmail = email
-		}
-	}
+	in.RequesterID, in.RequesterEmail, in.RequesterIP = h.requesterOf(r, claims, in.TenantID)
 	delete(in.TargetDetails, "approver_emails")
 	in.CallbackService, in.CallbackAction, in.CallbackPayload = "", "", nil
+}
+
+// requesterOf is the verified caller as a requester: their ID, the email on
+// their account (a user's; it is what keeps them out of their own approvers)
+// and the address the edge saw.
+func (h *Handler) requesterOf(r *http.Request, claims *pkgauth.Claims, tenantID string) (id, email, ip string) {
+	id, ip = firstNonEmpty(claims.UserID, claims.ClientID), clientip.From(r)
+	if callerIsUser(claims) {
+		if found, err := h.svc.store.UserEmail(r.Context(), tenantID, claims.UserID); err == nil {
+			email = found
+		}
+	}
+	return id, email, ip
 }

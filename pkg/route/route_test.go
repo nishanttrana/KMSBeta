@@ -258,3 +258,52 @@ func TestPublicRouteRecordsVerifiedActor(t *testing.T) {
 		t.Fatalf("token identity must win: %+v", ev)
 	}
 }
+
+// A handler written for a raw mux reads its tenant from the request. Behind
+// the kernel it is reached only by a caller who may act in that tenant, and
+// it reads the tenant the kernel resolved, whichever way the caller named it.
+func TestLegacyHandlerSeesOnlyTheCheckedTenant(t *testing.T) {
+	rec := &routetest.Recorder{}
+	r := route.New("demo", rec, nil)
+	var seen []string
+	legacy := func(w http.ResponseWriter, req *http.Request) {
+		seen = append(seen, req.Header.Get("X-Tenant-ID"))
+		w.WriteHeader(http.StatusNoContent)
+	}
+	r.Handle("POST /legacy", route.Spec{Action: "legacy.write", Permission: "demo.write", Resource: "thing"}, route.Legacy(legacy))
+
+	for name, tc := range map[string]struct {
+		target, body string
+		claims       *pkgauth.Claims
+		status       int
+	}{
+		"no token":                {"/legacy?tenant_id=t1", `{}`, nil, http.StatusUnauthorized},
+		"no permission":           {"/legacy?tenant_id=t1", `{}`, claims("t1"), http.StatusForbidden},
+		"another tenant, query":   {"/legacy?tenant_id=t2", `{}`, claims("t1", "demo.write"), http.StatusForbidden},
+		"another tenant, body":    {"/legacy", `{"tenant_id":"t2"}`, claims("t1", "demo.write"), http.StatusForbidden},
+		"query and body disagree": {"/legacy?tenant_id=t1", `{"tenant_id":"t2"}`, claims("t1", "demo.write"), http.StatusForbidden},
+	} {
+		if w := serve(t, r, http.MethodPost, tc.target, tc.body, tc.claims); w.Code != tc.status {
+			t.Errorf("%s: %d, want %d", name, w.Code, tc.status)
+		}
+	}
+	if len(seen) != 0 {
+		t.Fatalf("a refused request reached the handler: %q", seen)
+	}
+
+	// Named in the query, in the body, or not at all: the handler reads the
+	// tenant the kernel checked.
+	for _, target := range []string{"/legacy?tenant_id=t1", "/legacy"} {
+		for _, body := range []string{`{}`, `{"tenant_id":"t1"}`} {
+			if w := serve(t, r, http.MethodPost, target, body, claims("t1", "demo.write")); w.Code != http.StatusNoContent {
+				t.Fatalf("%s %s: %d", target, body, w.Code)
+			}
+		}
+	}
+	if strings.Join(seen, ",") != "t1,t1,t1,t1" {
+		t.Fatalf("the handler read %q", seen)
+	}
+	if ev := rec.Last(t); ev.Action != "legacy.write" || ev.Event.Result != route.ResultSuccess || ev.Event.TenantID != "t1" {
+		t.Fatalf("event: %+v", ev)
+	}
+}

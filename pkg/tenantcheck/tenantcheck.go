@@ -5,10 +5,12 @@
 package tenantcheck
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"os"
 	"strings"
+	"vecta-kms/pkg/clientip"
 
 	pkgauth "vecta-kms/pkg/auth"
 )
@@ -113,4 +115,35 @@ func Enforce(r *http.Request, requestTenantID string) error {
 		return ErrTenantMismatch
 	}
 	return nil
+}
+
+// ActingFor is who a request is made by: the verified caller. Only a platform
+// service (IsServicePrincipal) may name the person it acts for, as a playbook
+// does; what anyone else names is ignored. Empty without a verified token.
+func ActingFor(ctx context.Context, named string) string {
+	claims, ok := pkgauth.ClaimsFromContext(ctx)
+	if !ok || claims == nil {
+		return ""
+	}
+	if named = strings.TrimSpace(named); named != "" && IsServicePrincipal(claims) {
+		return named
+	}
+	return pkgauth.Actor(ctx)
+}
+
+// Requester is who asked for something that others approve, or that is judged
+// by who asked: the verified caller, at the address the edge saw, with no
+// email (a token carries none). Only a platform service may state somebody
+// else. Taken from the body for anyone, the requester was whoever the caller
+// named, and a rule that keeps the requester from approving their own request
+// kept out the wrong person.
+func Requester(r *http.Request, id, email, ip string) (string, string, string) {
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	if !IsServicePrincipal(claims) {
+		return pkgauth.Actor(r.Context()), "", clientip.From(r)
+	}
+	if ip = strings.TrimSpace(ip); ip == "" {
+		ip = clientip.From(r)
+	}
+	return ActingFor(r.Context(), id), strings.TrimSpace(email), ip
 }

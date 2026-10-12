@@ -71,6 +71,12 @@ an approach, record it here or in the matching doc below.
    an approval, is identity whatever it is called (12.1.0-beta,
    [docs/SECURITY/REQUEST_ORIGIN.md](docs/SECURITY/REQUEST_ORIGIN.md);
    conformance `client-address`, `caller-named-actor`).
+   **A request body never says who is asking.** `requested_by`,
+   `updated_by`, `created_by`, `requester_id` and the like are assigned in
+   the handler from `tenantcheck.ActingFor` / `tenantcheck.Requester` (or
+   `c.Actor()`); only a platform service may name the person it acts for
+   (13.0.0-beta; conformance `body-named-person`, whose allowlist only
+   shrinks).
 5. **FIPS 140-3 is the customer's choice (made in the KMS UI), on the certified module**
    ([docs/SECURITY/FIPS.md](docs/SECURITY/FIPS.md)):
    - Every binary builds with `GOFIPS140` = `pkg/fips.CertifiedModuleVersion`.
@@ -449,6 +455,13 @@ changes code without touching CHANGELOG.md or learning.md.
     4xx. A dashboard call whose credential is in its body, not the session
     token, sets `keepSessionOn401`.
   - A dashboard client file with no importer is deleted, not kept.
+  - Every route needs a verified token and the caller's own tenant
+    ([docs/SECURITY/TENANT_ISOLATION.md](docs/SECURITY/TENANT_ISOLATION.md)).
+    `scripts/live-check.py` asks every dashboard route with no token and for
+    another tenant; a route that answers by design is added to its `PUBLIC`
+    or `SAME_FOR_EVERY_TENANT` list with the reason. A guard is judged by
+    its callers, not its definition: KMIP served with no verifier and
+    Autokey defined a tenant check nothing called (13.0.0-beta).
   - A control on a page has an effect (owner, 2026-10-12: in the key dialog
     "the tenant name display is not required"). No selector with one
     option, no field its request leaves out, no box that is always ticked;

@@ -4,6 +4,68 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.0.0-beta] — 2026-10-12
+
+### Security
+- **KMIP's management API answered without a token.** `/kmip/profiles`,
+  `/kmip/clients`, `/kmip/interop/targets` and `/kmip/capabilities` were
+  served with no token verification at all. Anyone who could reach the
+  console's address could list any tenant's KMIP clients and profiles, and
+  add or delete them. Every route now needs a verified token, the caller's
+  own tenant and `kmip.read` or `kmip.write`. The KMIP protocol port
+  (mutual TLS) was not affected. **Check each tenant's KMIP clients and
+  profiles for entries nobody there created**: a request made this way is
+  in the audit log as `audit.kmip.http_request` with no actor.
+- **Autokey and artifact signing answered for whichever tenant was named.**
+  A signed-in user of one tenant could read and change another tenant's
+  Autokey settings, templates, service policies and key requests, and its
+  signing settings, profiles and records, by naming that tenant in the
+  request. Signing and verifying themselves were already checked. All three
+  services' routes now go through the route kernel: token, tenant,
+  permission, and an audit event for every call and refusal.
+- **Who asked is the verified caller, not what the request says.** Some
+  forty handlers recorded `requested_by`, `updated_by`, `created_by` or
+  `requester_id` as the caller wrote it. Where governance keeps the
+  requester from approving their own request (Autokey key requests, TDE key
+  wrap, unwrap and rotation, cloud sync, HYOK, key approvals), a caller who
+  named somebody else could approve their own request. A key's creator, who
+  changed a policy or a setting, who asked for a signature and who approved
+  a wrapper registration are now the caller. Only a platform service may
+  name the person it acts for.
+
+### Changed (breaking)
+- **New permissions.** Built-in `admin` and `tenant-admin` hold `*` and are
+  unaffected. Any other role or API client needs them granted:
+  `kmip.read`, `kmip.write`; `autokey.read`, `autokey.write`, `autokey.use`
+  (asking for a key); `signing.read`, `signing.write`, `signing.use`
+  (signing), `signing.verify` (verifying). **A CI client that signs needs
+  `signing.use`.**
+- `requested_by`, `updated_by`, `created_by`, `approved_by`, `actor`,
+  `requester_id`, `requester_email` and `requester_ip` in a request body
+  are ignored unless the caller is a platform service. The values recorded
+  are the caller's user or client ID, so a name shown as "updated by" is
+  now that ID. The dashboard still sends some of these fields; they have no
+  effect.
+- `audit.signing.request_refused` is gone. A request refused for its
+  tenant, permission or missing token is audited under the route's own
+  subject (`audit.signing.blob_sign`, `audit.autokey.settings_update`, …)
+  with `result: refused` and its `reason`, as on every kernel route. The
+  same holds for Autokey's `audit.autokey.request_refused`.
+
+### Added
+- `make conformance` fails when a handler takes a person's name from the
+  request body (`body-named-person`) and when a service starts an HTTP
+  server with no token verifier (`server-verifies-tokens`).
+- `scripts/live-check.py` asks every dashboard route twice more, with no
+  token and for a tenant the account is not in, and fails on any answer.
+  Run against 12.3.0-beta it reports the 18 faulty answers above.
+
+### Still open
+- Thirteen handler files are not on the route kernel yet. Their routes
+  check the tenant in each handler and most check no permission: a
+  signed-in user with few permissions can still read much of their own
+  tenant ([docs/SECURITY/TENANT_ISOLATION.md](docs/SECURITY/TENANT_ISOLATION.md)).
+
 ## [12.3.0-beta] — 2026-10-12
 
 ### Fixed

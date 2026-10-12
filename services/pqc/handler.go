@@ -169,7 +169,8 @@ func (h *Handler) rollbackPlan(c *route.Call) {
 	if !c.Decode(&req) {
 		return
 	}
-	item, err := h.svc.RollbackMigrationPlan(c.R.Context(), c.Tenant, c.R.PathValue("id"), c.Actor())
+	req.Actor = c.Actor()
+	item, err := h.svc.RollbackMigrationPlan(c.R.Context(), c.Tenant, c.R.PathValue("id"), req.Actor)
 	if !h.ok(c, err) {
 		return
 	}

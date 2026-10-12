@@ -134,6 +134,14 @@ and the largest last:
 - [ ] CHANGELOG lists behaviour changes (new permission requirements,
       tenant defaults).
 
+**In one step, without rewriting handlers:** register each old
+`http.HandlerFunc` as `route.Legacy(h.handleX)` with its `Spec`. The kernel
+does the token, tenant, permission and audit; the adapter writes the checked
+tenant to `X-Tenant-ID`, and the handler's tenant helper is reduced to read
+only that header. KMIP's management API, Autokey and signing were moved this
+way in 13.0.0-beta. The handlers keep their own domain events until they are
+rewritten.
+
 ### Phase 3: more rules in the Spec
 Each rule below is added once to the kernel and then reaches every migrated
 route:

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	"vecta-kms/pkg/servicetoken"
 	pkgsvctls "vecta-kms/pkg/svctls"
 
@@ -71,11 +72,13 @@ func main() {
 	}
 
 	var publisher EventPublisher
+	var auditClient *pkgaudit.Client // the management API's per-route events
 	var natsConn *nats.Conn
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		natsConn = nc
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.kmip.dead_letter")
+		auditClient, _ = pkgaudit.NewClient(js, "kmip")
 	} else {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
 	}
@@ -95,7 +98,10 @@ func main() {
 	exec := handler.NewBatchExecutor()
 
 	httpPort := envOr("HTTP_PORT", "8160")
-	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler.HTTPHandler(), publisher, "kmip"))
+	// The management API takes a verified token on every route. Without a
+	// verification key the service refuses to start (MustWrapRouter).
+	management := pkgjwtauth.MustWrapRouter("KMIP", cfg.JWTIssuer, cfg.JWTAudience, handler.HTTPRouter(auditClient, logger), logger)
+	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(management, publisher, "kmip"))
 	go func() {
 		logger.Printf("https (mTLS) listening on :%s", httpPort)
 		if err := httpSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {

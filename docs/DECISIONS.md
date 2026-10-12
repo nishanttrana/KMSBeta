@@ -7,6 +7,57 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-12 — Legacy handlers go behind the kernel through an adapter; the tenant has one source
+**Decision:** KMIP's management API, Autokey and signing are registered on
+`pkg/route` with `route.Legacy(handler)`. The kernel verifies the token,
+resolves and checks the tenant and the permission and audits the call; the
+adapter writes the checked tenant to `X-Tenant-ID` and the old handler reads
+only that (13.0.0-beta).
+**Why:** KMIP verified no token and the other two never compared the tenant
+with the token. Rewriting 38 handlers as kernel handlers in a security fix
+is 38 chances to change behaviour; the adapter changes none.
+**Rejected:** adding `tenantcheck.Enforce` to each handler (it passes
+without a token, and the next handler forgets it again); wrapping KMIP with
+`MustWrap` only (authenticates, checks no tenant or permission).
+**Permissions:** `kmip.read|write`, `autokey.read|write|use`,
+`signing.read|write|use|verify`. Verifying is separate from signing: who
+deploys an artifact checks it without being able to sign one. None of the
+three domains joins `route.CoarseDomains`: `kms.read` / `kms.write` grant
+nothing here.
+**Not done:** these handlers still emit their own domain events beside the
+kernel's request event.
+**Enforced by:** `routetest.RefusalsAudited` in each service,
+`TestManagementAPINeedsATokenAndTheCallersTenant`,
+`TestAnotherTenantIsRefusedHoweverItIsNamed`,
+`TestTenantMismatchRefusedAndAudited`, conformance `route-kernel` and
+`server-verifies-tokens`, and the no-token and other-tenant passes of
+`scripts/live-check.py`.
+
+## 2026-10-12 — A request body never says who is asking
+**Decision:** `requested_by`, `updated_by`, `created_by`, `approved_by`,
+`actor` and the requester fields are set by the handler from the verified
+token: `tenantcheck.ActingFor(ctx, named)` and
+`tenantcheck.Requester(r, id, email, ip)`. A platform service
+(`IsServicePrincipal`) may name the person it acts for; anyone else's value
+is dropped. A requester's email is never taken from the caller; governance
+looks it up from the account (13.0.0-beta).
+**Why:** governance keeps the recorded requester out of the approvers. Taken
+from the body, that was whoever the caller named.
+**HYOK:** its caller is authenticated by the endpoint's own mode (token,
+mutual TLS, Entra), not always an auth-service token, so its requester is
+that verified identity. What the body named stays in the logged request.
+**Rejected:** removing the fields from the request types (several services
+refuse unknown fields; existing clients would break for no gain); trusting
+the dashboard to send the right name.
+**Kept as data:** a key's and a CARAF asset's `owner`, and the actor of an
+ingested posture event. Listed with reasons in
+`scripts/body-named-people-allowlist.txt`, which only shrinks.
+**Enforced by:** conformance `body-named-person`
+(`scripts/check-body-named-people.py`), `pkg/tenantcheck/acting_for_test.go`,
+`TestKeyCreatorIsTheVerifiedCaller`, `TestTDEKeyRequesterIsTheVerifiedCaller`,
+`TestRequesterAndEditorAreTheVerifiedCaller`,
+`TestHandlerGovernancePendingApproval`, `TestSignRefusalAuditedPostgres`.
+
 ## 2026-10-12 — A key pair rotates as one; a public key never rotates alone
 **Decision:** rotating a private key that has a public component (same
 `pair_id`) gives both their new version in one transaction, the public key

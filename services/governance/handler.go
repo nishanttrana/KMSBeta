@@ -120,6 +120,7 @@ func (h *Handler) handleUpdateSettings(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
+	settings.UpdatedBy = tenantcheck.ActingFor(r.Context(), settings.UpdatedBy)
 	settings.TenantID = tenantID
 	updated, err := h.svc.UpdateSettings(r.Context(), settings)
 	if err != nil {
@@ -412,6 +413,7 @@ func (h *Handler) handleUpdateSystemState(w http.ResponseWriter, r *http.Request
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
+	state.UpdatedBy = tenantcheck.ActingFor(r.Context(), state.UpdatedBy)
 	state.TenantID = tenantID
 	updated, err := h.svc.UpdateSystemState(r.Context(), state)
 	if err != nil {
@@ -493,6 +495,7 @@ func (h *Handler) handleUpdatePostureControls(w http.ResponseWriter, r *http.Req
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
+	patch.UpdatedBy = tenantcheck.ActingFor(r.Context(), patch.UpdatedBy)
 	patch.TenantID = tenantID
 	out, err := h.svc.ApplyPostureControls(r.Context(), patch)
 	if err != nil {
@@ -834,7 +837,7 @@ func (h *Handler) handleCreateKeyApproval(w http.ResponseWriter, r *http.Request
 	}
 	if !tenantcheck.IsServicePrincipal(claims) {
 		in.CallbackService, in.CallbackAction, in.CallbackPayload = "", "", nil
-		in.RequesterID = firstNonEmpty(claims.UserID, claims.ClientID)
+		in.RequesterID, in.RequesterEmail, in.RequesterIP = h.requesterOf(r, claims, in.TenantID)
 	}
 	out, err := h.svc.CreateKeyApproval(r.Context(), in)
 	if err != nil {

@@ -49,6 +49,7 @@ func (h *Handler) handleCreatePolicy(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", "invalid request body", reqID, "")
 		return
 	}
+	req.Actor = tenantcheck.ActingFor(r.Context(), req.Actor)
 	tenantID := strings.TrimSpace(req.TenantID)
 	if tenantID == "" {
 		tenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
@@ -116,6 +117,7 @@ func (h *Handler) handleUpdatePolicy(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", "invalid request body", reqID, tenantID)
 		return
 	}
+	req.Actor = tenantcheck.ActingFor(r.Context(), req.Actor)
 	req.TenantID = tenantID
 	p, err := h.svc.UpdatePolicy(r.Context(), r.PathValue("id"), req)
 	if errors.Is(err, errNotFound) {
@@ -145,6 +147,7 @@ func (h *Handler) handleDeletePolicy(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	req.Actor = tenantcheck.ActingFor(r.Context(), req.Actor)
 	if err := h.svc.DeletePolicy(r.Context(), tenantID, r.PathValue("id"), req.Actor, req.CommitMessage); err != nil {
 		if errors.Is(err, errNotFound) {
 			writeErr(w, http.StatusNotFound, "not_found", "policy not found", reqID, tenantID)

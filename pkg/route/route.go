@@ -324,6 +324,25 @@ func (c *Call) write(status int, payload map[string]interface{}) {
 	_ = json.NewEncoder(c.W).Encode(payload)
 }
 
+// Legacy adapts a handler written for a raw mux to run behind the kernel.
+// By the time it is called the caller is authenticated, holds the route's
+// permission and may act in c.Tenant, and the handler finds that tenant
+// where every such handler already looks: X-Tenant-ID. What the handler
+// writes decides the event's result.
+//
+// It is the way off the burn-down list for a service whose handlers read a
+// tenant from the request themselves: autokey and signing did so without
+// checking it against the token, and KMIP's management API had no token
+// check at all (13.0.0-beta).
+func Legacy(h http.HandlerFunc) func(*Call) {
+	return func(c *Call) {
+		if c.Tenant != "" {
+			c.R.Header.Set("X-Tenant-ID", c.Tenant)
+		}
+		h(c.W, c.R)
+	}
+}
+
 type capture struct {
 	http.ResponseWriter
 	status int

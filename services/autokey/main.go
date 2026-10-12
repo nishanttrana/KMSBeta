@@ -83,13 +83,12 @@ func main() {
 		NewHTTPGovernanceClient(envOr("GOVERNANCE_URL", "https://governance:8050"), 5*time.Second),
 		publisher,
 	)
-	handler := NewHandler(svc)
+	handler := NewHandler(svc, auditClient, logger)
 
 	httpPort := envOr("HTTP_PORT", "8260")
-	// Every request carries a verified Bearer token: a person's from the
-	// dashboard or API, or a platform service's. Before 8.0.0-beta this
-	// service verified none and took the tenant from the request.
-	authed := pkgjwtauth.MustWrap("AUTOKEY", cfg.JWTIssuer, cfg.JWTAudience, handler, auditClient, logger)
+	// Every route goes through the kernel behind a verified Bearer token: a
+	// person's from the dashboard or API, or a platform service's.
+	authed := pkgjwtauth.MustWrapRouter("AUTOKEY", cfg.JWTIssuer, cfg.JWTAudience, handler.router, logger)
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authed, publisher, "autokey"))
 	go func() {
 		logger.Printf("https (mTLS) listening on :%s", httpPort)

@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-12T10:22:11Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-12T10:59:34Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -10,7 +10,7 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Tab/component mappings: `33`
 - Sub-pane groups: `9`
 - Backend HTTP routes discovered: `907` across `28` services
-- Backend routes on the `pkg/route` kernel: `482` (permission and audit action in `backend-routes.csv`)
+- Backend routes on the `pkg/route` kernel: `520` (permission and audit action in `backend-routes.csv`)
 - Frontend API call sites discovered: `537`
 - Frontend call sites with exact backend route match: `516`
 - Frontend call sites needing review or dynamic/runtime confirmation: `21`
@@ -326,10 +326,10 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | auth | DELETE | /scim/v2/Groups/{id} | h.handleSCIMDeleteGroup |  | services/auth/handler.go | 152 |
 | auth | POST | /internal/subjects/check | h.checkSubjects | authenticated | services/auth/subjects.go | 36 |
 | auth | GET | /internal/tenant-ids | h.listTenantIDs | authenticated | services/auth/tenant_ids.go | 20 |
-| autokey | POST | /autokey/templates | h.handleUpsertTemplate |  | services/autokey/handler.go | 34 |
-| autokey | PUT | /autokey/templates/{id} | h.handleUpsertTemplate |  | services/autokey/handler.go | 35 |
-| autokey | POST | /autokey/service-policies | h.handleUpsertServicePolicy |  | services/autokey/handler.go | 38 |
-| autokey | PUT | /autokey/service-policies/{service} | h.handleUpsertServicePolicy |  | services/autokey/handler.go | 39 |
+| autokey | POST | /autokey/templates | route.Legacy(h.handleUpsertTemplate) | autokey.write | services/autokey/handler.go | 39 |
+| autokey | PUT | /autokey/templates/{id} | route.Legacy(h.handleUpsertTemplate) | autokey.write | services/autokey/handler.go | 40 |
+| autokey | POST | /autokey/service-policies | route.Legacy(h.handleUpsertServicePolicy) | autokey.write | services/autokey/handler.go | 43 |
+| autokey | PUT | /autokey/service-policies/{service} | route.Legacy(h.handleUpsertServicePolicy) | autokey.write | services/autokey/handler.go | 44 |
 | backup | GET | /healthz | h.handleHealth |  | services/backup/handler.go | 48 |
 | certs | GET | /certs/{id} | h.handleGetCert |  | services/certs/handler.go | 47 |
 | certs | POST | /certs/profiles | h.handleCreateProfile |  | services/certs/handler.go | 52 |
@@ -355,11 +355,11 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | cloud | POST | /cloud/accounts/{id}/test | h.testAccount | cloud.write | services/cloud/credentials.go | 176 |
 | cloud | POST | /cloud/credentials/{id}/test | h.testCredential | authenticated | services/cloud/credentials.go | 177 |
 | cloud | GET | /cloud/credential-usage | h.credentialUsage | authenticated | services/cloud/credentials.go | 178 |
-| cloud | GET | /cloud/accounts | h.handleListAccounts |  | services/cloud/handler.go | 32 |
-| cloud | GET | /cloud/region-mappings | h.handleListRegionMappings |  | services/cloud/handler.go | 35 |
-| cloud | GET | /cloud/inventory | h.handleInventory |  | services/cloud/handler.go | 37 |
-| cloud | GET | /cloud/bindings | h.handleListBindings |  | services/cloud/handler.go | 38 |
-| cloud | GET | /cloud/bindings/{id} | h.handleGetBinding |  | services/cloud/handler.go | 39 |
+| cloud | GET | /cloud/accounts | h.handleListAccounts |  | services/cloud/handler.go | 31 |
+| cloud | GET | /cloud/region-mappings | h.handleListRegionMappings |  | services/cloud/handler.go | 34 |
+| cloud | GET | /cloud/inventory | h.handleInventory |  | services/cloud/handler.go | 36 |
+| cloud | GET | /cloud/bindings | h.handleListBindings |  | services/cloud/handler.go | 37 |
+| cloud | GET | /cloud/bindings/{id} | h.handleGetBinding |  | services/cloud/handler.go | 38 |
 | cluster-manager | GET | /healthz | h.handleHealth |  | services/cluster-manager/handler.go | 33 |
 | cluster-manager | GET | /cluster/members | h.handleMembers |  | services/cluster-manager/handler.go | 36 |
 | cluster-manager | GET | /cluster/nodes | h.handleNodes |  | services/cluster-manager/handler.go | 37 |

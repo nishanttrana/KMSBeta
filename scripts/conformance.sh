@@ -307,6 +307,41 @@ else
   echo "PASS [caller-named-actor]"
 fi
 
+# A request body never says who is asking either (CLAUDE.md rule 4). Until
+# 13.0.0-beta some forty handlers recorded requested_by, updated_by or
+# requester_id as the caller wrote it; where governance keeps the requester
+# from approving their own request, the wrong person was kept out.
+if body_hits=$(python3 scripts/check-body-named-people.py 2>&1); then
+  echo "PASS [body-named-person]"
+else
+  FAIL=1
+  echo "FAIL [body-named-person]: who is asking comes from the verified token, never from the request body"
+  printf '%s\n' "$body_hits"
+fi
+
+# Every service that serves HTTP verifies tokens in front of it. Until
+# 13.0.0-beta KMIP's management API was served with no verification at all:
+# a request without a token listed and registered KMIP clients. A service
+# built with platform.Boot gets this from the kernel; one with its own main
+# wraps its handler (pkgjwtauth.MustWrap / MustWrapRouter) or holds a verifier
+# of its own (pkgjwtauth.LoadParser, keycore's pkgauth.ParseRS256WithOptions).
+# auth verifies the tokens it issues itself. This proves a verifier exists in
+# the service, not that every route is behind it: scripts/live-check.py
+# asks every route with no token and with another tenant's.
+noauth_hits=""
+for main in $(grep -lE 'pkgconfig\.NewHTTPServer\(' services/*/*.go 2>/dev/null | grep -v '_test\.go$'); do
+  dir=$(dirname "$main")
+  [ "$dir" = "services/auth" ] && continue
+  grep -qE 'jwtauth\.(MustWrap|MustWrapRouter|LoadParser)\(|pkgauth\.ParseRS256WithOptions\(' "$dir"/*.go 2>/dev/null || noauth_hits="$noauth_hits  $main\n"
+done
+if [ -n "$noauth_hits" ]; then
+  FAIL=1
+  echo "FAIL [server-verifies-tokens]: an HTTP server is started without token verification in front of it"
+  printf "$noauth_hits"
+else
+  echo "PASS [server-verifies-tokens]"
+fi
+
 # Rule 6c: every connection is TLS, every internal one mTLS (CLAUDE.md rule
 # 10, docs/SECURITY/INTERNAL_TLS.md). No plain listener, no insecure gRPC
 # credentials, and no http:// to a platform host in code or deployment files.

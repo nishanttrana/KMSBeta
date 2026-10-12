@@ -84,10 +84,10 @@ func main() {
 	// The audience a signer's OIDC token must carry (a CI job requests its
 	// token for this audience).
 	svc.oidcAudience = envOr("SIGNING_OIDC_AUDIENCE", svc.oidcAudience)
-	handler := NewHandler(svc)
+	handler := NewHandler(svc, authAudit, logger)
 
 	httpPort := envOr("HTTP_PORT", "8280")
-	authedHandler := pkgjwtauth.MustWrap("SIGNING", cfg.JWTIssuer, cfg.JWTAudience, handler, authAudit, logger)
+	authedHandler := pkgjwtauth.MustWrapRouter("SIGNING", cfg.JWTIssuer, cfg.JWTAudience, handler.router, logger)
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authedHandler, publisher, "signing"))
 	go func() {
 		logger.Printf("https (mTLS) listening on :%s", httpPort)

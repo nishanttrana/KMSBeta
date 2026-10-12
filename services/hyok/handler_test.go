@@ -58,7 +58,7 @@ func TestHandlerProtocolFlow(t *testing.T) {
 }
 
 func TestHandlerGovernancePendingApproval(t *testing.T) {
-	h, _, keycore, _, _, _ := newHYOKHandler(t)
+	h, _, keycore, _, governance, _ := newHYOKHandler(t)
 	keycore.Seed("tenant-b", "key-2", "AES-256")
 
 	configReq := httptest.NewRequest(http.MethodPut, "/hyok/v1/endpoints/generic?tenant_id=tenant-b", bytes.NewReader([]byte(`{
@@ -75,7 +75,9 @@ func TestHandlerGovernancePendingApproval(t *testing.T) {
 	}
 
 	wrapReq := httptest.NewRequest(http.MethodPost, "/hyok/generic/v1/keys/key-2/wrap?tenant_id=tenant-b", bytes.NewReader([]byte(`{
-		"plaintext":"aGVsbG8="
+		"plaintext":"aGVsbG8=",
+		"requester_id":"somebody-else",
+		"requester_email":"else@example.com"
 	}`)))
 	wrapReq.Header.Set("Authorization", "Bearer jwt:tenant-b:operator")
 	wrapRR := httptest.NewRecorder()
@@ -85,6 +87,14 @@ func TestHandlerGovernancePendingApproval(t *testing.T) {
 	}
 	if !strings.Contains(wrapRR.Body.String(), "\"pending_approval\"") {
 		t.Fatalf("expected pending approval body=%s", wrapRR.Body.String())
+	}
+	// The approval is asked in the name of the caller this service
+	// authenticated, not the requester the body named (13.0.0-beta).
+	if len(governance.asked) != 1 {
+		t.Fatalf("want one approval request, got %d", len(governance.asked))
+	}
+	if got := governance.asked[0]; got.RequesterID == "" || got.RequesterID == "somebody-else" || got.RequesterEmail == "else@example.com" {
+		t.Fatalf("approval asked for %q / %q", got.RequesterID, got.RequesterEmail)
 	}
 }
 

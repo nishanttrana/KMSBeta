@@ -280,6 +280,7 @@ func (h *Handler) handleCreateKey(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.TenantID)
 		return
 	}
+	req.CreatedBy = tenantcheck.ActingFor(r.Context(), req.CreatedBy)
 	key, err := h.svc.CreateKey(r.Context(), req)
 	if err != nil {
 		if writeHSMError(w, err, reqID, req.TenantID) {

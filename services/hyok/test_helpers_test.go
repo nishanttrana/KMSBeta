@@ -200,9 +200,11 @@ type fakeHYOKGovernance struct {
 	id     string
 	err    error
 	status map[string]GovernanceApprovalStatus
+	asked  []GovernanceApprovalRequest
 }
 
-func (f *fakeHYOKGovernance) CreateKeyApproval(_ context.Context, _ GovernanceApprovalRequest) (string, error) {
+func (f *fakeHYOKGovernance) CreateKeyApproval(_ context.Context, req GovernanceApprovalRequest) (string, error) {
+	f.asked = append(f.asked, req)
 	if f.err != nil {
 		return "", f.err
 	}

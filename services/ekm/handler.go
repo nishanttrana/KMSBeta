@@ -252,6 +252,7 @@ func (h *Handler) handleRotateAgent(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, "")
 		return
 	}
+	req.RequesterID, req.RequesterEmail, _ = tenantcheck.Requester(r, req.RequesterID, req.RequesterEmail, "")
 	tenantID, _, err := tenantFromRequest(r, req.TenantID)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, req.TenantID)
@@ -481,6 +482,7 @@ func (h *Handler) handleQueueBitLockerOperation(w http.ResponseWriter, r *http.R
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, "")
 		return
 	}
+	req.RequestedBy = tenantcheck.ActingFor(r.Context(), req.RequestedBy)
 	tenantID, _, err := tenantFromRequest(r, req.TenantID)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, req.TenantID)
@@ -618,6 +620,7 @@ func (h *Handler) handleCreateTDEKey(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, "")
 		return
 	}
+	req.CreatedBy = tenantcheck.ActingFor(r.Context(), req.CreatedBy)
 	tenantID, _, err := tenantFromRequest(r, req.TenantID)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, req.TenantID)
@@ -639,6 +642,7 @@ func (h *Handler) handleWrapDEK(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, "")
 		return
 	}
+	req.RequesterID, req.RequesterEmail, _ = tenantcheck.Requester(r, req.RequesterID, req.RequesterEmail, "")
 	tenantID, _, err := tenantFromRequest(r, req.TenantID)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, req.TenantID)
@@ -664,6 +668,7 @@ func (h *Handler) handleUnwrapDEK(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, "")
 		return
 	}
+	req.RequesterID, req.RequesterEmail, _ = tenantcheck.Requester(r, req.RequesterID, req.RequesterEmail, "")
 	tenantID, _, err := tenantFromRequest(r, req.TenantID)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, req.TenantID)
@@ -689,6 +694,7 @@ func (h *Handler) handleRotateTDEKey(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, "")
 		return
 	}
+	req.RequesterID, req.RequesterEmail, _ = tenantcheck.Requester(r, req.RequesterID, req.RequesterEmail, "")
 	tenantID, _, err := tenantFromRequest(r, req.TenantID)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, req.TenantID)

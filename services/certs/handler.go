@@ -496,6 +496,7 @@ func (h *Handler) handleUpsertAlertPolicy(w http.ResponseWriter, r *http.Request
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
 		return
 	}
+	body.UpdatedBy = tenantcheck.ActingFor(r.Context(), body.UpdatedBy)
 	item, err := h.svc.UpsertCertExpiryAlertPolicy(r.Context(), UpsertCertExpiryAlertPolicyRequest{
 		TenantID:        tenantID,
 		DaysBefore:      body.DaysBefore,
@@ -539,6 +540,7 @@ func (h *Handler) handleUpsertProtocolConfig(w http.ResponseWriter, r *http.Requ
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
 		return
 	}
+	body.UpdatedBy = tenantcheck.ActingFor(r.Context(), body.UpdatedBy)
 	out, err := h.svc.UpsertProtocolConfig(r.Context(), UpsertProtocolConfigRequest{
 		TenantID:   tenantID,
 		Protocol:   r.PathValue("protocol"),
@@ -568,6 +570,7 @@ func (h *Handler) handleUploadThirdPartyCert(w http.ResponseWriter, r *http.Requ
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
+	req.UpdatedBy = tenantcheck.ActingFor(r.Context(), req.UpdatedBy)
 	out, err := h.svc.UploadThirdPartyCertificate(r.Context(), req)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "upload_3p_failed", err.Error(), reqID, req.TenantID)

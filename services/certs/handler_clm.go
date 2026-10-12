@@ -1,6 +1,10 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+
+	"vecta-kms/pkg/tenantcheck"
+)
 
 func (h *Handler) handleGetCLMPolicy(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
@@ -33,6 +37,7 @@ func (h *Handler) handleUpsertCLMPolicy(w http.ResponseWriter, r *http.Request) 
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
 		return
 	}
+	body.UpdatedBy = tenantcheck.ActingFor(r.Context(), body.UpdatedBy)
 	policy, err := h.svc.UpsertCLMPolicy(r.Context(), CLMPolicy{
 		TenantID:        tenantID,
 		Mode:            body.Mode,

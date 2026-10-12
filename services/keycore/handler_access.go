@@ -220,7 +220,8 @@ func (h *Handler) putAccessSettings(c *route.Call) {
 	setInt(&current.NonceTTLSeconds, req.NonceTTLSeconds)
 	setBool(&current.RequireInterfacePolicies, req.RequireInterfacePolicies)
 	current.TenantID = c.Tenant
-	current.UpdatedBy = actorOf(c)
+	req.UpdatedBy = actorOf(c)
+	current.UpdatedBy = req.UpdatedBy
 	out, err := h.svc.UpdateKeyAccessSettings(c.R.Context(), current)
 	if err != nil {
 		c.Error(http.StatusBadRequest, "access_settings_update_failed", err.Error())

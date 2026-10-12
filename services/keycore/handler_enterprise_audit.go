@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"vecta-kms/pkg/tenantcheck"
 )
 
 func (h *Handler) handleGetEnterpriseAuditSummary(w http.ResponseWriter, r *http.Request) {
@@ -77,6 +78,7 @@ func (h *Handler) handleRecordKeyRotationMetric(w http.ResponseWriter, r *http.R
 	}
 	metric.TenantID = tenantID
 	metric.KeyID = r.PathValue("id")
+	metric.InitiatedBy = tenantcheck.ActingFor(r.Context(), metric.InitiatedBy)
 	if strings.TrimSpace(metric.RotationID) == "" {
 		metric.RotationID = newID("rotm")
 	}

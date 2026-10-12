@@ -1,68 +1,65 @@
 package main
 
 import (
+	"vecta-kms/pkg/tenantcheck"
+	"vecta-kms/pkg/route"
+	"log"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"vecta-kms/pkg/tenantcheck"
 )
 
 type Handler struct {
-	svc *Service
-	mux *http.ServeMux
+	svc    *Service
+	router *route.Router
 }
 
-func NewHandler(svc *Service) *Handler {
-	h := &Handler{svc: svc}
-	h.mux = h.routes()
+// NewHandler registers every route through the kernel, which requires a
+// verified token, the route's permission and a tenant the caller may act
+// in, and audits each call. Until 13.0.0-beta the handlers took the tenant
+// from the request and never compared it with the token (the helper that
+// did was not called), so any signed-in caller could read and change
+// another tenant's templates, policies and key requests.
+func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger) *Handler {
+	h := &Handler{svc: svc, router: route.New("autokey", audit, logger)}
+	read := func(action, resource string) route.Spec {
+		return route.Spec{Action: action, Permission: "autokey.read", Resource: resource}
+	}
+	write := func(action, resource, target string) route.Spec {
+		return route.Spec{Action: action, Permission: "autokey.write", Resource: resource, TargetParam: target}
+	}
+	rt := h.router
+	rt.Handle("GET /autokey/settings", read("settings_read", "autokey_settings"), route.Legacy(h.handleGetSettings))
+	rt.Handle("PUT /autokey/settings", write("settings_update", "autokey_settings", ""), route.Legacy(h.handlePutSettings))
+	rt.Handle("GET /autokey/summary", read("summary_read", "autokey"), route.Legacy(h.handleGetSummary))
+	rt.Handle("GET /autokey/templates", read("template_list", "autokey_template"), route.Legacy(h.handleListTemplates))
+	rt.Handle("POST /autokey/templates", write("template_upsert", "autokey_template", ""), route.Legacy(h.handleUpsertTemplate))
+	rt.Handle("PUT /autokey/templates/{id}", write("template_upsert", "autokey_template", "id"), route.Legacy(h.handleUpsertTemplate))
+	rt.Handle("DELETE /autokey/templates/{id}", write("template_delete", "autokey_template", "id"), route.Legacy(h.handleDeleteTemplate))
+	rt.Handle("GET /autokey/service-policies", read("service_policy_list", "autokey_service_policy"), route.Legacy(h.handleListServicePolicies))
+	rt.Handle("POST /autokey/service-policies", write("service_policy_upsert", "autokey_service_policy", ""), route.Legacy(h.handleUpsertServicePolicy))
+	rt.Handle("PUT /autokey/service-policies/{service}", write("service_policy_upsert", "autokey_service_policy", "service"), route.Legacy(h.handleUpsertServicePolicy))
+	rt.Handle("DELETE /autokey/service-policies/{service}", write("service_policy_delete", "autokey_service_policy", "service"), route.Legacy(h.handleDeleteServicePolicy))
+	rt.Handle("GET /autokey/requests", read("request_list", "autokey_request"), route.Legacy(h.handleListRequests))
+	// Asking for a key is its own permission: more people ask than administer.
+	rt.Handle("POST /autokey/requests", route.Spec{Action: "request_create", Permission: "autokey.use", Resource: "autokey_request"}, route.Legacy(h.handleCreateRequest))
+	rt.Handle("GET /autokey/requests/{id}", route.Spec{Action: "request_read", Permission: "autokey.read", Resource: "autokey_request", TargetParam: "id"}, route.Legacy(h.handleGetRequest))
+	rt.Handle("GET /autokey/handles", read("handle_list", "autokey_handle"), route.Legacy(h.handleListHandles))
 	return h
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.mux.ServeHTTP(w, r)
+	h.router.ServeHTTP(w, r)
 }
 
-func (h *Handler) routes() *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /autokey/settings", h.handleGetSettings)
-	mux.HandleFunc("PUT /autokey/settings", h.handlePutSettings)
-	mux.HandleFunc("GET /autokey/summary", h.handleGetSummary)
-	mux.HandleFunc("GET /autokey/templates", h.handleListTemplates)
-	mux.HandleFunc("POST /autokey/templates", h.handleUpsertTemplate)
-	mux.HandleFunc("PUT /autokey/templates/{id}", h.handleUpsertTemplate)
-	mux.HandleFunc("DELETE /autokey/templates/{id}", h.handleDeleteTemplate)
-	mux.HandleFunc("GET /autokey/service-policies", h.handleListServicePolicies)
-	mux.HandleFunc("POST /autokey/service-policies", h.handleUpsertServicePolicy)
-	mux.HandleFunc("PUT /autokey/service-policies/{service}", h.handleUpsertServicePolicy)
-	mux.HandleFunc("DELETE /autokey/service-policies/{service}", h.handleDeleteServicePolicy)
-	mux.HandleFunc("GET /autokey/requests", h.handleListRequests)
-	mux.HandleFunc("POST /autokey/requests", h.handleCreateRequest)
-	mux.HandleFunc("GET /autokey/requests/{id}", h.handleGetRequest)
-	mux.HandleFunc("GET /autokey/handles", h.handleListHandles)
-	return mux
-}
-
+// tenantFromRequest is the tenant the kernel checked against the caller's
+// token (route.Legacy). Nothing else in the request names a tenant.
 func tenantFromRequest(r *http.Request) string {
-	return strings.TrimSpace(firstNonEmpty(r.URL.Query().Get("tenant_id"), r.Header.Get("X-Tenant-ID")))
+	return strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
 }
-
-// mustTenantChecked extracts tenant from the request and verifies it matches JWT claims.
-func mustTenantChecked(r *http.Request, w http.ResponseWriter, reqID string) (string, bool) {
-	tenantID := tenantFromRequest(r)
-	if tenantID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required", reqID, "")
-		return "", false
-	}
-	if err := tenantcheck.Enforce(r, tenantID); err != nil {
-		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
-		return "", false
-	}
-	return tenantID, true
-}
-
 
 func requestID(r *http.Request) string {
 	return firstNonEmpty(r.Header.Get("X-Request-ID"), newID("req"))
@@ -108,7 +105,8 @@ func (h *Handler) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, tenantFromRequest(r))
 		return
 	}
-	body.TenantID = firstNonEmpty(body.TenantID, tenantFromRequest(r))
+	body.TenantID = tenantFromRequest(r)
+	body.UpdatedBy = tenantcheck.ActingFor(r.Context(), body.UpdatedBy)
 	item, err := h.svc.UpdateSettings(r.Context(), body)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, body.TenantID)
@@ -146,7 +144,8 @@ func (h *Handler) handleUpsertTemplate(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, tenantFromRequest(r))
 		return
 	}
-	body.TenantID = firstNonEmpty(body.TenantID, tenantFromRequest(r))
+	body.TenantID = tenantFromRequest(r)
+	body.UpdatedBy = tenantcheck.ActingFor(r.Context(), body.UpdatedBy)
 	body.ID = firstNonEmpty(r.PathValue("id"), body.ID)
 	item, err := h.svc.UpsertTemplate(r.Context(), body)
 	if err != nil {
@@ -184,7 +183,8 @@ func (h *Handler) handleUpsertServicePolicy(w http.ResponseWriter, r *http.Reque
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, tenantFromRequest(r))
 		return
 	}
-	body.TenantID = firstNonEmpty(body.TenantID, tenantFromRequest(r))
+	body.TenantID = tenantFromRequest(r)
+	body.UpdatedBy = tenantcheck.ActingFor(r.Context(), body.UpdatedBy)
 	body.ServiceName = firstNonEmpty(r.PathValue("service"), body.ServiceName)
 	item, err := h.svc.UpsertServicePolicy(r.Context(), body)
 	if err != nil {
@@ -211,7 +211,8 @@ func (h *Handler) handleCreateRequest(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, tenantFromRequest(r))
 		return
 	}
-	body.TenantID = firstNonEmpty(body.TenantID, tenantFromRequest(r))
+	body.TenantID = tenantFromRequest(r)
+	body.RequesterID, body.RequesterEmail, body.RequesterIP = tenantcheck.Requester(r, body.RequesterID, body.RequesterEmail, body.RequesterIP)
 	item, err := h.svc.CreateRequest(r.Context(), body)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, body.TenantID)

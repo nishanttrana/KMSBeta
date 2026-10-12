@@ -3,60 +3,62 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"vecta-kms/pkg/route"
 
 	"vecta-kms/pkg/tenantcheck"
 )
 
 type Handler struct {
-	svc *Service
-	mux *http.ServeMux
+	svc    *Service
+	router *route.Router
 }
 
-func NewHandler(svc *Service) *Handler {
-	h := &Handler{svc: svc}
-	h.mux = h.routes()
+// NewHandler registers every route through the kernel, which requires a
+// verified token, the route's permission and a tenant the caller may act
+// in, and audits each call. Until 13.0.0-beta the settings, profile, record
+// and summary handlers took the tenant from the request without comparing
+// it with the token: any signed-in caller could read another tenant's
+// signing records and change its profiles and settings.
+func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger) *Handler {
+	h := &Handler{svc: svc, router: route.New("signing", audit, logger)}
+	read := func(action, resource string) route.Spec {
+		return route.Spec{Action: action, Permission: "signing.read", Resource: resource}
+	}
+	write := func(action, resource, target string) route.Spec {
+		return route.Spec{Action: action, Permission: "signing.write", Resource: resource, TargetParam: target}
+	}
+	use := func(action string) route.Spec {
+		return route.Spec{Action: action, Permission: "signing.use", Resource: "signing_artifact"}
+	}
+	rt := h.router
+	rt.Handle("GET /signing/settings", read("settings_read", "signing_settings"), route.Legacy(h.handleGetSettings))
+	rt.Handle("PUT /signing/settings", write("settings_update", "signing_settings", ""), route.Legacy(h.handlePutSettings))
+	rt.Handle("GET /signing/summary", read("summary_read", "signing"), route.Legacy(h.handleGetSummary))
+	rt.Handle("GET /signing/profiles", read("profile_list", "signing_profile"), route.Legacy(h.handleListProfiles))
+	rt.Handle("POST /signing/profiles", write("profile_upsert", "signing_profile", ""), route.Legacy(h.handleUpsertProfile))
+	rt.Handle("PUT /signing/profiles/{id}", write("profile_upsert", "signing_profile", "id"), route.Legacy(h.handleUpsertProfile))
+	rt.Handle("DELETE /signing/profiles/{id}", write("profile_delete", "signing_profile", "id"), route.Legacy(h.handleDeleteProfile))
+	rt.Handle("GET /signing/records", read("record_list", "signing_record"), route.Legacy(h.handleListRecords))
+	rt.Handle("POST /signing/blob", use("blob_sign"), route.Legacy(h.handleSignBlob))
+	rt.Handle("POST /signing/git", use("git_sign"), route.Legacy(h.handleSignGit))
+	// Checking a signature is not signing: whoever deploys an artifact
+	// verifies it without being able to sign one.
+	rt.Handle("POST /signing/verify", route.Spec{Action: "artifact_verify", Permission: "signing.verify", Resource: "signing_artifact"}, route.Legacy(h.handleVerify))
 	return h
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.mux.ServeHTTP(w, r)
+	h.router.ServeHTTP(w, r)
 }
 
-func (h *Handler) routes() *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /signing/settings", h.handleGetSettings)
-	mux.HandleFunc("PUT /signing/settings", h.handlePutSettings)
-	mux.HandleFunc("GET /signing/summary", h.handleGetSummary)
-	mux.HandleFunc("GET /signing/profiles", h.handleListProfiles)
-	mux.HandleFunc("POST /signing/profiles", h.handleUpsertProfile)
-	mux.HandleFunc("PUT /signing/profiles/{id}", h.handleUpsertProfile)
-	mux.HandleFunc("DELETE /signing/profiles/{id}", h.handleDeleteProfile)
-	mux.HandleFunc("GET /signing/records", h.handleListRecords)
-	mux.HandleFunc("POST /signing/blob", h.handleSignBlob)
-	mux.HandleFunc("POST /signing/git", h.handleSignGit)
-	mux.HandleFunc("POST /signing/verify", h.handleVerify)
-	return mux
-}
-
+// tenantFromRequest is the tenant the kernel checked against the caller's
+// token (route.Legacy). Nothing else in the request names a tenant.
 func tenantFromRequest(r *http.Request) string {
-	return strings.TrimSpace(firstNonEmpty(r.URL.Query().Get("tenant_id"), r.Header.Get("X-Tenant-ID")))
-}
-
-// mustTenantChecked extracts tenant from the request and verifies it matches JWT claims.
-func mustTenantChecked(r *http.Request, w http.ResponseWriter, reqID string) (string, bool) {
-	tenantID := tenantFromRequest(r)
-	if tenantID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required", reqID, "")
-		return "", false
-	}
-	if err := tenantcheck.Enforce(r, tenantID); err != nil {
-		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
-		return "", false
-	}
-	return tenantID, true
+	return strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
 }
 
 func requestID(r *http.Request) string {
@@ -103,7 +105,8 @@ func (h *Handler) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, tenantFromRequest(r))
 		return
 	}
-	body.TenantID = firstNonEmpty(body.TenantID, tenantFromRequest(r))
+	body.TenantID = tenantFromRequest(r)
+	body.UpdatedBy = tenantcheck.ActingFor(r.Context(), body.UpdatedBy)
 	item, err := h.svc.UpdateSettings(r.Context(), body)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, body.TenantID)
@@ -141,7 +144,8 @@ func (h *Handler) handleUpsertProfile(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, tenantFromRequest(r))
 		return
 	}
-	body.TenantID = firstNonEmpty(body.TenantID, tenantFromRequest(r))
+	body.TenantID = tenantFromRequest(r)
+	body.UpdatedBy = tenantcheck.ActingFor(r.Context(), body.UpdatedBy)
 	body.ID = firstNonEmpty(r.PathValue("id"), body.ID)
 	item, err := h.svc.UpsertProfile(r.Context(), body)
 	if err != nil {
@@ -193,9 +197,8 @@ func (h *Handler) handleSign(w http.ResponseWriter, r *http.Request, artifactTyp
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, tenantFromRequest(r))
 		return
 	}
-	if !h.bindTenant(w, r, reqID, &body.TenantID) {
-		return
-	}
+	body.TenantID = tenantFromRequest(r)
+	body.RequestedBy = tenantcheck.ActingFor(r.Context(), body.RequestedBy)
 	body.ArtifactType = firstNonEmpty(body.ArtifactType, artifactType)
 	item, err := h.svc.SignArtifact(r.Context(), body)
 	if err != nil {
@@ -218,38 +221,13 @@ func (h *Handler) handleVerify(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, tenantFromRequest(r))
 		return
 	}
-	if !h.bindTenant(w, r, reqID, &body.TenantID) {
-		return
-	}
+	body.TenantID = tenantFromRequest(r)
 	item, err := h.svc.VerifyArtifact(r.Context(), body)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, body.TenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"result": item, "request_id": reqID})
-}
-
-// bindTenant resolves the tenant from the body or request and requires it to
-// match the caller's verified token; a body tenant_id never reaches another
-// tenant's profiles or keys.
-func (h *Handler) bindTenant(w http.ResponseWriter, r *http.Request, reqID string, tenantID *string) bool {
-	*tenantID = firstNonEmpty(strings.TrimSpace(*tenantID), tenantFromRequest(r))
-	if *tenantID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required", reqID, "")
-		return false
-	}
-	if q := tenantFromRequest(r); q != "" && !strings.EqualFold(q, *tenantID) {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id in body and request differ", reqID, *tenantID)
-		return false
-	}
-	if err := tenantcheck.Enforce(r, *tenantID); err != nil {
-		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, *tenantID)
-		_ = publishAudit(r.Context(), h.svc.events, "audit.signing.request_refused", *tenantID, map[string]interface{}{
-			"route": r.Method + " " + r.URL.Path, "reason": "tenant_mismatch", "result": "refused", "severity": "warning",
-		})
-		return false
-	}
-	return true
 }
 
 func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {

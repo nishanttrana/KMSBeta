@@ -594,6 +594,7 @@ func (h *Handler) handleSetDataProtectionPolicy(w http.ResponseWriter, r *http.R
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
 		return
 	}
+	req.UpdatedBy = tenantcheck.ActingFor(r.Context(), req.UpdatedBy)
 	req.TenantID = firstTenant(req.TenantID, tenantID)
 	if req.TenantID != tenantID {
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant mismatch between request and session context", reqID, tenantID)
@@ -641,6 +642,7 @@ func (h *Handler) handleCreateFieldProtectionProfile(w http.ResponseWriter, r *h
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
 		return
 	}
+	req.UpdatedBy = tenantcheck.ActingFor(r.Context(), req.UpdatedBy)
 	req.TenantID = firstTenant(req.TenantID, tenantID)
 	if req.TenantID != tenantID {
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant mismatch between request and session context", reqID, tenantID)
@@ -670,6 +672,7 @@ func (h *Handler) handleUpdateFieldProtectionProfile(w http.ResponseWriter, r *h
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
 		return
 	}
+	req.UpdatedBy = tenantcheck.ActingFor(r.Context(), req.UpdatedBy)
 	req.TenantID = firstTenant(req.TenantID, tenantID)
 	if req.TenantID != tenantID {
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant mismatch between request and session context", reqID, tenantID)
@@ -781,6 +784,7 @@ func (h *Handler) handleCompleteFieldEncryptionWrapperRegistration(w http.Respon
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
+	req.ApprovedBy = tenantcheck.ActingFor(r.Context(), req.ApprovedBy)
 	req.TenantID = firstTenant(req.TenantID, tenantFromRequest(r))
 	item, err := h.svc.CompleteFieldEncryptionWrapperRegistration(r.Context(), req)
 	if err != nil {

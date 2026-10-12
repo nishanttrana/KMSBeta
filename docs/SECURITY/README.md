@@ -20,6 +20,8 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
 - [EKM_CLIENTS.md](EKM_CLIENTS.md): how a database client is registered
   (one-time token, then its own client key), what its health states mean,
   and why a tenant token can no longer register a client or keep it alive.
+- [TENANT_ISOLATION.md](TENANT_ISOLATION.md): where each service checks the
+  token, the tenant and the permission; what was found unchecked
 - [REQUEST_ORIGIN.md](REQUEST_ORIGIN.md): the address a request came from
   and who made it come only from what the platform observed or verified
   (`pkg/clientip`, `pkgauth.Actor`), never from a header, query parameter or

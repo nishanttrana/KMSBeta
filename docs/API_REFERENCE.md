@@ -1788,7 +1788,7 @@ Audit:
 - `audit.auth.client_key_rotated`, `audit.auth.client_revoked`, `audit.auth.api_key_revoked` (kernel events; refusals `client_state`, `service_identity_protected`), `audit.auth.unbound_api_keys_retired` (startup): REST client credentials (7.16.0-beta)
 - `audit.governance.approval_refused` (`reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `insufficient_privileges`, `not_a_user`, `no_user_email`, `builtin_policy_delete` (deleting a built-in policy), `builtin_policy_required` (disabling or narrowing the playbook policy), and `vote_refused` for a refused vote: not an approver, the requester, a wrong challenge code), `audit.governance.link_refused` (approval page with an invalid or used token)
 - `audit.hyok.dke_refused` (Microsoft DKE: missing or invalid token, Entra issuer/audience/tenant/user not allowed, anonymous fetch on another host, non-current key version), `audit.hyok.admin_refused` (endpoint administration), `audit.hyok.approval_refused` (retry with an approval that is not approved, for another key/operation/payload, or already used), `audit.hyok.request_denied` with `reason: key_access_unavailable`, `result: refused` (key access deployed but unreachable)
-- `audit.signing.sign_refused` (identity, policy or token refusal, with `code`), `audit.signing.request_refused` (`reason: tenant_mismatch`)
+- `audit.signing.sign_refused` (identity, policy or token refusal, with `code`); kernel refusals under each route's subject (`audit.signing.blob_sign`, …; `reason`: `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), likewise `audit.autokey.<action>` and `audit.kmip.<action>` (13.0.0-beta)
 - `audit.confidential.key_released` (key sealed to the attested recipient key; `recipient_key_binding`, `key_version`, `seal_algorithm`), `audit.confidential.key_release_refused` (`reason`: no binding, verdict, keycore refusal), `audit.confidential.key_release` (kernel), `audit.key.attested_release` (keycore kernel, refusals included)
 - `audit.ekm.request_refused` (EKM `401`/`403`: no verified tenant token, cross-tenant, BitLocker agent token missing or wrong role)
 - `audit.ekm.client_list`, `audit.ekm.client_read`, `audit.ekm.client_created`, `audit.ekm.client_token_issued` (EKM database clients, 11.7.0-beta; kernel refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`)
@@ -2134,9 +2134,9 @@ carries `kcv_b64` (AES), `public_key_b64` (private key) and the
   (`auth.exposure.acknowledge`), `POST /mek/rewrap-legacy`
   (`kms-governance` only). `kms-auth` is a service identity.
 
-The Cloud BYOK and Autokey services now require a verified bearer token on
-every route (`401`, audited as `audit.cloud.request_refused` /
-`audit.autokey.request_refused`).
+The Cloud BYOK and Autokey services require a verified bearer token on
+every route (`401`, audited as `audit.cloud.request_refused`; Autokey's are
+kernel events since 13.0.0-beta, see its section).
 
 `resolve` returns `{id, name, type, endpoint, fields}` with the opened
 fields. Any other caller, users and administrators included, is refused
@@ -2811,6 +2811,20 @@ printf 'Authorization: Bearer %s\n' "$TOKEN" |
 
 Policy-driven key provisioning: templates, handles, per-service defaults, governed self-service.
 
+Every route goes through the `pkg/route` kernel (13.0.0-beta): a verified
+token, the caller's own tenant (`403`, `reason: tenant_mismatch` otherwise)
+and a permission. `admin` and `tenant-admin` hold `*`.
+
+| Routes | Permission | Audit subject (`audit.autokey.…`) |
+|---|---|---|
+| `GET` settings, summary, templates, service-policies, requests, requests/{id}, handles | `autokey.read` | `settings_read`, `summary_read`, `template_list`, `service_policy_list`, `request_list`, `request_read`, `handle_list` |
+| `PUT` settings; `POST`/`PUT`/`DELETE` templates and service-policies | `autokey.write` | `settings_update`, `template_upsert`, `template_delete`, `service_policy_upsert`, `service_policy_delete` |
+| `POST /autokey/requests` | `autokey.use` | `request_create` |
+
+`updated_by`, `requester_id`, `requester_email` and `requester_ip` in a
+body are ignored: they are the verified caller and the address the edge
+saw. A platform service may name the person it acts for.
+
 ---
 
 ### GET /svc/autokey/autokey/settings
@@ -3050,6 +3064,14 @@ rm -f "$HDR"
 
 KMIP protocol management for KMIP-compliant clients and legacy HSM integrations.
 
+Every route goes through the `pkg/route` kernel (13.0.0-beta). Until then
+this API verified no token. `admin` and `tenant-admin` hold `*`.
+
+| Routes | Permission | Audit subject (`audit.kmip.…`) |
+|---|---|---|
+| `GET` capabilities, profiles, clients, clients/{id}, interop/targets | `kmip.read` | `capabilities_read`, `profile_list`, `client_list`, `client_read`, `interop_target_list` |
+| `POST`/`DELETE` profiles, clients, interop/targets; `POST` interop/targets/{id}/validate | `kmip.write` | `profile_create`, `profile_delete`, `client_create`, `client_delete`, `interop_target_create`, `interop_target_delete`, `interop_target_validate` |
+
 ---
 
 ### GET /svc/kmip/kmip/profiles / POST /svc/kmip/kmip/profiles
@@ -3096,6 +3118,20 @@ jq -n --rawfile csr client.csr '{tenant_id: "root", name: "storage-array", profi
 ## Service 20: Signing (`/svc/signing/`)
 
 Artifact signing, container image signing, Git artifact signing, keyless provenance.
+
+Every route goes through the `pkg/route` kernel (13.0.0-beta): a verified
+token, the caller's own tenant and a permission. `admin` and `tenant-admin`
+hold `*`; a CI client that signs needs `signing.use`.
+
+| Routes | Permission | Audit subject (`audit.signing.…`) |
+|---|---|---|
+| `GET` settings, summary, profiles, records | `signing.read` | `settings_read`, `summary_read`, `profile_list`, `record_list` |
+| `PUT` settings; `POST`/`PUT`/`DELETE` profiles | `signing.write` | `settings_update`, `profile_upsert`, `profile_delete` |
+| `POST /signing/blob`, `POST /signing/git` | `signing.use` | `blob_sign`, `git_sign` |
+| `POST /signing/verify` | `signing.verify` | `artifact_verify` |
+
+`updated_by` and `requested_by` in a body are ignored: they are the
+verified caller.
 
 ---
 
@@ -3950,7 +3986,9 @@ claim, when present) are what is checked and signed. Workload mode signs as
 the caller token's `workload_identity`. Body `oidc_issuer`, `oidc_subject`
 and `workload_identity` are ignored. `require_transparency` /
 `transparency_required` are gone (every record is in the tenant signing log).
-Refusals: `audit.signing.sign_refused`, `audit.signing.request_refused`.
+Refusals: `audit.signing.sign_refused`; a request refused for its tenant,
+permission or token is `audit.signing.blob_sign` / `git_sign` /
+`artifact_verify` with `result: refused` (13.0.0-beta).
 
 **Reporting.** Notification channels are `screen` only; alerts record
 `channels_sent: ["screen"]`. Scheduled reports take no `recipients`.

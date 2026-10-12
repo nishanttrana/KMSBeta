@@ -154,6 +154,9 @@ func (h *Handler) handleCrypto(w http.ResponseWriter, r *http.Request, protocol 
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
 		return
 	}
+	// The requester is the caller this service authenticated, never one the
+	// body names; what the body said stays in the logged request.
+	req.RequesterID, req.RequesterEmail = firstNonEmpty(identity.UserID, identity.Subject, identity.ClientCN), dkeRequesterEmail(identity)
 	out, err := h.svc.ProcessCrypto(r.Context(), tenantID, protocol, operation, r.PathValue("id"), r.URL.Path, identity, req)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)

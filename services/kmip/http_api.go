@@ -8,10 +8,12 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"runtime/debug"
 	"strings"
 	"time"
+	"vecta-kms/pkg/route"
 
 	"github.com/ovh/kmip-go/ttlv"
 
@@ -20,21 +22,36 @@ import (
 	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
-func (h *Handler) HTTPHandler() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /kmip/capabilities", h.handleCapabilities)
-	mux.HandleFunc("GET /kmip/profiles", h.handleListClientProfiles)
-	mux.HandleFunc("POST /kmip/profiles", h.handleCreateClientProfile)
-	mux.HandleFunc("DELETE /kmip/profiles/{id}", h.handleDeleteClientProfile)
-	mux.HandleFunc("GET /kmip/clients", h.handleListClients)
-	mux.HandleFunc("GET /kmip/clients/{id}", h.handleGetClient)
-	mux.HandleFunc("POST /kmip/clients", h.handleCreateClient)
-	mux.HandleFunc("DELETE /kmip/clients/{id}", h.handleDeleteClient)
-	mux.HandleFunc("GET /kmip/interop/targets", h.handleListInteropTargets)
-	mux.HandleFunc("POST /kmip/interop/targets", h.handleCreateInteropTarget)
-	mux.HandleFunc("DELETE /kmip/interop/targets/{id}", h.handleDeleteInteropTarget)
-	mux.HandleFunc("POST /kmip/interop/targets/{id}/validate", h.handleValidateInteropTarget)
-	return mux
+// HTTPRouter is the KMIP management API: client profiles, clients (whose
+// certificates it issues) and interop targets. Every route goes through the
+// kernel, which requires a verified token, the route's permission and a
+// tenant the caller may act in, and audits each call.
+//
+// Until 13.0.0-beta this server verified no token at all: the handlers'
+// tenant check compares the request with the token's claims and passes when
+// there are none, so anyone who could reach the edge could list a tenant's
+// KMIP clients, and register one and be handed its certificate and key.
+func (h *Handler) HTTPRouter(audit route.Emitter, logger *log.Logger) *route.Router {
+	rt := route.New("kmip", audit, logger)
+	read := func(action, resource string) route.Spec {
+		return route.Spec{Action: action, Permission: "kmip.read", Resource: resource}
+	}
+	write := func(action, resource, target string) route.Spec {
+		return route.Spec{Action: action, Permission: "kmip.write", Resource: resource, TargetParam: target, Severity: "warning"}
+	}
+	rt.Handle("GET /kmip/capabilities", read("capabilities_read", "kmip_server"), route.Legacy(h.handleCapabilities))
+	rt.Handle("GET /kmip/profiles", read("profile_list", "kmip_profile"), route.Legacy(h.handleListClientProfiles))
+	rt.Handle("POST /kmip/profiles", write("profile_create", "kmip_profile", ""), route.Legacy(h.handleCreateClientProfile))
+	rt.Handle("DELETE /kmip/profiles/{id}", write("profile_delete", "kmip_profile", "id"), route.Legacy(h.handleDeleteClientProfile))
+	rt.Handle("GET /kmip/clients", read("client_list", "kmip_client"), route.Legacy(h.handleListClients))
+	rt.Handle("GET /kmip/clients/{id}", route.Spec{Action: "client_read", Permission: "kmip.read", Resource: "kmip_client", TargetParam: "id"}, route.Legacy(h.handleGetClient))
+	rt.Handle("POST /kmip/clients", write("client_create", "kmip_client", ""), route.Legacy(h.handleCreateClient))
+	rt.Handle("DELETE /kmip/clients/{id}", write("client_delete", "kmip_client", "id"), route.Legacy(h.handleDeleteClient))
+	rt.Handle("GET /kmip/interop/targets", read("interop_target_list", "kmip_interop_target"), route.Legacy(h.handleListInteropTargets))
+	rt.Handle("POST /kmip/interop/targets", write("interop_target_create", "kmip_interop_target", ""), route.Legacy(h.handleCreateInteropTarget))
+	rt.Handle("DELETE /kmip/interop/targets/{id}", write("interop_target_delete", "kmip_interop_target", "id"), route.Legacy(h.handleDeleteInteropTarget))
+	rt.Handle("POST /kmip/interop/targets/{id}/validate", write("interop_target_validate", "kmip_interop_target", "id"), route.Legacy(h.handleValidateInteropTarget))
+	return rt
 }
 
 func (h *Handler) handleCapabilities(w http.ResponseWriter, r *http.Request) {

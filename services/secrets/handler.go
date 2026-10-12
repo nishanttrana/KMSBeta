@@ -538,7 +538,8 @@ func (h *Handler) rotateSecret(c *route.Call) {
 	if !ok {
 		return
 	}
-	out, err := h.svc.RotateSecret(c.R.Context(), c.Tenant, secret.ID, req.Value, req.ExpectedVersion, actorOr(c, req.UpdatedBy))
+	req.UpdatedBy = actorOr(c, req.UpdatedBy)
+	out, err := h.svc.RotateSecret(c.R.Context(), c.Tenant, secret.ID, req.Value, req.ExpectedVersion, req.UpdatedBy)
 	if err != nil {
 		fail(c, err, http.StatusBadRequest, "rotate_failed")
 		return

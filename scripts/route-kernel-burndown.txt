@@ -9,7 +9,6 @@
 # can't be added, and a migrated file left here fails the check.
 services/audit/handler.go
 services/auth/handler.go
-services/autokey/handler.go
 services/backup/handler.go
 services/certs/handler.go
 services/cloud/handler.go
@@ -20,6 +19,4 @@ services/governance/handler.go
 services/hyok/handler.go
 services/keycore/handler.go
 services/kmip/handler.go
-services/kmip/http_api.go
 services/policy/handler.go
-services/signing/handler.go

@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"vecta-kms/pkg/tenantcheck"
 )
 
 func (h *Handler) handleGetSTARSummary(w http.ResponseWriter, r *http.Request) {
@@ -42,6 +44,7 @@ func (h *Handler) handleCreateSTARSubscription(w http.ResponseWriter, r *http.Re
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
+	req.CreatedBy = tenantcheck.ActingFor(r.Context(), req.CreatedBy)
 	req.TenantID = firstTenant(req.TenantID, tenantFromRequest(r))
 	item, err := h.svc.CreateACMESTARSubscription(r.Context(), req)
 	if err != nil {
@@ -55,6 +58,7 @@ func (h *Handler) handleRefreshSTARSubscription(w http.ResponseWriter, r *http.R
 	reqID := requestID(r)
 	var req RefreshACMESTARSubscriptionRequest
 	_ = decodeJSONAllowEmpty(r, &req)
+	req.RequestedBy = tenantcheck.ActingFor(r.Context(), req.RequestedBy)
 	req.TenantID = firstTenant(req.TenantID, tenantFromRequest(r))
 	item, err := h.svc.RefreshACMESTARSubscription(r.Context(), req, r.PathValue("id"))
 	if err != nil {
