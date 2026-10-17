@@ -4,6 +4,16 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.10.0-beta] — 2026-10-17
+
+### Fixed
+- **The no-network test step works on GitHub's runner.** Once it could say
+  why it failed, it said: building with the certified FIPS module unpacks
+  that module into Go's module cache, and the step gives the container the
+  cache read-only. A developer's cache usually has it unpacked already, so
+  it passed locally. `scripts/test-hermetic.sh` now unpacks it first; shown
+  with an empty module cache, as CI has.
+
 ## [13.9.0-beta] — 2026-10-17
 
 ### Fixed

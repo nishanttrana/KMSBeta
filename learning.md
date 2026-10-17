@@ -5,6 +5,13 @@ Newest entries on top.
 
 ## 2026-10-17
 
+### What the annotation said (13.10.0-beta)
+- The first readable failure of the no-network step was not a test at all:
+  `mkdir .../golang.org/fips140: read-only file system`. Go unpacks the
+  certified module the first time something is built with `GOFIPS140`, and
+  this Mac's cache had it from earlier builds. **Rule: reproduce a CI step
+  from CI's starting state (an empty cache), not from a warm laptop.**
+
 ### A new check must report the way the old ones do (13.9.0-beta)
 - The no-network step was added on the day the rule "a failing test names
   itself" was written, and did not follow it: it called `go test` inside a

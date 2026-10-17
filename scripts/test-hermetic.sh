@@ -19,6 +19,11 @@ if [ "$#" -eq 0 ]; then
   set -- ./pkg/... ./services/...
 fi
 modcache="$(go env GOMODCACHE)"
+# Building with the certified FIPS module unpacks it into the module cache,
+# which the container sees read-only: unpack it here first. CI's first run
+# of this step failed on exactly that ("mkdir .../golang.org/fips140:
+# read-only file system"); a developer's cache usually has it already.
+GOFIPS140=v1.0.0 go list -deps ./pkg/fips >/dev/null
 # Through scripts/ci-go-test.sh, so in CI a failing test is named in the
 # job's annotations (GITHUB_ACTIONS is passed in for that).
 docker run --rm --network none \
