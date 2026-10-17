@@ -8,6 +8,9 @@ security meaning where a generic request record isn't enough.
 Every row names the test that fails if its event stops being emitted (or
 is emitted with the wrong `result` or `reason`). Naming the code that emits
 an event is not proof; a new row is added only with its test (1.36.0-beta).
+A refusal published in auth's `{"data": ...}` envelope was stored as
+`success` before 13.15.0-beta; see
+[AUDIT_INTEGRITY.md](AUDIT_INTEGRITY.md#recorded-outcome-13150-beta).
 
 | Event | Emitted by | When | Severity | Test |
 |---|---|---|---|---|

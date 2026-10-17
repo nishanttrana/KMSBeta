@@ -103,6 +103,25 @@ Pin the public keys you received through your event stream
 (`audit.audit.checkpoint_key_created`) rather than the ones the API returns
 now; that is what makes the check independent of this database.
 
+## Recorded outcome (13.15.0-beta)
+
+The chain proves a row was not changed, not that it was recorded right.
+Publishers send one of two shapes: the `pkg/audit` event (outcome in
+`result` at the top) or auth's legacy `{"data": {...}}` envelope (outcome
+inside `data`). Until 13.15.0-beta the ingest read only the top level and
+defaulted `result` to `success`, so every refusal auth published the second
+way (`request_refused`, `password_change_refused`, `cli_session_refused`,
+`cluster_mint_refused`, ...) was stored as a success, with no actor or
+address in its columns. The ingest now takes `result`, `actor_id` (or
+`actor_user_id`) and `source_ip` from `data` when the envelope has none
+(`TestDataEnvelopeKeepsItsRefusal`).
+
+Rows stored before 13.15.0-beta are not rewritten: changing them would
+break the chain. On a stack upgraded from an earlier release, filter those
+refusals by action and `details.result`, not by the `result` column. A new
+event's test checks the row as stored at least once, not only the payload
+published (CLAUDE.md, "Before calling a change done").
+
 ## What it does not prove
 
 - **Events after the latest checkpoint** are protected by the chain and the

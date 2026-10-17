@@ -466,6 +466,27 @@ changes code without touching CHANGELOG.md or learning.md.
     or `SAME_FOR_EVERY_TENANT` list with the reason. A guard is judged by
     its callers, not its definition: KMIP served with no verifier and
     Autokey defined a tenant check nothing called (13.0.0-beta).
+  - **`*` is everything inside the caller's own tenant, never across
+    tenants** (owner report 2026-10-17, tenant and user management "all
+    broken"). Acting on another tenant, the tenant list or a tenant's
+    lifecycle needs a person whose verified token is for `root` and who
+    holds the permission (`platformAdministrator` in auth); a role name
+    (`super-admin`) grants nothing. A deny rule (`ui.module.deny:*`,
+    `feature.deny.*`) matches only when granted by name, never through `*`
+    ([docs/SECURITY/TENANT_ISOLATION.md](docs/SECURITY/TENANT_ISOLATION.md);
+    `TestOnlyAPlatformAdministratorActsAcrossTenants`,
+    `moduleRegistry.test.ts`).
+  - **A selector of values the server stores is loaded from the server**
+    (roles from `GET /auth/roles`, never a list in the dashboard or a doc),
+    the server refuses a value it doesn't define, and a stored value outside
+    the list is shown as it is, never replaced by the first option.
+  - **A form sends only the fields its route accepts.** Services refuse
+    unknown fields, so a record loaded and sent back whole fails every
+    save; a smoke test that saves asserts the exact keys sent. Every
+    write a page offers is exercised by a smoke test at least once.
+  - **A page that shows another tenant names it in the request** (query
+    `tenant_id`, on a route that admits a platform administrator), never
+    by changing `X-Tenant-ID` on a copy of the session.
   - A control on a page has an effect (owner, 2026-10-12: in the key dialog
     "the tenant name display is not required"). No selector with one
     option, no field its request leaves out, no box that is always ticked;

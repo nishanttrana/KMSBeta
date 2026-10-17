@@ -5,6 +5,14 @@ Newest entries on top.
 
 ## 2026-10-17
 
+### A learning nobody is bound by (13.16.0-beta)
+- 13.14.0 and 13.15.0 recorded their lessons in learning.md and the
+  decision log, but not in CLAUDE.md or the security index, and the owner
+  asked whether any of it had been added. learning.md explains; CLAUDE.md
+  binds. **Rule: a fix whose lesson is a rule for future changes adds that
+  rule to CLAUDE.md, and a security fix adds to its `docs/SECURITY/` page,
+  in the same commit as the fix.**
+
 ### A refusal audited as success (13.15.0-beta)
 - auth's legacy `publishAudit` nests the outcome in `data`; the audit
   service only read the envelope's `result` and defaulted it to `success`.

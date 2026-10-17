@@ -4,6 +4,19 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.16.0-beta] — 2026-10-17
+
+### Documentation
+- **The lessons of 13.14.0 and 13.15.0 are now standing rules**, not only
+  learnings. CLAUDE.md ("Before calling a change done"): `*` never crosses
+  tenants and never matches a deny rule; a selector of stored values comes
+  from the server; a form sends only its route's fields, and every write a
+  page offers is saved once in a smoke test; a page showing another tenant
+  names it in the request. docs/SECURITY/AUDIT_INTEGRITY.md gains
+  "Recorded outcome": which refusals were stored as `success` before
+  13.15.0-beta and how to find them, since those rows can't be rewritten.
+  docs/SECURITY/README.md and AUDIT_EVENTS_2026-09.md point to both.
+
 ## [13.15.0-beta] — 2026-10-17
 
 ### Fixed
