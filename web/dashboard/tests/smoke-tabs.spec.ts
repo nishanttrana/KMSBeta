@@ -369,6 +369,24 @@ test("the unread count sits beside the bell, however many alerts there are", asy
   }
 });
 
+// The build popover closed only on a second press of ⓘ (13.12.0-beta). It
+// closes on a press anywhere else and on Escape, and its button still toggles it.
+test("the build popover closes on an outside press, on Escape and on its button", async ({ page }) => {
+  const info = page.getByRole("button", { name: "About this KMS build" });
+  const panel = page.getByRole("dialog", { name: "Build information" });
+  await info.click();
+  await expect(panel).toBeVisible();
+  await page.getByTestId("sidebar").click({ position: { x: 5, y: 300 } });
+  await expect(panel).toHaveCount(0);
+  await info.click();
+  await expect(panel).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(panel).toHaveCount(0);
+  await info.click();
+  await info.click();
+  await expect(panel).toHaveCount(0);
+});
+
 // A dialog offers only what its request sends (11.6.0-beta): no one-option
 // Tenant selector, no derivation or FIPS box keycore never received.
 // Description and a rotation schedule came back in 12.0.0-beta with the code

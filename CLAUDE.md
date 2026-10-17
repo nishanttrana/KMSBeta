@@ -484,6 +484,9 @@ changes code without touching CHANGELOG.md or learning.md.
     its icon, never over it. The smoke tests' `coveredControls` sweep
     (`web/dashboard/tests/fixtures/layout.ts`) fails when one control is
     drawn over another.
+  - A popover or menu closes on a press outside it and on Escape, not only
+    on its own button: its state comes from `components/v3/usePopover.ts`
+    (13.12.0-beta; `tests/unit/popoversClose.test.ts`).
 
 - **CI's verdict is read after every push** (2026-10-13: CI had failed on
   every one of its 274 runs and nobody had looked). Run

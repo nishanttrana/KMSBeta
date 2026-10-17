@@ -2,12 +2,12 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Atom, Ban, Package, RefreshCcw } from "lucide-react";
 import {
-  AreaChart, Area, BarChart, Bar as RBar, PieChart, Pie, Cell,
-  RadialBarChart, RadialBar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
+  AreaChart, Area, BarChart, Bar as RBar, PieChart, Pie, Cell, RadialBarChart, RadialBar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
 import { B, Btn, Card, Inp, Modal, Row3, Sel, Stat, Tabs } from "../legacyPrimitives";
 import { C } from "../theme";
 import { errMsg } from "../runtimeUtils";
+import { usePopover } from "../usePopover";
 import {
   diffCBOM,
   diffSBOM,
@@ -43,7 +43,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
   const [cbomHistory, setCBOMHistory] = useState<any[]>([]);
   const [pqcReadiness, setPQCReadiness] = useState<any>(null);
   const [activeSBOMFormat, setActiveSBOMFormat] = useState("cyclonedx");
-  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen, exportMenuRef] = usePopover();
   const [selectedDepCategory, setSelectedDepCategory] = useState("");
   const [depListOpen, setDepListOpen] = useState(false);
   const [depListTitle, setDepListTitle] = useState("");
@@ -490,7 +490,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
           <Btn small onClick={() => void exportSBOMFile("spdx")} disabled={Boolean(exportingSBOM)} style={{ height: 30, fontSize: 11, background: activeSBOMFormat === "spdx" ? C.accentDim : "transparent", borderColor: activeSBOMFormat === "spdx" ? C.accent : C.border, color: activeSBOMFormat === "spdx" ? C.accentFg : C.dim }}>
             {exportingSBOM === "spdx" ? "..." : "SPDX"}
           </Btn>
-          <div style={{ position: "relative" }}>
+          <div ref={exportMenuRef} style={{ position: "relative" }}>
             <Btn small onClick={() => setExportMenuOpen((prev) => !prev)} disabled={Boolean(exportingSBOM)} style={{ height: 30, fontSize: 11 }}>Export</Btn>
             {exportMenuOpen ? <div style={{ position: "absolute", right: 0, top: 34, minWidth: 120, background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: 6, zIndex: 20 }}>
               <Btn small onClick={() => { setExportMenuOpen(false); void exportSBOMFile("pdf"); }} disabled={Boolean(exportingSBOM)} style={{ width: "100%", justifyContent: "flex-start", height: 28, borderColor: "transparent", fontSize: 11 }}>

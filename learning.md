@@ -5,6 +5,14 @@ Newest entries on top.
 
 ## 2026-10-17
 
+### A popover that only its own button closes (13.12.0-beta)
+- The ⓘ build popover, the timezone menu and the SBOM Export menu were each
+  a `useState(false)` flag and an absolutely positioned `<div>`, so nothing
+  but the trigger closed them. The shared `Select` already closed on an
+  outside press and Escape, but that logic lived inside it, so hand-made
+  menus never got it. **Rule: a floating panel takes its state from
+  `usePopover`**; `tests/unit/popoversClose.test.ts` finds the old pattern.
+
 ### Test state that outlives the test (13.11.0-beta)
 - Three times now a test met leftovers of an earlier run on something that
   lives for the whole process: a SQL driver name, HSM key labels in the

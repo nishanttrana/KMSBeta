@@ -48,6 +48,7 @@ import { getAuthCLIStatus, listAuthTenants } from "../lib/authAdmin";
 import { getGovernanceSystemState } from "../lib/governance";
 import { listKeysPaginated, listTags } from "../lib/keycore";
 import { getUnreadAlertCounts } from "../lib/reporting";
+import { usePopover } from "./v3/usePopover";
 import { B, Btn, Sel } from "./v3/legacyPrimitives";
 import { isFipsModeEnabled, normalizeFipsModeValue, TabErrorBoundary } from "./v3/runtimeUtils";
 import { SidebarSubNav, SUB_PANES, type SubPane } from "./v3/SidebarSubNav";
@@ -286,17 +287,16 @@ export default function VectaDashboardV3Shell(props: Props) {
   const [tz, setTz] = useState(() => {
     try { return localStorage.getItem(TZ_STORAGE_KEY) || "local"; } catch { return "local"; }
   });
-  const [tzOpen, setTzOpen] = useState(false);
-  const [infoOpen, setInfoOpen] = useState(false);
+  const [tzOpen, setTzOpen, tzRef] = usePopover();
+  const [infoOpen, setInfoOpen, infoRef] = usePopover();
   const formattedTime = useMemo(() => {
     if (tz === "local") return t.toLocaleTimeString();
     try { return t.toLocaleTimeString(undefined, { timeZone: tz }); } catch { return t.toLocaleTimeString(); }
   }, [t, tz]);
   const changeTz = useCallback((val: string) => {
-    setTz(val);
-    setTzOpen(false);
+    setTz(val); setTzOpen(false);
     try { localStorage.setItem(TZ_STORAGE_KEY, val); } catch { /* ignored */ }
-  }, []);
+  }, [setTzOpen]);
   const [pinnedTabs, setPinnedTabs] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem("vecta_pinned_tabs");
@@ -886,7 +886,7 @@ export default function VectaDashboardV3Shell(props: Props) {
             )}
 
             {/* Clock + timezone picker */}
-            <div style={{ position: "relative" }}>
+            <div ref={tzRef} style={{ position: "relative" }}>
               <div
                 onClick={() => setTzOpen((v) => !v)}
                 style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", padding: "3px 8px", borderRadius: 3, border: `1px solid transparent`, transition: "border-color .12s" }}
@@ -916,7 +916,7 @@ export default function VectaDashboardV3Shell(props: Props) {
             </div>
 
             {/* Build info */}
-            <div style={{ position: "relative" }}>
+            <div ref={infoRef} style={{ position: "relative" }}>
               <button
                 onClick={() => { setInfoOpen((v) => !v); setTzOpen(false); }}
                 className="vk-icon-btn"

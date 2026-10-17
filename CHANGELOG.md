@@ -4,6 +4,17 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.12.0-beta] — 2026-10-17
+
+### Fixed
+- **The ⓘ build popover closes when you click elsewhere or press Esc.**
+  It closed only on a second click of ⓘ, so it stayed over the page. The
+  clock's timezone menu and the SBOM Export menu had the same fault and
+  are fixed the same way, through one shared `usePopover` hook. A unit
+  test (`popoversClose.test.ts`) fails if a floating panel is again opened
+  from a plain `useState` flag, and a smoke test clicks outside and
+  presses Esc.
+
 ## [13.11.0-beta] — 2026-10-17
 
 ### Fixed
