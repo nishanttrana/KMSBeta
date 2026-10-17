@@ -492,6 +492,12 @@ changes code without touching CHANGELOG.md or learning.md.
   steps never ran. Before pushing a change to HSM, PKCS#11 or build files,
   run CI's Go job in a Linux container with `scripts/install-softhsm.sh`:
   the HSM tests skip on a Mac.
+- **Tests are hermetic** (2026-10-17, after an intermittent CI failure).
+  No test needs the Internet or DNS: names are resolved only through
+  `pkg/ssrfguard`, which refuses real DNS in a test binary; answer names
+  with `ssrfguard.SetResolverForTests`. A test can run twice in one process
+  and has no data race. CI checks all three (`scripts/test-hermetic.sh`,
+  `-count=2`, `-race`).
 - **A test never passes in CI by skipping.** A dependency a test needs is
   required there (`VECTA_REQUIRE_SOFTHSM=1`, `VECTA_REQUIRE_JDK=1`), and a
   test that waits for an environment variable has a CI step that sets it.

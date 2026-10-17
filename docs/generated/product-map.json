@@ -33403,7 +33403,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-12T17:09:14Z",
+  "generated_at": "2026-10-17T05:26:13Z",
   "navigation": [
     {
       "group": "Overview",
@@ -57050,7 +57050,7 @@
           "file": "services/discovery/targets.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 279,
+          "line": 278,
           "name": "ListTargets",
           "receiver_calls": [],
           "store_calls": [
@@ -57126,7 +57126,7 @@
             "CreateTarget"
           ],
           "internal_package_calls": [],
-          "line": 245,
+          "line": 244,
           "name": "AddTarget",
           "receiver_calls": [],
           "store_calls": [
@@ -57186,7 +57186,7 @@
             "DeleteTarget"
           ],
           "internal_package_calls": [],
-          "line": 283,
+          "line": 282,
           "name": "RemoveTarget",
           "receiver_calls": [],
           "store_calls": [
@@ -123338,7 +123338,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-12T17:09:14Z",
+    "generatedAt": "2026-10-17T05:26:13Z",
     "methods": [
       "DELETE",
       "GET",

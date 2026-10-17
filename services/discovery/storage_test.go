@@ -32,6 +32,7 @@ import (
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/route/routetest"
+	"vecta-kms/pkg/ssrfguard"
 )
 
 const (
@@ -564,8 +565,8 @@ func TestStorageSkipsUnchangedObjects(t *testing.T) {
 	srv := newS3Server(t, objects, true)
 	trust(t, svc, srv)
 	svc.conns = stubConnections{"c1": s3Connection(srvHost(srv))}
-	clock := time.Now().UTC()
-	svc.now = func() time.Time { clock = clock.Add(time.Minute); return clock }
+	clock := newTestClock(time.Minute)
+	svc.now = clock.Now
 	_ = store.CreateBucket(ctx, Bucket{ID: "b1", TenantID: "t1", Provider: "s3", Endpoint: srv.URL, Name: "acme-artifacts", Prefix: "app/", Region: "eu-west-1", ConnectionID: "c1", Deep: true})
 	gets := func() (n int) {
 		for _, r := range srv.requests() {
@@ -934,6 +935,7 @@ func TestLiveObjectStorage(t *testing.T) {
 	if len(cases) == 0 && os.Getenv("VECTA_TEST_AZURE_OAUTH_EMULATOR") == "" {
 		t.Skip("set VECTA_TEST_S3_ENDPOINT, VECTA_TEST_AZURE_ENDPOINT or VECTA_TEST_GCS_BUCKET to scan a real storage service")
 	}
+	defer ssrfguard.UseSystemResolverForTests()() // this test is about the real network
 	svc, _, _ := newDiscoveryService(t)
 	if ca := os.Getenv("VECTA_TEST_STORAGE_CA"); ca != "" {
 		raw, err := os.ReadFile(ca)
@@ -1108,8 +1110,8 @@ func TestStorageWithoutETags(t *testing.T) {
 		writeXML(w, http.StatusOK, out+`</ListBucketResult>`)
 	})
 	trust(t, svc, srv)
-	clock := time.Now().UTC()
-	svc.now = func() time.Time { clock = clock.Add(time.Second); return clock }
+	clock := newTestClock(time.Second)
+	svc.now = clock.Now
 	_ = store.CreateBucket(ctx, Bucket{ID: "b1", TenantID: "t1", Provider: "s3", Endpoint: srv.URL, Name: "acme-artifacts", Region: "eu-west-1"})
 	run := func(wantRead, wantUnchanged int, what string) bucketScan {
 		t.Helper()
@@ -1162,7 +1164,7 @@ func TestStorageWithoutETags(t *testing.T) {
 	run(2, 2, "the new object read")
 	set("keys/padded.pem", object{pad + sameLength(len(first)), objects["keys/padded.pem"].modified})
 	run(2, 2, "replaced under the same time, size and first kilobyte")
-	clock = clock.Add(modifiedTrust)
+	clock.Advance(modifiedTrust)
 	run(4, 0, "once the stand-ins are too old to trust")
 	// The check is one small ranged read per object, never the object.
 	ranged := 0
@@ -1177,7 +1179,8 @@ func TestStorageWithoutETags(t *testing.T) {
 
 	// An ETag, where there is one, is still what decides.
 	o := bucketObject{key: "k", size: 10, etag: "abc", modified: stamp(time.Hour), listed: time.Now()}
-	if _, standIn := o.standIn("abc", clock); !o.unchangedSince("abc") || o.unchangedSince("abd") || o.recorded(clock, nil) != "abc" || standIn {
+	at := clock.Now()
+	if _, standIn := o.standIn("abc", at); !o.unchangedSince("abc") || o.unchangedSince("abd") || o.recorded(at, nil) != "abc" || standIn {
 		t.Fatal("an ETag was not used as it is")
 	}
 	// No Date on the listing: no stand-in, the object is read.
@@ -1201,8 +1204,8 @@ func TestStorageResolvesConstantsAcrossObjects(t *testing.T) {
 	}
 	srv := newS3Server(t, objects, false)
 	trust(t, svc, srv)
-	clock := time.Now().UTC()
-	svc.now = func() time.Time { clock = clock.Add(time.Second); return clock }
+	clock := newTestClock(time.Second)
+	svc.now = clock.Now
 	_ = store.CreateBucket(ctx, Bucket{ID: "b1", TenantID: "t1", Provider: "s3", Endpoint: srv.URL, Name: "acme-artifacts", Region: "eu-west-1"})
 	run := func(wantRead int, want ...string) {
 		t.Helper()
@@ -1242,4 +1245,33 @@ func TestStorageResolvesConstantsAcrossObjects(t *testing.T) {
 	run(1)
 	run(1, "crypto_usage|MD5|weak|app/hasher.py:2")
 	run(0)
+}
+
+// testClock is the service's clock in a test: it moves forward by step every
+// time it is read, so records made one after another have different times.
+// A scan reads the clock from several workers at once, so it is locked. The
+// three tests that kept the time in a bare variable raced on it (found by the
+// race detector, 13.8.0-beta).
+type testClock struct {
+	mu   sync.Mutex
+	at   time.Time
+	step time.Duration
+}
+
+func newTestClock(step time.Duration) *testClock {
+	return &testClock{at: time.Now().UTC(), step: step}
+}
+
+func (c *testClock) Now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.at = c.at.Add(c.step)
+	return c.at
+}
+
+// Advance moves the clock forward without reading it.
+func (c *testClock) Advance(d time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.at = c.at.Add(d)
 }

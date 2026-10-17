@@ -11,6 +11,7 @@ import (
 	"strings"
 	"syscall"
 
+	"vecta-kms/pkg/ssrfguard"
 	"vecta-kms/pkg/svctls"
 )
 
@@ -137,9 +138,7 @@ func platformAddrs(ctx context.Context, lookup func(context.Context, string) ([]
 
 // newTargetGuard is the dial guard for one network scan.
 func newTargetGuard(ctx context.Context) dialControl {
-	platform := platformAddrs(ctx, func(ctx context.Context, h string) ([]netip.Addr, error) {
-		return net.DefaultResolver.LookupNetIP(ctx, "ip", h)
-	}, net.InterfaceAddrs)
+	platform := platformAddrs(ctx, ssrfguard.LookupNetIP, net.InterfaceAddrs)
 	return guardAddrs(platform)
 }
 

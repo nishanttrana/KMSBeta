@@ -30,6 +30,9 @@ func TestValidateWebhookURLBlocksPrivateAndMappedPrivateIPv4(t *testing.T) {
 // The dialer refuses a blocked address even when validation was skipped or
 // the name now resolves elsewhere; the client refuses plain HTTP redirects.
 func TestDialContextRefusesBlockedAddresses(t *testing.T) {
+	// "localhost" is refused for the address it resolves to, not because
+	// the lookup failed.
+	defer SetResolverForTests(map[string][]string{"localhost": {"127.0.0.1"}})()
 	for _, addr := range []string{"127.0.0.1:443", "169.254.169.254:80", "10.1.2.3:443", "localhost:443"} {
 		if c, err := DialContext(context.Background(), "tcp", addr); err == nil {
 			c.Close()

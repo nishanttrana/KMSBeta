@@ -3,6 +3,41 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-10-17
+
+### Hunting a failure that would not happen again (13.8.0-beta)
+- **Repeating did not find it; changing the conditions did.** Twenty-odd
+  full runs on Linux, with two CPUs and with one, passed. What found causes
+  was running the suite *differently*: under the race detector (two data
+  races), with the network switched off (one test that needed DNS), and
+  twice in one process (two tests that could not be repeated). **Rule: a
+  flaky test is found by removing an assumption, not by rolling the dice
+  again.**
+- **A test that needs DNS is a flaky test.** It registered a connection for
+  a real AWS host name and expected success. The guard resolves names; on
+  a CI runner, now and then, resolution fails. Inside a test binary the
+  guard now refuses real DNS unless the test answered the name or is about
+  the real network (`testing.Testing()`), and CI runs the whole suite with
+  no network.
+- **A library's bug reached the product through its tests.** The KMIP
+  rejection test showed a data race inside the kmip-go client. Reading it
+  showed the client can panic when a server hangs up, and that the same
+  client validates customers' KMIP servers. A test that only checked "an
+  error came back" passed either way. Catching the panic would have left
+  the race; the check now does its one request at a time on one goroutine,
+  and the race detector is clean.
+- **A test written to prove one fix found two worse faults.** A test that
+  the interop check reports success against our own KMIP server failed
+  with EOF: the check had not spoken TLS since the client library was
+  upgraded (a custom dialer now means "do your own TLS"), and its verdict
+  was set in a `defer` after an unnamed result had been returned, so it was
+  always "not verified". **Rule: a feature with no test of its success
+  path has not been shown to succeed.** Nobody had ever seen this check
+  pass.
+- **A test double that resets per test, beside a resource that lives per
+  process, collides on the second run.** The HSM CA tests numbered keys per
+  test on a SoftHSM token shared by the whole process.
+
 ## 2026-10-13
 
 ### The first green run, and what it does not show (13.7.0-beta)

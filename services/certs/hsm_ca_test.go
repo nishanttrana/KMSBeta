@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"golang.org/x/crypto/ocsp"
@@ -25,10 +26,14 @@ import (
 // sign a digest with it) and forwards them to a real hsm-connector on
 // SoftHSM2, so every signature here is made by a real PKCS#11 HSM.
 // keycore's own side (prehashed HSM signing) is tested in keycore.
+// hsmKeyN numbers CA keys across the test process. The SoftHSM token lives
+// as long as the process, so a counter per test made the second run of a
+// test (go test -count=2) collide with the first's key label.
+var hsmKeyN atomic.Int64
+
 type hsmKeycore struct {
 	usages []string // usage of each HSM signature (pkg/delegation)
 	client *hsm.Client
-	n      int
 	// connections is the HSM credential each CA key was created on ("" is
 	// the tenant's HSM profile).
 	connections map[string]string
@@ -41,8 +46,7 @@ func (k *hsmKeycore) Sign(context.Context, string, string, []byte) ([]byte, erro
 	return nil, errors.New("not used")
 }
 func (k *hsmKeycore) CreateHSMSigningKey(ctx context.Context, tenantID, algorithm, _, connectionID string) (string, []byte, error) {
-	k.n++
-	keyID := fmt.Sprintf("key_ca_%d", k.n)
+	keyID := fmt.Sprintf("key_ca_%d", hsmKeyN.Add(1))
 	if k.connections == nil {
 		k.connections = map[string]string{}
 	}

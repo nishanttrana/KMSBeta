@@ -68,6 +68,32 @@ jobs:
       - name: Cross-build the Windows customer agent
         run: GOOS=windows GOARCH=amd64 go build ./services/ekm-agent/...
 
+  race:
+    # Data races make tests fail now and then; the race detector finds them
+    # every time. Two were found this way (13.8.0-beta).
+    name: Go tests — race detector
+    runs-on: ubuntu-latest
+    env:
+      GOFIPS140: v1.0.0
+      VECTA_REQUIRE_SOFTHSM: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Install SoftHSM (a real PKCS#11 library for the HSM tests)
+        run: |
+          scripts/install-softhsm.sh "$HOME/softhsm"
+          echo "SOFTHSM_LIB=$HOME/softhsm/lib/softhsm/libsofthsm2.so" >> "$GITHUB_ENV"
+          echo "$HOME/softhsm/bin" >> "$GITHUB_PATH"
+
+      - name: go test -race
+        run: scripts/ci-go-test.sh -race ./pkg/... ./services/...
+
   cluster-replication:
     # Two real Postgres 17 servers: selective per-component logical replication
     # (docs/CLUSTERING.md).
@@ -254,8 +280,16 @@ jobs:
       - name: go vet
         run: go vet ./...
 
-      - name: go test
-        run: scripts/ci-go-test.sh ./...
+      # Twice in one process: a test that cannot be repeated (shared state
+      # left by its first run) fails here, and could not be repeated to look
+      # for an intermittent failure either.
+      - name: go test (every test twice)
+        run: scripts/ci-go-test.sh -count=2 ./...
+
+      # No network at all: a test that needs the Internet or DNS fails here
+      # every time, instead of in some run whenever the network does.
+      - name: go test with no network
+        run: scripts/test-hermetic.sh
 
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest

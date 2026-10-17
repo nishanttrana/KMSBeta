@@ -20,6 +20,7 @@ import (
 	pkgauth "vecta-kms/pkg/auth"
 	pkgcrypto "vecta-kms/pkg/crypto"
 	"vecta-kms/pkg/route"
+	"vecta-kms/pkg/ssrfguard"
 )
 
 func svcClaims(clientID string) *pkgauth.Claims {
@@ -359,6 +360,9 @@ func TestPlatformUsageFindsRepositoriesAndBuckets(t *testing.T) {
 // and can't be deleted while a bucket reads with it. A secret key too short
 // to sign with and a SAS token that isn't one are refused.
 func TestStorageConnectionsAreDiscoverysAlone(t *testing.T) {
+	// The Amazon endpoint below is a name. Left to real DNS, this test failed
+	// whenever the resolver did (seen as one red CI job in twelve).
+	defer ssrfguard.SetResolverForTests(map[string][]string{"s3.eu-west-1.amazonaws.com": {"52.218.0.10"}})()
 	hs := newPlaybookHarness(t)
 	create := func(typ string, fields map[string]string) *httptest.ResponseRecorder {
 		return hs.do(t, http.MethodPost, "/compliance/playbooks/connections", pbAdmin, map[string]any{"name": typ, "type": typ, "fields": fields})

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -82,9 +83,18 @@ func (countingConn) Begin() (driver.Tx, error) { return nil, errors.New("no tran
 // A node without the table (no cluster manager deployed) is standalone, and
 // the failed lookup is cached: every service asked Postgres on every call,
 // thousands of failed queries an hour on an idle node.
+// A driver name can be registered once in a process. Registered inside the
+// test, the second run of it in one process (go test -count=2) panicked, so
+// the test could not be repeated to look for an intermittent failure.
+var (
+	missingTableQueries  atomic.Int64
+	registerMissingTable sync.Once
+)
+
 func TestMissingTableIsCachedAsStandalone(t *testing.T) {
-	var queries atomic.Int64
-	sql.Register("clusterstate-missing-table", countingDriver{&queries})
+	queries := &missingTableQueries
+	registerMissingTable.Do(func() { sql.Register("clusterstate-missing-table", countingDriver{queries}) })
+	queries.Store(0)
 	db, err := sql.Open("clusterstate-missing-table", "")
 	if err != nil {
 		t.Fatal(err)

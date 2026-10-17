@@ -22,7 +22,7 @@ func DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+	ips, err := resolveHost(ctx, host)
 	if err != nil {
 		return nil, err
 	}
@@ -30,12 +30,12 @@ func DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
 		return nil, fmt.Errorf("%s resolves to no address", host)
 	}
 	for _, ip := range ips {
-		if isBlockedIP(ip.IP) {
-			return nil, fmt.Errorf("%s resolves to blocked IP %s", host, ip.IP)
+		if isBlockedIP(ip) {
+			return nil, fmt.Errorf("%s resolves to blocked IP %s", host, ip)
 		}
 	}
 	d := net.Dialer{Timeout: 10 * time.Second}
-	return d.DialContext(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
+	return d.DialContext(ctx, network, net.JoinHostPort(ips[0].String(), port))
 }
 
 // NewHTTPSClient returns a client for user-configured external endpoints:

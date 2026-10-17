@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,8 +13,8 @@ import (
 	"time"
 
 	kmip "github.com/ovh/kmip-go"
-	"github.com/ovh/kmip-go/kmipclient"
 	"github.com/ovh/kmip-go/payloads"
+	"github.com/ovh/kmip-go/ttlv"
 )
 
 func defaultKMIPInteropVersions() []kmip.ProtocolVersion {
@@ -91,9 +92,9 @@ func normalizeInteropEndpoint(endpoint string) string {
 	return out + ":" + KMIPPort
 }
 
-func (h *Handler) runInteropValidation(ctx context.Context, target KMIPInteropTarget) KMIPInteropValidationResult {
+func (h *Handler) runInteropValidation(ctx context.Context, target KMIPInteropTarget) (result KMIPInteropValidationResult) {
 	start := time.Now()
-	result := KMIPInteropValidationResult{
+	result = KMIPInteropValidationResult{
 		TargetID: target.ID,
 		Vendor:   target.Vendor,
 		Endpoint: target.Endpoint,
@@ -127,34 +128,42 @@ func (h *Handler) runInteropValidation(ctx context.Context, target KMIPInteropTa
 		return result
 	}
 
-	if _, err := tls.X509KeyPair([]byte(target.ClientCertPEM), []byte(target.ClientKeyPEM)); err != nil {
+	pair, err := tls.X509KeyPair([]byte(target.ClientCertPEM), []byte(target.ClientKeyPEM))
+	if err != nil {
 		result.Error = "invalid client certificate/key pair: " + err.Error()
 		return result
 	}
+	roots := x509.NewCertPool()
+	if !roots.AppendCertsFromPEM([]byte(target.CAPEM)) {
+		result.Error = "ca_pem holds no certificate"
+		return result
+	}
 
-	dialer := &net.Dialer{Timeout: 8 * time.Second}
 	endpoint := strings.TrimSpace(target.Endpoint)
-	opts := []kmipclient.Option{
-		kmipclient.WithRootCAPem([]byte(target.CAPEM)),
-		kmipclient.WithClientCertPEM([]byte(target.ClientCertPEM), []byte(target.ClientKeyPEM)),
-		kmipclient.WithKmipVersions(defaultKMIPInteropVersions()...),
-		// Keep endpoint capture explicit so validation cannot be redirected by a
-		// caller-controlled address in the upgraded kmip-go dialer callback.
-		kmipclient.WithDialerUnsafe(func(ctx context.Context, _ string) (net.Conn, error) {
-			return dialer.DialContext(ctx, "tcp", endpoint)
-		}),
+	serverName := strings.TrimSpace(target.ServerName)
+	if serverName == "" {
+		if host, _, splitErr := net.SplitHostPort(endpoint); splitErr == nil {
+			serverName = host
+		}
 	}
-	if strings.TrimSpace(target.ServerName) != "" {
-		opts = append(opts, kmipclient.WithServerName(strings.TrimSpace(target.ServerName)))
-	}
-	client, err := kmipclient.Dial(endpoint, opts...)
+	// The connection is made here, to the stored endpoint and nowhere else,
+	// and it is mutual TLS: the target's CA, this client certificate, the
+	// target's name. With a dialer of its own the kmip-go client applies none
+	// of its TLS options, so until 13.8.0-beta this dialled plain TCP and
+	// sent KMIP in the clear: no TLS server could be validated, and the
+	// failure was reported as an "mTLS handshake" that never took place.
+	dialer := &tls.Dialer{NetDialer: &net.Dialer{Timeout: 8 * time.Second}, Config: &tls.Config{
+		RootCAs: roots, Certificates: []tls.Certificate{pair}, ServerName: serverName,
+		MinVersion: tls.VersionTLS12, // FIPS exception: external protocol mandate (KMIP 1.x servers)
+	}}
+	client, err := dialKMIPSession(ctx, dialer, endpoint)
 	if err != nil {
 		result.Error = "mTLS handshake/dial failed: " + err.Error()
 		return result
 	}
-	defer client.Close()
+	defer client.Close() //nolint:errcheck
 	result.HandshakeOK = true
-	if v := client.Version(); v.ProtocolVersionMajor > 0 {
+	if v := client.version; v.ProtocolVersionMajor > 0 {
 		result.NegotiatedVersion = formatKMIPVersion(v)
 	}
 
@@ -293,3 +302,81 @@ func marshalInteropValidationReport(report KMIPInteropValidationResult) string {
 	}
 	return string(raw)
 }
+
+// kmipSession is one KMIP connection driven from the caller's goroutine: a
+// request is written and its answer read before the next is sent. The
+// interop check used the kmip-go client (0.9.2, the newest), whose reader
+// goroutine closes the channel its sender writes to when the server hangs
+// up: a data race, and a "send on closed channel" panic when the timing is
+// unlucky. A customer's KMIP server may hang up whenever it likes.
+type kmipSession struct {
+	conn    net.Conn
+	stream  ttlv.Stream
+	version kmip.ProtocolVersion
+}
+
+// dialKMIPSession connects with dialer (mutual TLS) and agrees a protocol
+// version the way kmip-go's client does: DiscoverVersions under a 1.1
+// header, the first version both sides have, 1.0 for a server without it.
+func dialKMIPSession(ctx context.Context, dialer *tls.Dialer, endpoint string) (*kmipSession, error) {
+	conn, err := dialer.DialContext(ctx, "tcp", endpoint)
+	if err != nil {
+		return nil, err
+	}
+	s := &kmipSession{conn: conn, stream: ttlv.NewStream(conn, 1<<20), version: kmip.V1_1}
+	resp, err := s.roundTrip(ctx, &payloads.DiscoverVersionsRequestPayload{ProtocolVersion: defaultKMIPInteropVersions()})
+	if err != nil {
+		_ = conn.Close()
+		return nil, err
+	}
+	item := resp.BatchItem[0]
+	switch {
+	case item.ResultStatus == kmip.ResultStatusOperationFailed && item.ResultReason == kmip.ResultReasonOperationNotSupported:
+		s.version = kmip.V1_0
+	case item.Err() != nil:
+		_ = conn.Close()
+		return nil, item.Err()
+	default:
+		offered, _ := item.ResponsePayload.(*payloads.DiscoverVersionsResponsePayload)
+		if offered == nil || len(offered.ProtocolVersion) == 0 {
+			_ = conn.Close()
+			return nil, errors.New("protocol version negotiation failed: no common version")
+		}
+		s.version = offered.ProtocolVersion[0]
+	}
+	return s, nil
+}
+
+func (s *kmipSession) roundTrip(ctx context.Context, payload kmip.OperationPayload) (kmip.ResponseMessage, error) {
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		deadline = time.Now().Add(20 * time.Second)
+	}
+	_ = s.conn.SetDeadline(deadline)
+	req := kmip.NewRequestMessage(s.version, payload)
+	var resp kmip.ResponseMessage
+	if err := s.stream.Send(&req); err != nil {
+		return resp, err
+	}
+	if err := s.stream.Recv(&resp); err != nil {
+		return resp, err
+	}
+	if len(resp.BatchItem) != 1 {
+		return resp, fmt.Errorf("%d answers to one request", len(resp.BatchItem))
+	}
+	return resp, nil
+}
+
+// Request sends one operation and returns its answer, or the server's error.
+func (s *kmipSession) Request(ctx context.Context, payload kmip.OperationPayload) (kmip.OperationPayload, error) {
+	resp, err := s.roundTrip(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+	if err := resp.BatchItem[0].Err(); err != nil {
+		return nil, err
+	}
+	return resp.BatchItem[0].ResponsePayload, nil
+}
+
+func (s *kmipSession) Close() error { return s.conn.Close() }

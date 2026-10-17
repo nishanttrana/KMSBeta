@@ -367,6 +367,21 @@ else
   echo "PASS [tls-only]"
 fi
 
+# A name is resolved in one place, pkg/ssrfguard (LookupNetIP, or the guard's
+# own checks), so a test answers every lookup in one place and none reaches
+# real DNS: a test that does fails whenever a resolver hiccups (13.8.0-beta,
+# one red CI job in twelve). Reverse lookups (net.LookupAddr) are not names
+# to connect to and are left alone.
+dns_hits=$(grep -rnE 'net\.DefaultResolver|net\.Lookup(Host|IP|NetIP|IPAddr|CNAME|SRV|MX|TXT)\(' services pkg --include='*.go' 2>/dev/null | grep -v '_test\.go:' | grep -v '^pkg/ssrfguard/' || true)
+hook_hits=$(grep -rnE 'ssrfguard\.(SetResolverForTests|UseSystemResolverForTests)\(' services pkg --include='*.go' 2>/dev/null | grep -v '_test\.go:' || true)
+if [ -n "$dns_hits$hook_hits" ]; then
+  FAIL=1
+  echo "FAIL [name-resolution]: resolve names with ssrfguard.LookupNetIP; the test resolvers are for _test files"
+  printf '%s\n' "$dns_hits" "$hook_hits" | sed '/^$/d; s/^/  /'
+else
+  echo "PASS [name-resolution]"
+fi
+
 # Test hooks stay in tests: svctls.ResetForTests forgets the process's
 # internal mTLS identity.
 reset_hits=$(grep -rn "svctls\.ResetForTests" services pkg --include="*.go" 2>/dev/null | grep -v "_test\.go:" || true)

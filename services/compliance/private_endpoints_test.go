@@ -3,15 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
-	"net/netip"
 	"strings"
 	"testing"
 
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/route"
+	"vecta-kms/pkg/ssrfguard"
 )
 
 var (
@@ -145,17 +144,10 @@ func TestPrivateEndpointRoutes(t *testing.T) {
 // is handed the tenant's ranges with the opened connection.
 func TestSourceConnectionOnAnApprovedPrivateAddress(t *testing.T) {
 	hs := newPlaybookHarness(t)
-	old := lookupHost
-	defer func() { lookupHost = old }()
-	lookupHost = func(_ context.Context, host string) ([]netip.Addr, error) {
-		switch host {
-		case "minio.corp.example":
-			return []netip.Addr{netip.MustParseAddr("10.4.0.20")}, nil
-		case "split.corp.example": // one address inside the range, one outside
-			return []netip.Addr{netip.MustParseAddr("10.4.0.21"), netip.MustParseAddr("10.9.9.9")}, nil
-		}
-		return nil, errors.New("no such host")
-	}
+	defer ssrfguard.SetResolverForTests(map[string][]string{
+		"minio.corp.example": {"10.4.0.20"},
+		"split.corp.example": {"10.4.0.21", "10.9.9.9"}, // one address inside the range, one outside
+	})()
 	create := func(who *pkgauth.Claims, typ string, fields map[string]string) *httptest.ResponseRecorder {
 		return hs.do(t, http.MethodPost, "/compliance/playbooks/connections?tenant_id="+who.TenantID, who, map[string]any{"name": typ, "type": typ, "fields": fields})
 	}

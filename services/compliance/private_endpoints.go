@@ -218,11 +218,6 @@ func (h *Handler) approvedRanges(ctx context.Context, tenantID string) ([]netip.
 	return out, names, nil
 }
 
-// lookupHost resolves a connection's host (a variable so a test can answer).
-var lookupHost = func(ctx context.Context, host string) ([]netip.Addr, error) {
-	return net.DefaultResolver.LookupNetIP(ctx, "ip", host)
-}
-
 // privateSourceAllowed reports whether a source connection may name rawURL
 // although the outbound guard refuses it: an https address, not a platform
 // service, every address of which is public or inside a range approved for
@@ -235,7 +230,7 @@ func (h *Handler) privateSourceAllowed(ctx context.Context, tenantID, rawURL str
 	var addrs []netip.Addr
 	if a, err := netip.ParseAddr(u.Hostname()); err == nil {
 		addrs = []netip.Addr{a}
-	} else if addrs, err = lookupHost(ctx, u.Hostname()); err != nil || len(addrs) == 0 {
+	} else if addrs, err = ssrfguard.LookupNetIP(ctx, u.Hostname()); err != nil || len(addrs) == 0 {
 		return false, nil
 	}
 	ranges, _, err := h.approvedRanges(ctx, tenantID)

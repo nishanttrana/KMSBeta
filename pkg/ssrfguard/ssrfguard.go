@@ -4,6 +4,7 @@
 package ssrfguard
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -92,14 +93,13 @@ func ValidateWebhookURL(rawURL string) error {
 	}
 
 	// Resolve hostname and check all IPs.
-	addrs, err := net.LookupHost(hostname)
+	addrs, err := resolveHost(context.Background(), hostname)
 	if err != nil {
 		return fmt.Errorf("webhook URL hostname resolution failed: %w", err)
 	}
-	for _, addr := range addrs {
-		ip := net.ParseIP(addr)
-		if ip != nil && isBlockedIP(ip) {
-			return fmt.Errorf("webhook URL hostname %q resolves to blocked IP %s", hostname, addr)
+	for _, ip := range addrs {
+		if isBlockedIP(ip) {
+			return fmt.Errorf("webhook URL hostname %q resolves to blocked IP %s", hostname, ip)
 		}
 	}
 	return nil

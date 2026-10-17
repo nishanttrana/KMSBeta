@@ -25,6 +25,7 @@ import (
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/route/routetest"
+	"vecta-kms/pkg/ssrfguard"
 )
 
 const (
@@ -445,6 +446,7 @@ func TestLivePublicRepositories(t *testing.T) {
 	if os.Getenv("VECTA_TEST_LIVE_GIT") == "" {
 		t.Skip("set VECTA_TEST_LIVE_GIT=1 to scan real public repositories")
 	}
+	defer ssrfguard.UseSystemResolverForTests()() // this test is about the real network
 	svc, _, _ := newDiscoveryService(t)
 	svc.targetGuard = newTargetGuard
 	for _, raw := range strings.Fields(defaultString(os.Getenv("VECTA_TEST_LIVE_GIT_URLS"), "https://github.com/octocat/Hello-World https://gitlab.com/gitlab-org/gitlab-test https://codeberg.org/forgejo/governance")) {

@@ -3077,6 +3077,14 @@ this API verified no token. `admin` and `tenant-admin` hold `*`.
 
 ---
 
+`POST /svc/kmip/kmip/interop/targets/{id}/validate` connects to the target
+with mutual TLS (its `ca_pem`, the stored client certificate and key, its
+`server_name` or the endpoint's host), then discovers versions, queries,
+and with `test_key_operation` creates and destroys a test key. It records
+`status` `verified` or `failed`, the report and `last_checked_at`. A server
+that hangs up is a failed validation with the reason (13.8.0-beta; before,
+the check spoke KMIP without TLS and never reported a success).
+
 ### GET /svc/kmip/kmip/profiles / POST /svc/kmip/kmip/profiles
 
 KMIP profile: name, kmipVersion (1.1/1.2/2.0), allowedOperations[], requireMtls, allowedAlgorithms[], description

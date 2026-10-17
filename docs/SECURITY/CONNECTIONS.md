@@ -183,6 +183,10 @@ on-premises Splunk, Elastic or TLS syslog collector).
 
 ## Every call is TLS
 
+- Every host name is resolved in one place, `pkg/ssrfguard` (the guard,
+  and `ssrfguard.LookupNetIP` for a service's own address checks), so the
+  address checked is the address used and a test can answer every lookup
+  (conformance `name-resolution`, 13.8.0-beta).
 - HTTP types go through `ssrfguard.NewHTTPSClient`: HTTPS only, TLS 1.3, no
   redirects, no proxy, and the dialer refuses private, loopback, link-local
   and metadata addresses after resolving (no DNS rebinding). Platform hosts

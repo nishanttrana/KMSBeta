@@ -97,13 +97,13 @@ func (a Allow) ValidateHost(host string) error {
 		}
 		return nil
 	}
-	addrs, err := net.LookupHost(host)
+	addrs, err := resolveHost(context.Background(), host)
 	if err != nil {
 		return fmt.Errorf("host %q does not resolve: %w", host, err)
 	}
-	for _, addr := range addrs {
-		if ip := net.ParseIP(addr); ip != nil && a.blocked(ip) {
-			return fmt.Errorf("host %q resolves to blocked address %s", host, addr)
+	for _, ip := range addrs {
+		if a.blocked(ip) {
+			return fmt.Errorf("host %q resolves to blocked address %s", host, ip)
 		}
 	}
 	return nil
@@ -132,7 +132,7 @@ func (a Allow) DialContext(ctx context.Context, network, addr string) (net.Conn,
 	if err != nil {
 		return nil, err
 	}
-	ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+	ips, err := resolveHost(ctx, host)
 	if err != nil {
 		return nil, err
 	}
@@ -140,14 +140,14 @@ func (a Allow) DialContext(ctx context.Context, network, addr string) (net.Conn,
 		return nil, fmt.Errorf("%s resolves to no address", host)
 	}
 	for _, ip := range ips {
-		if a.blocked(ip.IP) {
-			return nil, fmt.Errorf("%s resolves to blocked IP %s", host, ip.IP)
+		if a.blocked(ip) {
+			return nil, fmt.Errorf("%s resolves to blocked IP %s", host, ip)
 		}
 		// An approved private address: never one of the platform's own.
-		if isBlockedIP(ip.IP) && platformAddr(ctx, ip.IP) {
-			return nil, fmt.Errorf("%s resolves to %s, which belongs to the KMS platform's internal services", host, ip.IP)
+		if isBlockedIP(ip) && platformAddr(ctx, ip) {
+			return nil, fmt.Errorf("%s resolves to %s, which belongs to the KMS platform's internal services", host, ip)
 		}
 	}
 	d := net.Dialer{Timeout: 10 * time.Second}
-	return d.DialContext(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
+	return d.DialContext(ctx, network, net.JoinHostPort(ips[0].String(), port))
 }

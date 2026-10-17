@@ -27,7 +27,12 @@ var (
 
 	// Variables so a test can answer.
 	lookupPlatform = func(ctx context.Context, host string) ([]net.IPAddr, error) {
-		return net.DefaultResolver.LookupIPAddr(ctx, host)
+		ips, err := resolveHost(ctx, host)
+		out := make([]net.IPAddr, 0, len(ips))
+		for _, ip := range ips {
+			out = append(out, net.IPAddr{IP: ip})
+		}
+		return out, err
 	}
 	ownAddrs = net.InterfaceAddrs
 )

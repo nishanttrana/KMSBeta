@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"vecta-kms/pkg/fips/fipstest"
+	"vecta-kms/pkg/ssrfguard"
 )
 
 // TestLiveCloudBYOK runs cloud BYOK against real cloud accounts
@@ -184,6 +185,7 @@ func TestLiveCloudBYOK(t *testing.T) {
 	if len(clouds) == 0 {
 		t.Skip("set a cloud's VECTA_TEST_BYOK_* settings to run BYOK against a real account (scripts/verify-byok-live.sh)")
 	}
+	defer ssrfguard.UseSystemResolverForTests()() // this test is about the real network
 	for _, c := range clouds {
 		c := c
 		t.Run(c.name, func(t *testing.T) { liveBYOK(t, c) })

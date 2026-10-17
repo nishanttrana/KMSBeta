@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"net"
 	"sync"
@@ -18,6 +19,8 @@ import (
 	"github.com/ovh/kmip-go"
 	"github.com/ovh/kmip-go/kmipclient"
 	"github.com/ovh/kmip-go/kmipserver"
+	"github.com/ovh/kmip-go/payloads"
+	"github.com/ovh/kmip-go/ttlv"
 )
 
 // KMIP over the real wire: TLS with client certificates, the production
@@ -209,19 +212,117 @@ func TestKMIPWireTenantIsolation(t *testing.T) {
 	}
 }
 
+// createOnce asks the server to create an AES-256 key over one TLS connection
+// of its own, with the request written and the answer read on the calling
+// goroutine. It does not use the kmip-go client: when a server hangs up, that
+// client's reader closes a channel its sender may be writing to (a data race
+// the race detector reports, and a "send on closed channel" panic when the
+// timing is unlucky), and hanging up is exactly what the server does to a
+// client it refuses. It returns nil only for an answer of success.
+func (w kmipWire) createOnce(t *testing.T, cert tls.Certificate) error {
+	t.Helper()
+	pool := x509.NewCertPool()
+	pool.AppendCertsFromPEM(w.pki.caPEM)
+	conn, err := tls.Dial("tcp", w.addr, &tls.Config{
+		RootCAs: pool, Certificates: []tls.Certificate{cert},
+		MinVersion: tls.VersionTLS12, // FIPS exception: external protocol mandate (KMIP 1.x clients)
+	})
+	if err != nil {
+		return err
+	}
+	defer conn.Close() //nolint:errcheck
+	_ = conn.SetDeadline(time.Now().Add(10 * time.Second))
+	stream := ttlv.NewStream(conn, 1<<20)
+	req := kmip.NewRequestMessage(kmip.V1_4, &payloads.CreateRequestPayload{
+		ObjectType: kmip.ObjectTypeSymmetricKey,
+		TemplateAttribute: kmip.TemplateAttribute{Attribute: []kmip.Attribute{
+			{AttributeName: kmip.AttributeNameCryptographicAlgorithm, AttributeValue: kmip.CryptographicAlgorithmAES},
+			{AttributeName: kmip.AttributeNameCryptographicLength, AttributeValue: int32(256)},
+			{AttributeName: kmip.AttributeNameCryptographicUsageMask, AttributeValue: kmip.CryptographicUsageEncrypt},
+		}},
+	})
+	if err := stream.Send(&req); err != nil {
+		return err
+	}
+	var resp kmip.ResponseMessage
+	if err := stream.Recv(&resp); err != nil {
+		return err
+	}
+	if len(resp.BatchItem) != 1 {
+		return fmt.Errorf("%d answers to one request", len(resp.BatchItem))
+	}
+	return resp.BatchItem[0].Err()
+}
+
 func TestKMIPWireRejectsUnregisteredAndInactiveClients(t *testing.T) {
 	w := startKMIPWire(t)
+	// The request itself is a good one: a registered, active client gets a
+	// key for it. So a refusal below is about the client, not the request.
+	if err := w.createOnce(t, w.register(t, "tenant-a", "kmip-admin", "active")); err != nil {
+		t.Fatalf("an active client's create: %v", err)
+	}
 	unregistered := w.pki.issue(t, "tenant-a:kmip-client", false)
 	inactive := w.register(t, "tenant-a", "kmip-admin", "revoked")
 	for name, cert := range map[string]tls.Certificate{"unregistered": unregistered, "inactive": inactive} {
-		client, err := w.dial(t, cert)
-		if err != nil {
-			continue // refused at connect
-		}
-		_, err = client.Create().AES(256, kmip.CryptographicUsageEncrypt).Exec()
-		_ = client.Close()
-		if err == nil {
+		if err := w.createOnce(t, cert); err == nil {
 			t.Fatalf("%s client certificate must be refused", name)
+		}
+	}
+}
+
+// pemPair is a certificate and its key as an interop target stores them.
+func pemPair(t *testing.T, cert tls.Certificate) (string, string) {
+	t.Helper()
+	der, err := x509.MarshalPKCS8PrivateKey(cert.PrivateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Certificate[0]})),
+		string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}))
+}
+
+// Validating an interop target against a KMIP server that works reports it
+// verified, with the time and how long it took. Until 13.8.0-beta the three
+// were set after the result had been returned, so every validation, however
+// successful, came back "not verified" with no time.
+func TestInteropValidationReportsASuccess(t *testing.T) {
+	w := startKMIPWire(t)
+	certPEM, keyPEM := pemPair(t, w.register(t, "tenant-a", "kmip-admin", "active"))
+	report := (&Handler{}).runInteropValidation(context.Background(), KMIPInteropTarget{
+		ID: "t1", Vendor: "vecta", Endpoint: w.addr, CAPEM: string(w.pki.caPEM), ClientCertPEM: certPEM, ClientKeyPEM: keyPEM, TestKeyOperation: true,
+	})
+	if !report.Verified || report.Error != "" || report.CheckedAt.IsZero() {
+		t.Fatalf("a working server was reported as %+v", report)
+	}
+}
+
+// A server that completes the handshake and hangs up is a failed validation
+// with a reason, every time. With the kmip-go client this raced (and could
+// panic); the check now drives the connection from one goroutine.
+func TestInteropValidationSurvivesAServerThatHangsUp(t *testing.T) {
+	pki := newTestPKI(t)
+	ln, err := tls.Listen("tcp", "127.0.0.1:0", &tls.Config{Certificates: []tls.Certificate{pki.issue(t, "127.0.0.1", true)}, ClientAuth: tls.RequireAnyClientCert, MinVersion: tls.VersionTLS12}) // FIPS exception: external protocol mandate (KMIP 1.x clients)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ln.Close() })
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				_ = c.(*tls.Conn).Handshake()
+				_ = c.Close()
+			}()
+		}
+	}()
+	certPEM, keyPEM := pemPair(t, pki.issue(t, "tenant-a:kmip-admin", false))
+	target := KMIPInteropTarget{ID: "t1", Endpoint: ln.Addr().String(), CAPEM: string(pki.caPEM), ClientCertPEM: certPEM, ClientKeyPEM: keyPEM}
+	for i := 0; i < 25; i++ {
+		if report := (&Handler{}).runInteropValidation(context.Background(), target); report.Verified || report.Error == "" || report.CheckedAt.IsZero() {
+			t.Fatalf("run %d: a server that hangs up was reported as %+v", i, report)
 		}
 	}
 }

@@ -7,6 +7,22 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-17 — Tests are hermetic: no real DNS, no shared state across runs
+**Decision:** every name the product resolves goes through `pkg/ssrfguard`
+(`LookupNetIP` and the guard's own checks). In a test binary that resolver
+refuses real DNS: a test answers the names it uses
+(`ssrfguard.SetResolverForTests`), and a test about the real network asks
+for the system resolver (`UseSystemResolverForTests`). CI runs the suite
+with no network, under the race detector, and every test twice.
+**Why:** an intermittent CI failure could not be reproduced by repetition;
+removing assumptions found a test that needed DNS, two data races and two
+tests that could not run twice.
+**Rejected:** retrying failed tests in CI (hides the cause); skipping a test
+when DNS fails (it would then pass by not running); a stub per service (the
+compliance service had its own, and still reached DNS through the guard).
+**Enforced by:** conformance `name-resolution`; `TestATestNeverResolvesThroughRealDNS`;
+`scripts/test-hermetic.sh` and the race and run-twice steps in CI.
+
 ## 2026-10-13 — CI's verdict is read after every push; a test that cannot run in CI fails
 **Decision:** after a push, `scripts/ci-status.sh --wait` is run and a red
 run is fixed before other work. In CI a test never passes by skipping: a

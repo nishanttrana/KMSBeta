@@ -4,6 +4,54 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.8.0-beta] — 2026-10-17
+
+### Fixed
+- **Validating a KMIP interop target never used TLS, and never reported a
+  success.** Since the kmip-go client was upgraded, a dialer of our own
+  means the client applies none of its TLS settings, so the check opened a
+  plain TCP connection and spoke KMIP in the clear. Against a real KMIP
+  server (always TLS) it failed with "mTLS handshake/dial failed: EOF". And
+  the verdict, time and latency were filled in after the result had been
+  returned, so even a working server would have come back "not verified"
+  with no time. The check now makes the mutual-TLS connection itself (the
+  target's CA, the client certificate, the target's name) and reports what
+  it found. Proven against the product's own KMIP server.
+- **The KMIP interop check no longer races, or panics, when a server hangs
+  up.** The kmip-go client (0.9.2, the newest) closes the channel its sender
+  writes to when its reader sees the connection end: a data race, and a
+  "send on closed channel" panic when the timing is unlucky. The check now
+  drives its one connection from a single goroutine (request, then answer)
+  and no longer uses that client.
+- **The intermittent CI failure (one red job in twelve, run 38299060688).**
+  Its log could not be read, so it cannot be proven which of these it was;
+  each is a real cause of a test failing now and then, and all are fixed:
+  - one test needed the Internet: it registered a connection for
+    `s3.eu-west-1.amazonaws.com` and expected success, so it failed
+    whenever DNS did. Every name lookup in the product now goes through
+    one resolver (`pkg/ssrfguard`), which a test answers, and which refuses
+    real DNS inside a test binary unless the test is about the real network;
+  - the KMIP rejection test drove the kmip-go client into the hang-up race
+    above; it now speaks the protocol on one connection without it;
+  - two data races: three object-storage scan tests advanced their clock
+    from several workers without a lock (found by the race detector).
+- Two tests could not run twice in one process (`go test -count=2`): a SQL
+  driver registered twice, and HSM key labels that restarted at 1 on a token
+  that outlives the test. They blocked repeating tests to find failures.
+
+### Still open
+- Seven `pkg/hsmconnector` tests cannot run twice in one process: they use
+  fixed key labels on a SoftHSM token that lives as long as the process.
+  CI's run-twice step has no SoftHSM, so they skip there; with SoftHSM,
+  `-count=2` fails on them.
+
+### Added
+- CI runs the race detector over the whole suite (a new job), every test
+  twice, and the suite with no network at all (`scripts/test-hermetic.sh`).
+- `make conformance` fails when code resolves a name other than through
+  `ssrfguard.LookupNetIP` or the guard (`name-resolution`), and when the test
+  resolvers are used outside a test.
+
 ## [13.7.0-beta] — 2026-10-13
 
 ### Fixed
