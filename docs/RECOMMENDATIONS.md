@@ -20,6 +20,12 @@ in `tests/unit/recommendations.test.ts`) and `src/lib/platformSnapshot.ts`
   licensed, or not permitted for the current user yields **not assessed** — its
   checks are shown with a dashed icon and **never** pass, fail or change the
   score. Nothing is estimated or fabricated.
+- A Go zero time (`0001-01-01T00:00:00Z`) is no time. Services answer a
+  tenant that was never scanned with it, so every response the dashboard
+  reads goes through `parseServiceJSON` (`src/lib/wire.ts`), which turns it
+  into an empty value. `posture-open` therefore reads **not assessed** until
+  a posture scan is on record, instead of passing (11.4.0-beta,
+  `tests/unit/zeroTime.test.ts`).
 - Snoozing a recommendation (30 days) is a per-browser convenience only; it does
   not change platform state or any audit record.
 

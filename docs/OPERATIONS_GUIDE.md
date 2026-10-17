@@ -76,6 +76,11 @@ Recovery:
 ./infra/scripts/recover-kms.sh
 ```
 
+On a single machine, `./deploy-local.sh` builds and starts the stack, and
+`./deploy-local.sh --no-build` restarts it on the images already built.
+After every deploy or rebuild run the two live checks in
+[Check Platform Health](#check-platform-health).
+
 ## What A Healthy Startup Looks Like
 
 A healthy startup usually means:
@@ -128,19 +133,42 @@ Verify only if enabled:
 - `certs`
 - `secrets`
 - `cloud`
+- `hyok`
 - `ekm`
 - `kmip`
-- `payment`
+- `dataprotect`
+- `hsm-connector`
 - `compliance`
 - `posture`
 - `reporting`
 - `discovery`
+- `sbom`
 - `autokey`
 - `keyaccess`
 - `signing`
 - `workload`
 - `confidential`
 - `pqc`
+- `backup`
+
+### What System Health lists
+
+Administration → System Administration → Health lists the services
+registered in Consul plus a fixed set of TCP probes for components that
+register nothing there: Envoy, the dashboard, the reconciler, the watchdog,
+posture and backup (10.2.0-beta). A test keeps the probe list covering every
+platform identity in `pkg/svctls`. The auth service has no access to the
+container runtime, so an optional component that is not reachable is not
+listed, and Network Interfaces reads "unavailable".
+
+### A service that will not start
+
+A service refuses to start, rather than starting healthy and refusing every
+call, when something it needs is missing: a token-verification key, a
+required `https://` address, its port. The reason is the last
+`refusing to start: …` line in `docker compose logs <service>`. HYOK, for
+example, reads `HYOK_JWT_PUBLIC_KEY_PEM`/`_B64` and then the shared
+`JWT_PUBLIC_KEY_B64`, like keycore and governance (10.1.0-beta).
 
 ## Reaching Postgres, NATS, Valkey And Consul Directly
 
@@ -188,6 +216,14 @@ Use:
 - dashboard home page
 - healthcheck script
 - cluster overview if clustering is enabled
+
+After every deploy or rebuild, run both live checks against the running
+stack. Both are read-only and print no secret.
+
+| Command | Fails when | Notes |
+|---|---|---|
+| `scripts/live-sweep.sh [minutes]` | a container is not healthy, or an error-like line (`error`, `failed`, `refused`, `denied`, `panic`, ...) repeats at least `MIN_REPEAT` times (default 5) in the last 20 minutes | Identifiers, addresses and credentials are stripped before lines are compared. Health-probe handshakes are ignored, and so are tab-indented lines, which only continue the line above: a statement in Postgres's slow-query log, or the frames under a Go `panic:` line (13.13.0-beta). Containers still `starting` right after a deploy are reported; run it again once they are healthy. |
+| `scripts/live-check.py` | a dashboard GET answers 401, 5xx or the router's 404, or answers 2xx with no token or for another tenant | Signs in as the bootstrap CLI user from `.env`. Routes that answer by design are listed in its `PUBLIC` and `SAME_FOR_EVERY_TENANT` lists with the reason. |
 
 ### Review High-Risk Events
 
@@ -253,7 +289,6 @@ Backups should preserve control-plane state such as:
 - workload identity state
 - confidential-compute policy
 - PQC migration state
-- MPC key and ceremony metadata when threshold workflows are enabled
 - governance metadata
 
 ### What Not To Treat As Recovery State
@@ -280,6 +315,12 @@ restored through their parent table. A backup taken before 1.24.0-beta also
 lists the partitions; the restore skips them (they appear under
 "skipped") and restores each row once, through the parent.
 
+
+Columns the database computes itself (for example `users.username_lower`)
+are not written on restore; the database recomputes them. Before
+12.2.0-beta every restore of a backup holding users failed on that column
+and changed nothing (a restore runs in one transaction). Backups taken
+before then restore as they are.
 
 1. Validate backup provenance and intended scope.
 2. Confirm restore approvals where required.
@@ -376,6 +417,23 @@ Check:
 - tenant bootstrap state
 - client or admin credentials
 - interface and TLS settings if login path moved
+
+### "Opening a page signs me out"
+
+The dashboard ends the session on any `401`, so a service that cannot
+verify tokens signs everyone out of the page that calls it. Look for a `401`
+from that service (`scripts/live-check.py` lists them) and for a missing
+token-verification key in its startup log; a service now refuses to start
+without one (10.1.0-beta). A valid token for another tenant is `403`, never
+`401`.
+
+### "Every service refuses every token after the volumes were removed"
+
+Auth generates a new signing key when its volume is empty, and every other
+service verifies with `JWT_PUBLIC_KEY_B64` from `.env`. `./deploy-local.sh`
+mints the key whenever the auth volume has none and always derives
+`JWT_PUBLIC_KEY_B64` from the key in the volume (9.4.0-beta). A stack left
+in this state is repaired with `./deploy-local.sh --no-build`.
 
 ### "API calls work for some clients but not others"
 

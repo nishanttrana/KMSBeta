@@ -418,7 +418,13 @@ an approach, record it here or in the matching doc below.
 ## Documentation is part of done
 
 Every change is documented in the same commit. Don't leave it for later, and
-don't wait to be asked. Where each kind of change goes:
+don't wait to be asked. **A change to code, scripts, deployment or CI updates
+three things: its CHANGELOG section, a learning.md entry, and the document of
+the area it changed** (owner directive, 2026-10-17: "havent been adding to
+learning and other documentation"; thirteen changes had updated only the
+first two). A script or a check is documented where an operator or developer
+looks for it (`docs/OPERATIONS_GUIDE.md`, `docs/TESTING_AND_CI.md`), not
+only in its own header. Where each kind of change goes:
 
 | What changed | Document it in |
 |---|---|
@@ -427,12 +433,17 @@ don't wait to be asked. Where each kind of change goes:
 | An approach or design decision (why X over Y, what was rejected) | [docs/DECISIONS.md](docs/DECISIONS.md) |
 | A security practice or rule | `docs/SECURITY/` (for example `SECURE_DEFAULTS.md`), linked from its README |
 | A standing instruction from the owner | this file |
-| Operating steps (deploy, rotate, recover) | the matching guide in `docs/`, for example `SECRET_ROTATION.md` or `OPERATIONS_GUIDE.md` |
+| Operating steps (deploy, rotate, recover), live checks, troubleshooting | the matching guide in `docs/`, for example `SECRET_ROTATION.md` or `OPERATIONS_GUIDE.md` |
+| CI, test rules, repository scripts | [docs/TESTING_AND_CI.md](docs/TESTING_AND_CI.md) |
+| A dashboard behaviour or rule | the feature's document, or `docs/DECISIONS.md` for a console-wide rule |
 | API surface | `docs/API_REFERENCE.md` and the OpenAPI spec |
 
 Write what a reviewer six months from now needs: what changed, why, how it's
-enforced, and what's still open. `scripts/check-docs.sh` fails a PR that
-changes code without touching CHANGELOG.md or learning.md.
+enforced, and what's still open. `scripts/check-docs.sh` fails a change to
+code without a VERSION bump and CHANGELOG section, without a learning.md
+entry, or without an area document (`docs/`, not `docs/generated/`, or this
+file; `Docs: n/a — <reason>` waives only the last). CI runs it on every push
+to `main` (13.17.0-beta); run it before pushing.
 
 ## Before calling a change done
 

@@ -7,6 +7,42 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-17 — Every change documents its area, and the gate runs on every push
+**Decision:** a change to code, scripts, deployment or CI ships with a
+`CHANGELOG.md` section, a `learning.md` entry and an update to the document
+of the area it changed (`docs/`, not `docs/generated/`, or `CLAUDE.md`).
+`Docs: n/a — <reason>` in a commit message waives only the area document.
+CI runs `scripts/check-docs.sh` on every push to `main`, over the pushed
+commits, not only on pull requests.
+**Why:** owner direction, 2026-10-17: "havent been adding to learning and
+other documentation". Thirteen changes since 2026-10-11 changed code with a
+CHANGELOG and learning entry only; the operations guide, the testing rules
+and the audit ingest rule went unwritten. The gate could not catch it: it
+ran on pull requests, work reaches `main` without one, and either
+CHANGELOG or learning.md alone satisfied it.
+**Rejected:** a per-path map of which document each directory must touch
+(too brittle: a fix in `services/auth` may belong in the administration
+guide, the tenant-isolation rule or the operations guide); trusting the
+checklist in CLAUDE.md alone (it was already there).
+**Enforced by:** `scripts/check-docs.sh` (`learning`, `area-docs`) and the
+CI job "Documentation ships with the change" ([TESTING_AND_CI.md](TESTING_AND_CI.md)).
+
+## 2026-10-17 — A popover closes on an outside press or Escape, through one hook
+**Decision:** every floating panel (a menu, a popover) takes its open state
+from `components/v3/usePopover.ts`, which closes it on a press outside the
+element its ref is on, or on Escape; its trigger still toggles it.
+**Why:** the ⓘ build popover stayed over the page until ⓘ was pressed again
+(owner report, 2026-10-17); the timezone menu and the SBOM Export menu were
+built the same way. The shared `Select` already closed correctly, but that
+logic was inside it, so hand-made menus never had it.
+**Rejected:** fixing the three menus one by one (the next menu would repeat
+it); a portal-based popover component (the panels are already positioned
+under their triggers, and moving them to `document.body` changes their
+layout for no gain).
+**Enforced by:** `tests/unit/popoversClose.test.ts` (no floating panel gated
+by a plain `useState(false)`) and the smoke test "the build popover closes
+on an outside press, on Escape and on its button".
+
 ## 2026-10-17 — Tenants are administered from the platform tenant; a tenant's roles are the only roles
 **Decision:** acting on another tenant (the tenant list, lifecycle and roles,
 or another tenant's users, groups, identity providers, SCIM settings and

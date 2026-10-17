@@ -9,8 +9,9 @@ on:
 
 jobs:
   docs-with-change:
+    # On every push as well as on pull requests: changes reach main without a
+    # pull request, so until 13.17.0-beta this job never ran.
     name: Documentation ships with the change
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,7 +20,9 @@ jobs:
           fetch-depth: 0
 
       - name: Check docs updated
-        run: ./scripts/check-docs.sh "origin/${{ github.base_ref }}"
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+        run: ./scripts/check-docs.sh "$BASE"
 
   fips-modes:
     # Every customer-selectable FIPS 140-3 mode must pass the full suite on the

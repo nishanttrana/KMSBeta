@@ -5,6 +5,21 @@ Newest entries on top.
 
 ## 2026-10-17
 
+### A gate that never ran (13.17.0-beta)
+- The owner noticed before any check did: thirteen changes since
+  2026-10-11 carried a CHANGELOG and learning entry and no other document.
+  The docs gate existed, but its CI job had `if: github.event_name ==
+  'pull_request'`, and every change goes straight to `main`, so it showed
+  as "skipped" in every run, which reads like "nothing to check". Locally
+  it passed on CHANGELOG.md alone.
+- **Rule: when the way work flows changes (here, main only with no pull
+  requests), check that every gate's trigger still fires on it.** A
+  "skipped" job in `ci-status.sh` output is a question to answer, not a
+  pass.
+- **Rule: a learning entry is not the documentation.** It records why
+  something went wrong; the operations guide, the testing rules and the
+  security docs are where the next reader looks for how it works now.
+
 ### A learning nobody is bound by (13.16.0-beta)
 - 13.14.0 and 13.15.0 recorded their lessons in learning.md and the
   decision log, but not in CLAUDE.md or the security index, and the owner

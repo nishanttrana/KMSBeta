@@ -4,6 +4,36 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.17.0-beta] — 2026-10-17
+
+### Fixed
+- **The documentation gate never ran.** CI ran `scripts/check-docs.sh` on
+  pull requests only, and changes reach `main` without one. It runs on
+  every push now. It also passed on a CHANGELOG line alone; a change to
+  code, scripts, deployment or CI now also needs a `learning.md` entry and
+  an update to the document of its area (`docs/`, not `docs/generated/`,
+  or `CLAUDE.md`). `Docs: n/a — <reason>` waives only the last.
+
+### Documentation
+Thirteen changes since 9.4.0-beta shipped with a CHANGELOG and learning
+entry only. 13.16.0-beta documented the audit one; these are the other
+twelve:
+- [docs/OPERATIONS_GUIDE.md](docs/OPERATIONS_GUIDE.md): the two live checks
+  and what the sweep ignores (13.13.0-beta); what System Health lists
+  (10.2.0-beta); a service that refuses to start (10.1.0-beta); restoring
+  columns the database computes (12.2.0-beta); "opening a page signs me
+  out" and "every service refuses every token after the volumes were
+  removed" (9.4.0-beta); the optional-service list matches the services
+  that exist (no `payment`, no MPC).
+- New [docs/TESTING_AND_CI.md](docs/TESTING_AND_CI.md): this repository's
+  CI jobs, reading a red run (`ci-status.sh`, `ci-go-test.sh`), the test
+  rules (hermetic, repeatable, race-free, never passing by skipping, real
+  SoftHSM) and the documentation gate (13.4.0- to 13.11.0-beta).
+- [docs/RECOMMENDATIONS.md](docs/RECOMMENDATIONS.md): a Go zero time is no
+  time, so `posture-open` is not assessed before a scan (11.4.0-beta).
+- [docs/DECISIONS.md](docs/DECISIONS.md): popovers close through one hook
+  (13.12.0-beta); the documentation gate above.
+
 ## [13.16.0-beta] — 2026-10-17
 
 ### Documentation
