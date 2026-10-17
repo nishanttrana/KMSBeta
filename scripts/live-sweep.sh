@@ -21,6 +21,10 @@ fail=0
 # TCP health probes open and close a TLS port without a handshake; that line
 # is the probe, not a fault.
 PROBE_NOISE='TLS handshake error.*EOF|unexpected eof while reading'
+# A tab-indented line continues the line above it: the text of a statement in
+# Postgres's slow-query log (whose columns include error_message), or a frame
+# of a Go stack trace whose panic line is matched on its own.
+CONTINUATION=$'^\t'
 
 for c in $(docker ps -a --filter "label=com.docker.compose.project=$PROJECT" --format '{{.Names}}' | sort); do
   state="$(docker inspect -f '{{.State.Status}}{{if .State.Health}}/{{.State.Health.Status}}{{end}}' "$c" 2>/dev/null)"
@@ -30,7 +34,7 @@ for c in $(docker ps -a --filter "label=com.docker.compose.project=$PROJECT" --f
   esac
   lines="$(docker logs --since "${MINUTES}m" "$c" 2>&1 \
     | grep -iE 'error|failed|refus|unavailable|denied|unauthorized|panic|fatal' \
-    | grep -vE "$PROBE_NOISE" \
+    | grep -vE "$PROBE_NOISE" | grep -v "$CONTINUATION" \
     | sed -E 's/(token|password|secret|key)[=:][^ ]*/\1=<redacted>/g; s#://[^@/ ]*@#://<redacted>@#g; s/[0-9]{4}[-\/][0-9]{2}[-\/][0-9]{2}[T ][0-9:.]+Z?( UTC)?//g; s/\[[0-9]+\]//g; s/[0-9a-f]{8}-[0-9a-f-]{27}/<id>/g; s/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(:[0-9]+)?/<ip>/g' \
     | cut -c1-200 | sort | uniq -c | sort -rn | awk -v m="$MIN_REPEAT" '$1 >= m' | head -5)"
   if [ -n "$lines" ]; then

@@ -5,6 +5,13 @@ Newest entries on top.
 
 ## 2026-10-17
 
+### A column name read as an error (13.13.0-beta)
+- The sweep greps logs for words like "error". Postgres's slow-query log
+  prints each statement in full on tab-indented lines, and the audit read
+  selects `error_message`, so a few slow reads made a "repeating error".
+  **Rule: a log scan matches the line that states the event, not text that
+  continues it.**
+
 ### A popover that only its own button closes (13.12.0-beta)
 - The ⓘ build popover, the timezone menu and the SBOM Export menu were each
   a `useState(false)` flag and an absolutely positioned `<div>`, so nothing

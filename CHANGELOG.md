@@ -4,6 +4,16 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.13.0-beta] — 2026-10-17
+
+### Fixed
+- **`scripts/live-sweep.sh` no longer reports Postgres's slow-query log as
+  a repeating error.** Postgres logs a slow statement in full, and the
+  audit query names the column `error_message`, so each slow audit read
+  looked like an error line. The sweep now skips tab-indented lines, which
+  only continue the line above (a statement's text, or a Go stack frame
+  under its `panic:` line, which is still matched).
+
 ## [13.12.0-beta] — 2026-10-17
 
 ### Fixed
