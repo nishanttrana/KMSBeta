@@ -424,7 +424,12 @@ the area it changed** (owner directive, 2026-10-17: "havent been adding to
 learning and other documentation"; thirteen changes had updated only the
 first two). A script or a check is documented where an operator or developer
 looks for it (`docs/OPERATIONS_GUIDE.md`, `docs/TESTING_AND_CI.md`), not
-only in its own header. Where each kind of change goes:
+only in its own header. **A lesson that applies to later work becomes a rule
+in this file, and a security lesson goes on its `docs/SECURITY/` page, in
+the same commit** (owner directive, 2026-10-17: "whatever the changes,
+learning and things to be noted it has to be done in claude, documentation
+... from previous changes"; the backfill is "Rules learned from faults"
+below). Where each kind of change goes:
 
 | What changed | Document it in |
 |---|---|
@@ -571,3 +576,193 @@ to `main` (13.17.0-beta); run it before pushing.
   example the KMIP TLS tests). SQLite alone is not evidence for
   JSONB/information_schema behaviour.
 - The documentation above is updated in the same change.
+
+## Rules learned from faults
+
+Each rule below comes from a fault recorded in [learning.md](learning.md)
+(2026-09-25 to 2026-10-17, version in brackets) and binds every later
+change (owner directive, 2026-10-17: "whatever the changes, learning and
+things to be noted it has to be done in claude, documentation"). A new
+learning whose lesson applies to later work adds its rule here, and a
+security one adds to its `docs/SECURITY/` page, in the same commit.
+Security rules are explained in
+[docs/SECURITY/FAIL_CLOSED_AND_VERIFICATION.md](docs/SECURITY/FAIL_CLOSED_AND_VERIFICATION.md).
+
+**A claim is real only when its effect is traced**
+- A setting has code that reads and applies it; a listener setting is
+  proven by a handshake against the real server, not by the stored value
+ . A config field goes with the last code that reads it.
+- A status (`queued`, `sent`, `completed`, `applied`, `verified`) is written
+  only by the code that did the work, from its result. A field named for a
+  guarantee names what it read.
+- Provenance and labels (algorithm, source, provider, key size) are read
+  back from what was produced, never from what was asked; a benchmark or
+  measurement needs a name `pkg/cryptocatalog.Lookup` accepts.
+- A metric comes from the event of the work, never from a record callers
+  post. A number derived from another number is not a measurement.
+- Before a doc row, catalogue entry, capability list or CHANGELOG line names
+  a capability, find its caller in a running path (`main.go` wiring, a
+  registered route, a scheduler). Code with no caller outside its own file
+  and test is removed, not documented. A capability list (KMIP Query, event
+  catalogues, playbook triggers) is derived from or tested against what is
+  routed or emitted (`TestQueryAdvertisesOnlyRoutedOperations`,
+  `TestTriggerSubjectsAreEmitted`).
+- A request field is documented only after reading the struct that decodes
+  it; a doc example is checked against the handler (JSON tags, response
+  keys, middleware), and every route a doc names is registered
+  (`check-doc-routes.py`). When a feature is cut, its docs and guides go in
+  the same change.
+- A claim about the system ("I can't see it", "no test covers it", "the
+  toolchain can't") is checked like any other: grep every test file, see
+  the test run with `-v`, re-check the toolchain (13.3, 13.4).
+
+**Tests prove the success path and the refusal**
+- A feature with no test of its success path has not been shown to
+  succeed (13.8). A credential or key operation's test uses the result: a
+  rotated key gets a token and the old one 401; a generated key is checked
+  by its actual public key; a versioned operation rotates between producing
+  and consuming.
+- A double of another service answers exactly that service's response
+  shape, including fields it doesn't return; each client call has one test
+  against the real handler, and an agent/service contract decodes the
+  agent's request with the service's type and `DisallowUnknownFields`
+  (`TestBitLockerJobRoundTripMatchesServiceContract`). A protocol double
+  proves the wire format; the test still uses what was made, and a run with
+  a failed step is a failed call (13.2).
+- A third-party API gets an opt-in live test run before shipping; a vendor
+  protocol is pinned against the vendor's reference; a primitive named
+  after a standard passes the standard's vectors (`TestFF1IsNotAnAdditiveKeystream`);
+  a client SDK or PKCS#11/JCA module is tested by a real consumer.
+- A control or policy field ships with a test that the field changes the
+  decision (allowed only by it gets in, without it refused). A test of "is
+  X on record" uses the bytes the service sends for "no X" (11.4).
+- A test that skips what it can't find also asserts it did something; a
+  test asserting an asynchronous event checks it is among those recorded,
+  not that it is the last; a test that sets process-wide state resets it in
+  `t.Cleanup`.
+- SQL is run once against Postgres before it ships; Postgres tests use their
+  own schema; cursor paging is tested on Postgres; a value compared with a
+  stored time is truncated to microseconds; a failed time parse is an error,
+  never a zero value (12.2).
+
+**Fail closed, show failure**
+- No fail-open switch, no `dev`/`Any`/weaker fallback in TLS or listener
+  setup, no random fallback for a key that must verify data later (derive
+  it from `pkg/mek`), no `return empty, nil` on an upstream error. Fail
+  closed at the smallest scope that protects the secret; a feature's key
+  never takes down the audit pipeline.
+- In a guard, "not applicable" may return quietly; "unable" is a failure
+  and is audited.
+- A missing or failed source reads "unavailable" or "not assessed" with the
+  error; a composite with a failed source is an error; a zero is shown only
+  when a check ran. The dashboard never catches a fetch into an empty list
+  or renders constants.
+- A write reports what it changed (`RowsAffected`, 404 for nothing) and
+  validates enumerated values at the service. A read handler never creates
+  data (`TestCBOMHistoryReadWritesNothing`).
+- A caller of an optional service reads whether it is deployed from the
+  deployment; unknown fails closed. A fallback taken on every call is a bug:
+  count or audit fallbacks.
+
+**Identity, credentials and outbound calls** (rule 4, rule 9)
+- A route whose credential isn't a bearer token lists what that credential
+  proves and binds every request field to it. MFA or step-up comes from a
+  claim auth signs, never a header. Every token or assertion that grants
+  access has tests with forged, tampered, expired, mis-addressed and
+  replayed copies; "for now" in a verification path is a blocker.
+- An M-of-N control binds each vote to a verified identity and refuses the
+  requester; an identity is resolved to every form a check compares (ID and
+  email) before the check.
+- An internal client sends its service token and its test asserts the
+  credential sent (`TestEvaluateSendsServiceToken`). When a service starts
+  refusing tokenless callers, every client of it is fixed and tested in the
+  same change.
+- A credential on a request that may be redirected rides only in
+  `Authorization` and is dropped on a host change (`CheckRedirect`). An
+  outbound address is checked where it is dialled (`pkg/ssrfguard`), not by
+  hostname. A URL that carries a credential is a secret, and errors name
+  only its host.
+- A secret in a new table is sealed in the store, never a `TEXT` column; a
+  backup is a copy too. A secret that ever shipped is banned by value
+  (`no-retired-public-secret`); secrets seeded into volumes are secrets.
+
+**Integrity and audit** (rule 2)
+- An integrity check names the trusted input an attacker can't write, and
+  ships with a test that alters the stored data (row, recomputed row,
+  deleted neighbour, root) and expects rejection. A check with no such
+  input is removed.
+- An audit register row names a test that fails when the event disappears
+  or changes its `result` or `reason`, and checks the stored row at least
+  once (13.15). An event counts as emitted when it is on the stream
+  (`TestChainBrokenPublishedToStream`). A crypto operation's event is
+  emitted from a deferred call so no return path skips it.
+- Middleware in front of the kernel verifies and passes the outcome on
+  (`route.WithInvalidToken`) so the kernel audits the refusal. A stream
+  consumer terminates permanent errors and NAKs only transient ones.
+- A service that opts out of the platform JWT middleware has a test that a
+  tokenless call is refused and audited
+  (`TestUnauthenticatedRequestsAreRefusedAndAudited`).
+
+**Fix the class; remove completely**
+- A hole found in one route means every route of that service is listed
+  and accounted for, every service on `scripts/route-kernel-burndown.txt` is
+  checked for the same shape, and for a sensitive operation every caller of
+  the service method is found. Management writes are tested with no token
+  and with a no-permission token, not only the data plane.
+- A removal is finished in one sitting: the route, its entry in the cluster
+  routing table and playbook catalogue, the store, settings, fields that
+  fed it, previews or roadmap rows promising it, a second copy in another
+  service, docs and guides, with a test that the routes are gone. Hiding a
+  control in one view does not remove it. When a real capability lands,
+  previews promising it go in the same release.
+- Two engines or stores for one job: keep the one the UI uses, remove the
+  other with a migration.
+
+**Data**
+- A person's decision and a machine's observation never share a column; the
+  test runs the rewriting job afterwards (`TestReviewSurvivesRescan`).
+- A node-local log never updates a replicated row; counters are derived at
+  read. Tables are enumerated from `pg_class` (partitions), not
+  `information_schema`.
+- A job that must cover every tenant gets the tenant list from auth
+  (`/internal/tenant-ids`) and falls back to what it knows when auth is
+  down.
+- A chart's numbers are counted by the owning service over the whole window
+  with one predicate shared by count and list (`TestInventoryIsNeverASample`).
+- Work whose duration depends on someone else's network runs in the
+  background with a deadline and progress, refuses a second run, and a row
+  left `running` by a restart reads as interrupted.
+- Unattended work (playbooks, schedulers) re-checks the person's authority
+  when it runs and fails closed when it can't ask; a detection runs on a
+  scheduler, primary-only if it writes replicated data, tested by driving
+  the tick.
+
+**Dashboard**
+- Every call goes through `serviceRequest` (`/svc/<name>`); one concept has
+  one screen. A timer reads its callback through a ref. Undefined names are
+  checked even in `@ts-nocheck` files (`check-nocheck-names.mjs`). A
+  removed tab either removes its feature or moves its view.
+
+**CI, process and deploy**
+- Reproduce CI as CI runs it: the same unprivileged user, an empty cache,
+  one command, its package order, a fresh database; every test step runs
+  through `scripts/ci-go-test.sh`. When the way work flows changes, check
+  every gate's trigger still fires; a skipped job is a question, not a pass
+  (13.5, 13.10, 13.17).
+- A flaky test is found by removing an assumption, not by rerunning. After
+  the last edit the whole suite runs again. Verification and push are
+  chained with `&&`.
+- A dependency built from source is pinned by commit. A committed generated
+  file has a freshness check; its generator is deterministic and holds no
+  content of its own.
+- A stack bootstrap step is one function every start path calls; a storage
+  property (tmpfs, read-only) is checked where it takes effect (`mount` in
+  the container); a script that creates a Compose volume uses
+  `compose_volume_create`.
+- A log scan matches the line that states the event, not text that
+  continues it (13.13).
+- With another session active, work in a worktree from the start,
+  regenerate generated files there, push `HEAD:main`, and only
+  `git merge --ff-only` in the shared checkout; never `checkout --`,
+  `restore` or `reset` a file there. Before saying a change is live, the
+  deploy checkout's `HEAD` equals `origin/main`.

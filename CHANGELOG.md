@@ -4,6 +4,30 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.18.0-beta] — 2026-10-17
+
+### Documentation
+- **Every lesson in learning.md is now a rule where the next change will
+  read it** (owner directive: "whatever the changes, learning and things to
+  be noted it has to be done in claude, documentation ... from previous
+  changes"). The 197 rules recorded in learning.md since 2026-09-25 were
+  checked against CLAUDE.md and the security pages; those not already
+  stated are now in CLAUDE.md, "Rules learned from faults", grouped as:
+  tracing a claim to its effect, testing success and refusal, failing
+  closed, identity and outbound calls, integrity and audit, fixing a class
+  and removing completely, data, dashboard, and CI and deploy. CLAUDE.md
+  also states that a lesson becomes a rule in the same commit.
+- **New docs/SECURITY/FAIL_CLOSED_AND_VERIFICATION.md** for the security
+  lessons that had no page: no fail-open switch or random key fallback;
+  every token and assertion tested forged, tampered, expired, mis-addressed
+  and replayed; credentials on redirects and addresses checked where
+  dialled; integrity checks that name an input the attacker can't write.
+- **Open fault recorded there:** the audit write-ahead buffer's HMAC key is
+  random at every start (no installer sets `AUDIT_WAL_HMAC_KEY_B64`), so
+  audit events still buffered at a restart are dropped without trace.
+  Noted in learning.md on 2026-09-28 and not fixed; not changed in this
+  release.
+
 ## [13.17.0-beta] — 2026-10-17
 
 ### Fixed

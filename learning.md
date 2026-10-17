@@ -5,6 +5,17 @@ Newest entries on top.
 
 ## 2026-10-17
 
+### Lessons that stayed in learning.md (13.18.0-beta)
+- learning.md held 197 "Rule:" lines; most were in no rule file, so a new
+  session did not read them. The open item in one of them (the audit WAL
+  HMAC key, 2026-09-28) sat for three weeks because a learning has no
+  owner. **Rule: a lesson that applies to later work is added to CLAUDE.md
+  in the same commit, and an open item it names goes in the "Still open"
+  list of its `docs/SECURITY/` or area page**, where it is seen and tracked.
+- A rule copied into CLAUDE.md is checked against the code before it is
+  copied: the redirect rule's examples differed (one client refuses
+  redirects, one does not follow them, one follows and drops the header).
+
 ### A gate that never ran (13.17.0-beta)
 - The owner noticed before any check did: thirteen changes since
   2026-10-11 carried a CHANGELOG and learning entry and no other document.

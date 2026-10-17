@@ -20,6 +20,12 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
 - [EKM_CLIENTS.md](EKM_CLIENTS.md): how a database client is registered
   (one-time token, then its own client key), what its health states mean,
   and why a tenant token can no longer register a client or keep it alive.
+- [FAIL_CLOSED_AND_VERIFICATION.md](FAIL_CLOSED_AND_VERIFICATION.md): no
+  fail-open switch or random key fallback; every token and assertion tested
+  forged, tampered, expired, mis-addressed and replayed; credentials dropped
+  on a redirect and addresses checked where dialled; an integrity check
+  names an input the attacker can't write. Lists the open audit
+  write-ahead-buffer key fault.
 - [TENANT_ISOLATION.md](TENANT_ISOLATION.md): where each service checks the
   token, the tenant and the permission; what was found unchecked. Tenant
   administration (13.14.0-beta): only a person in the `root` tenant holding
