@@ -5,6 +5,14 @@ Newest entries on top.
 
 ## 2026-10-17
 
+### A new check must report the way the old ones do (13.9.0-beta)
+- The no-network step was added on the day the rule "a failing test names
+  itself" was written, and did not follow it: it called `go test` inside a
+  container instead of the wrapper. It failed on its first CI run with
+  nothing to read. **Rule: every step that runs tests goes through
+  `scripts/ci-go-test.sh`, also inside a container.**
+
+
 ### Hunting a failure that would not happen again (13.8.0-beta)
 - **Repeating did not find it; changing the conditions did.** Twenty-odd
   full runs on Linux, with two CPUs and with one, passed. What found causes

@@ -4,6 +4,16 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.9.0-beta] — 2026-10-17
+
+### Fixed
+- **The new no-network test step failed on GitHub's runner and could not
+  say why.** It ran `go test` directly, not through
+  `scripts/ci-go-test.sh`, so a failure was "exit code 1" again. It now
+  runs through it, and the wrapper also names a compile error, or the last
+  lines of a run that failed before any test did. On 13.8.0-beta every
+  other job passed, including the new race-detector job.
+
 ## [13.8.0-beta] — 2026-10-17
 
 ### Fixed

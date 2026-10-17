@@ -23,10 +23,14 @@ fi
 awk '
   function esc(s) { gsub(/%/, "%25", s); gsub(/\r/, "%0D", s); return s }
   function flush() { if (title != "" && n < 8) { printf "::error title=%s::%s\n", esc(title), body; n++ } title = ""; body = "" }
+  /\.go:[0-9]+:[0-9]+: / && title == "" && n < 8 { printf "::error title=build::%s\n", esc($0); n++; next }
   /^--- FAIL: / { flush(); title = $3; body = esc($0); lines = 0; next }
   /^panic: / { flush(); title = "panic"; body = esc($0); lines = 0; next }
   /^(FAIL|ok|---|===|\?)/ { flush(); if ($1 == "FAIL" && NF >= 2) pkgs = pkgs " " $2; next }
   title != "" && lines < 12 { body = body "%0A" esc($0); lines++ }
-  END { flush(); if (pkgs != "") printf "::error title=packages that failed::%s\n", esc(pkgs) }
-' "$log"
+  END { flush(); if (pkgs != "") printf "::error title=packages that failed::%s\n", esc(pkgs); if (n == 0 && pkgs == "") exit 3 }
+' "$log" || {
+  # No test failed: the build or the run itself did. Say how it ended.
+  printf '::error title=go test failed before any test did::%s\n' "$(tail -n 15 "$log" | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+}
 exit "$status"

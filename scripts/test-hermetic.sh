@@ -19,7 +19,10 @@ if [ "$#" -eq 0 ]; then
   set -- ./pkg/... ./services/...
 fi
 modcache="$(go env GOMODCACHE)"
+# Through scripts/ci-go-test.sh, so in CI a failing test is named in the
+# job's annotations (GITHUB_ACTIONS is passed in for that).
 docker run --rm --network none \
   -v "$PWD":/src:ro -v "$modcache":/go/pkg/mod:ro \
   -e GOFLAGS=-buildvcs=false -e GOPROXY=off -e GOTOOLCHAIN=local -e GOFIPS140=v1.0.0 \
-  -w /src "golang:${version}" go test -count=1 "$@"
+  -e GITHUB_ACTIONS="${GITHUB_ACTIONS:-}" \
+  -w /src "golang:${version}" scripts/ci-go-test.sh -count=1 "$@"
