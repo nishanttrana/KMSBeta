@@ -5,6 +5,16 @@ Newest entries on top.
 
 ## 2026-10-17
 
+### Test state that outlives the test (13.11.0-beta)
+- Three times now a test met leftovers of an earlier run on something that
+  lives for the whole process: a SQL driver name, HSM key labels in the
+  certificate tests, and key labels on the connector's own tokens. The fix
+  that holds is to start each test from a clean resource (here: empty
+  tokens), not to make every name unique by hand.
+- **A repeat check that skips the tests it should repeat proves nothing.**
+  CI's run-twice step had no SoftHSM, so the very tests that could not run
+  twice were skipped there. It installs SoftHSM now.
+
 ### What the annotation said (13.10.0-beta)
 - The first readable failure of the no-network step was not a test at all:
   `mkdir .../golang.org/fips140: read-only file system`. Go unpacks the

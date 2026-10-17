@@ -280,10 +280,21 @@ jobs:
       - name: go vet
         run: go vet ./...
 
+      # With SoftHSM, so the HSM tests are repeated too (they skipped here
+      # until 13.11.0-beta, and could not run twice).
+      - name: Install SoftHSM (a real PKCS#11 library for the HSM tests)
+        run: |
+          scripts/install-softhsm.sh "$HOME/softhsm"
+          echo "SOFTHSM_LIB=$HOME/softhsm/lib/softhsm/libsofthsm2.so" >> "$GITHUB_ENV"
+          echo "$HOME/softhsm/bin" >> "$GITHUB_PATH"
+
       # Twice in one process: a test that cannot be repeated (shared state
       # left by its first run) fails here, and could not be repeated to look
       # for an intermittent failure either.
       - name: go test (every test twice)
+        env:
+          GOFIPS140: v1.0.0
+          VECTA_REQUIRE_SOFTHSM: "1"
         run: scripts/ci-go-test.sh -count=2 ./...
 
       # No network at all: a test that needs the Internet or DNS fails here

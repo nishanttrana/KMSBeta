@@ -4,6 +4,16 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.11.0-beta] — 2026-10-17
+
+### Fixed
+- **The HSM-connector tests can run twice in one process.** Seven of them
+  used fixed key labels on SoftHSM tokens that live as long as the process,
+  so a second run met the first run's keys ("an object with this label
+  already exists"). Each test now starts on empty tokens. CI's run-twice
+  step now installs SoftHSM, so the HSM tests are repeated there too
+  instead of skipping. This closes the item left open in 13.8.0-beta.
+
 ## [13.10.0-beta] — 2026-10-17
 
 ### Fixed

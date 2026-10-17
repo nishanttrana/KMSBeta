@@ -19,6 +19,8 @@ import (
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/hsm"
 	"vecta-kms/pkg/route/routetest"
+
+	"github.com/miekg/pkcs11"
 )
 
 // These tests drive a real PKCS#11 library, SoftHSM2, through the
@@ -88,8 +90,46 @@ func newTestHandler(t *testing.T) (*Handler, *routetest.Recorder) {
 		}
 		t.Skip("SoftHSM not installed (scripts/install-softhsm.sh, then SOFTHSM_LIB); CI runs these")
 	}
+	emptyTokens(t)
 	rec := &routetest.Recorder{}
 	return NewHandler(staticConfigs{}, sharedProvider, rec, nil), rec
+}
+
+// emptyTokens destroys every object on the three test tokens before a test.
+// The tokens live as long as the process and the tests use fixed labels, so
+// until 13.11.0-beta a test run a second time in one process
+// (go test -count=2) met the keys of its first run and failed with "an
+// object with this label already exists". No test here runs in parallel.
+func emptyTokens(t *testing.T) {
+	t.Helper()
+	for _, cfg := range []TenantConfig{
+		{TenantID: "t1", Provider: "softhsm2", Library: softhsmLib, TokenLabel: "vecta-a", PIN: testPIN},
+		{TenantID: "t3", Provider: "softhsm2", Library: softhsmLib, TokenLabel: "vecta-b", PIN: testPIN},
+		{TenantID: "t1", Provider: "softhsm2", Library: softhsmLib, TokenLabel: "vecta-c", PIN: credPIN},
+	} {
+		ctx, sh, done, err := sharedProvider.session(cfg)
+		if err != nil {
+			t.Fatalf("open %s to empty it: %v", cfg.TokenLabel, err)
+		}
+		var objs []pkcs11.ObjectHandle
+		if err := ctx.FindObjectsInit(sh, nil); err == nil {
+			for {
+				batch, _, err := ctx.FindObjects(sh, 100)
+				if err != nil || len(batch) == 0 {
+					break
+				}
+				objs = append(objs, batch...)
+			}
+			_ = ctx.FindObjectsFinal(sh)
+		}
+		for _, o := range objs {
+			if err := ctx.DestroyObject(sh, o); err != nil {
+				done()
+				t.Fatalf("empty %s: %v", cfg.TokenLabel, err)
+			}
+		}
+		done()
+	}
 }
 
 // One provider for the process: a PKCS#11 library is initialised once.
