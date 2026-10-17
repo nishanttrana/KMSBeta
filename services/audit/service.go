@@ -337,6 +337,20 @@ func parseIncomingEvent(subject string, payload []byte) (AuditEvent, error) {
 	} else if data, ok := in["data"].(map[string]interface{}); ok {
 		event.Details = data
 	}
+	// Publishers that send {"data": {...}} (auth's legacy routes) state the
+	// outcome, actor and address inside it. A refusal stored as "success"
+	// (the default below) hid every such refusal from result filters, alert
+	// rules and reports, so the top-level fields are taken from there when
+	// the envelope has none.
+	if event.Result == "" {
+		event.Result = str(event.Details["result"])
+	}
+	if event.ActorID == "" {
+		event.ActorID = firstNonEmptyString(str(event.Details["actor_id"]), str(event.Details["actor_user_id"]))
+	}
+	if event.SourceIP == "" {
+		event.SourceIP = str(event.Details["source_ip"])
+	}
 	// Wire-schema fields without dedicated columns are preserved in Details
 	// so downstream consumers and the UI can distinguish agent-originated
 	// events without a storage migration.

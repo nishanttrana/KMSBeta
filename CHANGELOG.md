@@ -4,6 +4,21 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.15.0-beta] — 2026-10-17
+
+### Fixed
+- **Refusals published by auth's legacy routes were recorded as
+  `success`.** Those routes send `{"data": {..., "result": "refused"}}`,
+  and the audit service read `result` (and the actor and address) only from
+  the top of the message, defaulting to `success`. Found on the live stack
+  after 13.14.0-beta: 81 `audit.auth.request_refused` events stored as
+  success. The audit service now takes `result`, `actor_id` (or
+  `actor_user_id`) and `source_ip` from `data` when the message itself has
+  none. The same applied to `password_change_refused`,
+  `cli_session_refused`, `cluster_mint_refused` and the other refusals auth
+  publishes this way. Events already recorded are not rewritten: the audit
+  chain is immutable. Test: `TestDataEnvelopeKeepsItsRefusal`.
+
 ## [13.14.0-beta] — 2026-10-17
 
 ### Security

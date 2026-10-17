@@ -29,3 +29,25 @@ func TestUnparseableMessageIsTerminatedNotRedelivered(t *testing.T) {
 		t.Fatalf("want errUnparseableEvent, got %v", err)
 	}
 }
+
+// auth's legacy routes publish {"data": {...}} with the outcome inside it. A
+// refusal was stored as "success" (13.14.0-beta found 81 of them on the live
+// stack); the envelope's result, actor and address now come from data when
+// the envelope has none, and an envelope that has them keeps its own.
+func TestDataEnvelopeKeepsItsRefusal(t *testing.T) {
+	ev, err := parseIncomingEvent("audit.auth.request_refused", []byte(`{"tenant_id":"t1","data":{"result":"refused","reason":"not_platform_administrator","actor_id":"usr_1","source_ip":"198.51.100.7"}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ev.Result != "refused" || ev.ActorID != "usr_1" || ev.SourceIP != "198.51.100.7" {
+		t.Fatalf("result %q actor %q ip %q", ev.Result, ev.ActorID, ev.SourceIP)
+	}
+	ev, _ = parseIncomingEvent("audit.auth.password_change_refused", []byte(`{"tenant_id":"t1","data":{"result":"refused","actor_user_id":"usr_2"}}`))
+	if ev.Result != "refused" || ev.ActorID != "usr_2" {
+		t.Fatalf("actor_user_id envelope: result %q actor %q", ev.Result, ev.ActorID)
+	}
+	ev, _ = parseIncomingEvent("audit.x.y", []byte(`{"tenant_id":"t1","result":"failure","actor_id":"a","data":{"result":"refused","actor_id":"b"}}`))
+	if ev.Result != "failure" || ev.ActorID != "a" {
+		t.Fatalf("the envelope's own fields must win: %q %q", ev.Result, ev.ActorID)
+	}
+}

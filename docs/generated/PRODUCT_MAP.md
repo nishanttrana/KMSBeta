@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-17T14:33:02Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-17T14:46:31Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 

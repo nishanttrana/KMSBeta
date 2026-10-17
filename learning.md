@@ -5,6 +5,15 @@ Newest entries on top.
 
 ## 2026-10-17
 
+### A refusal audited as success (13.15.0-beta)
+- auth's legacy `publishAudit` nests the outcome in `data`; the audit
+  service only read the envelope's `result` and defaulted it to `success`.
+  The tests asserted the published payload, never the stored row, so every
+  legacy refusal looked audited and was filed as a success. Seen only by
+  querying the live `audit_events` after a deploy. **Rule: an audit test of
+  a new event checks the row as stored (result, actor) at least once, and
+  the ingest normalises both envelope shapes.**
+
 ### "All broken": tenant and user management (13.14.0-beta)
 - **`*` is not "everything everywhere".** A tenant's own administrator
   holds `*` inside that tenant, and three checks read it as more: auth's
