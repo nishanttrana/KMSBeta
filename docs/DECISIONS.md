@@ -7,6 +7,38 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-17 — Tenants are administered from the platform tenant; a tenant's roles are the only roles
+**Decision:** acting on another tenant (the tenant list, lifecycle and roles,
+or another tenant's users, groups, identity providers, SCIM settings and
+policies) needs a person in the `root` tenant holding `auth.tenant.*`. A
+role name grants nothing. Every role assigned to a user, group binding,
+identity-provider import, SCIM default or identity-provider default must
+be one the tenant defines, and the console lists those (`GET /auth/roles`)
+instead of a built-in list. Nobody changes their own role or deactivates
+themselves. The top bar names the signed-in tenant and offers no switch.
+Tenant Administration drops its HSM tab (a tenant's HSM is set in the HSM
+module, which acts in the signed-in tenant) and its browser-only "KMS-Wide
+Enforcement" lock.
+**Why:** the owner reported tenant and user management "all broken". It
+was: any tenant's administrator (`*`) could administer every tenant,
+including resetting the root administrator's password; the console offered
+roles no tenant defines, so new users could not sign in, and showed
+existing users with the wrong role and status; policy and HSM edits for a
+chosen tenant were applied to the caller's own; policy saves were always
+refused; and a tenant administrator outside root saw no modules at all.
+**Rejected:** letting a root token act in any tenant through the kernel
+(it would widen every service's tenant check for one console screen);
+keeping the top-bar switch and sending the chosen tenant (every service
+refuses it, by design); a client-side list of "standard" roles (it already
+drifted from the server once).
+**Enforced by:** `TestOnlyAPlatformAdministratorActsAcrossTenants`,
+`TestEveryAssignedRoleIsDefinedByTheTenant`, `TestRolesListedAreTheTenantsOwn`,
+`TestAdministratorCannotDemoteOrDeactivateThemselves`,
+`TestPolicyEditLandsOnTheTenantItNames`,
+`TestTenantCreateLeavesNothingBehindWhenRefused`; the smoke spec
+`admin-tenants-users.spec.ts`; `moduleRegistry.test.ts` (a `*` grant is
+never read as a module deny rule).
+
 ## 2026-10-17 — Tests are hermetic: no real DNS, no shared state across runs
 **Decision:** every name the product resolves goes through `pkg/ssrfguard`
 (`LookupNetIP` and the guard's own checks). In a test binary that resolver

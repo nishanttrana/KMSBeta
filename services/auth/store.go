@@ -44,6 +44,7 @@ type Store interface {
 	UpdateTenantRole(ctx context.Context, role TenantRole) error
 	DeleteTenantRole(ctx context.Context, tenantID string, roleName string) error
 	GetRolePermissions(ctx context.Context, tenantID string, roleName string) ([]string, error)
+	ListTenantRoles(ctx context.Context, tenantID string) ([]TenantRole, error)
 
 	CreateUser(ctx context.Context, u User) error
 	GetUserByUsername(ctx context.Context, tenantID string, username string) (User, error)
@@ -567,6 +568,29 @@ DELETE FROM auth_tenant_roles WHERE tenant_id=$1 AND role_name=$2
 		return errNotFound
 	}
 	return nil
+}
+
+func (s *SQLStore) ListTenantRoles(ctx context.Context, tenantID string) ([]TenantRole, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT role_name, permissions FROM auth_tenant_roles WHERE tenant_id=$1 ORDER BY role_name
+`, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := []TenantRole{}
+	for rows.Next() {
+		var raw []byte
+		role := TenantRole{TenantID: tenantID}
+		if err := rows.Scan(&role.RoleName, &raw); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(raw, &role.Permissions); err != nil {
+			return nil, err
+		}
+		out = append(out, role)
+	}
+	return out, rows.Err()
 }
 
 func (s *SQLStore) GetRolePermissions(ctx context.Context, tenantID string, roleName string) ([]string, error) {

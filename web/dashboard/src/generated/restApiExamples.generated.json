@@ -399,7 +399,7 @@
     "service": "auth",
     "method": "POST",
     "pathTemplate": "/auth/users",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"username\": \"newuser\",\n  \"password\": \"Example-Passw0rd-2026\",\n  \"role\": \"operator\",\n  \"email\": \"user@example.com\"\n}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"username\": \"newuser\",\n  \"password\": \"Example-Passw0rd-2026\",\n  \"role\": \"readonly\",\n  \"email\": \"user@example.com\"\n}",
     "responseExample": {
       "request_id": "req_615e52f0f3ac364f",
       "user_id": "usr_176b4c99438de96d"

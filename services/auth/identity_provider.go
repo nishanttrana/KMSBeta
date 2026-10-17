@@ -127,7 +127,7 @@ func defaultIdentityProviderConfig(tenantID string, provider string) IdentityPro
 			"idp_sso_url":       "",
 			"name_id_format":    "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
 			"auto_create_users": false,
-			"default_role":      "viewer",
+			"default_role":      "readonly",
 			"attr_username":     "username",
 			"attr_email":        "email",
 			"attr_display_name": "displayName",
@@ -139,7 +139,7 @@ func defaultIdentityProviderConfig(tenantID string, provider string) IdentityPro
 			"redirect_uri":      "",
 			"scopes":            "openid profile email",
 			"auto_create_users": false,
-			"default_role":      "viewer",
+			"default_role":      "readonly",
 			"attr_username":     "preferred_username",
 			"attr_email":        "email",
 			"attr_display_name": "name",
@@ -159,7 +159,7 @@ func defaultIdentityProviderConfig(tenantID string, provider string) IdentityPro
 			"insecure_skip_verify": false,
 			"timeout_sec":          10,
 			"auto_create_users":    false,
-			"default_role":         "viewer",
+			"default_role":         "readonly",
 		}
 	}
 	return cfg

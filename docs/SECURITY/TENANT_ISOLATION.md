@@ -12,7 +12,31 @@ unchecked in 13.0.0-beta, and what fails if it comes back.
 | a raw mux behind `pkgjwtauth.MustWrap` (13 files, `scripts/route-kernel-burndown.txt`) | middleware | **each handler**, with `tenantcheck.Enforce` | each handler, if at all | each handler |
 
 Only a platform service identity (`tenantcheck.IsServicePrincipal`) may act
-in a tenant other than its token's.
+in a tenant other than its token's, with one exception in auth below.
+
+### Tenant administration (auth, 13.14.0-beta)
+
+The tenant list, a tenant's lifecycle and roles (`/tenants...`), and
+another tenant's users, groups, identity providers, SCIM settings and
+policies (`tenant_id` on `/auth/...`) belong to a **platform
+administrator**: a person whose verified token is for the `root` tenant
+(`tenantcheck.InternalServiceTenant`) and holds `auth.tenant.read` or
+`auth.tenant.write` (`platformAdministrator` in `services/auth/handler.go`).
+Every other caller is refused (`403`, `reason: not_platform_administrator`,
+audited `audit.auth.request_refused`).
+
+Before 13.14.0-beta the check was "role is `super-admin`, or holds
+`auth.tenant.*` or `*`". Every tenant's own administrator holds `*` in its
+tenant, so the administrator of any tenant could list all tenants, create,
+disable and delete them, and reset the password of the `root`
+administrator; and since a tenant administrator can give a user any role
+name, the role `super-admin` was a name anyone could take. Services do not
+administer tenants (they list IDs from `/internal/tenant-ids`).
+
+The console's top bar no longer offers a tenant switch: a token is for one
+tenant and every service refuses another, so switching produced only
+refusals. A platform administrator manages other tenants in Administration;
+to work inside another tenant, one signs in to it.
 
 `tenantcheck.Enforce` compares a tenant with a token. With no token in the
 context it has nothing to compare and returns nil: it is not an
@@ -41,6 +65,10 @@ token.
   fails unless the route is in the script's `PUBLIC` or
   `SAME_FOR_EVERY_TENANT` list, each with its reason. Against 12.3.0-beta
   it reports 18 failures.
+- `TestOnlyAPlatformAdministratorActsAcrossTenants` (auth): a tenant
+  administrator holding `*`, and a role named `super-admin`, are refused
+  the tenant list, tenant create and disable, and another tenant's users,
+  password reset, status and policy; a root administrator is not.
 - `routetest.RefusalsAudited` in each kernel service: every route refuses a
   caller with no token, without the permission, and naming another tenant,
   and audits each refusal.

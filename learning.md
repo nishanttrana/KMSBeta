@@ -5,6 +5,40 @@ Newest entries on top.
 
 ## 2026-10-17
 
+### "All broken": tenant and user management (13.14.0-beta)
+- **`*` is not "everything everywhere".** A tenant's own administrator
+  holds `*` inside that tenant, and three checks read it as more: auth's
+  cross-tenant check (any tenant's admin could administer every tenant and
+  reset root's password), the console's module-deny rule (`*` matched
+  `ui.module.deny:<tab>`, so a non-root admin saw no modules), and a role
+  name (`super-admin`) that any tenant admin could assign. **Rule: a grant
+  that crosses tenants is tied to the verified token's tenant
+  (`platformAdministrator`), and a deny rule matches only when granted by
+  name.**
+- **A client list of server values drifts.** The console's role list
+  (`viewer`, `operator`, ...) and status list (`disabled`) matched nothing
+  auth stores, so new users could not sign in and existing ones were shown
+  with another role; the admin guide had the same invented roles. **Rule: a
+  selector of server values is loaded from the server** (`GET
+  /auth/roles`), the server refuses values it doesn't define, and a stored
+  value outside the list is shown as it is, never replaced by the first
+  option.
+- **A form that sends back what it loaded fails against a strict
+  decoder.** Policy and HSM saves spread the loaded record (with
+  `tenant_id`, `updated_at`) into the request, and auth's
+  `DisallowUnknownFields` refused every save. No test had ever saved. The
+  client now sends only the route's fields, and the smoke spec asserts the
+  exact keys sent.
+- **A per-tenant view built by swapping `X-Tenant-ID`.** Tenant
+  Administration made a copy of the session with another `tenantId` and
+  called tenant-scoped routes with it; auth ignored the header and used the
+  token's tenant (wrong tenant changed), governance refused it. A view of
+  another tenant names it in the query, on routes that admit a platform
+  administrator.
+- How it slipped through: no test drove these screens or wrote through
+  them; the tenant tests used a `super-admin` token in a non-root tenant,
+  which was itself the bad case.
+
 ### A column name read as an error (13.13.0-beta)
 - The sweep greps logs for words like "error". Postgres's slow-query log
   prints each statement in full on tab-indented lines, and the audit read

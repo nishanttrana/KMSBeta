@@ -202,9 +202,39 @@ and auth deletes any such keys left over at startup
 
 ### GET /svc/auth/auth/users
 
-`auth.user.read`. Query: `tenant_id` (another tenant needs
-`auth.tenant.read`). Response `items[]`: `id`, `tenant_id`, `username`,
-`email`, `role`, `status`, `must_change_password`, `created_at`. Not paged.
+`auth.user.read`. Query: `tenant_id`. Another tenant than the token's is
+open only to a platform administrator: a person in the `root` tenant holding
+`auth.tenant.read` (`auth.tenant.write` for writes). This applies to every
+user, group, identity-provider, SCIM and policy route that takes
+`tenant_id`; a refusal is `403`, audited as `audit.auth.request_refused`
+with `reason: not_platform_administrator` (13.14.0-beta). Response
+`items[]`: `id`, `tenant_id`, `username`, `email`, `role`, `status`
+(`active` or `inactive`), `must_change_password`, `created_at`. Not paged.
+
+---
+
+### GET /svc/auth/auth/roles
+
+`auth.user.read`. Query: `tenant_id` (platform administrators only, as
+above). The roles the tenant defines, the only ones a user, group binding,
+identity-provider import, SCIM default or identity-provider default role
+may name; any other is refused with `400 unknown_role`. Response
+`items[]`: `tenant_id`, `role_name`, `permissions[]`; `tenant_id`.
+Audited `audit.auth.roles_listed` (kernel route, refusals included).
+
+### PUT /svc/auth/auth/users/{id}/role, PUT /svc/auth/auth/users/{id}/status
+
+`auth.user.write`. Body `{"role": "..."}` (a role the tenant defines) or
+`{"status": "active"|"inactive"}`. Changing your own role, or setting your
+own status to anything but `active`, is refused with `409 self_change`.
+
+### GET/PUT /svc/auth/auth/password-policy, GET/PUT /svc/auth/auth/security-policy
+
+`auth.user.read` / `auth.user.write`. Query: `tenant_id` (platform
+administrators only); without it, the token's tenant. A `PUT` takes only
+the policy's own fields (`min_length`, `max_length`, `min_unique_chars`,
+`require_*`, `deny_*`; `max_failed_attempts`, `lockout_minutes`,
+`idle_timeout_minutes`); any other field is refused.
 
 ---
 
@@ -216,7 +246,7 @@ The password must meet the tenant's password policy. Response `201`:
 `user_id`.
 
 ```bash
-jq -n '{tenant_id: "root", username: "bob", email: "bob@example.com", role: "operator",
+jq -n '{tenant_id: "root", username: "bob", email: "bob@example.com", role: "readonly",
         password: env.NEW_USER_PASSWORD, must_change_password: true}' |
   { printf 'Authorization: Bearer %s\n' "$TOKEN" > "$HDR"; \
     curl -sS --fail-with-body --cacert vecta-root-ca.pem -X POST https://localhost/svc/auth/auth/users \
@@ -235,11 +265,17 @@ jq -n '{tenant_id: "root", username: "bob", email: "bob@example.com", role: "ope
 
 ### GET/POST /svc/auth/tenants / GET/PUT/DELETE /svc/auth/tenants/{id}
 
-`auth.tenant.read` / `auth.tenant.write` (or the `super-admin` role).
-Create body: `id`, `name`, `status`, and the tenant's first administrator
-`admin_username`, `admin_email`, `admin_password`, `admin_role`,
-`admin_status`, `admin_must_change_password`. Response: `status`,
-`tenant_id`, `admin_user_id`. `GET /tenants/{id}` returns `tenant`
+`auth.tenant.read` / `auth.tenant.write`, held by a person in the `root`
+tenant (a platform administrator). A role name, `super-admin` included,
+grants nothing, and `*` in another tenant grants none of these routes
+(13.14.0-beta). Create body: `id` (1–64 letters, digits, `-`, `_`),
+`name`, `status` (`active` only), and the tenant's first administrator
+`admin_username`, `admin_email`, `admin_password`, `admin_role` (`admin`
+or `tenant-admin`), `admin_status`, `admin_must_change_password`. All of it
+is checked before anything is written; a refusal (`400`, or `409
+tenant_exists`) leaves no tenant behind. Response: `status`, `tenant_id`,
+`admin_user_id`. `PUT /tenants/{id}` changes only the fields sent (`name`;
+`status: active` re-enables). `GET /tenants/{id}` returns `tenant`
 (`id`, `name`, `status`, `created_at`). Other routes:
 `GET /tenants/{id}/delete-readiness`, `POST /tenants/{id}/disable`, and
 `POST /tenants/{id}/roles` and `PUT`/`DELETE /tenants/{id}/roles/{name}`.
@@ -4281,6 +4317,7 @@ from the code; do not edit by hand.
 - `POST /svc/auth/auth/register/{id}/activate`
 - `GET /svc/auth/auth/register/{id}/status`
 - `GET /svc/auth/auth/rest-client-security/summary`
+- `GET /svc/auth/auth/roles`
 - `GET /svc/auth/auth/scim/groups`
 - `GET /svc/auth/auth/scim/settings`
 - `PUT /svc/auth/auth/scim/settings`

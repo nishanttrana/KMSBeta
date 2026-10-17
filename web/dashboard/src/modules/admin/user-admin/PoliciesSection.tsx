@@ -8,7 +8,10 @@ type Props = {
 
 export function PoliciesSection({ model }: Props) {
   return (
-    <Section title="Authentication Policies" actions={<Btn small primary onClick={() => void model.savePolicies()} disabled={model.savingPolicy}>{model.savingPolicy ? "Saving..." : "Save"}</Btn>}>
+    <Section title="Authentication Policies" actions={<Btn small primary onClick={() => void model.savePolicies()} disabled={model.savingPolicy || Boolean(model.policyError)}>{model.savingPolicy ? "Saving..." : "Save"}</Btn>}>
+      {model.policyError ? (
+        <div style={{ fontSize: 11, color: C.amberFg }}>{`Policies unavailable: ${model.policyError}`}</div>
+      ) : (
       <Row2>
         <Card>
           <div style={{ fontSize: 11, color: C.text, fontWeight: 700, marginBottom: 8 }}>Password Policy</div>
@@ -97,6 +100,7 @@ export function PoliciesSection({ model }: Props) {
           </FG>
         </Card>
       </Row2>
+      )}
     </Section>
   );
 }

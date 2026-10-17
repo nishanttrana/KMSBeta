@@ -60,6 +60,7 @@ func NewHandler(store Store, logic *AuthLogic, events AuditPublisher, meter *met
 	h.mountKernel(h.mux, h.tenantIDsRouter())
 	h.mountKernel(h.mux, h.subjectsRouter())
 	h.mountKernel(h.mux, h.clientAdminRouter())
+	h.mountKernel(h.mux, h.rolesRouter())
 	return h
 }
 
@@ -81,16 +82,18 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /auth/logout", h.withAuth(h.handleLogout, "auth.session.logout"))
 	mux.HandleFunc("GET /auth/me", h.withAuth(h.handleMe, "auth.self.read"))
 
-	mux.HandleFunc("POST /tenants", h.withAuth(h.handleCreateTenant, "auth.tenant.write", "super-admin"))
-	mux.HandleFunc("GET /tenants", h.withAuth(h.handleListTenants, "auth.tenant.read", "super-admin"))
-	mux.HandleFunc("GET /tenants/{id}", h.withAuth(h.handleGetTenant, "auth.tenant.read", "super-admin"))
-	mux.HandleFunc("GET /tenants/{id}/delete-readiness", h.withAuth(h.handleGetTenantDeleteReadiness, "auth.tenant.read", "super-admin"))
-	mux.HandleFunc("POST /tenants/{id}/disable", h.withAuth(h.handleDisableTenant, "auth.tenant.write", "super-admin"))
-	mux.HandleFunc("PUT /tenants/{id}", h.withAuth(h.handleUpdateTenant, "auth.tenant.write", "super-admin"))
-	mux.HandleFunc("DELETE /tenants/{id}", h.withAuth(h.handleDeleteTenant, "auth.tenant.write", "super-admin"))
-	mux.HandleFunc("POST /tenants/{id}/roles", h.withAuth(h.handleCreateTenantRole, "auth.role.write", "super-admin"))
-	mux.HandleFunc("PUT /tenants/{id}/roles/{name}", h.withAuth(h.handleUpdateTenantRole, "auth.role.write", "super-admin"))
-	mux.HandleFunc("DELETE /tenants/{id}/roles/{name}", h.withAuth(h.handleDeleteTenantRole, "auth.role.write", "super-admin"))
+	// The tenant list and every tenant's lifecycle and roles belong to the
+	// platform (root) tenant's administrators only (platformAdministrator).
+	mux.HandleFunc("POST /tenants", h.withPlatformAdmin(h.handleCreateTenant, "auth.tenant.write"))
+	mux.HandleFunc("GET /tenants", h.withPlatformAdmin(h.handleListTenants, "auth.tenant.read"))
+	mux.HandleFunc("GET /tenants/{id}", h.withPlatformAdmin(h.handleGetTenant, "auth.tenant.read"))
+	mux.HandleFunc("GET /tenants/{id}/delete-readiness", h.withPlatformAdmin(h.handleGetTenantDeleteReadiness, "auth.tenant.read"))
+	mux.HandleFunc("POST /tenants/{id}/disable", h.withPlatformAdmin(h.handleDisableTenant, "auth.tenant.write"))
+	mux.HandleFunc("PUT /tenants/{id}", h.withPlatformAdmin(h.handleUpdateTenant, "auth.tenant.write"))
+	mux.HandleFunc("DELETE /tenants/{id}", h.withPlatformAdmin(h.handleDeleteTenant, "auth.tenant.write"))
+	mux.HandleFunc("POST /tenants/{id}/roles", h.withPlatformAdmin(h.handleCreateTenantRole, "auth.role.write"))
+	mux.HandleFunc("PUT /tenants/{id}/roles/{name}", h.withPlatformAdmin(h.handleUpdateTenantRole, "auth.role.write"))
+	mux.HandleFunc("DELETE /tenants/{id}/roles/{name}", h.withPlatformAdmin(h.handleDeleteTenantRole, "auth.role.write"))
 
 	mux.HandleFunc("GET /auth/users", h.withAuth(h.handleListUsers, "auth.user.read"))
 	mux.HandleFunc("POST /auth/users", h.withAuth(h.handleCreateUser, "auth.user.write"))
@@ -153,25 +156,79 @@ func (h *Handler) routes() *http.ServeMux {
 	return mux
 }
 
-func (h *Handler) withAuth(next http.HandlerFunc, permission string, roles ...string) http.HandlerFunc {
+// withAuth admits a verified token holding permission. Every refusal is
+// audited as audit.auth.request_refused with its reason.
+func (h *Handler) withAuth(next http.HandlerFunc, permission string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		reqID := requestID(r)
 		raw := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer"))
 		if raw == "" {
+			h.refuseRequest(r, nil, "unauthenticated", permission)
 			writeErr(w, http.StatusUnauthorized, "unauthorized", "missing bearer token", reqID, "")
 			return
 		}
 		claims, err := h.logic.ParseJWT(raw)
 		if err != nil {
+			h.refuseRequest(r, nil, "invalid_token", permission)
 			writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid token", reqID, "")
 			return
 		}
-		if permission != "" && !contains(roles, claims.Role) && !hasPermission(claims.Permissions, permission) {
+		if permission != "" && !hasPermission(claims.Permissions, permission) {
+			h.refuseRequest(r, claims, "permission_denied", permission)
 			writeErr(w, http.StatusForbidden, "forbidden", "insufficient permissions", reqID, claims.TenantID)
 			return
 		}
 		next(w, r.WithContext(pkgauth.ContextWithClaims(r.Context(), claims)))
 	}
+}
+
+// withPlatformAdmin admits only a platform administrator holding
+// permission: the tenant list and other tenants' lifecycle are not a
+// tenant administrator's to see or change, whatever its role is called.
+func (h *Handler) withPlatformAdmin(next http.HandlerFunc, permission string) http.HandlerFunc {
+	return h.withAuth(func(w http.ResponseWriter, r *http.Request) {
+		claims, _ := pkgauth.ClaimsFromContext(r.Context())
+		if !platformAdministrator(claims, permission) {
+			h.refuseRequest(r, claims, reasonNotPlatformAdmin, permission)
+			writeErr(w, http.StatusForbidden, "forbidden", "tenant administration requires an administrator of the platform (root) tenant", requestID(r), claims.TenantID)
+			return
+		}
+		next(w, r)
+	}, permission)
+}
+
+const reasonNotPlatformAdmin = "not_platform_administrator"
+
+// platformAdministrator reports whether claims belong to a person in the
+// platform (root) tenant who holds perm: the only caller who may list
+// tenants, change their lifecycle, or act on another tenant's users, roles
+// and policies. The tenant comes from the verified token, so it can't be
+// claimed, and a role name grants nothing: a tenant's own administrator can
+// give a user any role name, and holds "*" inside that tenant. Platform
+// services don't administer tenants (they list IDs at /internal/tenant-ids).
+func platformAdministrator(claims *pkgauth.Claims, perm string) bool {
+	if claims == nil || tenantcheck.IsServicePrincipal(claims) {
+		return false
+	}
+	if !strings.EqualFold(strings.TrimSpace(claims.TenantID), tenantcheck.InternalServiceTenant()) {
+		return false
+	}
+	return hasPermission(claims.Permissions, perm)
+}
+
+// refuseRequest audits a refusal by a legacy (not yet kernel) route as
+// audit.auth.request_refused. Best effort: the refusal stands either way.
+func (h *Handler) refuseRequest(r *http.Request, claims *pkgauth.Claims, reason, permission string) {
+	actorTenant, actor := "", ""
+	if claims != nil {
+		actorTenant, actor = claims.TenantID, firstNonEmpty(claims.UserID, claims.ClientID)
+	}
+	_ = h.publishAudit(r.Context(), "audit.auth.request_refused", requestID(r), actorTenant, map[string]any{
+		"method": r.Method, "endpoint": r.URL.Path, "permission": permission,
+		"actor_id": actor, "actor_tenant_id": actorTenant,
+		"requested_tenant": strings.TrimSpace(r.URL.Query().Get("tenant_id")),
+		"source_ip": clientip.From(r), "reason": reason, "result": "refused", "severity": "warning",
+	})
 }
 
 func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
@@ -1269,10 +1326,8 @@ func (h *Handler) tenantWrite(w http.ResponseWriter, r *http.Request, mode strin
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.ID)
 		return
 	}
-	if req.Status == "" {
-		req.Status = "active"
-	}
-	if mode == "update" && strings.EqualFold(strings.TrimSpace(req.Status), "disabled") {
+	req.Status = strings.ToLower(strings.TrimSpace(req.Status))
+	if mode == "update" && req.Status == "disabled" {
 		writeErr(
 			w,
 			http.StatusBadRequest,
@@ -1281,6 +1336,10 @@ func (h *Handler) tenantWrite(w http.ResponseWriter, r *http.Request, mode strin
 			reqID,
 			strings.TrimSpace(r.PathValue("id")),
 		)
+		return
+	}
+	if req.Status != "" && req.Status != "active" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "status must be active (a tenant is disabled through /tenants/{id}/disable)", reqID, req.ID)
 		return
 	}
 	tenantID := req.ID
@@ -1293,32 +1352,36 @@ func (h *Handler) tenantWrite(w http.ResponseWriter, r *http.Request, mode strin
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant id is required", reqID, tenantID)
 		return
 	}
-	if mode == "create" && req.Name == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant name is required", reqID, tenantID)
-		return
-	}
-	t := Tenant{ID: tenantID, Name: req.Name, Status: req.Status}
 	var err error
 	createdUserID := ""
 	if mode == "create" {
-		err = h.store.CreateTenant(r.Context(), t)
-		if err == nil {
-			err = h.ensureTenantDefaults(r.Context(), tenantID)
-		}
-		if err == nil && (strings.TrimSpace(req.AdminUsername) != "" || strings.TrimSpace(req.AdminEmail) != "" || strings.TrimSpace(req.AdminPassword) != "") {
-			createdUserID, err = h.createTenantAdminUser(
-				r.Context(),
-				tenantID,
-				req.AdminUsername,
-				req.AdminEmail,
-				req.AdminPassword,
-				req.AdminRole,
-				req.AdminStatus,
-				req.AdminMustChangePassword,
-			)
+		createdUserID, err = h.createTenant(r.Context(), Tenant{ID: tenantID, Name: req.Name, Status: "active"}, tenantAdminInput{
+			Username: req.AdminUsername, Email: req.AdminEmail, Password: req.AdminPassword,
+			Role: req.AdminRole, Status: req.AdminStatus, MustChangePassword: req.AdminMustChangePassword,
+		})
+		var invalid tenantInputError
+		switch {
+		case errors.As(err, &invalid):
+			writeErr(w, invalid.status, invalid.code, invalid.Error(), reqID, tenantID)
+			return
+		case err != nil:
+			writeErr(w, http.StatusInternalServerError, "store_error", "tenant create failed", reqID, tenantID)
+			return
 		}
 	} else {
-		err = h.store.UpdateTenant(r.Context(), t)
+		current, getErr := h.store.GetTenant(r.Context(), tenantID)
+		if getErr == nil {
+			// Only what the request names changes: re-enabling a tenant
+			// sends a status and must keep its name.
+			if req.Name != "" {
+				current.Name = req.Name
+			}
+			if req.Status != "" {
+				current.Status = req.Status
+			}
+			getErr = h.store.UpdateTenant(r.Context(), current)
+		}
+		err = getErr
 	}
 	if err != nil {
 		code := http.StatusInternalServerError
@@ -1461,6 +1524,10 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, code, "store_error", "tenant not found", reqID, targetTenant)
 		return
 	}
+	if err := h.requireTenantRole(r.Context(), targetTenant, req.Role); err != nil {
+		writeRoleError(w, err, reqID, targetTenant)
+		return
+	}
 	status := normalizeUserStatus(req.Status)
 	if err := h.enforcePasswordPolicy(r.Context(), targetTenant, req.Password, req.Username, req.Email); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, targetTenant)
@@ -1528,6 +1595,15 @@ func (h *Handler) handleUpdateUserRole(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", "role is required", reqID, targetTenant)
 		return
 	}
+	if err := h.requireTenantRole(r.Context(), targetTenant, req.Role); err != nil {
+		writeRoleError(w, err, reqID, targetTenant)
+		return
+	}
+	if h.isSelf(claims, targetTenant, user.ID) && req.Role != user.Role {
+		h.refuseRequest(r, claims, reasonSelfChange, "auth.user.write")
+		writeErr(w, http.StatusConflict, reasonSelfChange, "you cannot change your own role; another administrator can", reqID, targetTenant)
+		return
+	}
 	cliUsername := strings.TrimSpace(envOr("AUTH_BOOTSTRAP_CLI_USERNAME", "cli-user"))
 	if strings.EqualFold(user.Username, cliUsername) && strings.TrimSpace(strings.ToLower(user.Role)) == "cli-user" && req.Role != user.Role {
 		writeErr(w, http.StatusBadRequest, "bad_request", "default CLI user role cannot be changed", reqID, targetTenant)
@@ -1570,6 +1646,11 @@ func (h *Handler) handleUpdateUserStatus(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	status := normalizeUserStatus(req.Status)
+	if h.isSelf(claims, targetTenant, r.PathValue("id")) && status != "active" {
+		h.refuseRequest(r, claims, reasonSelfChange, "auth.user.write")
+		writeErr(w, http.StatusConflict, reasonSelfChange, "you cannot deactivate your own account; another administrator can", reqID, targetTenant)
+		return
+	}
 	if err := h.store.UpdateUserStatus(r.Context(), targetTenant, r.PathValue("id"), status); err != nil {
 		code := http.StatusInternalServerError
 		if errors.Is(err, errNotFound) {
@@ -1701,6 +1782,10 @@ func (h *Handler) handleUpsertGroupRoleBinding(w http.ResponseWriter, r *http.Re
 		writeErr(w, http.StatusBadRequest, "bad_request", "role_name is required", reqID, targetTenant)
 		return
 	}
+	if err := h.requireTenantRole(r.Context(), targetTenant, roleName); err != nil {
+		writeRoleError(w, err, reqID, targetTenant)
+		return
+	}
 	binding, err := h.store.UpsertGroupRoleBinding(r.Context(), GroupRoleBinding{
 		TenantID: targetTenant,
 		GroupID:  groupID,
@@ -1757,9 +1842,14 @@ func (h *Handler) handleDeleteGroupRoleBinding(w http.ResponseWriter, r *http.Re
 func (h *Handler) handleGetPasswordPolicy(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
-	policy, err := h.resolvePasswordPolicy(r.Context(), claims.TenantID)
+	tenantID, err := h.resolveTenantScope(r, claims, "auth.tenant.read", r.URL.Query().Get("tenant_id"))
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read password policy", reqID, claims.TenantID)
+		writeErr(w, http.StatusForbidden, "forbidden", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	policy, err := h.resolvePasswordPolicy(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read password policy", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"policy": policy, "request_id": reqID})
@@ -1768,9 +1858,14 @@ func (h *Handler) handleGetPasswordPolicy(w http.ResponseWriter, r *http.Request
 func (h *Handler) handleUpdatePasswordPolicy(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
-	existing, err := h.resolvePasswordPolicy(r.Context(), claims.TenantID)
+	tenantID, err := h.resolveTenantScope(r, claims, "auth.tenant.write", r.URL.Query().Get("tenant_id"))
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read current password policy", reqID, claims.TenantID)
+		writeErr(w, http.StatusForbidden, "forbidden", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	existing, err := h.resolvePasswordPolicy(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read current password policy", reqID, tenantID)
 		return
 	}
 	var req struct {
@@ -1786,7 +1881,7 @@ func (h *Handler) handleUpdatePasswordPolicy(w http.ResponseWriter, r *http.Requ
 		MinUniqueChars *int  `json:"min_unique_chars"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
 		return
 	}
 	policy := existing
@@ -1820,7 +1915,7 @@ func (h *Handler) handleUpdatePasswordPolicy(w http.ResponseWriter, r *http.Requ
 	if req.MinUniqueChars != nil {
 		policy.MinUniqueChars = *req.MinUniqueChars
 	}
-	policy = NormalizePasswordPolicy(policy, claims.TenantID)
+	policy = NormalizePasswordPolicy(policy, tenantID)
 	if policy.MinLength < 8 {
 		policy.MinLength = 8
 	}
@@ -1837,15 +1932,15 @@ func (h *Handler) handleUpdatePasswordPolicy(w http.ResponseWriter, r *http.Requ
 
 	updated, err := h.store.UpsertPasswordPolicy(r.Context(), policy)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "store_error", "failed to update password policy", reqID, claims.TenantID)
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to update password policy", reqID, tenantID)
 		return
 	}
-	if err := h.publishAudit(r.Context(), "audit.auth.password_policy_updated", reqID, claims.TenantID, map[string]any{
+	if err := h.publishAudit(r.Context(), "audit.auth.password_policy_updated", reqID, tenantID, map[string]any{
 		"min_length":       updated.MinLength,
 		"max_length":       updated.MaxLength,
 		"min_unique_chars": updated.MinUniqueChars,
 	}); err != nil {
-		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"policy": updated, "request_id": reqID})
@@ -1854,9 +1949,14 @@ func (h *Handler) handleUpdatePasswordPolicy(w http.ResponseWriter, r *http.Requ
 func (h *Handler) handleGetSecurityPolicy(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
-	policy, err := h.resolveSecurityPolicy(r.Context(), claims.TenantID)
+	tenantID, err := h.resolveTenantScope(r, claims, "auth.tenant.read", r.URL.Query().Get("tenant_id"))
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read security policy", reqID, claims.TenantID)
+		writeErr(w, http.StatusForbidden, "forbidden", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	policy, err := h.resolveSecurityPolicy(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read security policy", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"policy": policy, "request_id": reqID})
@@ -1865,9 +1965,14 @@ func (h *Handler) handleGetSecurityPolicy(w http.ResponseWriter, r *http.Request
 func (h *Handler) handleUpdateSecurityPolicy(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
-	existing, err := h.resolveSecurityPolicy(r.Context(), claims.TenantID)
+	tenantID, err := h.resolveTenantScope(r, claims, "auth.tenant.write", r.URL.Query().Get("tenant_id"))
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read current security policy", reqID, claims.TenantID)
+		writeErr(w, http.StatusForbidden, "forbidden", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	existing, err := h.resolveSecurityPolicy(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read current security policy", reqID, tenantID)
 		return
 	}
 	var req struct {
@@ -1876,7 +1981,7 @@ func (h *Handler) handleUpdateSecurityPolicy(w http.ResponseWriter, r *http.Requ
 		IdleTimeoutMinutes *int `json:"idle_timeout_minutes"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
 		return
 	}
 	policy := existing
@@ -1889,19 +1994,19 @@ func (h *Handler) handleUpdateSecurityPolicy(w http.ResponseWriter, r *http.Requ
 	if req.IdleTimeoutMinutes != nil {
 		policy.IdleTimeoutMinutes = *req.IdleTimeoutMinutes
 	}
-	policy = NormalizeSecurityPolicy(policy, claims.TenantID)
+	policy = NormalizeSecurityPolicy(policy, tenantID)
 	policy.UpdatedBy = claims.UserID
 	updated, err := h.store.UpsertSecurityPolicy(r.Context(), policy)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "store_error", "failed to update security policy", reqID, claims.TenantID)
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to update security policy", reqID, tenantID)
 		return
 	}
-	if err := h.publishAudit(r.Context(), "audit.auth.security_policy_updated", reqID, claims.TenantID, map[string]any{
+	if err := h.publishAudit(r.Context(), "audit.auth.security_policy_updated", reqID, tenantID, map[string]any{
 		"max_failed_attempts":  updated.MaxFailedAttempts,
 		"lockout_minutes":      updated.LockoutMinutes,
 		"idle_timeout_minutes": updated.IdleTimeoutMinutes,
 	}); err != nil {
-		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"policy": updated, "request_id": reqID})
@@ -2388,6 +2493,10 @@ func (h *Handler) handleRESTClientSecuritySummary(w http.ResponseWriter, r *http
 	writeJSON(w, http.StatusOK, map[string]any{"summary": summary, "request_id": reqID})
 }
 
+// resolveTenantScope is the tenant a user, role or policy request acts on:
+// the first non-empty candidate, else the caller's own. Another tenant is
+// open only to a platform administrator holding crossTenantPerm; the
+// refusal is audited as audit.auth.request_refused.
 func (h *Handler) resolveTenantScope(r *http.Request, claims *pkgauth.Claims, crossTenantPerm string, candidates ...string) (string, error) {
 	targetTenant := strings.TrimSpace(claims.TenantID)
 	for _, c := range candidates {
@@ -2402,8 +2511,9 @@ func (h *Handler) resolveTenantScope(r *http.Request, claims *pkgauth.Claims, cr
 	if targetTenant == "" {
 		return "", errors.New("tenant_id is required")
 	}
-	if !h.canCrossTenant(claims, crossTenantPerm) {
-		return "", errors.New("cross-tenant operation requires tenant management permission")
+	if !platformAdministrator(claims, crossTenantPerm) {
+		h.refuseRequest(r, claims, reasonNotPlatformAdmin, crossTenantPerm)
+		return "", errors.New("acting on another tenant requires an administrator of the platform (root) tenant")
 	}
 	return targetTenant, nil
 }
@@ -2493,22 +2603,6 @@ func (h *Handler) requireApprovedGovernanceRequest(
 	return nil
 }
 
-func (h *Handler) canCrossTenant(claims *pkgauth.Claims, perm string) bool {
-	if claims == nil {
-		return false
-	}
-	if strings.EqualFold(strings.TrimSpace(claims.Role), "super-admin") {
-		return true
-	}
-	if hasPermission(claims.Permissions, "auth.tenant.write") || hasPermission(claims.Permissions, "auth.tenant.read") {
-		return true
-	}
-	if strings.TrimSpace(perm) != "" && hasPermission(claims.Permissions, strings.TrimSpace(perm)) {
-		return true
-	}
-	return hasPermission(claims.Permissions, "*")
-}
-
 func (h *Handler) ensureTenantDefaults(ctx context.Context, tenantID string) error {
 	roleCatalog := []TenantRole{
 		{TenantID: tenantID, RoleName: "admin", Permissions: []string{"*"}},
@@ -2570,15 +2664,10 @@ func (h *Handler) createTenantAdminUser(
 		return "", errors.New("admin_username, admin_email and admin_password are required to create tenant admin")
 	}
 
-	if _, err := h.store.GetRolePermissions(ctx, tenantID, role); errors.Is(err, errNotFound) {
-		if err := h.store.CreateTenantRole(ctx, TenantRole{
-			TenantID:    tenantID,
-			RoleName:    role,
-			Permissions: []string{"*"},
-		}); err != nil {
-			return "", err
-		}
-	} else if err != nil {
+	if !tenantAdminRoles[role] {
+		return "", errors.New("admin_role must be admin or tenant-admin")
+	}
+	if err := h.requireTenantRole(ctx, tenantID, role); err != nil {
 		return "", err
 	}
 
@@ -2752,6 +2841,13 @@ func normalizeUserStatus(status string) string {
 	default:
 		return "inactive"
 	}
+}
+
+// isSelf reports whether the target user is the caller.
+func (h *Handler) isSelf(claims *pkgauth.Claims, tenantID, userID string) bool {
+	return claims != nil && strings.TrimSpace(claims.UserID) != "" &&
+		strings.EqualFold(strings.TrimSpace(claims.TenantID), strings.TrimSpace(tenantID)) &&
+		strings.TrimSpace(claims.UserID) == strings.TrimSpace(userID)
 }
 
 func isAdminRole(role string) bool {

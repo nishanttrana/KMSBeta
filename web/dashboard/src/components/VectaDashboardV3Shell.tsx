@@ -44,12 +44,12 @@ const BUILD_INFO: Array<[string, string]> = [
 import type { AuthSession } from "../lib/auth";
 import { canAccessModule, isSystemAdminSession } from "../config/moduleRegistry";
 import type { FeatureKey } from "../config/tabs";
-import { getAuthCLIStatus, listAuthTenants } from "../lib/authAdmin";
+import { getAuthCLIStatus } from "../lib/authAdmin";
 import { getGovernanceSystemState } from "../lib/governance";
 import { listKeysPaginated, listTags } from "../lib/keycore";
 import { getUnreadAlertCounts } from "../lib/reporting";
 import { usePopover } from "./v3/usePopover";
-import { B, Btn, Sel } from "./v3/legacyPrimitives";
+import { B, Btn } from "./v3/legacyPrimitives";
 import { isFipsModeEnabled, normalizeFipsModeValue, TabErrorBoundary } from "./v3/runtimeUtils";
 import { SidebarSubNav, SUB_PANES, type SubPane } from "./v3/SidebarSubNav";
 import { C } from "./v3/theme";
@@ -319,8 +319,6 @@ export default function VectaDashboardV3Shell(props: Props) {
   const [fipsMode, setFipsMode] = useState<"enabled" | "disabled">("disabled");
   const [reportedUnread, setReportedUnread] = useState(Number(unreadAlerts || 0));
   const [cliEnabled, setCliEnabled] = useState(false);
-  const [tenantOptions, setTenantOptions] = useState<Array<{ id: string; name: string; status?: string }>>([]);
-  const [tenantScope, setTenantScope] = useState(String(sessionBase?.tenantId || ""));
   // Counts sub-option clicks, so a module can leave a local view (an editor)
   // when its current sub-option is chosen again.
   const [subNavTick, setSubNavTick] = useState(0);
@@ -338,51 +336,16 @@ export default function VectaDashboardV3Shell(props: Props) {
   // The one module whose sub-options are listed in the sidebar.
   const [expandedTab, setExpandedTab] = useState(tab);
 
-  const session = useMemo(
-    () => ({
-      ...sessionBase,
-      tenantId: String(tenantScope || sessionBase?.tenantId || "").trim() || String(sessionBase?.tenantId || "")
-    }),
-    [sessionBase, tenantScope]
-  );
+  // Every request acts in the tenant the session signed in to: services
+  // refuse any other tenant for this token, so the top bar names the tenant
+  // rather than offering a switch (a platform administrator manages other
+  // tenants in Administration).
+  const session = sessionBase;
 
   useEffect(() => {
     const id = setInterval(() => setT(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
-
-  useEffect(() => {
-    setTenantScope(String(sessionBase?.tenantId || ""));
-  }, [sessionBase?.tenantId, sessionBase?.token]);
-
-  useEffect(() => {
-    if (!sessionBase?.token) {
-      setTenantOptions([]);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const items = await listAuthTenants(sessionBase);
-        if (cancelled) return;
-        const rows = (Array.isArray(items) ? items : [])
-          .map((item: any) => ({
-            id: String(item?.id || "").trim(),
-            name: String(item?.name || item?.id || "").trim(),
-            status: String(item?.status || "active").trim()
-          }))
-          .filter((item) => Boolean(item.id));
-        setTenantOptions(rows.length ? rows : [{ id: sessionBase.tenantId, name: sessionBase.tenantId, status: "active" }]);
-      } catch {
-        if (!cancelled) {
-          setTenantOptions([{ id: sessionBase.tenantId, name: sessionBase.tenantId, status: "active" }]);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [sessionBase]);
 
   useEffect(() => {
     let stop = false;
@@ -499,7 +462,7 @@ export default function VectaDashboardV3Shell(props: Props) {
   }, [tab, visibleTabIDs]);
 
   const subPanesFor = (id: string): SubPane[] =>
-    (SUB_PANES[id] || []).filter((item) => canSeeFeature(item.feature, enabledFeatures || new Set<FeatureKey>(), session));
+    (SUB_PANES[id] || []).filter((item) => (!item.platformOnly || isSystemAdminSession(session)) && canSeeFeature(item.feature, enabledFeatures || new Set<FeatureKey>(), session));
   const activePaneItems = subPanesFor(tab);
   const selectedSubRaw = String((subPaneSelection as any)[tab] || "");
   const activeSubPaneSelection = String(
@@ -865,18 +828,10 @@ export default function VectaDashboardV3Shell(props: Props) {
               {globalFipsEnabled ? "FIPS STRICT" : "STANDARD"}
             </B>
 
-            {/* Tenant selector */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <Sel w={160} aria-label="Tenant" title="Tenant" value={String(session?.tenantId || "")} onChange={(e) => setTenantScope(String(e.target.value || ""))} style={{ height: 28, borderRadius: 4, padding: "4px 24px 4px 8px", fontSize: 11.5 }}>
-                {(Array.isArray(tenantOptions) && tenantOptions.length ? tenantOptions : [{ id: String(session?.tenantId || ""), name: String(session?.tenantId || ""), status: "active" }])
-                  .filter((item: any) => Boolean(String(item?.id || "").trim()))
-                  .map((item: any) => (
-                    <option key={String(item.id)} value={String(item.id)}>
-                      {`${String(item.name || item.id)} (${String(item.id)})`}
-                    </option>
-                  ))}
-              </Sel>
-            </div>
+            {/* Signed-in tenant */}
+            <span data-testid="topbar-tenant" title="Tenant" style={{ height: 28, display: "inline-flex", alignItems: "center", padding: "0 10px", border: `1px solid ${C.border}`, borderRadius: 4, fontSize: 11.5, color: C.text, fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>
+              {String(session?.tenantId || "")}
+            </span>
 
             {/* CLI (system admin only) */}
             {isSystemAdminSession(session) && (

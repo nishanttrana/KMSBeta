@@ -99,17 +99,22 @@ export function canAccessModule(tabID: string, features: Set<FeatureKey>, sessio
     return true;
   }
 
-  // Optional explicit module-level RBAC overrides.
-  if (hasPermission(session, `ui.module.deny:${normalizedTab}`)) {
+  // Optional explicit module-level RBAC overrides. They match only when
+  // granted by name: "*" grants every permission, and read as a deny rule
+  // it hid every module from a tenant administrator outside root.
+  const granted = normalizePermissionTokens(session);
+  if (granted.has(`ui.module.deny:${normalizedTab}`)) {
     return false;
   }
-  const hasExplicitAllow = hasPermission(session, `ui.module.allow:${normalizedTab}`);
+  const hasExplicitAllow = granted.has(`ui.module.allow:${normalizedTab}`);
   if (hasExplicitAllow) {
     return true;
   }
 
+  // A tenant's own administrators manage its users (User Management);
+  // System and Tenant Administration stay with the platform (root) tenant.
   if (normalizedTab === "admin") {
-    return isSystemAdminSession(session);
+    return hasPermission(session, "auth.user.read");
   }
 
   return matchesFeatureNeed(TAB_FEATURES[normalizedTab], features);

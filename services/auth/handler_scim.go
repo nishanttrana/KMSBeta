@@ -409,6 +409,10 @@ func (h *Handler) handleUpdateSCIMSettings(w http.ResponseWriter, r *http.Reques
 		current.Enabled = *req.Enabled
 	}
 	if strings.TrimSpace(req.DefaultRole) != "" {
+		if err := h.requireTenantRole(r.Context(), targetTenant, req.DefaultRole); err != nil {
+			writeRoleError(w, err, reqID, targetTenant)
+			return
+		}
 		current.DefaultRole = strings.TrimSpace(req.DefaultRole)
 	}
 	if strings.TrimSpace(req.DefaultStatus) != "" {

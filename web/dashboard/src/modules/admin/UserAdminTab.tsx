@@ -14,7 +14,7 @@ export const UserAdminTab = ({ session, onToast }: AdminTabProps) => {
       <UserManagementSection model={model} />
       <GroupBindingsSection model={model} />
       <IdentityProvidersSection model={model} />
-      <ScimProvisioningSection session={session} onToast={onToast} tenantID={model.selectedTenant} />
+      <ScimProvisioningSection session={session} onToast={onToast} tenantID={model.selectedTenant} roles={model.roles} />
       <PoliciesSection model={model} />
     </div>
   );

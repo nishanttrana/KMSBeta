@@ -327,7 +327,7 @@ curl -sk -X PUT https://localhost/svc/auth/auth/security-policy \
 | Lab / development | 10 | 5 | 480 |
 | Compliance-driven (PCI-DSS) | 6 | 30 | 15 |
 
-> **Note:** Account lockouts do not affect refresh token validity. A locked user who still has a valid refresh token can continue to obtain new access tokens until the refresh token expires or is explicitly invalidated. To fully terminate a session, use the user status update API to set `status: locked` AND revoke refresh tokens.
+> **Note:** Account lockouts do not affect refresh token validity. A locked user who still has a valid refresh token can continue to obtain new access tokens until the refresh token expires or is explicitly invalidated. To fully terminate a session, use the user status update API to set `status: inactive` and revoke refresh tokens.
 
 ---
 
@@ -341,62 +341,72 @@ Users in Vecta KMS are scoped to a tenant. A user record in one tenant is comple
 |---|---|---|
 | `id` | string | Platform-generated unique ID. Immutable after creation. |
 | `tenant_id` | string | Tenant this user belongs to. |
-| `username` | string | Login name. Typically email format. Must be unique within the tenant. |
-| `email` | string | Email address. Used for password reset communications. |
-| `role` | enum | `admin`, `operator`, `viewer`, `auditor` |
-| `status` | enum | `active`, `locked`, `suspended` |
-| `must_change_password` | boolean | When `true`, the user is forced to set a new password on next login. |
+| `username` | string | Login name. Unique within the tenant. |
+| `email` | string | Email address. |
+| `role` | string | One of the roles the tenant defines (`GET /svc/auth/auth/roles`). |
+| `status` | enum | `active` or `inactive`. `disabled`, `locked` and `suspended` are accepted and stored as `inactive`. |
+| `must_change_password` | boolean | When `true`, the user must set a new password at the next sign-in. |
 
 ### 4.2 Roles and Permissions
 
-| Role | Capabilities |
-|---|---|
-| `admin` | Full platform control: create/delete users, create/delete tenants, manage all keys and certificates, configure policies, approve governance actions, manage SCIM and IdP settings, view all audit data. |
-| `operator` | Key and certificate operations: create, rotate, retire, and use keys; issue and renew certificates; manage interface configurations. Cannot create or delete users, cannot modify tenant settings. |
-| `viewer` | Read-only access to all non-sensitive configuration and operational state. Cannot perform any write or cryptographic operation. Suitable for monitoring dashboards and read-only observers. |
-| `auditor` | Read-only access to audit logs, compliance assessments, and posture findings. Cannot view raw key material. Focused on accountability and regulatory evidence functions. |
+A role is a named set of permissions **defined per tenant**. Every tenant is
+created with these six:
 
-> **Best practice:** Assign the `auditor` role to compliance officers and external assessors. Do not give auditors the `viewer` role — `viewer` exposes more operational configuration than an auditor typically needs. Reserve `admin` for a small number of named individuals who own the platform.
+| Role | Permissions |
+|---|---|
+| `admin`, `tenant-admin` | `*`: everything inside the tenant |
+| `audit`, `backup` | `auth.self.read`, `auth.user.read`, `auth.client.read` |
+| `readonly` | `auth.self.read`, `auth.user.read` |
+| `cli-user` | `auth.self.read` (the bootstrap CLI account) |
+
+A platform administrator adds or changes a tenant's roles with
+`POST /svc/auth/tenants/{id}/roles` and `PUT`/`DELETE
+/svc/auth/tenants/{id}/roles/{name}`. List a tenant's roles with:
+
+```bash
+curl -sS --cacert vecta-root-ca.pem "https://localhost/svc/auth/auth/roles" \
+  -H @"$HDR" | jq '.items[].role_name'
+```
+
+A user, a group binding, an identity-provider import, the SCIM default role
+and an identity provider's default role for users created at first sign-in
+must name a role the tenant defines; anything else is refused with
+`400 unknown_role` (13.14.0-beta). A user given an undefined role could not
+sign in.
+
+**Who administers what.** A tenant's own administrators (`*` in that tenant)
+manage that tenant's users, groups, identity providers and policies, in the
+console under `Administration → User Management`. Only an administrator of
+the platform (`root`) tenant who holds `auth.tenant.read` /
+`auth.tenant.write` lists tenants, creates, disables or deletes them, and
+acts on another tenant's users, roles and policies by naming it in
+`tenant_id`. `*` in any other tenant, or a role named `super-admin`, grants
+none of this. Nobody can change their own role or deactivate their own
+account (`409 self_change`); another administrator can.
 
 ### 4.3 Listing Users
 
 ```
-GET /svc/auth/auth/users?tenant_id=root
-Authorization: Bearer <access_token>
+GET /svc/auth/auth/users[?tenant_id=<tenant>]
 ```
 
-**cURL example:**
-
-```bash
-curl -sk "https://localhost/svc/auth/auth/users?tenant_id=root" \
-  -H "Authorization: Bearer ${TOKEN}" | jq .
-```
-
-**Response shape:**
+Without `tenant_id`, the caller's own tenant. Response:
 
 ```json
 {
-  "users": [
+  "items": [
     {
       "id": "usr_01HXYZ",
       "tenant_id": "root",
-      "username": "admin@example.com",
+      "username": "admin",
       "email": "admin@example.com",
-      "role": "admin",
+      "role": "tenant-admin",
       "status": "active",
-      "must_change_password": false
-    },
-    {
-      "id": "usr_02HABC",
-      "tenant_id": "root",
-      "username": "operator1@example.com",
-      "email": "operator1@example.com",
-      "role": "operator",
-      "status": "active",
-      "must_change_password": true
+      "must_change_password": false,
+      "created_at": "2026-10-11T09:51:45Z"
     }
   ],
-  "total": 2
+  "request_id": "req_..."
 }
 ```
 
@@ -404,109 +414,55 @@ curl -sk "https://localhost/svc/auth/auth/users?tenant_id=root" \
 
 ```
 POST /svc/auth/auth/users
-Authorization: Bearer <access_token>
 Content-Type: application/json
 
 {
-  "tenant_id": "root",
-  "username": "new.operator@example.com",
-  "email": "new.operator@example.com",
-  "password": "Temp@12345!",
-  "role": "operator",
+  "username": "alice",
+  "email": "alice@example.com",
+  "password": "<temporary password>",
+  "role": "readonly",
   "must_change_password": true
 }
 ```
 
-**cURL example:**
-
-```bash
-curl -sk -X POST https://localhost/svc/auth/auth/users \
-  -H "Authorization: Bearer ${TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "username": "new.operator@example.com",
-    "email": "new.operator@example.com",
-    "password": "Temp@12345!",
-    "role": "operator",
-    "must_change_password": true
-  }' | jq .
-```
-
-Setting `must_change_password: true` forces the user to set their own password immediately after first login. This is the recommended pattern when an administrator creates an account on someone else's behalf — the admin sets a temporary password and the user replaces it.
+Add `tenant_id` to create the user in another tenant (platform
+administrators only). The password must meet that tenant's password policy;
+a refusal names the rule it broke. Set `must_change_password: true` when
+you create an account for someone else.
 
 **User creation checklist:**
 
-- [ ] Username follows the tenant's naming convention
-- [ ] Role matches the minimum needed for the user's function
-- [ ] `must_change_password` is set to `true` for new accounts
-- [ ] The temporary password satisfies the current password policy
-- [ ] The new user is notified of their credentials through a secure channel
+- [ ] The role is the least the user needs
+- [ ] `must_change_password` is `true`
+- [ ] The temporary password reaches the user through a secure channel
 
 ### 4.5 Changing a User's Role
 
 ```
-PUT /svc/auth/auth/users/{id}/role
-Authorization: Bearer <access_token>
+PUT /svc/auth/auth/users/{id}/role[?tenant_id=<tenant>]
 Content-Type: application/json
 
-{
-  "role": "viewer"
-}
+{ "role": "audit" }
 ```
 
-**cURL example:**
+> **Warning:** A role change applies from the user's next token. An access token already issued keeps the old role until it expires.
 
-```bash
-USER_ID="usr_02HABC"
-
-curl -sk -X PUT "https://localhost/svc/auth/auth/users/${USER_ID}/role" \
-  -H "Authorization: Bearer ${TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{"role": "viewer"}' | jq .
-```
-
-> **Warning:** Role changes take effect on the user's next token issue. An existing access token will retain the old role until it expires (up to 15 minutes). If an immediate role downgrade is required, also revoke the user's active sessions.
-
-### 4.6 Locking and Unlocking a User
-
-Use the status endpoint to lock a user account (preventing login) or to unlock a previously locked account.
+### 4.6 Deactivating and Reactivating a User
 
 ```
-PUT /svc/auth/auth/users/{id}/status
-Authorization: Bearer <access_token>
+PUT /svc/auth/auth/users/{id}/status[?tenant_id=<tenant>]
 Content-Type: application/json
 
-{
-  "status": "locked"
-}
+{ "status": "inactive" }
 ```
 
 | Status value | Effect |
 |---|---|
-| `active` | User can log in normally. |
-| `locked` | User cannot log in. Existing sessions remain valid until token expiry. |
-| `suspended` | User cannot log in. Intended for longer-term administrative holds pending investigation or offboarding. |
+| `active` | The user can sign in. |
+| `inactive` | The user cannot sign in. |
 
-**Lock a user immediately:**
-
-```bash
-curl -sk -X PUT "https://localhost/svc/auth/auth/users/${USER_ID}/status" \
-  -H "Authorization: Bearer ${TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{"status": "locked"}'
-```
-
-**Unlock a user:**
-
-```bash
-curl -sk -X PUT "https://localhost/svc/auth/auth/users/${USER_ID}/status" \
-  -H "Authorization: Bearer ${TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{"status": "active"}'
-```
-
-> **Note:** Accounts locked by the automated lockout policy (exceeded `max_failed_attempts`) are unlocked in the same way — either by an admin changing status back to `active`, or automatically when the `lockout_minutes` duration elapses.
+Send `{"status": "active"}` to reactivate. An account locked by the
+failed-attempt policy unlocks when `lockout_minutes` has passed.
 
 ### 4.7 Admin-Initiated Password Reset
 
@@ -537,7 +493,7 @@ curl -sk -X POST "https://localhost/svc/auth/auth/users/${USER_ID}/reset-passwor
 
 **Incident response password reset flow:**
 
-1. Lock the account immediately: `PUT /svc/auth/auth/users/{id}/status` → `{"status": "locked"}`
+1. Lock the account immediately: `PUT /svc/auth/auth/users/{id}/status` → `{"status": "inactive"}`
 2. Investigate the audit log for the account's recent activity.
 3. When satisfied the account is safe, reset the password: `POST /svc/auth/auth/users/{id}/reset-password`
 4. Restore account to active: `PUT /svc/auth/auth/users/{id}/status` → `{"status": "active"}`
@@ -546,21 +502,17 @@ curl -sk -X POST "https://localhost/svc/auth/auth/users/${USER_ID}/reset-passwor
 
 ### 4.8 Dashboard: User Management
 
-**Navigation path:** `Admin → User Admin → Users`
+**Navigation path:** `Administration → User Management`
 
-The Users pane shows:
-- A searchable table of all users in the current tenant
-- Status indicators (active/locked/suspended) with color coding
-- Role badges
-- Last login time
-- Quick actions: Edit Role, Lock/Unlock, Reset Password
-
-**Creating a user through the dashboard:**
-1. Click `New User` in the top-right corner of the Users pane.
-2. Fill in username, email, role, and a temporary password.
-3. Check `Force password change on first login`.
-4. Click `Create`.
-5. Securely communicate credentials to the new user.
+- The users of the tenant, with each one's role and status as stored. Role
+  and status are changed in the row; your own row can't be changed.
+- Create User, Reset Password, Group Role Bindings, identity providers,
+  SCIM and the tenant's authentication policies.
+- Role selectors list only the tenant's own roles. A user holding a role
+  the tenant no longer defines shows it as "(not defined)".
+- A platform (`root`) administrator also gets a Tenant selector here. A
+  tenant's own administrator sees only `User Management` under
+  Administration.
 
 ---
 
@@ -581,9 +533,9 @@ Multi-tenancy is a first-class concept in Vecta KMS. Each tenant is a fully isol
 
 | Field | Type | Values / Notes |
 |---|---|---|
-| `id` | string | Platform-generated unique ID. Immutable. |
-| `name` | string | Human-readable tenant name. Used in the dashboard. |
-| `status` | enum | `active`, `disabled`, `suspended` |
+| `id` | string | Chosen at creation: 1–64 letters, digits, `-` or `_`. Immutable. |
+| `name` | string | Human-readable tenant name. |
+| `status` | enum | `active` or `disabled`. A tenant is disabled only through `POST /tenants/{id}/disable`. |
 | `created_at` | timestamp | ISO 8601 creation timestamp. |
 
 ### 5.2 Tenant Isolation Guarantees
@@ -599,112 +551,76 @@ Multi-tenancy is a first-class concept in Vecta KMS. Each tenant is a fully isol
 
 ### 5.3 Listing Tenants
 
-Only users with the `admin` role can list tenants. This operation is scoped to the platform level, not a specific tenant.
+Only an administrator of the platform (`root`) tenant holding
+`auth.tenant.read` can list tenants; anyone else gets `403` with reason
+`not_platform_administrator`, audited as `audit.auth.request_refused`.
 
 ```
 GET /svc/auth/tenants
-Authorization: Bearer <access_token>
 ```
 
-**cURL example:**
-
-```bash
-curl -sk https://localhost/svc/auth/tenants \
-  -H "Authorization: Bearer ${TOKEN}" | jq .
-```
-
-**Response:**
-
-```json
-{
-  "tenants": [
-    {
-      "id": "root",
-      "name": "Root Tenant",
-      "status": "active",
-      "created_at": "2025-01-15T09:00:00Z"
-    },
-    {
-      "id": "tenant_finance",
-      "name": "Finance Operations",
-      "status": "active",
-      "created_at": "2025-03-01T14:30:00Z"
-    }
-  ]
-}
-```
+Response: `items[]` of `id`, `name`, `status`, `created_at`.
 
 ### 5.4 Creating a Tenant
 
 ```
 POST /svc/auth/tenants
-Authorization: Bearer <access_token>
 Content-Type: application/json
 
 {
-  "name": "Engineering Platform"
+  "id": "finance",
+  "name": "Finance Operations",
+  "admin_username": "owner",
+  "admin_email": "owner@example.com",
+  "admin_password": "<temporary password>",
+  "admin_role": "tenant-admin",
+  "admin_must_change_password": true
 }
 ```
 
-**cURL example:**
-
-```bash
-curl -sk -X POST https://localhost/svc/auth/tenants \
-  -H "Authorization: Bearer ${TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Engineering Platform"}' | jq .
-```
-
-After creation, the response includes the new tenant's ID. Use this ID when creating users, configuring IdPs, and calling any tenant-scoped API.
+The tenant is created with its six default roles (4.2) and, when the
+`admin_*` fields are given, its first administrator (`admin_role` is
+`admin` or `tenant-admin`). Everything is checked before anything is
+written: an invalid ID, a duplicate (`409 tenant_exists`), an admin
+password that fails the default policy, or another role is refused with a
+message saying which, and nothing is left behind, so the corrected request
+can be sent again with the same ID.
 
 **Post-creation checklist:**
-- [ ] Create at least one `admin` user in the new tenant
-- [ ] Configure the password and security policy
-- [ ] If using SSO: configure the identity provider for the tenant
-- [ ] If using SCIM: configure SCIM provisioning and issue the token to the IdP
-- [ ] Create initial keys if the tenant team needs them immediately
-- [ ] Confirm the Audit Log shows the tenant creation event
+- [ ] The first administrator signs in to the new tenant and changes the password
+- [ ] Set the tenant's password and security policy (4.2 for who can)
+- [ ] If using SSO or SCIM: configure them for the tenant
+- [ ] Confirm the Audit Log shows `audit.auth.tenant_created`
 
 ### 5.5 Updating a Tenant
 
 ```
 PUT /svc/auth/tenants/{id}
-Authorization: Bearer <access_token>
 Content-Type: application/json
 
-{
-  "name": "Engineering Platform - Production"
-}
+{ "name": "Finance Operations - Production" }
 ```
 
-**cURL example:**
-
-```bash
-TENANT_ID="tenant_engineering"
-
-curl -sk -X PUT "https://localhost/svc/auth/tenants/${TENANT_ID}" \
-  -H "Authorization: Bearer ${TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Engineering Platform - Production"}' | jq .
-```
+Only the fields sent change. `{"status": "active"}` re-enables a disabled
+tenant and keeps its name.
 
 ### 5.6 Disabling a Tenant
 
-Disabling a tenant prevents all users in that tenant from logging in and suspends all service-to-service calls that carry tenant-scoped tokens. This is a significant operational action and requires governance approval.
+Disabling a tenant stops its users from signing in. Data is kept. The
+platform (`root`) tenant, and the tenant your own session belongs to, can't
+be disabled.
 
 ```
 POST /svc/auth/tenants/{id}/disable
-Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{ "governance_approval_id": "<approved request id>" }
 ```
 
-> **Warning:** Disabling a tenant does not delete any data. Keys, certificates, audit logs, and configuration are preserved. However, all users in the tenant will be unable to authenticate until the tenant is re-enabled. Applications using that tenant's API clients will also lose access.
-
-The governance approval flow for tenant disable:
-1. Admin calls `POST /svc/auth/tenants/{id}/disable`.
-2. A governance approval request is created.
-3. A second authorized admin reviews and approves the request in `Governance → Approval Requests`.
-4. The platform executes the disable action.
-5. An audit event is emitted recording both the requester and approver.
+When the platform governance policy names `tenant.disable`, the request
+must carry the ID of an approved governance request for it; otherwise
+`governance_approval_id` may be left out. Active sessions or service links
+block the disable (`409`).
 
 ### 5.7 Deleting a Tenant
 
@@ -714,76 +630,47 @@ Tenant deletion is irreversible and requires both a governance approval and a su
 
 ```
 GET /svc/auth/tenants/{id}/delete-readiness
-Authorization: Bearer <access_token>
 ```
 
-**cURL example:**
-
-```bash
-curl -sk "https://localhost/svc/auth/tenants/${TENANT_ID}/delete-readiness" \
-  -H "Authorization: Bearer ${TOKEN}" | jq .
-```
-
-**Response:**
-
-```json
-{
-  "tenant_id": "tenant_engineering",
-  "ready_to_delete": false,
-  "blockers": [
-    {
-      "type": "active_sessions",
-      "count": 3,
-      "description": "3 active user sessions exist. Sessions must be terminated before deletion."
-    },
-    {
-      "type": "service_links",
-      "count": 2,
-      "description": "2 registered API clients still reference this tenant."
-    },
-    {
-      "type": "active_keys",
-      "count": 47,
-      "description": "47 active keys would be permanently deleted. Back up any key material needed for future decryption."
-    }
-  ]
-}
-```
-
-The readiness check evaluates:
-- **Active sessions:** Users currently logged in
-- **Service links:** Registered API clients and SCIM connectors
-- **Active keys:** Keys that would be permanently destroyed
-- **Active certificates:** Unexpired certificates that would become invalid
-- **Pending governance requests:** Approval requests still in flight for this tenant
+Response `readiness`: `tenant_id`, `tenant_status`, `can_disable`,
+`can_delete`, `active_ui_session_count`, `active_service_link_count`,
+`requires_governance_approve`, and `blockers[]` (`code`, `label`, `count`,
+`remediation`, `details`). A tenant is deleted only once it is disabled
+and has no blockers.
 
 #### Step 2: Resolve All Blockers
 
-For each blocker:
-- **Active sessions:** Wait for natural expiry or force-expire refresh tokens.
-- **Service links:** Deregister or revoke API clients. Disable SCIM.
-- **Active keys:** Confirm with the application team that no future decryption operations are needed. Back up exported key material if required.
+Each blocker's `remediation` says what to do: end the sessions, revoke the
+API clients or disable SCIM.
 
-#### Step 3: Submit Deletion Request
+#### Step 3: Delete
 
 ```
-DELETE /svc/auth/tenants/{id}
-Authorization: Bearer <access_token>
+DELETE /svc/auth/tenants/{id}?confirm_tenant_id={id}&force=true[&governance_approval_id=<id>]
 ```
 
-This creates a governance approval request. After approval, the platform permanently destroys all tenant data.
+The governance approval ID is required when the platform governance policy
+names `tenant.delete`. Deletion removes the tenant's rows from every table
+and can't be undone.
 
-> **Warning:** Tenant deletion is permanent and irreversible. Key material stored exclusively in Vecta KMS for this tenant will be permanently lost. Ensure a backup exists for any data encrypted under tenant keys before proceeding.
+> **Warning:** Key material held only in Vecta KMS for this tenant is lost. Back up anything encrypted under the tenant's keys first.
 
 ### 5.8 Dashboard: Tenant Management
 
-**Navigation path:** `Admin → Tenant Admin`
+**Navigation path:** `Administration → Tenant Administration` (platform
+administrators only)
 
-The Tenant Admin pane shows:
-- All tenants with status indicators
-- Creation timestamps
-- Quick actions: Edit Name, Disable, Delete Readiness Check
-- A `New Tenant` button in the top-right
+- **Overview:** every tenant, its users and status; `+ Create Tenant`.
+- **Security:** the chosen tenant's password and lockout policy. Saving
+  changes that tenant's policy, not your own.
+- **Backup:** the chosen tenant's backups.
+- **Lifecycle:** readiness, disable, re-enable and delete. Not offered for
+  the platform tenant or your own.
+
+A tenant's HSM (its root of trust) is set by that tenant's administrators in
+the HSM module. The top bar shows the tenant you are signed in to: every
+request acts in that tenant, so to work inside another tenant, sign in to
+it.
 
 ---
 
@@ -967,7 +854,7 @@ Content-Type: application/json
   "tenant_id": "root",
   "provider": "ad",
   "group_filter": "CN=KMS-Users,OU=Groups,DC=corp,DC=example,DC=com",
-  "default_role": "operator",
+  "default_role": "readonly",
   "default_status": "active"
 }
 ```
@@ -982,7 +869,7 @@ curl -sk -X POST https://localhost/svc/auth/auth/identity/import/users \
     "tenant_id": "root",
     "provider": "ad",
     "group_filter": "CN=KMS-Users,OU=Groups,DC=corp,DC=example,DC=com",
-    "default_role": "operator",
+    "default_role": "readonly",
     "default_status": "active"
   }' | jq .
 ```
@@ -999,19 +886,19 @@ Authorization: Bearer <access_token>
 Content-Type: application/json
 
 {
-  "role_name": "operator"
+  "role_name": "audit"
 }
 ```
 
-**Example: Map the AD group "KMS-Operators" to the operator role:**
+**Example: map the AD group "KMS-Compliance" to the `audit` role:**
 
 ```bash
-GROUP_ID="CN=KMS-Operators,OU=Groups,DC=corp,DC=example,DC=com"
+GROUP_ID="CN=KMS-Compliance,OU=Groups,DC=corp,DC=example,DC=com"
 
 curl -sk -X PUT "https://localhost/svc/auth/auth/groups/${GROUP_ID}/role" \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
-  -d '{"role_name": "operator"}' | jq .
+  -d '{"role_name": "audit"}' | jq .
 ```
 
 **Group-to-role mapping table example:**
@@ -1019,9 +906,11 @@ curl -sk -X PUT "https://localhost/svc/auth/auth/groups/${GROUP_ID}/role" \
 | Directory Group | KMS Role |
 |---|---|
 | `KMS-Platform-Admins` | `admin` |
-| `KMS-Key-Operators` | `operator` |
-| `KMS-Readonly-Observers` | `viewer` |
-| `KMS-Compliance-Team` | `auditor` |
+| `KMS-Readonly-Observers` | `readonly` |
+| `KMS-Compliance-Team` | `audit` |
+
+The role must be one the tenant defines (`GET /svc/auth/auth/roles`);
+another is refused with `400 unknown_role`.
 
 > **Best practice:** Define group-to-role mappings before importing users or enabling SCIM group push. This way, users arrive in KMS with the correct role automatically rather than landing in a default role that then needs to be adjusted.
 
@@ -1039,7 +928,7 @@ SCIM (System for Cross-domain Identity Management) allows an external identity p
 | `token_prefix` | string | A label identifying the current SCIM token generation (e.g., `scim_2025_03`). |
 | `default_role` | enum | Role assigned to newly provisioned users who are not covered by a group-role mapping. |
 | `default_status` | enum | Initial status for provisioned users: `active` or a holding state. |
-| `deprovision_mode` | enum | `disable` — set user status to locked when deprovisioned. `delete` — permanently remove the user record. |
+| `deprovision_mode` | enum | `disable` — set user status to `inactive` when deprovisioned. `delete` — permanently remove the user record. |
 | `group_role_mappings_enabled` | boolean | Whether directory group membership drives KMS role assignment. |
 
 ### 7.2 Getting SCIM Settings
@@ -1066,7 +955,7 @@ Content-Type: application/json
 {
   "tenant_id": "root",
   "enabled": true,
-  "default_role": "operator",
+  "default_role": "readonly",
   "default_status": "active",
   "deprovision_mode": "disable",
   "group_role_mappings_enabled": true
@@ -1082,7 +971,7 @@ curl -sk -X PUT https://localhost/svc/auth/auth/scim/settings \
   -d '{
     "tenant_id": "root",
     "enabled": true,
-    "default_role": "operator",
+    "default_role": "readonly",
     "default_status": "active",
     "deprovision_mode": "disable",
     "group_role_mappings_enabled": true

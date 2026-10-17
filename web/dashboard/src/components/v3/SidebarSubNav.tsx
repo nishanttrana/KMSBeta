@@ -27,7 +27,8 @@ import {
 } from "lucide-react";
 import { C } from "./theme";
 
-export type SubPane = { id: string; label: string; hint: string; icon: LucideIcon; feature?: string };
+// platformOnly views belong to the platform (root) tenant's administrators.
+export type SubPane = { id: string; label: string; hint: string; icon: LucideIcon; feature?: string; platformOnly?: boolean };
 
 // A module's views. They are listed in the sidebar under the module's name,
 // never in a second column or a tab strip of the shell (owner directive,
@@ -86,8 +87,8 @@ export const SUB_PANES: Record<string, SubPane[]> = {
     { id: "streams", label: "Event streaming", hint: "Audit events to a SIEM or webhook", icon: Radio }
   ],
   admin: [
-    { id: "system", label: "System Administration", hint: "Platform health, runtime hardening, FIPS and governance settings", icon: Settings },
-    { id: "tenant", label: "Tenant Administration", hint: "Tenant lifecycle disable/delete workflow", icon: Building2 },
+    { id: "system", label: "System Administration", hint: "Platform health, runtime hardening, FIPS and governance settings", icon: Settings, platformOnly: true },
+    { id: "tenant", label: "Tenant Administration", hint: "Tenants, their policies, backups and lifecycle", icon: Building2, platformOnly: true },
     { id: "users", label: "User Management", hint: "User and group administration with role assignments", icon: Users }
   ]
 };

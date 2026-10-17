@@ -6,18 +6,13 @@ import {
   getAuthPasswordPolicy,
   getAuthSecurityPolicy,
   getAuthTenantDeleteReadiness,
-  getAuthCLIHSMConfig,
-  listAuthCLIHSMPartitions,
   listAuthTenants,
   listAuthUsers,
   updateAuthPasswordPolicy,
   updateAuthSecurityPolicy,
   updateAuthTenant,
-  upsertAuthCLIHSMConfig,
   type AuthTenant,
   type AuthUser,
-  type CLIHSMPartitionSlot,
-  type HSMProviderConfig,
   type PasswordPolicy,
   type SecurityPolicy,
   type TenantDeleteReadiness
@@ -31,14 +26,18 @@ import {
   listGovernanceBackups,
   type GovernanceBackupJob
 } from "../../lib/governance";
-import { B, Btn, Card, Chk, FG, Inp, Modal, Row2, Row3, Sel, Stat } from "../../components/v3/legacyPrimitives";
+import { B, Btn, Card, Chk, FG, Inp, Modal, Row2, Sel, Stat } from "../../components/v3/legacyPrimitives";
 import { errMsg } from "../../components/v3/runtimeUtils";
 import { C } from "../../components/v3/theme";
 import type { AdminTabProps } from "./types";
 import { ExposurePanel } from "./ExposurePanel";
-import type { AuthSession } from "../../lib/auth";
 
-const INTERNAL_TABS = ["Overview", "Security", "HSM", "Backup", "Lifecycle"] as const;
+// A tenant's HSM (its root of trust) is set by that tenant's administrators
+// in the HSM module.
+const INTERNAL_TABS = ["Overview", "Security", "Backup", "Lifecycle"] as const;
+
+// The platform tenant can't be disabled or deleted (auth refuses it).
+const PLATFORM_TENANT = "root";
 type InternalTab = (typeof INTERNAL_TABS)[number];
 
 const readinessDefaults = (tenantID: string): TenantDeleteReadiness => ({
@@ -70,19 +69,6 @@ const defaultSecurityPolicy = (): SecurityPolicy => ({
   idle_timeout_minutes: 30
 });
 
-const defaultHSMConfig = (): HSMProviderConfig => ({
-  tenant_id: "",
-  provider_name: "",
-  integration_service: "",
-  library_path: "",
-  slot_id: "",
-  partition_label: "",
-  token_label: "",
-  pin_env_var: "",
-  read_only: false,
-  enabled: false
-});
-
 function relativeTime(iso: string): string {
   if (!iso) return "—";
   const diff = Date.now() - new Date(iso).getTime();
@@ -112,46 +98,24 @@ function saveBackupFile(file: { file_name?: string; content_type?: string; conte
   URL.revokeObjectURL(url);
 }
 
-const INHERIT_KEY="vecta_sys_inheritance_policy";
-const readInheritancePolicy=():Record<string,string>=>{
-  try{return JSON.parse(localStorage.getItem(INHERIT_KEY)||"{}")||{};}catch{return {};}
-};
-
-const InheritBanner=({section,label}:{section:string;label:string})=>{
-  const pol=readInheritancePolicy();
-  const isWide=(pol[section]||"kms_wide")==="kms_wide";
-  if(!isWide) return null;
-  return(
-    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,padding:"10px 14px",background:`${C.amber}14`,borderRadius:4,border:`1px solid ${C.amber}44`}}>
-      <span style={{fontSize:16}}>&#x1F512;</span>
-      <div style={{flex:1}}>
-        <div style={{fontSize:12,fontWeight:600,color:C.text}}>KMS-Wide Enforcement Active</div>
-        <div style={{fontSize:10,color:C.dim,marginTop:2}}>{label} settings are enforced uniformly by System Administration. Contact your system administrator to request changes.</div>
-      </div>
-    </div>
-  );
-};
-
-const isSectionLocked=(section:string):boolean=>{
-  const pol=readInheritancePolicy();
-  return (pol[section]||"kms_wide")==="kms_wide";
-};
-
 export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
   const [activeTab, setActiveTab] = useState<InternalTab>("Overview");
   const [tenants, setTenants] = useState<AuthTenant[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [loading, setLoading] = useState(false);
+  // Why the tenant list could not be read: only a platform (root)
+  // administrator may read it.
+  const [tenantsError, setTenantsError] = useState("");
 
   // Overview state
   const [tenantUsers, setTenantUsers] = useState<AuthUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState("");
 
   // Create tenant modal
   const [createOpen, setCreateOpen] = useState(false);
   const [createTenantID, setCreateTenantID] = useState("");
   const [createTenantName, setCreateTenantName] = useState("");
-  const [createTenantStatus, setCreateTenantStatus] = useState("active");
   const [createAdminUsername, setCreateAdminUsername] = useState("admin");
   const [createAdminEmail, setCreateAdminEmail] = useState("");
   const [createAdminPassword, setCreateAdminPassword] = useState("");
@@ -163,13 +127,8 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
   const [passwordPolicy, setPasswordPolicy] = useState<PasswordPolicy>(defaultPasswordPolicy());
   const [securityPolicy, setSecurityPolicy] = useState<SecurityPolicy>(defaultSecurityPolicy());
   const [policyLoading, setPolicyLoading] = useState(false);
+  const [policyError, setPolicyError] = useState("");
   const [policySaving, setPolicySaving] = useState(false);
-
-  // HSM state
-  const [hsmConfig, setHsmConfig] = useState<HSMProviderConfig>(defaultHSMConfig());
-  const [hsmPartitions, setHsmPartitions] = useState<CLIHSMPartitionSlot[]>([]);
-  const [hsmLoading, setHsmLoading] = useState(false);
-  const [hsmSaving, setHsmSaving] = useState(false);
 
   // Backup state
   const [backups, setBackups] = useState<GovernanceBackupJob[]>([]);
@@ -179,6 +138,7 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
   // Lifecycle state
   const [readiness, setReadiness] = useState<TenantDeleteReadiness>(readinessDefaults(""));
   const [readinessLoading, setReadinessLoading] = useState(false);
+  const [readinessError, setReadinessError] = useState("");
   const [disableBusy, setDisableBusy] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [disableApprovalID, setDisableApprovalID] = useState("");
@@ -186,12 +146,6 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
   const [enableBusy, setEnableBusy] = useState(false);
 
   const selectedTenant = useMemo(() => tenants.find((t) => t.id === selectedTenantId), [tenants, selectedTenantId]);
-
-  // Create a tenant-scoped session for policy/HSM calls
-  const tenantSession = useMemo<AuthSession | null>(() => {
-    if (!session?.token || !selectedTenantId) return null;
-    return { ...session, tenantId: selectedTenantId } as AuthSession;
-  }, [session, selectedTenantId]);
 
   // ── Load tenants ──
   const loadTenants = useCallback(async () => {
@@ -201,12 +155,11 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
       const items = await listAuthTenants(session);
       const next = Array.isArray(items) ? items : [];
       setTenants(next);
-      if (!next.some((t) => t.id === selectedTenantId)) {
-        setSelectedTenantId(next[0]?.id || "");
-      }
-    } catch (e) { onToast(`Tenant list failed: ${errMsg(e)}`); }
+      setTenantsError("");
+      setSelectedTenantId((current) => (next.some((t) => t.id === current) ? current : next[0]?.id || ""));
+    } catch (e) { setTenants([]); setTenantsError(errMsg(e)); }
     finally { setLoading(false); }
-  }, [onToast, selectedTenantId, session]);
+  }, [session]);
 
   useEffect(() => { void loadTenants(); }, [loadTenants]);
 
@@ -217,7 +170,8 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
     try {
       const items = await listAuthUsers(session, selectedTenantId);
       setTenantUsers(Array.isArray(items) ? items : []);
-    } catch { setTenantUsers([]); }
+      setUsersError("");
+    } catch (e) { setTenantUsers([]); setUsersError(errMsg(e)); }
     finally { setUsersLoading(false); }
   }, [session, selectedTenantId]);
 
@@ -225,50 +179,34 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
 
   // ── Load policies ──
   const loadPolicies = useCallback(async () => {
-    if (!tenantSession) return;
+    if (!session?.token || !selectedTenantId) return;
     setPolicyLoading(true);
     try {
       const [pp, sp] = await Promise.all([
-        getAuthPasswordPolicy(tenantSession),
-        getAuthSecurityPolicy(tenantSession)
+        getAuthPasswordPolicy(session, selectedTenantId),
+        getAuthSecurityPolicy(session, selectedTenantId)
       ]);
       setPasswordPolicy(pp || defaultPasswordPolicy());
       setSecurityPolicy(sp || defaultSecurityPolicy());
-    } catch { /* keep defaults */ }
+      setPolicyError("");
+    } catch (e) { setPolicyError(errMsg(e)); }
     finally { setPolicyLoading(false); }
-  }, [tenantSession]);
+  }, [session, selectedTenantId]);
 
   useEffect(() => { if (activeTab === "Security") void loadPolicies(); }, [activeTab, loadPolicies]);
 
-  // ── Load HSM config ──
-  const loadHSM = useCallback(async () => {
-    if (!tenantSession) return;
-    setHsmLoading(true);
-    try {
-      const cfg = await getAuthCLIHSMConfig(tenantSession);
-      setHsmConfig(cfg || defaultHSMConfig());
-      if (cfg?.library_path) {
-        try {
-          const parts = await listAuthCLIHSMPartitions(tenantSession, cfg.library_path);
-          setHsmPartitions(Array.isArray(parts?.items) ? parts.items : []);
-        } catch { setHsmPartitions([]); }
-      }
-    } catch { setHsmConfig(defaultHSMConfig()); }
-    finally { setHsmLoading(false); }
-  }, [tenantSession]);
-
-  useEffect(() => { if (activeTab === "HSM") void loadHSM(); }, [activeTab, loadHSM]);
-
   // ── Load backups ──
+  // Backups are a root administrator's (governance system administration),
+  // so they are read and made with the signed-in session, naming the tenant.
   const loadBackups = useCallback(async () => {
-    if (!tenantSession) return;
+    if (!session?.token) return;
     setBackupsLoading(true);
     try {
-      const items = await listGovernanceBackups(tenantSession, { scope: "tenant", limit: 50 });
+      const items = await listGovernanceBackups(session, { scope: "tenant", limit: 200 });
       setBackups(Array.isArray(items) ? items : []);
-    } catch { setBackups([]); }
+    } catch (e) { setBackups([]); onToast(`Backups unavailable: ${errMsg(e)}`); }
     finally { setBackupsLoading(false); }
-  }, [tenantSession]);
+  }, [session, onToast]);
 
   useEffect(() => { if (activeTab === "Backup") void loadBackups(); }, [activeTab, loadBackups]);
 
@@ -279,7 +217,8 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
     try {
       const out = await getAuthTenantDeleteReadiness(session, selectedTenantId);
       setReadiness(out || readinessDefaults(selectedTenantId));
-    } catch { setReadiness(readinessDefaults(selectedTenantId)); }
+      setReadinessError("");
+    } catch (e) { setReadiness(readinessDefaults(selectedTenantId)); setReadinessError(errMsg(e)); }
     finally { setReadinessLoading(false); }
   }, [session, selectedTenantId]);
 
@@ -295,7 +234,6 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
       await createAuthTenant(session, {
         id: createTenantID.trim(),
         name: createTenantName.trim(),
-        status: createTenantStatus,
         admin_username: createAdminUsername.trim(),
         admin_email: createAdminEmail.trim(),
         admin_password: createAdminPassword,
@@ -309,40 +247,30 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
       await loadTenants();
     } catch (e) { onToast(`Create failed: ${errMsg(e)}`); }
     finally { setCreateBusy(false); }
-  }, [createAdminEmail, createAdminMustChange, createAdminPassword, createAdminRole, createAdminUsername, createTenantID, createTenantName, createTenantStatus, loadTenants, onToast, session]);
+  }, [createAdminEmail, createAdminMustChange, createAdminPassword, createAdminRole, createAdminUsername, createTenantID, createTenantName, loadTenants, onToast, session]);
 
   const savePolicies = useCallback(async () => {
-    if (!tenantSession) return;
+    if (!session?.token || !selectedTenantId) return;
     setPolicySaving(true);
     try {
-      await Promise.all([
-        updateAuthPasswordPolicy(tenantSession, passwordPolicy),
-        updateAuthSecurityPolicy(tenantSession, securityPolicy)
+      const [pp, sp] = await Promise.all([
+        updateAuthPasswordPolicy(session, passwordPolicy, selectedTenantId),
+        updateAuthSecurityPolicy(session, securityPolicy, selectedTenantId)
       ]);
-      onToast("Security policies saved.");
+      if (pp) setPasswordPolicy(pp);
+      if (sp) setSecurityPolicy(sp);
+      onToast(`Security policies saved for ${selectedTenantId}.`);
     } catch (e) { onToast(`Save failed: ${errMsg(e)}`); }
     finally { setPolicySaving(false); }
-  }, [tenantSession, passwordPolicy, securityPolicy, onToast]);
-
-  const saveHSM = useCallback(async () => {
-    if (!tenantSession) return;
-    setHsmSaving(true);
-    try {
-      const out = await upsertAuthCLIHSMConfig(tenantSession, hsmConfig);
-      setHsmConfig(out || hsmConfig);
-      onToast("HSM configuration saved.");
-    } catch (e) { onToast(`HSM save failed: ${errMsg(e)}`); }
-    finally { setHsmSaving(false); }
-  }, [tenantSession, hsmConfig, onToast]);
+  }, [session, selectedTenantId, passwordPolicy, securityPolicy, onToast]);
 
   const handleCreateBackup = useCallback(async () => {
-    if (!tenantSession || !selectedTenantId) return;
+    if (!session?.token || !selectedTenantId) return;
     setBackupCreating(true);
     try {
-      const { job, key_file } = await createGovernanceBackup(tenantSession, {
+      const { job, key_file } = await createGovernanceBackup(session, {
         scope: "tenant",
-        target_tenant_id: selectedTenantId,
-        created_by: session?.username || "admin"
+        target_tenant_id: selectedTenantId
       });
       if (key_file) saveBackupFile(key_file, `backup-${job.id}.key.json`, "application/json");
       onToast(governanceBackupKeyRetained(job)
@@ -351,32 +279,32 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
       await loadBackups();
     } catch (e) { onToast(`Backup failed: ${errMsg(e)}`); }
     finally { setBackupCreating(false); }
-  }, [tenantSession, selectedTenantId, session?.username, onToast, loadBackups]);
+  }, [session, selectedTenantId, onToast, loadBackups]);
 
   const handleDownloadArtifact = useCallback(async (backupId: string) => {
-    if (!tenantSession) return;
+    if (!session?.token) return;
     try {
-      const art = await downloadGovernanceBackupArtifact(tenantSession, backupId);
+      const art = await downloadGovernanceBackupArtifact(session, backupId);
       saveBackupFile(art, `backup-${backupId}.vbk`, "application/octet-stream");
     } catch (e) { onToast(`Download failed: ${errMsg(e)}`); }
-  }, [tenantSession, onToast]);
+  }, [session, onToast]);
 
   const handleDownloadKey = useCallback(async (backupId: string) => {
-    if (!tenantSession) return;
+    if (!session?.token) return;
     try {
-      const key = await downloadGovernanceBackupKey(tenantSession, backupId);
+      const key = await downloadGovernanceBackupKey(session, backupId);
       saveBackupFile(key, `backup-${backupId}.key.json`, "application/json");
     } catch (e) { onToast(`Key download failed: ${errMsg(e)}`); }
-  }, [tenantSession, onToast]);
+  }, [session, onToast]);
 
   const handleDeleteBackup = useCallback(async (backupId: string) => {
-    if (!tenantSession) return;
+    if (!session?.token) return;
     try {
-      await deleteGovernanceBackup(tenantSession, backupId, session?.username || "admin");
+      await deleteGovernanceBackup(session, backupId);
       onToast("Backup deleted.");
       await loadBackups();
     } catch (e) { onToast(`Delete failed: ${errMsg(e)}`); }
-  }, [tenantSession, session?.username, onToast, loadBackups]);
+  }, [session, onToast, loadBackups]);
 
   const handleDisable = useCallback(async () => {
     if (!session?.token || !selectedTenantId) return;
@@ -418,7 +346,10 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
   const activeTenants = tenants.filter((t) => t.status === "active").length;
   const disabledTenants = tenants.filter((t) => t.status === "disabled").length;
   const blockerRows = useMemo(() => (Array.isArray(readiness.blockers) ? readiness.blockers : []), [readiness.blockers]);
-  const tenantBackups = useMemo(() => backups.filter((b) => b.target_tenant_id === selectedTenantId || b.scope === "tenant"), [backups, selectedTenantId]);
+  const tenantBackups = useMemo(() => backups.filter((b) => b.scope === "tenant" && b.target_tenant_id === selectedTenantId), [backups, selectedTenantId]);
+  // The platform tenant, and the tenant this session belongs to, are never
+  // disabled or deleted from here.
+  const lifecycleProtected = selectedTenantId === PLATFORM_TENANT || selectedTenantId === session?.tenantId;
 
   // ── Tab Bar ──
   const tabBar = (
@@ -466,7 +397,7 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
         <Stat l="Total Tenants" v={tenants.length} c="accent" />
         <Stat l="Active" v={activeTenants} c="green" />
         <Stat l="Disabled" v={disabledTenants} c="orange" />
-        <Stat l="Users" v={tenantUsers.length} s={usersLoading ? "Loading..." : `in ${selectedTenant?.name || "—"}`} c="blue" />
+        <Stat l="Users" v={usersError ? "—" : tenantUsers.length} s={usersError ? `unavailable: ${usersError}` : usersLoading ? "Loading..." : `in ${selectedTenant?.name || "—"}`} c="blue" />
       </div>
 
       {/* Tenant Cards Grid */}
@@ -512,15 +443,15 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
             <div style={{ background: C.surface, borderRadius: 4, padding: "10px 12px", border: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Users</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginTop: 2 }}>{tenantUsers.length}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginTop: 2 }}>{usersError ? "—" : tenantUsers.length}</div>
             </div>
             <div style={{ background: C.surface, borderRadius: 4, padding: "10px 12px", border: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Active Users</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginTop: 2 }}>{tenantUsers.filter((u) => u.status === "active").length}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginTop: 2 }}>{usersError ? "—" : tenantUsers.filter((u) => u.status === "active").length}</div>
             </div>
             <div style={{ background: C.surface, borderRadius: 4, padding: "10px 12px", border: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Admin Users</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginTop: 2 }}>{tenantUsers.filter((u) => u.role?.includes("admin")).length}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginTop: 2 }}>{usersError ? "—" : tenantUsers.filter((u) => u.role?.includes("admin")).length}</div>
             </div>
           </div>
 
@@ -550,15 +481,15 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
     </div>
   );
 
-  const securityLocked=isSectionLocked("passwordPolicy")||isSectionLocked("loginSecurity");
-
   // ── VIEW: Security ──
   const securityView = (
     <div>
-      {tenantSession && <div style={{ marginBottom: 12 }}><ExposurePanel session={tenantSession} onToast={onToast}/></div>}
-      <InheritBanner section="passwordPolicy" label="Password Policy &amp; Login Security"/>
+      {/* The exposure register is read from each service as the signed-in tenant. */}
+      {selectedTenantId === session?.tenantId && <div style={{ marginBottom: 12 }}><ExposurePanel session={session} onToast={onToast}/></div>}
       {policyLoading && <div style={{ fontSize: 10, color: C.muted, marginBottom: 10 }}>Loading policies...</div>}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, opacity:securityLocked?0.6:1, pointerEvents:securityLocked?"none":"auto" }}>
+      {policyError && <div style={{ fontSize: 11, color: C.amberFg, marginBottom: 10 }}>{`Policies unavailable: ${policyError}`}</div>}
+      {!policyError && <>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         {/* Password Policy */}
         <Card style={{ borderTop: `2px solid ${C.blue}` }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 14 }}>Password Policy</div>
@@ -624,94 +555,14 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
         <Btn small onClick={() => void loadPolicies()} disabled={policyLoading}>{policyLoading ? "Loading..." : "Reload"}</Btn>
         <Btn small primary onClick={() => void savePolicies()} disabled={policySaving || policyLoading}>{policySaving ? "Saving..." : "Save Policies"}</Btn>
       </div>
+      </>}
     </div>
   );
-
-  const hsmLocked=isSectionLocked("hsmConfig");
-
-  // ── VIEW: HSM ──
-  const hsmView = (
-    <div>
-      <InheritBanner section="hsmConfig" label="HSM"/>
-      {hsmLoading && <div style={{ fontSize: 10, color: C.muted, marginBottom: 10 }}>Loading HSM configuration...</div>}
-
-      <div style={{opacity:hsmLocked?0.6:1,pointerEvents:hsmLocked?"none":"auto"}}>
-      <Card style={{ borderTop: `2px solid ${C.accent}`, marginBottom: 14 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>HSM Provider Configuration</div>
-          <B c={hsmConfig.enabled ? "green" : "orange"} pulse={hsmConfig.enabled}>{hsmConfig.enabled ? "ENABLED" : "DISABLED"}</B>
-        </div>
-
-        <Row2>
-          <FG label="Provider Name">
-            <Inp value={hsmConfig.provider_name} onChange={(e) => setHsmConfig((c) => ({ ...c, provider_name: e.target.value }))} placeholder="e.g. thales-luna" />
-          </FG>
-          <FG label="Integration Service">
-            <Inp value={hsmConfig.integration_service} onChange={(e) => setHsmConfig((c) => ({ ...c, integration_service: e.target.value }))} placeholder="e.g. kms-hsm" />
-          </FG>
-        </Row2>
-        <FG label="PKCS#11 Library Path">
-          <Inp mono value={hsmConfig.library_path} onChange={(e) => setHsmConfig((c) => ({ ...c, library_path: e.target.value }))} placeholder="/usr/lib/pkcs11/libCryptoki2_64.so" />
-        </FG>
-        <Row3>
-          <FG label="Slot ID">
-            <Inp value={hsmConfig.slot_id} onChange={(e) => setHsmConfig((c) => ({ ...c, slot_id: e.target.value }))} placeholder="0" />
-          </FG>
-          <FG label="Partition Label">
-            <Inp value={hsmConfig.partition_label} onChange={(e) => setHsmConfig((c) => ({ ...c, partition_label: e.target.value }))} placeholder="partition-1" />
-          </FG>
-          <FG label="Token Label">
-            <Inp value={hsmConfig.token_label} onChange={(e) => setHsmConfig((c) => ({ ...c, token_label: e.target.value }))} placeholder="kms-token" />
-          </FG>
-        </Row3>
-        <Row2>
-          <FG label="PIN Environment Variable">
-            <Inp mono value={hsmConfig.pin_env_var} onChange={(e) => setHsmConfig((c) => ({ ...c, pin_env_var: e.target.value }))} placeholder="HSM_PIN" />
-          </FG>
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 12, paddingBottom: 12 }}>
-            <Chk label="Read Only" checked={hsmConfig.read_only} onChange={() => setHsmConfig((c) => ({ ...c, read_only: !c.read_only }))} />
-            <Chk label="Enabled" checked={hsmConfig.enabled} onChange={() => setHsmConfig((c) => ({ ...c, enabled: !c.enabled }))} />
-          </div>
-        </Row2>
-      </Card>
-
-      {/* Partitions */}
-      {hsmPartitions.length > 0 && (
-        <Card style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.dim, marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.8 }}>Detected Partitions</div>
-          <div style={{ display: "grid", gap: 6 }}>
-            {hsmPartitions.map((p, i) => (
-              <div key={p.slot_id || i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: C.surface, borderRadius: 3, border: `1px solid ${C.border}` }}>
-                <div style={{ width: 28, height: 28, borderRadius: 3, background: C.blueDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: C.blueFg, flexShrink: 0 }}>
-                  S{p.slot_id}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 11, color: C.text, fontWeight: 600 }}>{p.slot_name || p.token_label || `Slot ${p.slot_id}`}</div>
-                  <div style={{ fontSize: 10, color: C.muted }}>{[p.token_model, p.token_manufacturer, p.serial_number].filter(Boolean).join(" · ")}</div>
-                </div>
-                <B c={p.token_present ? "green" : "orange"}>{p.token_present ? "Present" : "Empty"}</B>
-                <Btn small onClick={() => setHsmConfig((c) => ({ ...c, slot_id: p.slot_id, partition_label: p.partition || c.partition_label, token_label: p.token_label || c.token_label }))}>Select</Btn>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-        <Btn small onClick={() => void loadHSM()} disabled={hsmLoading}>{hsmLoading ? "Loading..." : "Reload"}</Btn>
-        <Btn small primary onClick={() => void saveHSM()} disabled={hsmSaving||hsmLocked}>{hsmSaving ? "Saving..." : "Save HSM Config"}</Btn>
-      </div>
-      </div>
-    </div>
-  );
-
-  const backupLocked=isSectionLocked("backupPolicy");
 
   // ── VIEW: Backup ──
   const backupView = (
     <div>
-      <InheritBanner section="backupPolicy" label="Backup"/>
-      <div style={{opacity:backupLocked?0.6:1,pointerEvents:backupLocked?"none":"auto"}}>
+      <div>
       <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
         <Stat l="Total Backups" v={tenantBackups.length} c="accent" />
         <Stat l="Completed" v={tenantBackups.filter((b) => b.status === "completed").length} c="green" />
@@ -774,6 +625,7 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
   const lifecycleView = (
     <div>
       {readinessLoading && <div style={{ fontSize: 10, color: C.muted, marginBottom: 10 }}>Checking readiness...</div>}
+      {readinessError && <div style={{ fontSize: 11, color: C.amberFg, marginBottom: 10 }}>{`Readiness unavailable: ${readinessError}`}</div>}
 
       {/* Status Card */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10, marginBottom: 18 }}>
@@ -855,6 +707,11 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
           </div>
         )}
 
+        {lifecycleProtected ? (
+          <div style={{ fontSize: 11, color: C.dim }}>
+            {selectedTenantId === PLATFORM_TENANT ? "The platform tenant is never disabled or deleted." : "The tenant you are signed in to is disabled or deleted from another tenant's session."}
+          </div>
+        ) : <>
         <Row2>
           <FG label="Disable Approval Request ID (optional)">
             <Inp value={disableApprovalID} onChange={(e) => setDisableApprovalID(e.target.value)} placeholder="governance-approval-id" />
@@ -872,6 +729,7 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
             {deleteBusy ? "Deleting..." : "Delete Tenant"}
           </Btn>
         </div>
+        </>}
       </Card>
     </div>
   );
@@ -895,18 +753,13 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
           </FG>
         </Row2>
         <Row2>
-          <FG label="Initial Status">
-            <Sel value={createTenantStatus} onChange={(e) => setCreateTenantStatus(e.target.value)}>
-              <option value="active">Active</option>
-              <option value="disabled">Disabled</option>
-            </Sel>
-          </FG>
           <FG label="Admin Role">
             <Sel value={createAdminRole} onChange={(e) => setCreateAdminRole(e.target.value)}>
               <option value="tenant-admin">Tenant Admin</option>
               <option value="admin">Admin</option>
             </Sel>
           </FG>
+          <div />
         </Row2>
 
         <div style={{ fontSize: 11, fontWeight: 700, color: C.dim, textTransform: "uppercase", letterSpacing: 0.8, marginTop: 4 }}>Initial Admin User</div>
@@ -940,21 +793,27 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <div>
           <div style={{ fontSize: 16, fontWeight: 700, color: C.text, letterSpacing: -0.3 }}>Tenant Administration</div>
-          <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>Multi-tenant isolation with per-tenant security, HSM, backup, and lifecycle management</div>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>Tenants, their security policies, backups and lifecycle</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {selectedTenant && <B c={selectedTenant.status === "active" ? "green" : "orange"}>{selectedTenant.name}</B>}
         </div>
       </div>
 
+      {tenantsError ? (
+        <Card>
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Tenants unavailable</div>
+          <div style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>{tenantsError}</div>
+        </Card>
+      ) : <>
       {tenantSelector}
       {tabBar}
 
       {activeTab === "Overview" && overviewView}
       {activeTab === "Security" && securityView}
-      {activeTab === "HSM" && hsmView}
       {activeTab === "Backup" && backupView}
       {activeTab === "Lifecycle" && lifecycleView}
+      </>}
 
       {createModal}
     </div>

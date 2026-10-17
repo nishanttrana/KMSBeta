@@ -4,6 +4,73 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.14.0-beta] — 2026-10-17
+
+### Security
+- **Only an administrator of the platform (`root`) tenant administers
+  tenants.** Before, the check was "role `super-admin`, or `auth.tenant.*`
+  or `*`", and every tenant's own administrator holds `*`: the
+  administrator of any tenant could list all tenants, create, disable and
+  delete them, and reset the `root` administrator's password or deactivate
+  them. Now the tenant list, lifecycle and roles, and another tenant's
+  users, groups, identity providers, SCIM settings and policies need a
+  person in `root` holding `auth.tenant.*`. A role name grants nothing.
+  Refusals are audited as `audit.auth.request_refused`, and so is every
+  token or permission refusal on auth's not-yet-migrated routes.
+- **An administrator can't change their own role or deactivate
+  themselves** (`409 self_change`), so a tenant can't be locked out of its
+  own administration by one click.
+
+### Fixed
+- **Roles are the tenant's own.** The console offered `viewer`,
+  `operator`, `approver` and `auditor`, which no tenant defines: a user
+  created with the default `viewer` could never sign in, users imported
+  from a directory or created at first single sign-on got `viewer` too, and
+  users holding `cli-user` or `readonly` were shown as `admin`. auth now
+  refuses a role the tenant doesn't define (`400 unknown_role`) for users,
+  group bindings, imports, the SCIM default and identity-provider defaults
+  (whose default is now `readonly`), and the new `GET /auth/roles` lists a
+  tenant's roles for every role selector. A user's status shows as stored
+  (`active` / `inactive`).
+- **Policy and HSM saves were always refused.** The console sent back the
+  whole record it had loaded (`tenant_id`, `updated_at`, ...) and auth
+  refuses unknown fields. Each update now sends only the fields its route
+  takes; this also fixes System Administration's HSM save.
+- **Tenant Administration acts on the tenant it shows.** Its Security tab
+  read and saved the signed-in tenant's policy whatever tenant was chosen
+  (the policy routes now take `tenant_id`), its Backup tab was refused for
+  every tenant but `root`, and listed every tenant's backups. Its HSM tab,
+  a third copy of the HSM module's settings that also saved to the wrong
+  tenant, is gone, as is the "KMS-Wide Enforcement Active" lock, which came
+  only from the browser's local storage and was enforced by nothing (the
+  matching banner in System Administration is removed too).
+- **Creating a tenant either completes or leaves nothing.** An admin
+  password the policy refused left the tenant behind without an
+  administrator, and the corrected retry then failed on the ID with "tenant
+  write failed". Everything is now checked first, a failure part-way
+  removes the tenant, and the error says what was wrong (`409
+  tenant_exists` for a duplicate). An `admin_role` other than `admin` or
+  `tenant-admin` is refused instead of creating that role with `*`.
+- **Re-enabling a tenant kept wiping its name**: an update now changes only
+  the fields it sends.
+- **A tenant's administrator outside `root` saw no modules at all.** Their
+  `*` grant was read as the explicit rule "deny module X" for every
+  module. Module deny and allow rules now match only when granted by name.
+  Such an administrator now also gets Administration → User Management for
+  their own tenant (System and Tenant Administration stay with `root`).
+- **The top bar names the signed-in tenant instead of offering a switch.**
+  A token is for one tenant and every service refuses another, so choosing
+  another tenant there made every page fail.
+- Lifecycle no longer offers Disable or Delete for the platform tenant or
+  your own; failed loads read "unavailable" with the error instead of 0 or
+  defaults; the administration guide's roles, statuses and examples match
+  the product.
+
+Tests: `services/auth/tenant_admin_test.go` (cross-tenant refusal, defined
+roles, self-change, policy tenant, tenant create rollback, update),
+`web/dashboard/tests/admin-tenants-users.spec.ts`, and a unit test that
+`*` is never a deny rule.
+
 ## [13.13.0-beta] — 2026-10-17
 
 ### Fixed

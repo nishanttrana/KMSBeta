@@ -248,7 +248,7 @@ func TestPlaintextIdentityProviderSecretsAreSealedAndRegistered(t *testing.T) {
 // Replacing every secret a provider held closes its exposure entry;
 // saving something else, or the same value again, does not.
 func TestReplacingIdentityProviderSecretsClosesExposure(t *testing.T) {
-	h, logic, store, _ := newTestHandler(t)
+	h, logic, store, _ := newTestHandlerWithRoles(t)
 	if _, err := store.UpsertIdentityProviderConfig(context.Background(), ldapConfig(testBindPassword)); err != nil {
 		t.Fatal(err)
 	}

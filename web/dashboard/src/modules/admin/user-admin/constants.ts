@@ -1,7 +1,8 @@
 import type { PasswordPolicy, SecurityPolicy } from "../../../lib/authAdmin";
 
-export const ROLE_OPTIONS = ["admin", "tenant-admin", "approver", "operator", "auditor", "viewer"] as const;
-export const STATUS_OPTIONS = ["active", "disabled"] as const;
+// The statuses auth stores (normalizeUserStatus); roles come from the
+// tenant (GET /auth/roles).
+export const STATUS_OPTIONS = ["active", "inactive"] as const;
 
 export const defaultPasswordPolicy: PasswordPolicy = {
   tenant_id: "",

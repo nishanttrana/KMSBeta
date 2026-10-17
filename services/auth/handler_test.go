@@ -46,6 +46,17 @@ func newTestHandler(t *testing.T) (*Handler, *AuthLogic, *SQLStore, *mockPublish
 	return h, logic, store, pub
 }
 
+// newTestHandlerWithRoles gives tenant t1 the default roles every tenant is
+// created with, for tests that assign one.
+func newTestHandlerWithRoles(t *testing.T) (*Handler, *AuthLogic, *SQLStore, *mockPublisher) {
+	t.Helper()
+	h, logic, store, pub := newTestHandler(t)
+	if err := h.ensureTenantDefaults(context.Background(), "t1"); err != nil {
+		t.Fatal(err)
+	}
+	return h, logic, store, pub
+}
+
 func TestHandlerRegisterActivateFlow(t *testing.T) {
 	h, logic, store, pub := newTestHandler(t)
 
@@ -305,7 +316,7 @@ func TestHandlerRejectsDisabledUserLogin(t *testing.T) {
 }
 
 func TestHandlerUserCreateHonorsPasswordPolicy(t *testing.T) {
-	h, logic, _, _ := newTestHandler(t)
+	h, logic, _, _ := newTestHandlerWithRoles(t)
 	adminToken, _, err := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false)
 	if err != nil {
 		t.Fatal(err)
@@ -436,7 +447,7 @@ VALUES ('apr-delete','t-delete','tenant.delete','tenant','t-delete','approved')
 		t.Fatal(err)
 	}
 
-	superToken, _, err := logic.IssueJWT("t1", "super-admin", []string{"*"}, "root-admin", false)
+	superToken, _, err := logic.IssueJWT("root", "tenant-admin", []string{"*"}, "root-admin", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -499,7 +510,7 @@ VALUES ('apr-disable-block','t-disable','tenant.disable','tenant','t-disable','a
 		t.Fatal(err)
 	}
 
-	superToken, _, err := logic.IssueJWT("t1", "super-admin", []string{"*"}, "root-admin", false)
+	superToken, _, err := logic.IssueJWT("root", "tenant-admin", []string{"*"}, "root-admin", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -518,7 +529,7 @@ func TestHandlerTenantLifecycleWithoutPlatformQuorumAllowsNoApprovalID(t *testin
 	if err := store.CreateTenant(context.Background(), Tenant{ID: "t-noquorum", Name: "No Quorum", Status: "active"}); err != nil {
 		t.Fatal(err)
 	}
-	superToken, _, err := logic.IssueJWT("t1", "super-admin", []string{"*"}, "root-admin", false)
+	superToken, _, err := logic.IssueJWT("root", "tenant-admin", []string{"*"}, "root-admin", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -551,7 +562,7 @@ VALUES ('pol-quorum','t-quorum','kms-platform-governance-default','platform','["
 `); err != nil {
 		t.Fatal(err)
 	}
-	superToken, _, err := logic.IssueJWT("t1", "super-admin", []string{"*"}, "root-admin", false)
+	superToken, _, err := logic.IssueJWT("root", "tenant-admin", []string{"*"}, "root-admin", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -674,7 +685,7 @@ VALUES ('t1','grp-audit','u-readonly')
 }
 
 func TestHandlerIdentityProviderConfigRoundTrip(t *testing.T) {
-	h, logic, _, _ := newTestHandler(t)
+	h, logic, _, _ := newTestHandlerWithRoles(t)
 	adminToken, _, err := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false)
 	if err != nil {
 		t.Fatal(err)

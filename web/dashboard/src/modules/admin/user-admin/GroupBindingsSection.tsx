@@ -1,6 +1,6 @@
 import { Btn, Card, FG, Inp, Row2, Section, Sel } from "../../../components/v3/legacyPrimitives";
 import { C } from "../../../components/v3/theme";
-import { ROLE_OPTIONS } from "./constants";
+import { selectOptions } from "./roleOptions";
 import type { UserAdminModel } from "./useUserAdminModel";
 
 type Props = {
@@ -16,9 +16,7 @@ export function GroupBindingsSection({ model }: Props) {
         </FG>
         <FG label="Role">
           <Sel value={model.groupRole} onChange={(event) => model.setGroupRole(event.target.value)}>
-            {ROLE_OPTIONS.map((role) => (
-              <option key={role} value={role}>{role}</option>
-            ))}
+            {selectOptions(model.roles)}
           </Sel>
         </FG>
       </Row2>

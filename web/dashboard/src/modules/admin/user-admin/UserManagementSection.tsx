@@ -1,6 +1,7 @@
-import { B, Btn, Card, FG, Inp, Row2, Section, Sel } from "../../../components/v3/legacyPrimitives";
+import { B, Btn, Card, Chk, FG, Inp, Row2, Section, Sel } from "../../../components/v3/legacyPrimitives";
 import { C } from "../../../components/v3/theme";
-import { ROLE_OPTIONS, STATUS_OPTIONS } from "./constants";
+import { STATUS_OPTIONS } from "./constants";
+import { selectOptions } from "./roleOptions";
 import type { UserAdminModel } from "./useUserAdminModel";
 
 type Props = {
@@ -12,17 +13,20 @@ export function UserManagementSection({ model }: Props) {
     <>
       <Section title="User Management" actions={<Btn small onClick={() => void model.loadUsers()}>{model.loading ? "Refreshing..." : "Refresh"}</Btn>}>
         <Row2>
-          <FG label="Tenant Scope">
-            <Sel value={model.selectedTenant} onChange={(event) => model.setSelectedTenant(event.target.value)}>
-              {model.tenants.map((tenant) => (
-                <option key={tenant.id} value={tenant.id}>{`${tenant.id} (${tenant.name})`}</option>
-              ))}
-            </Sel>
-          </FG>
+          {/* Only a platform (root) administrator manages more than one tenant. */}
+          {model.tenants.length > 1 ? (
+            <FG label="Tenant">
+              <Sel value={model.selectedTenant} onChange={(event) => model.setSelectedTenant(event.target.value)}>
+                {model.tenants.map((tenant) => (
+                  <option key={tenant.id} value={tenant.id}>{`${tenant.id} (${tenant.name})`}</option>
+                ))}
+              </Sel>
+            </FG>
+          ) : <div />}
           <FG label="Inventory">
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <B c="green">{`${model.usersByStatus.active} active`}</B>
-              <B c="amber">{`${model.usersByStatus.disabled} non-active`}</B>
+              <B c="amber">{`${model.usersByStatus.inactive} inactive`}</B>
               <B c="blue">{`${model.users.length} total`}</B>
             </div>
           </FG>
@@ -36,21 +40,18 @@ export function UserManagementSection({ model }: Props) {
           </div>
           {model.users.map((user) => {
             const userID = String(user.id || "");
+            const self = model.isSelf(user);
             const roleBusy = model.updateBusy === `${userID}:role`;
             const statusBusy = model.updateBusy === `${userID}:status`;
             return (
               <div key={userID} style={{ display: "grid", gridTemplateColumns: "1.5fr 1.4fr 0.9fr 0.9fr 1.2fr", gap: 8, alignItems: "center", borderBottom: `1px solid ${C.border}`, padding: "8px 0" }}>
                 <div style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{String(user.username || "-")}</div>
                 <div style={{ fontSize: 11, color: C.dim }}>{String(user.email || "-")}</div>
-                <Sel value={String(user.role || "viewer")} onChange={(event) => void model.updateRole(user, event.target.value)} disabled={roleBusy}>
-                  {ROLE_OPTIONS.map((role) => (
-                    <option key={role} value={role}>{role}</option>
-                  ))}
+                <Sel value={String(user.role || "")} onChange={(event) => void model.updateRole(user, event.target.value)} disabled={roleBusy || self} title={self ? "Another administrator changes your role" : undefined}>
+                  {selectOptions(model.roles, String(user.role || ""))}
                 </Sel>
-                <Sel value={String(user.status || "active")} onChange={(event) => void model.updateStatus(user, event.target.value)} disabled={statusBusy}>
-                  {STATUS_OPTIONS.map((status) => (
-                    <option key={status} value={status}>{status}</option>
-                  ))}
+                <Sel value={String(user.status || "")} onChange={(event) => void model.updateStatus(user, event.target.value)} disabled={statusBusy || self} title={self ? "Another administrator changes your status" : undefined}>
+                  {selectOptions(STATUS_OPTIONS, String(user.status || ""))}
                 </Sel>
                 <Btn
                   small
@@ -83,18 +84,14 @@ export function UserManagementSection({ model }: Props) {
           </FG>
           <FG label="Role">
             <Sel value={model.newRole} onChange={(event) => model.setNewRole(event.target.value)}>
-              {ROLE_OPTIONS.map((role) => (
-                <option key={role} value={role}>{role}</option>
-              ))}
+              {selectOptions(model.roles)}
             </Sel>
           </FG>
         </Row2>
         <Row2>
           <FG label="Status">
             <Sel value={model.newStatus} onChange={(event) => model.setNewStatus(event.target.value)}>
-              {STATUS_OPTIONS.map((status) => (
-                <option key={status} value={status}>{status}</option>
-              ))}
+              {selectOptions(STATUS_OPTIONS)}
             </Sel>
           </FG>
           <div />
@@ -118,10 +115,7 @@ export function UserManagementSection({ model }: Props) {
             <Inp type="password" value={model.resetPasswordValue} onChange={(event) => model.setResetPasswordValue(event.target.value)} />
           </FG>
         </Row2>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <B c={model.resetMustChange ? "amber" : "blue"}>{model.resetMustChange ? "Must change on next login" : "No forced change"}</B>
-          <Btn small onClick={() => model.setResetMustChange((prev) => !prev)}>Toggle</Btn>
-        </div>
+        <Chk label="Must change on next sign-in" checked={model.resetMustChange} onChange={() => model.setResetMustChange((prev) => !prev)} />
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
           <Btn primary onClick={() => void model.resetPassword()} disabled={model.updateBusy.endsWith(":reset")}>{model.updateBusy.endsWith(":reset") ? "Applying..." : "Apply Reset"}</Btn>
         </div>

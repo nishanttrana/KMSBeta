@@ -711,36 +711,73 @@ export async function resetAuthUserPassword(
   );
 }
 
-export async function getAuthPasswordPolicy(session: AuthSession): Promise<PasswordPolicy> {
-  const out = await serviceRequest<PolicyResponse>(session, "auth", "/auth/password-policy");
+// A policy belongs to one tenant: the signed-in one, or the one named (a
+// platform administrator only).
+const tenantQuery = (tenantID?: string): string => {
+  const target = String(tenantID || "").trim();
+  return target ? `?tenant_id=${encodeURIComponent(target)}` : "";
+};
+
+// pick sends only the fields a route accepts: auth refuses unknown fields,
+// so a loaded record sent back whole (tenant_id, updated_at, ...) failed.
+function pick<T extends object>(input: Partial<T> | undefined, keys: readonly (keyof T)[]): Partial<T> {
+  const out: Partial<T> = {};
+  for (const key of keys) {
+    if (input && input[key] !== undefined) out[key] = input[key];
+  }
+  return out;
+}
+
+const PASSWORD_POLICY_FIELDS = [
+  "min_length", "max_length", "require_upper", "require_lower", "require_digit", "require_special",
+  "require_no_whitespace", "deny_username", "deny_email_local_part", "min_unique_chars"
+] as const satisfies readonly (keyof PasswordPolicy)[];
+const SECURITY_POLICY_FIELDS = ["max_failed_attempts", "lockout_minutes", "idle_timeout_minutes"] as const satisfies readonly (keyof SecurityPolicy)[];
+const HSM_CONFIG_FIELDS = [
+  "provider_name", "integration_service", "library_path", "slot_id", "partition_label", "token_label",
+  "pin_env_var", "read_only", "enabled", "metadata"
+] as const satisfies readonly (keyof HSMProviderConfig)[];
+
+export async function getAuthPasswordPolicy(session: AuthSession, tenantID?: string): Promise<PasswordPolicy> {
+  const out = await serviceRequest<PolicyResponse>(session, "auth", `/auth/password-policy${tenantQuery(tenantID)}`);
   return out.policy;
 }
 
 export async function updateAuthPasswordPolicy(
   session: AuthSession,
-  input: Partial<PasswordPolicy>
+  input: Partial<PasswordPolicy>,
+  tenantID?: string
 ): Promise<PasswordPolicy> {
-  const out = await serviceRequest<PolicyResponse>(session, "auth", "/auth/password-policy", {
+  const out = await serviceRequest<PolicyResponse>(session, "auth", `/auth/password-policy${tenantQuery(tenantID)}`, {
     method: "PUT",
-    body: JSON.stringify(input || {})
+    body: JSON.stringify(pick(input, PASSWORD_POLICY_FIELDS))
   });
   return out.policy;
 }
 
-export async function getAuthSecurityPolicy(session: AuthSession): Promise<SecurityPolicy> {
-  const out = await serviceRequest<SecurityPolicyResponse>(session, "auth", "/auth/security-policy");
+export async function getAuthSecurityPolicy(session: AuthSession, tenantID?: string): Promise<SecurityPolicy> {
+  const out = await serviceRequest<SecurityPolicyResponse>(session, "auth", `/auth/security-policy${tenantQuery(tenantID)}`);
   return out.policy;
 }
 
 export async function updateAuthSecurityPolicy(
   session: AuthSession,
-  input: Partial<SecurityPolicy>
+  input: Partial<SecurityPolicy>,
+  tenantID?: string
 ): Promise<SecurityPolicy> {
-  const out = await serviceRequest<SecurityPolicyResponse>(session, "auth", "/auth/security-policy", {
+  const out = await serviceRequest<SecurityPolicyResponse>(session, "auth", `/auth/security-policy${tenantQuery(tenantID)}`, {
     method: "PUT",
-    body: JSON.stringify(input || {})
+    body: JSON.stringify(pick(input, SECURITY_POLICY_FIELDS))
   });
   return out.policy;
+}
+
+export type AuthRole = { tenant_id: string; role_name: string; permissions: string[] };
+
+// The roles a tenant defines: the only ones a user, group or import may hold.
+export async function listAuthRoles(session: AuthSession, tenantID?: string): Promise<AuthRole[]> {
+  const out = await serviceRequest<{ items?: AuthRole[] }>(session, "auth", `/auth/roles${tenantQuery(tenantID)}`);
+  return Array.isArray(out?.items) ? out.items : [];
 }
 
 export async function getAuthCLIStatus(session: AuthSession): Promise<CLIStatus> {
@@ -794,7 +831,7 @@ export async function upsertAuthCLIHSMConfig(
 ): Promise<HSMProviderConfig> {
   const out = await serviceRequest<HSMProviderConfigResponse>(session, "auth", "/auth/cli/hsm/config", {
     method: "PUT",
-    body: JSON.stringify(input || {})
+    body: JSON.stringify(pick(input, HSM_CONFIG_FIELDS))
   });
   return out?.config;
 }

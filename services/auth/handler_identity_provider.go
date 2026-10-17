@@ -116,6 +116,12 @@ func (h *Handler) handleUpsertIdentityProviderConfig(w http.ResponseWriter, r *h
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, targetTenant)
 		return
 	}
+	// Users created on first sign-in get this role; one the tenant doesn't
+	// define would leave them unable to sign in.
+	if err := h.requireTenantRole(r.Context(), targetTenant, identityProviderConfigMapString(cfg.Config, "default_role", "readonly")); err != nil {
+		writeRoleError(w, err, reqID, targetTenant)
+		return
+	}
 	updated, err := h.store.UpsertIdentityProviderConfig(r.Context(), cfg)
 	if err != nil {
 		idpStoreErr(w, err, "failed to save identity provider config", reqID, targetTenant)
@@ -417,6 +423,10 @@ func (h *Handler) handleImportIdentityUsers(w http.ResponseWriter, r *http.Reque
 	if role == "" {
 		role = "readonly"
 	}
+	if err := h.requireTenantRole(r.Context(), targetTenant, role); err != nil {
+		writeRoleError(w, err, reqID, targetTenant)
+		return
+	}
 	mustChange := true
 	if req.MustChangePassword != nil {
 		mustChange = *req.MustChangePassword
@@ -589,7 +599,7 @@ func sanitizeIdentityProviderConfigRecord(cfg IdentityProviderConfig) (IdentityP
 			"idp_sso_url":       strings.TrimSpace(identityProviderConfigMapString(out.Config, "idp_sso_url", "")),
 			"name_id_format":    strings.TrimSpace(identityProviderConfigMapString(out.Config, "name_id_format", "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress")),
 			"auto_create_users": identityProviderConfigMapBool(out.Config, "auto_create_users", false),
-			"default_role":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "default_role", "viewer")),
+			"default_role":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "default_role", "readonly")),
 			"attr_username":     strings.TrimSpace(identityProviderConfigMapString(out.Config, "attr_username", "username")),
 			"attr_email":        strings.TrimSpace(identityProviderConfigMapString(out.Config, "attr_email", "email")),
 			"attr_display_name": strings.TrimSpace(identityProviderConfigMapString(out.Config, "attr_display_name", "displayName")),
@@ -611,7 +621,7 @@ func sanitizeIdentityProviderConfigRecord(cfg IdentityProviderConfig) (IdentityP
 			"redirect_uri":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "redirect_uri", "")),
 			"scopes":            strings.TrimSpace(identityProviderConfigMapString(out.Config, "scopes", "openid profile email")),
 			"auto_create_users": identityProviderConfigMapBool(out.Config, "auto_create_users", false),
-			"default_role":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "default_role", "viewer")),
+			"default_role":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "default_role", "readonly")),
 			"attr_username":     strings.TrimSpace(identityProviderConfigMapString(out.Config, "attr_username", "preferred_username")),
 			"attr_email":        strings.TrimSpace(identityProviderConfigMapString(out.Config, "attr_email", "email")),
 			"attr_display_name": strings.TrimSpace(identityProviderConfigMapString(out.Config, "attr_display_name", "name")),
@@ -644,7 +654,7 @@ func sanitizeIdentityProviderConfigRecord(cfg IdentityProviderConfig) (IdentityP
 			"insecure_skip_verify": identityProviderConfigMapBool(out.Config, "insecure_skip_verify", false),
 			"timeout_sec":          timeoutSec,
 			"auto_create_users":    identityProviderConfigMapBool(out.Config, "auto_create_users", false),
-			"default_role":         strings.TrimSpace(identityProviderConfigMapString(out.Config, "default_role", "viewer")),
+			"default_role":         strings.TrimSpace(identityProviderConfigMapString(out.Config, "default_role", "readonly")),
 		}
 		secret := strings.TrimSpace(identityProviderConfigMapString(out.Secrets, "bind_password", ""))
 		out.Secrets = map[string]any{}

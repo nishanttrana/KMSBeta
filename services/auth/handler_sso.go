@@ -198,7 +198,7 @@ func (h *Handler) handleSSOCallback(w http.ResponseWriter, r *http.Request) {
 	// Resolve or create user
 	cfg, _ := h.store.GetIdentityProviderConfig(r.Context(), tenantID, provider)
 	autoCreate := identityProviderConfigMapString(cfg.Config, "auto_create_users", "false") == "true"
-	defaultRole := identityProviderConfigMapString(cfg.Config, "default_role", "viewer")
+	defaultRole := identityProviderConfigMapString(cfg.Config, "default_role", "readonly")
 
 	user, err := h.findOrCreateSSOUser(r.Context(), tenantID, attrs, autoCreate, defaultRole)
 	if err != nil {
@@ -313,7 +313,10 @@ func (h *Handler) findOrCreateSSOUser(ctx context.Context, tenantID string, attr
 
 	role := strings.TrimSpace(defaultRole)
 	if role == "" {
-		role = "viewer"
+		role = "readonly"
+	}
+	if err := h.requireTenantRole(ctx, tenantID, role); err != nil {
+		return User{}, err
 	}
 
 	newUser := User{
@@ -394,7 +397,7 @@ func (h *Handler) tryLDAPBind(ctx context.Context, tenantID, username, password 
 	}
 
 	autoCreate := identityProviderConfigMapString(cfg.Config, "auto_create_users", "false") == "true"
-	defaultRole := identityProviderConfigMapString(cfg.Config, "default_role", "viewer")
+	defaultRole := identityProviderConfigMapString(cfg.Config, "default_role", "readonly")
 
 	return h.findOrCreateSSOUser(ctx, tenantID, attrs, autoCreate, defaultRole)
 }

@@ -1,6 +1,7 @@
 import { B, Btn, Card, Chk, FG, Inp, Row2, Section, Sel, Txt } from "../../../components/v3/legacyPrimitives";
 import { C } from "../../../components/v3/theme";
-import { ROLE_OPTIONS, STATUS_OPTIONS } from "./constants";
+import { STATUS_OPTIONS } from "./constants";
+import { selectOptions } from "./roleOptions";
 import type { UserAdminModel } from "./useUserAdminModel";
 import type { IdentityProviderName } from "../../../lib/authAdmin";
 
@@ -101,8 +102,8 @@ function SAMLForm({ model }: { model: UserAdminModel }) {
       <Row2>
         <ConfigInput model={model} configKey="attr_display_name" label="Display Name Attribute" placeholder="name" />
         <FG label="Default Role (Auto-Created Users)">
-          <Sel value={getConfigKey(model, "default_role", "viewer")} onChange={(e) => setConfigKey(model, "default_role", e.target.value)}>
-            {ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+          <Sel value={getConfigKey(model, "default_role", "readonly")} onChange={(e) => setConfigKey(model, "default_role", e.target.value)}>
+            {selectOptions(model.roles, getConfigKey(model, "default_role", "readonly"))}
           </Sel>
         </FG>
       </Row2>
@@ -136,8 +137,8 @@ function OIDCForm({ model }: { model: UserAdminModel }) {
       <Row2>
         <ConfigInput model={model} configKey="display_name" label="Display Name (Login Button)" placeholder="OpenID Connect" />
         <FG label="Default Role (Auto-Created Users)">
-          <Sel value={getConfigKey(model, "default_role", "viewer")} onChange={(e) => setConfigKey(model, "default_role", e.target.value)}>
-            {ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+          <Sel value={getConfigKey(model, "default_role", "readonly")} onChange={(e) => setConfigKey(model, "default_role", e.target.value)}>
+            {selectOptions(model.roles, getConfigKey(model, "default_role", "readonly"))}
           </Sel>
         </FG>
       </Row2>
@@ -183,8 +184,8 @@ function LDAPForm({ model }: { model: UserAdminModel }) {
       <Row2>
         <ConfigInput model={model} configKey="timeout_sec" label="Timeout (seconds)" placeholder="10" />
         <FG label="Default Role (Auto-Created Users)">
-          <Sel value={getConfigKey(model, "default_role", "viewer")} onChange={(e) => setConfigKey(model, "default_role", e.target.value)}>
-            {ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+          <Sel value={getConfigKey(model, "default_role", "readonly")} onChange={(e) => setConfigKey(model, "default_role", e.target.value)}>
+            {selectOptions(model.roles, getConfigKey(model, "default_role", "readonly"))}
           </Sel>
         </FG>
       </Row2>
@@ -322,16 +323,12 @@ export function IdentityProvidersSection({ model }: Props) {
           <Row2>
             <FG label="Import Role">
               <Sel value={model.idpImportRole} onChange={(event) => model.setIdpImportRole(event.target.value)}>
-                {ROLE_OPTIONS.map((role) => (
-                  <option key={role} value={role}>{role}</option>
-                ))}
+                {selectOptions(model.roles)}
               </Sel>
             </FG>
             <FG label="Import Status">
               <Sel value={model.idpImportStatus} onChange={(event) => model.setIdpImportStatus(event.target.value)}>
-                {STATUS_OPTIONS.map((status) => (
-                  <option key={status} value={status}>{status}</option>
-                ))}
+                {selectOptions(STATUS_OPTIONS)}
               </Sel>
             </FG>
           </Row2>

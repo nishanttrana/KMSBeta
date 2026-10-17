@@ -3,11 +3,22 @@ import { canAccessModule, isSystemAdminSession } from "../../src/config/moduleRe
 import { enabledFeatures, type DeploymentConfig } from "../../src/lib/deployment";
 
 describe("moduleRegistry", () => {
-  it("allows admin module only for root system admin session", () => {
+  it("opens Administration to root and to a tenant's user administrators", () => {
     const features = new Set();
     expect(canAccessModule("admin", features, { tenantId: "root", role: "admin", permissions: [] })).toBe(true);
     expect(canAccessModule("admin", features, { tenantId: "root", role: "viewer", permissions: ["auth.tenant.read"] })).toBe(true);
-    expect(canAccessModule("admin", features, { tenantId: "bank-a", role: "admin", permissions: ["*"] })).toBe(false);
+    // A tenant's own administrator manages its users (User Management only).
+    expect(canAccessModule("admin", features, { tenantId: "bank-a", role: "admin", permissions: ["*"] })).toBe(true);
+    expect(canAccessModule("admin", features, { tenantId: "bank-a", role: "readonly", permissions: ["auth.user.read"] })).toBe(true);
+    expect(canAccessModule("admin", features, { tenantId: "bank-a", role: "cli-user", permissions: ["auth.self.read"] })).toBe(false);
+  });
+
+  it("reads a module deny rule only when it is granted by name, never from \"*\"", () => {
+    const features = new Set(["cloud_byok"] as const);
+    const tenantAdmin = { tenantId: "bank-a", role: "admin", permissions: ["*"] };
+    expect(canAccessModule("byok", features as any, tenantAdmin)).toBe(true);
+    expect(canAccessModule("home", features as any, tenantAdmin)).toBe(true);
+    expect(canAccessModule("byok", features as any, { tenantId: "bank-a", permissions: ["*", "ui.module.deny:byok"] })).toBe(false);
   });
 
   it("applies feature and permission visibility rules", () => {

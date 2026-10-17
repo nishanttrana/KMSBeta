@@ -15,11 +15,14 @@ import {
 } from "../../../lib/authAdmin";
 import { errMsg } from "../../../components/v3/runtimeUtils";
 import type { AuthSession } from "../../../lib/auth";
+import { selectOptions } from "./roleOptions";
 
 type Props = {
   session: AuthSession | null;
   onToast: (message: string) => void;
   tenantID: string;
+  // The roles the tenant defines.
+  roles: string[];
 };
 
 const DEFAULT_SETTINGS: SCIMSettings = {
@@ -32,7 +35,7 @@ const DEFAULT_SETTINGS: SCIMSettings = {
   group_role_mappings_enabled: true
 };
 
-export function ScimProvisioningSection({ session, onToast, tenantID }: Props) {
+export function ScimProvisioningSection({ session, onToast, tenantID, roles }: Props) {
   const [settings, setSettings] = useState<SCIMSettings>(DEFAULT_SETTINGS);
   const [summary, setSummary] = useState<SCIMSummary | null>(null);
   const [users, setUsers] = useState<SCIMUser[]>([]);
@@ -168,9 +171,7 @@ export function ScimProvisioningSection({ session, onToast, tenantID }: Props) {
             value={String(settings.default_role || "readonly")}
             onChange={(event) => setSettings((prev) => ({ ...prev, tenant_id: tenantID, default_role: event.target.value }))}
           >
-            {["readonly", "viewer", "operator", "tenant-admin", "security-admin", "app-service"].map((role) => (
-              <option key={role} value={role}>{role}</option>
-            ))}
+            {selectOptions(roles, String(settings.default_role || "readonly"))}
           </Sel>
         </FG>
         <FG label="Default Status">

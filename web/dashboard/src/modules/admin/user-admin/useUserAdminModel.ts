@@ -10,6 +10,7 @@ import {
   listAuthIdentityProviders,
   getAuthSecurityPolicy,
   listAuthGroupRoleBindings,
+  listAuthRoles,
   listAuthTenants,
   listAuthUsers,
   resetAuthUserPassword,
@@ -38,6 +39,11 @@ type SetState<T> = Dispatch<SetStateAction<T>>;
 
 export type UserAdminModel = {
   tenants: AuthTenant[];
+  // The roles the selected tenant defines: the only ones offered.
+  roles: string[];
+  policyError: string;
+  // The signed-in user: auth refuses changing your own role or status.
+  isSelf: (user: AuthUser) => boolean;
   selectedTenant: string;
   setSelectedTenant: SetState<string>;
   users: AuthUser[];
@@ -107,7 +113,7 @@ export type UserAdminModel = {
 
   usersByStatus: {
     active: number;
-    disabled: number;
+    inactive: number;
   };
 
   loadUsers: () => Promise<void>;
@@ -128,9 +134,15 @@ export type UserAdminModel = {
   importIdpUsers: () => Promise<void>;
 };
 
+// The role a new user, binding or import starts with: readonly when the
+// tenant defines it.
+const defaultRole = (roles: string[]): string => (roles.includes("readonly") ? "readonly" : roles[0] || "");
+
 export function useUserAdminModel({ session, onToast }: Pick<AdminTabProps, "session" | "onToast">): UserAdminModel {
   const [tenants, setTenants] = useState<AuthTenant[]>([]);
-  const [selectedTenant, setSelectedTenant] = useState("");
+  const [selectedTenant, setSelectedTenant] = useState(String(session?.tenantId || ""));
+  const [roles, setRoles] = useState<string[]>([]);
+  const [policyError, setPolicyError] = useState("");
   const [users, setUsers] = useState<AuthUser[]>([]);
   const [bindings, setBindings] = useState<GroupRoleBinding[]>([]);
   const [passwordPolicy, setPasswordPolicy] = useState<PasswordPolicy>(defaultPasswordPolicy);
@@ -145,7 +157,7 @@ export function useUserAdminModel({ session, onToast }: Pick<AdminTabProps, "ses
   const [newUsername, setNewUsername] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [newRole, setNewRole] = useState("viewer");
+  const [newRole, setNewRole] = useState("");
   const [newStatus, setNewStatus] = useState("active");
 
   const [resetUserID, setResetUserID] = useState("");
@@ -153,7 +165,7 @@ export function useUserAdminModel({ session, onToast }: Pick<AdminTabProps, "ses
   const [resetMustChange, setResetMustChange] = useState(true);
 
   const [groupID, setGroupID] = useState("");
-  const [groupRole, setGroupRole] = useState("viewer");
+  const [groupRole, setGroupRole] = useState("");
 
   const [idpProvider, setIdpProvider] = useState<IdentityProviderName>("ad");
   const [idpEnabled, setIdpEnabled] = useState(false);
@@ -171,7 +183,7 @@ export function useUserAdminModel({ session, onToast }: Pick<AdminTabProps, "ses
   const [idpGroups, setIdpGroups] = useState<ExternalDirectoryGroup[]>([]);
   const [idpMembers, setIdpMembers] = useState<ExternalDirectoryUser[]>([]);
   const [idpSelectedUserIDs, setIdpSelectedUserIDs] = useState<string[]>([]);
-  const [idpImportRole, setIdpImportRole] = useState("viewer");
+  const [idpImportRole, setIdpImportRole] = useState("");
   const [idpImportStatus, setIdpImportStatus] = useState("active");
   const [idpImportMustChange, setIdpImportMustChange] = useState(true);
 
@@ -181,15 +193,36 @@ export function useUserAdminModel({ session, onToast }: Pick<AdminTabProps, "ses
       setSelectedTenant("");
       return;
     }
+    // Only a platform (root) administrator may list tenants; anyone else
+    // manages the tenant they signed in to.
+    const own: AuthTenant = { id: session.tenantId, name: session.tenantId, status: "active" };
     try {
       const items = await listAuthTenants(session);
-      const next = Array.isArray(items) ? items : [];
+      const next = Array.isArray(items) && items.length ? items : [own];
       setTenants(next);
-      if (!next.some((tenant) => String(tenant.id) === String(selectedTenant))) {
-        setSelectedTenant(next[0]?.id || "");
-      }
+      setSelectedTenant((current) => (next.some((tenant) => tenant.id === current) ? current : session.tenantId));
+    } catch {
+      setTenants([own]);
+      setSelectedTenant(session.tenantId);
+    }
+  }, [session]);
+
+  const loadRoles = useCallback(async () => {
+    const tenantID = String(selectedTenant || "").trim();
+    if (!session?.token || !tenantID) {
+      setRoles([]);
+      return;
+    }
+    try {
+      const names = (await listAuthRoles(session, tenantID)).map((role) => role.role_name).filter(Boolean);
+      setRoles(names);
+      const fallback = defaultRole(names);
+      setNewRole((role) => (names.includes(role) ? role : fallback));
+      setGroupRole((role) => (names.includes(role) ? role : fallback));
+      setIdpImportRole((role) => (names.includes(role) ? role : fallback));
     } catch (error) {
-      onToast(`Tenant list load failed: ${errMsg(error)}`);
+      setRoles([]);
+      onToast(`Roles unavailable: ${errMsg(error)}`);
     }
   }, [onToast, selectedTenant, session]);
 
@@ -216,19 +249,19 @@ export function useUserAdminModel({ session, onToast }: Pick<AdminTabProps, "ses
   }, [onToast, selectedTenant, session]);
 
   const loadPolicies = useCallback(async () => {
-    if (!session?.token) {
-      setPasswordPolicy(defaultPasswordPolicy);
-      setSecurityPolicy(defaultSecurityPolicy);
+    const tenantID = String(selectedTenant || "").trim();
+    if (!session?.token || !tenantID) {
       return;
     }
     try {
-      const [pwd, sec] = await Promise.all([getAuthPasswordPolicy(session), getAuthSecurityPolicy(session)]);
+      const [pwd, sec] = await Promise.all([getAuthPasswordPolicy(session, tenantID), getAuthSecurityPolicy(session, tenantID)]);
       setPasswordPolicy(pwd || defaultPasswordPolicy);
       setSecurityPolicy(sec || defaultSecurityPolicy);
+      setPolicyError("");
     } catch (error) {
-      onToast(`Policy load failed: ${errMsg(error)}`);
+      setPolicyError(errMsg(error));
     }
-  }, [onToast, session]);
+  }, [selectedTenant, session]);
 
   const createUser = useCallback(async () => {
     const tenantID = String(selectedTenant || "").trim();
@@ -242,21 +275,12 @@ export function useUserAdminModel({ session, onToast }: Pick<AdminTabProps, "ses
       onToast("Username, email, and password are required.");
       return;
     }
-    // Email format validation
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailPattern.test(trimmedEmail)) {
       onToast("Invalid email format.");
       return;
     }
-    // Password complexity: min 12 chars, upper, lower, digit, special
-    if (trimmedPassword.length < 12) {
-      onToast("Password must be at least 12 characters.");
-      return;
-    }
-    if (!/[A-Z]/.test(trimmedPassword) || !/[a-z]/.test(trimmedPassword) || !/\d/.test(trimmedPassword) || !/[^A-Za-z0-9\s]/.test(trimmedPassword)) {
-      onToast("Password must include uppercase, lowercase, digit, and special character.");
-      return;
-    }
+    // Password rules are the tenant's policy, applied by the server.
     setCreateBusy(true);
     try {
       await createAuthUser(session, {
@@ -331,14 +355,6 @@ export function useUserAdminModel({ session, onToast }: Pick<AdminTabProps, "ses
       onToast("Provide new password.");
       return;
     }
-    if (trimmedResetPw.length < 12) {
-      onToast("Reset password must be at least 12 characters.");
-      return;
-    }
-    if (!/[A-Z]/.test(trimmedResetPw) || !/[a-z]/.test(trimmedResetPw) || !/\d/.test(trimmedResetPw) || !/[^A-Za-z0-9\s]/.test(trimmedResetPw)) {
-      onToast("Reset password must include uppercase, lowercase, digit, and special character.");
-      return;
-    }
     setUpdateBusy(`${userID}:reset`);
     try {
       await resetAuthUserPassword(session, userID, {
@@ -363,18 +379,8 @@ export function useUserAdminModel({ session, onToast }: Pick<AdminTabProps, "ses
     setSavingPolicy(true);
     try {
       await Promise.all([
-        updateAuthPasswordPolicy(session, {
-          ...passwordPolicy,
-          min_length: Math.max(8, Math.trunc(Number(passwordPolicy.min_length || 12))),
-          max_length: Math.max(32, Math.trunc(Number(passwordPolicy.max_length || 128))),
-          min_unique_chars: Math.max(1, Math.trunc(Number(passwordPolicy.min_unique_chars || 6)))
-        }),
-        updateAuthSecurityPolicy(session, {
-          ...securityPolicy,
-          max_failed_attempts: Math.max(1, Math.trunc(Number(securityPolicy.max_failed_attempts || 5))),
-          lockout_minutes: Math.max(1, Math.trunc(Number(securityPolicy.lockout_minutes || 15))),
-          idle_timeout_minutes: Math.max(1, Math.trunc(Number(securityPolicy.idle_timeout_minutes || 30)))
-        })
+        updateAuthPasswordPolicy(session, passwordPolicy, selectedTenant),
+        updateAuthSecurityPolicy(session, securityPolicy, selectedTenant)
       ]);
       onToast("Auth policies updated.");
       await loadPolicies();
@@ -383,7 +389,7 @@ export function useUserAdminModel({ session, onToast }: Pick<AdminTabProps, "ses
     } finally {
       setSavingPolicy(false);
     }
-  }, [loadPolicies, onToast, passwordPolicy, securityPolicy, session]);
+  }, [loadPolicies, onToast, passwordPolicy, securityPolicy, selectedTenant, session]);
 
   const upsertBinding = useCallback(async () => {
     const tenantID = String(selectedTenant || "").trim();
@@ -617,12 +623,13 @@ export function useUserAdminModel({ session, onToast }: Pick<AdminTabProps, "ses
 
   useEffect(() => {
     void loadTenants();
-    void loadPolicies();
-  }, [loadPolicies, loadTenants]);
+  }, [loadTenants]);
 
   useEffect(() => {
     void loadUsers();
-  }, [loadUsers]);
+    void loadRoles();
+    void loadPolicies();
+  }, [loadUsers, loadRoles, loadPolicies]);
 
   useEffect(() => {
     void loadIdpConfig();
@@ -630,12 +637,20 @@ export function useUserAdminModel({ session, onToast }: Pick<AdminTabProps, "ses
 
   const usersByStatus = useMemo(() => {
     const active = users.filter((user) => String(user.status || "").toLowerCase() === "active").length;
-    const disabled = users.filter((user) => String(user.status || "").toLowerCase() !== "active").length;
-    return { active, disabled };
+    const inactive = users.filter((user) => String(user.status || "").toLowerCase() !== "active").length;
+    return { active, inactive };
   }, [users]);
+
+  const isSelf = useCallback(
+    (user: AuthUser) => user.tenant_id === session?.tenantId && user.username === session?.username,
+    [session?.tenantId, session?.username]
+  );
 
   return {
     tenants,
+    roles,
+    policyError,
+    isSelf,
     selectedTenant,
     setSelectedTenant,
     users,

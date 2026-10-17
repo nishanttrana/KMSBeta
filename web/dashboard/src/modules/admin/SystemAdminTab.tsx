@@ -487,28 +487,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const [securityPolicy,setSecurityPolicy]=useState<Record<string,any>|null>(null);
   const [securityPolicyLoading,setSecurityPolicyLoading]=useState(false);
   const [securityPolicySaving,setSecurityPolicySaving]=useState(false);
-  const INHERIT_KEY="vecta_sys_inheritance_policy";
-  const [inheritancePolicy,setInheritancePolicyRaw]=useState<Record<string,string>>(()=>{
-    try{return JSON.parse(localStorage.getItem(INHERIT_KEY)||"{}")||{};}catch{return {};}
-  });
-  const setInheritancePolicy=useCallback((next:Record<string,string>)=>{
-    setInheritancePolicyRaw(next);
-    try{localStorage.setItem(INHERIT_KEY,JSON.stringify(next));}catch { /* ignored */ }
-  },[]);
-  const toggleScope=(key:string)=>{
-    const cur=inheritancePolicy[key]||"kms_wide";
-    setInheritancePolicy({...inheritancePolicy,[key]:cur==="kms_wide"?"tenant_specific":"kms_wide"});
-  };
-  const ScopeBanner=({section}:{section:string})=>{
-    const isWide=(inheritancePolicy[section]||"kms_wide")==="kms_wide";
-    return(
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"8px 14px",background:isWide?`${C.accent}18`:`${C.amber}18`,borderRadius:4,border:`1px solid ${isWide?C.accent:C.amber}44`}}>
-        <span style={{fontSize:14}}>{isWide?"\u{1F512}":"\u{1F513}"}</span>
-        <span style={{flex:1,fontSize:12,color:C.text}}>{isWide?"KMS-Wide (Uniform) — All tenants inherit these settings":"Tenant-Specific — Tenants may override these settings"}</span>
-        <button onClick={()=>toggleScope(section)} style={{fontSize:11,padding:"4px 10px",borderRadius:3,border:`1px solid ${C.border}`,background:C.surface,color:C.text,cursor:"pointer"}}>{isWide?"Allow Tenant Override":"Enforce KMS-Wide"}</button>
-      </div>
-    );
-  };
   const [accessSettings,setAccessSettings]=useState<Record<string,any>|null>(null);
   const [accessSettingsLoading,setAccessSettingsLoading]=useState(false);
   const [accessSettingsSaving,setAccessSettingsSaving]=useState(false);
@@ -1523,7 +1501,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
 
     {panel==="password"&&<>
     <Section title="Password Policy" actions={<div style={{display:"flex",gap:8}}><Btn small onClick={()=>void loadPasswordPolicy()} disabled={passwordPolicyLoading||passwordPolicySaving}>{passwordPolicyLoading?"Reloading...":"Reload Policy"}</Btn><Btn small primary onClick={()=>void savePasswordPolicy()} disabled={passwordPolicyLoading||passwordPolicySaving||!passwordPolicy}>{passwordPolicySaving?"Saving...":"Save Policy"}</Btn></div>}>
-      <ScopeBanner section="passwordPolicy"/>
       <Card style={{padding:10,borderRadius:4}}>
         <Row2>
           <FG label="Min Length"><Inp type="number" value={String(passwordPolicy?.min_length||12)} onChange={(e)=>setPasswordPolicy((p)=>({...p,min_length:Math.max(8,Number(e.target.value||12))}))}/></FG>
@@ -1548,7 +1525,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
 
     {panel==="login"&&<>
     <Section title="Login Security" actions={<Btn small primary onClick={()=>void saveSecurityPolicy()} disabled={securityPolicyLoading||securityPolicySaving||!securityPolicy}>{securityPolicySaving?"Saving...":"Save"}</Btn>}>
-      <ScopeBanner section="loginSecurity"/>
       <Card style={{padding:10,borderRadius:4}}>
         <Row3>
           <FG label="Max Failed Attempts"><Inp type="number" value={String(securityPolicy?.max_failed_attempts||5)} onChange={(e)=>setSecurityPolicy((p)=>({...p,max_failed_attempts:Math.max(3,Number(e.target.value||5))}))}/></FG>
@@ -1752,7 +1728,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
 
     {panel==="backup"&&<>
     <Section title="Encrypted Backups" actions={<div style={{display:"flex",gap:6}}><Btn small onClick={()=>void loadJobs()}>{jobsLoading?"Refreshing...":"Refresh Jobs"}</Btn></div>}>
-      <ScopeBanner section="backupPolicy"/>
       <Card style={{padding:10,borderRadius:4,marginBottom:8}}>
         <div style={{fontSize:10,color:C.muted,marginBottom:8}}>Create Backup</div>
         <Row2><FG label="Scope"><Sel value={backupScope} onChange={(e)=>setBackupScope(String(e.target.value||"system") as "system"|"tenant")}><option value="system">System</option><option value="tenant">Tenant</option></Sel></FG><FG label="Target Tenant ID (tenant scope)"><Inp value={backupTenant} onChange={(e)=>setBackupTenant(e.target.value)} placeholder="tenant-id"/></FG></Row2>

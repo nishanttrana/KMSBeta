@@ -689,7 +689,7 @@ export const REST_API_CATALOG = [
     method: "POST",
     pathTemplate: "/auth/users",
     bodyTemplate: 
-      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"username\": \"newuser\",\n  \"password\": \"Example-Passw0rd-2026\",\n  \"role\": \"operator\",\n  \"email\": \"user@example.com\"\n}",
+      "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"username\": \"newuser\",\n  \"password\": \"Example-Passw0rd-2026\",\n  \"role\": \"readonly\",\n  \"email\": \"user@example.com\"\n}",
     description: "Creates a new user account.",
     requestExample: "POST /svc/auth/auth/users",
     responseExample: {"request_id": "req_615e52f0f3ac364f", "user_id": "usr_176b4c99438de96d"},
