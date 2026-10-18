@@ -3,9 +3,6 @@ flowchart LR
   tab_home["Command Center"]
   UI --> tab_home
   tab_home --> svc_auth_edge
-  tab_recommendations["Recommendations"]
-  UI --> tab_recommendations
-  tab_recommendations --> svc_auth_edge
   tab_ops["Operations"]
   UI --> tab_ops
   tab_ops --> svc_audit
@@ -21,6 +18,10 @@ flowchart LR
   UI --> tab_keys
   tab_keys --> svc_auth
   tab_keys --> svc_keycore
+  tab_certs["Certificates / PKI"]
+  UI --> tab_certs
+  tab_certs --> svc_certs
+  tab_certs --> svc_keycore
   tab_crypto_agility["Crypto Agility"]
   UI --> tab_crypto_agility
   tab_crypto_agility --> svc_keycore
@@ -28,10 +29,6 @@ flowchart LR
   UI --> tab_discovery
   tab_discovery --> svc_compliance
   tab_discovery --> svc_discovery
-  tab_certs["Certificates / PKI"]
-  UI --> tab_certs
-  tab_certs --> svc_certs
-  tab_certs --> svc_keycore
   tab_vault["Secret Vault"]
   UI --> tab_vault
   tab_vault --> svc_auth_edge
@@ -57,10 +54,6 @@ flowchart LR
   UI --> tab_alerts
   tab_alerts --> svc_auth_edge
   tab_alerts --> svc_reporting
-  tab_approvals["Approvals"]
-  UI --> tab_approvals
-  tab_approvals --> svc_compliance
-  tab_approvals --> svc_governance
   tab_posture["Posture"]
   UI --> tab_posture
   tab_posture --> svc_auth
@@ -77,6 +70,10 @@ flowchart LR
   tab_sbom["SBOM / CBOM"]
   UI --> tab_sbom
   tab_sbom --> svc_sbom
+  tab_approvals["Approvals"]
+  UI --> tab_approvals
+  tab_approvals --> svc_compliance
+  tab_approvals --> svc_governance
   tab_playbooks["Playbooks"]
   UI --> tab_playbooks
   tab_playbooks --> svc_compliance

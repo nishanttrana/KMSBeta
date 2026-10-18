@@ -5,6 +5,21 @@ Newest entries on top.
 
 ## 2026-10-18
 
+### A simpler sidebar breaks every test that clicks by name (13.23.0-beta)
+- Starting groups collapsed failed 88 of 95 browser tests: specs open a
+  module by clicking its name, and a collapsed group renders no names. The
+  specs now start with every group open through Playwright's
+  `storageState`, and one spec checks the real default with an empty
+  state. A change to what the shell shows by default is tested once for
+  the default and once for the behaviour the other specs rely on.
+- Moving a page's tab strip into the sidebar gives its sections new names
+  in the sidebar, which can collide with buttons inside the page
+  (Administration → Backup and Tenant Administration's own Backup tab).
+  Tests scope such clicks to `main`.
+- Links between pages now carry a sub-option ("admin/users");
+  `tests/unit/navTargets.test.ts` checks both parts against `NAV` and
+  `SUB_PANES`, recommendation actions included.
+
 ### A vendor schedule inside an issuance path (13.22.0-beta)
 - The certificate lifetime policy shortened certificates on dates a
   standards body chose, and warned every tenant at a preset 47 days without

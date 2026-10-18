@@ -1581,128 +1581,32 @@ networking belongs to the host or orchestrator.
 
 ## 12. Dashboard UI Navigation
 
-The Vecta KMS dashboard is organized into tab groups in the left sidebar. Each group contains one or more tabs, and each tab may contain sub-panes for drilling into specific features.
+The left sidebar lists the console's modules in six groups by job
+(13.23.0-beta). Only the group holding the open module starts expanded;
+click a group's name to open or close it (the choice is remembered in this
+browser), or type in **Filter modules** to find any module. A module with
+several views lists them as sub-options under its name when you click it.
+Modules whose data you may not read are not listed (13.21.0-beta).
 
-### 12.1 Sidebar Structure
-
-The sidebar is divided into the following tab groups:
-
-| Group | Purpose |
+| Group | Modules |
 |---|---|
-| **CORE** | Health, keys, and primary operational surfaces |
-| **CRYPTO & PKI** | Certificate lifecycle, PKI, and protocol interfaces |
-| **DATA & POLICY** | Data protection and tokenization |
-| **CLOUD & IDENTITY** | Cloud integrations, workload identity, and BYOK/HYOK |
-| **INFRASTRUCTURE** | Interfaces, network, cluster, and HSM integration |
-| **GOVERNANCE** | Approvals, backups, audit, and compliance |
-| **ADMIN** | User management, tenant management, SCIM, system settings |
+| **Home** | Command Center (sub-options Overview, Recommendations), Operations, Workbench |
+| **Keys & certificates** | Key Management, Certificates / PKI, Rotation & Scheduling, Crypto Agility, Crypto Discovery |
+| **Data & integrations** | Secret Vault, Data Protection, Cloud Key Control, Enterprise KM, HSM, Workload Identity, Confidential Compute |
+| **Monitor** | Audit Log, Alert Center, Posture, Compliance, SBOM / CBOM |
+| **Respond** | Approvals, Playbooks |
+| **Platform** | Cluster, Backup & Restore, Administration |
 
-### 12.2 CORE Group
+**Administration** sub-options: Health, Runtime Crypto, SNMP, Tags, Password
+Policy, Login Security, Key Access Hardening, CLI / HSM, Governance, Backup,
+Alert Rules, Approval Policies and Tenant Administration (platform
+administrators only), and User Management. They were a twelve-tab strip
+inside System Administration until 13.23.0-beta.
 
-| Tab | Sub-panes | Purpose |
-|---|---|---|
-| **Dashboard** | Health, Summary, Alerts | Overview of platform health, key counts, certificate expiry alerts, compliance posture |
-| **Keys** | Key List, Create Key, Versions, Operations | Full key lifecycle management — create, rotate, retire, test operations |
-| **Secrets** | Secret List, Create Secret, Versions | Software vault for application secrets and structured data |
-| **Autokey** | Templates, Requests, Handles | Self-service key provisioning with centralized policy templates |
-
-### 12.3 CRYPTO & PKI Group
-
-| Tab | Sub-panes | Purpose |
-|---|---|---|
-| **Certificates** | CA Hierarchy, Issued Certs, Renewal, ACME | Internal PKI, certificate issuance, renewal intelligence |
-| **Signing** | Profiles, Records, Verification | Artifact signing for CI/CD pipelines, OCI, and Git workflows |
-| **Post-Quantum** | Policy, Migration Status, PQC Inventory | PQC migration planning and readiness scoring |
-| **KMIP** | Sessions, Operations Log | KMIP protocol session management |
-
-### 12.4 DATA & POLICY Group
-
-| Tab | Sub-panes | Purpose |
-|---|---|---|
-| **Data Protection** | Tokenization, Masking | Field-level data protection configuration |
-| **Workbench** | Protocol Testing | Controlled testing environment — not production state |
-
-### 12.5 CLOUD & IDENTITY Group
-
-| Tab | Sub-panes | Purpose |
-|---|---|---|
-| **Cloud** | BYOK, HYOK, Cloud Key Import | Cloud provider key management integration |
-| **Workload Identity** | Trust Domains, Registrations, SVIDs, Federation | SPIFFE/SVID-based workload authentication |
-| **Confidential Compute** | Attestation Policy, Release History | TEE attestation and attested key release |
-| **Key Access** | Reason Codes, Rules, Decisions | Key access justification enforcement and review |
-
-### 12.6 INFRASTRUCTURE Group
-
-| Tab | Sub-panes | Purpose |
-|---|---|---|
-| **Interfaces** | REST, KMIP, gRPC, Payment TCP | Request-handling surface configuration |
-| **REST API** | Client Security, Sender Constraints | API client auth mode and sender-constrained security |
-| **Cluster** | Nodes, Replication Profiles, Sync | Multi-node coordination and replication state |
-| **HSM Integration** | HSM Connections, Operations | Hardware security module integration |
-| **EKM** | Agent Config, Database TDE | Transparent data encryption for databases |
-
-### 12.7 GOVERNANCE Group
-
-| Tab | Sub-panes | Purpose |
-|---|---|---|
-| **Governance** | Approvals, Backup, Restore | Approval workflows, backup creation, and restore operations |
-| **Audit Log** | Event Search, Export | Searchable audit event trail |
-| **Compliance** | Assessments, Frameworks, Gaps | Compliance framework alignment and control gap analysis |
-| **Posture** | Findings, Risk, Remediation | Operational security posture and risk triage |
-| **Reporting** | Report Library, Export | Evidence reports for external auditors |
-
-### 12.8 ADMIN Group
-
-| Tab | Sub-panes | Purpose |
-|---|---|---|
-| **User Admin** | Users, SCIM, Groups | User lifecycle, SCIM settings, group management |
-| **Tenant Admin** | Tenants, Delete Readiness | Tenant lifecycle and isolation management |
-| **API Clients** | Client List, Security Posture | Machine identity and API client management |
-| **System** | Health, Network, FIPS, Logs | System health monitoring, network config, FIPS toggle |
-| **Identity Providers** | Provider List, Configure, Test | SSO and directory integration |
-
-### 12.9 Sidebar Features
-
-**Pinned tabs:** Frequently used tabs can be pinned to the top of the sidebar for quick access. Click the pin icon on any tab to pin it.
-
-**Theme toggle:** The bottom of the sidebar has a theme toggle with three options:
-- `Dark` — dark background with light text
-- `Light` — light background with dark text
-- `Auto` — follows the operating system preference
-
-**Timezone picker:** The current timezone is shown at the bottom of the sidebar. Click it to change the display timezone for all timestamps in the dashboard. This does not affect the underlying UTC timestamps in the database.
-
-**Search:** A global search bar at the top of the sidebar searches across key names, certificate common names, user accounts, and audit events. Press `/` from anywhere in the dashboard to focus the search bar.
-
-**Alert badge:** The sidebar displays an unread alert count badge that refreshes every 10 seconds. Click the badge to navigate to the Alerts pane.
-
-**Keyboard shortcuts:**
-
-| Shortcut | Action |
-|---|---|
-| `/` | Focus global search |
-| `g h` | Go to Dashboard (home) |
-| `g k` | Go to Keys |
-| `g c` | Go to Certificates |
-| `g a` | Go to Audit Log |
-| `g u` | Go to User Admin |
-| `g s` | Go to System Health |
-| `?` | Show keyboard shortcut reference |
-
-### 12.10 Sub-pane Navigation
-
-Within a tab, sub-panes are accessed through a secondary navigation bar that appears horizontally below the tab title. The active sub-pane is underlined or highlighted.
-
-For example, within the **Certificates** tab:
-```
-[ CA Hierarchy ] [ Issued Certs ] [ Renewal ] [ ACME ] [ STAR ]
-                  ^^^^^^^^^^^^^^^^^^^
-                  Currently active sub-pane
-```
-
-Clicking a sub-pane loads its content in the main panel. State (such as search filters and scroll position) is preserved when switching between sub-panes within the same tab session.
-
----
+**Addresses.** The browser address names the module and sub-option, for
+example `#admin/backup` or `#home/recommendations`. Old addresses still
+open their view: `#recommendations` opens Command Center → Recommendations,
+`#admin/system` opens Administration → Health.
 
 ## 13. Day 0 Checklist
 

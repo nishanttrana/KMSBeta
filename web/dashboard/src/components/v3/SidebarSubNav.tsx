@@ -5,6 +5,7 @@ import {
   Cloud,
   Cpu,
   Database,
+  DatabaseBackup,
   FileText,
   GitBranch,
   KeyRound,
@@ -17,8 +18,8 @@ import {
   Radio,
   RefreshCw,
   Server,
-  Settings,
   Shield,
+  Stamp,
   ShieldCheck,
   Users,
   VenetianMask,
@@ -86,8 +87,25 @@ export const SUB_PANES: Record<string, SubPane[]> = {
     { id: "connections", label: "Credentials", hint: "The one store for every external credential", icon: Link },
     { id: "streams", label: "Event streaming", hint: "Audit events to a SIEM or webhook", icon: Radio }
   ],
+  home: [
+    { id: "overview", label: "Overview", hint: "Posture score, KPIs, top recommended actions and control coverage", icon: Activity },
+    { id: "recommendations", label: "Recommendations", hint: "Every open recommendation, filterable", icon: ListChecks }
+  ],
+  // System Administration's sections are sub-options (13.23.0-beta): they
+  // were a twelve-tab strip inside the page.
   admin: [
-    { id: "system", label: "System Administration", hint: "Platform health, runtime hardening, FIPS and governance settings", icon: Settings, platformOnly: true },
+    { id: "health", label: "Health", hint: "Service health, heartbeats and reconcilers", icon: Activity, platformOnly: true },
+    { id: "runtime", label: "Runtime Crypto", hint: "FIPS mode and runtime hardening", icon: Shield, platformOnly: true },
+    { id: "snmp", label: "SNMP", hint: "SNMP trap targets", icon: Radio, platformOnly: true },
+    { id: "tags", label: "Tags", hint: "Tag catalogue for keys and objects", icon: List, platformOnly: true },
+    { id: "password", label: "Password Policy", hint: "Password rules for the platform tenant", icon: Lock, platformOnly: true },
+    { id: "login", label: "Login Security", hint: "Lockout and session rules", icon: ShieldCheck, platformOnly: true },
+    { id: "keyaccess", label: "Key Access Hardening", hint: "Default grants, replay window, interface binding", icon: KeyRound, platformOnly: true },
+    { id: "cli", label: "CLI / HSM", hint: "CLI/SSH access and HSM connector", icon: Cpu, platformOnly: true },
+    { id: "governance", label: "Governance", hint: "Approval notifications and delivery", icon: Stamp, platformOnly: true },
+    { id: "backup", label: "Backup", hint: "Encrypted backups and restore", icon: DatabaseBackup, platformOnly: true },
+    { id: "alertrules", label: "Alert Rules", hint: "Rules that raise alerts from audit events", icon: AlertTriangle, platformOnly: true },
+    { id: "approvals", label: "Approval Policies", hint: "Quorum policies for administrative and key operations", icon: ListChecks, platformOnly: true },
     { id: "tenant", label: "Tenant Administration", hint: "Tenants, their policies, backups and lifecycle", icon: Building2, platformOnly: true },
     { id: "users", label: "User Management", hint: "User and group administration with role assignments", icon: Users }
   ]

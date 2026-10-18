@@ -395,7 +395,13 @@ an approach, record it here or in the matching doc below.
   `subView`. The shell has no second column, card list or tab strip for a
   module's views, and a new module with views is added to `SUB_PANES`, not
   given its own switcher. The smoke test "a module's sub-options expand
-  under its name in the sidebar" enforces this.
+  under its name in the sidebar" enforces this. A settings page's section
+  strip counts too: System Administration's twelve tabs became
+  Administration sub-options (13.23.0-beta). Modules sit in six groups by
+  job (`NAV` in `components/v3/shellNav.ts`); a new module joins one. A
+  link to another page may name its sub-option (`onNavigate("admin/users")`,
+  a recommendation's `action.tab`), and `tests/unit/navTargets.test.ts`
+  checks both parts exist.
 
 - **Dashboard pages are visual first, with little text** (owner directive,
   2026-10-01, on Crypto Discovery: "immature buggy and not esthetic", "bar

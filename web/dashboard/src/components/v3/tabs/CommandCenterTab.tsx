@@ -35,6 +35,7 @@ type Props = {
   // False where the clustering feature is not deployed.
   clustered?: boolean;
   onNavigate?: (tabId: string) => void;
+  subView?: string;
 };
 
 const SEV_COLOR: Record<Severity, { fg: string; bg: string; label: string }> = {
@@ -331,7 +332,7 @@ export const CommandCenterTab = ({ session, fipsMode, clustered, onNavigate }: P
               <div style={{ fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}><ShieldAlert size={16} color={C.accentFg} /> Recommended actions</div>
             </div>
             {onNavigate && visible.length > 6 && (
-              <button onClick={() => onNavigate("recommendations")} style={{ fontSize: 12.5, fontWeight: 600, color: C.accentFg, background: "none", border: 0, cursor: "pointer" }}>View all {visible.length} →</button>
+              <button onClick={() => onNavigate("home/recommendations")} style={{ fontSize: 12.5, fontWeight: 600, color: C.accentFg, background: "none", border: 0, cursor: "pointer" }}>View all {visible.length} →</button>
             )}
           </div>
           {visible.slice(0, 6).map((r) => <RecommendationRow key={r.id} r={r} onNavigate={onNavigate} onSnooze={snooze} />)}
@@ -399,3 +400,8 @@ export const RecommendationsTab = ({ session, fipsMode, clustered, onNavigate }:
     </div>
   );
 };
+
+// Command Center's two views, its sidebar sub-options (13.23.0-beta):
+// Recommendations was a module of its own beside it.
+export const HomeTab = (props: Props) =>
+  props.subView === "recommendations" ? <RecommendationsTab {...props} /> : <CommandCenterTab {...props} />;

@@ -1,20 +1,20 @@
 # Generated Product Map
 
-Generated at `2026-10-18T06:57:04Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-18T07:24:42Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
 ## Summary
 
-- Dashboard navigation items: `26`
-- Tab/component mappings: `33`
-- Sub-pane groups: `9`
+- Dashboard navigation items: `25`
+- Tab/component mappings: `32`
+- Sub-pane groups: `10`
 - Backend HTTP routes discovered: `911` across `28` services
 - Backend routes on the `pkg/route` kernel: `524` (permission and audit action in `backend-routes.csv`)
 - Frontend API call sites discovered: `544`
 - Frontend call sites with exact backend route match: `517`
 - Frontend call sites needing review or dynamic/runtime confirmation: `27`
-- Clickable controls with static `onClick` handlers: `774`
+- Clickable controls with static `onClick` handlers: `772`
 - Backend request flows with handler/service/package summaries: `911`
 
 ## How To Use This For Launch
@@ -33,9 +33,6 @@ flowchart LR
   tab_home["Command Center"]
   UI --> tab_home
   tab_home --> svc_auth_edge
-  tab_recommendations["Recommendations"]
-  UI --> tab_recommendations
-  tab_recommendations --> svc_auth_edge
   tab_ops["Operations"]
   UI --> tab_ops
   tab_ops --> svc_audit
@@ -51,6 +48,10 @@ flowchart LR
   UI --> tab_keys
   tab_keys --> svc_auth
   tab_keys --> svc_keycore
+  tab_certs["Certificates / PKI"]
+  UI --> tab_certs
+  tab_certs --> svc_certs
+  tab_certs --> svc_keycore
   tab_crypto_agility["Crypto Agility"]
   UI --> tab_crypto_agility
   tab_crypto_agility --> svc_keycore
@@ -58,10 +59,6 @@ flowchart LR
   UI --> tab_discovery
   tab_discovery --> svc_compliance
   tab_discovery --> svc_discovery
-  tab_certs["Certificates / PKI"]
-  UI --> tab_certs
-  tab_certs --> svc_certs
-  tab_certs --> svc_keycore
   tab_vault["Secret Vault"]
   UI --> tab_vault
   tab_vault --> svc_auth_edge
@@ -87,10 +84,6 @@ flowchart LR
   UI --> tab_alerts
   tab_alerts --> svc_auth_edge
   tab_alerts --> svc_reporting
-  tab_approvals["Approvals"]
-  UI --> tab_approvals
-  tab_approvals --> svc_compliance
-  tab_approvals --> svc_governance
   tab_posture["Posture"]
   UI --> tab_posture
   tab_posture --> svc_auth
@@ -107,6 +100,10 @@ flowchart LR
   tab_sbom["SBOM / CBOM"]
   UI --> tab_sbom
   tab_sbom --> svc_sbom
+  tab_approvals["Approvals"]
+  UI --> tab_approvals
+  tab_approvals --> svc_compliance
+  tab_approvals --> svc_governance
   tab_playbooks["Playbooks"]
   UI --> tab_playbooks
   tab_playbooks --> svc_compliance
@@ -169,15 +166,14 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 
 | Group | UI item | Tab id | Component | Service dependencies | Static call sites |
 | --- | --- | --- | --- | --- | --- |
-| Overview | Command Center | home | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
-| Overview | Recommendations | recommendations | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
-| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 205 |
-| Overview | Workbench | workbench | web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx | - | 0 |
-| Keys & lifecycle | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 97 |
-| Keys & lifecycle | Rotation & Scheduling | rotation | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | - | 0 |
-| Keys & lifecycle | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 12 |
-| Keys & lifecycle | Crypto Discovery | discovery | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | compliance, discovery | 23 |
-| PKI & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 103 |
+| Home | Command Center | home | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
+| Home | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 205 |
+| Home | Workbench | workbench | web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx | - | 0 |
+| Keys & certificates | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 97 |
+| Keys & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 103 |
+| Keys & certificates | Rotation & Scheduling | rotation | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | - | 0 |
+| Keys & certificates | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 12 |
+| Keys & certificates | Crypto Discovery | discovery | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | compliance, discovery | 23 |
 | Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, keycore, secrets | 75 |
 | Data & integrations | Data Protection | dataprotection | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | Data & integrations | Cloud Key Control | cloudctl | web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | - | 0 |
@@ -185,13 +181,13 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Data & integrations | HSM | hsm | web/dashboard/src/components/v3/tabs/HSMTab.tsx | auth | 47 |
 | Data & integrations | Workload Identity | workload | web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | workload | 13 |
 | Data & integrations | Confidential Compute | confidential | web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | confidential | 6 |
-| Security & compliance | Audit Log | audit | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | audit | 10 |
-| Security & compliance | Alert Center | alerts | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | auth-edge, reporting | 27 |
-| Security & compliance | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | compliance, governance | 24 |
-| Security & compliance | Posture | posture | web/dashboard/src/components/v3/tabs/PostureTab.tsx | auth, autokey, keyaccess, posture, signing, workload | 96 |
-| Security & compliance | Compliance | compliance | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | compliance, pqc, reporting | 46 |
-| Security & compliance | SBOM / CBOM | sbom | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | sbom | 12 |
-| Security & compliance | Playbooks | playbooks | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | compliance, keycore | 6 |
+| Monitor | Audit Log | audit | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | audit | 10 |
+| Monitor | Alert Center | alerts | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | auth-edge, reporting | 27 |
+| Monitor | Posture | posture | web/dashboard/src/components/v3/tabs/PostureTab.tsx | auth, autokey, keyaccess, posture, signing, workload | 96 |
+| Monitor | Compliance | compliance | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | compliance, pqc, reporting | 46 |
+| Monitor | SBOM / CBOM | sbom | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | sbom | 12 |
+| Respond | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | compliance, governance | 24 |
+| Respond | Playbooks | playbooks | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | compliance, keycore | 6 |
 | Platform | Cluster | cluster | web/dashboard/src/components/v3/tabs/ClusterTab.tsx | auth-edge, cluster-manager | 15 |
 | Platform | Backup & Restore | backup | web/dashboard/src/components/v3/tabs/BackupTab.tsx | backup | 10 |
 | Platform | Administration | admin | web/dashboard/src/components/v3/tabs/AdminTab.tsx | - | 0 |

@@ -1,6 +1,7 @@
 ﻿import type { AuthSession } from "../../lib/auth";
 
-export type AdminSubView = "system" | "tenant" | "users";
+// "tenant", "users", or a System Administration section (SystemAdminTab).
+export type AdminSubView = string;
 
 export type AdminTabProps = {
   session: AuthSession | null;

@@ -4,7 +4,37 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
-## [13.22.0-beta] — 2026-10-18
+## [13.23.0-beta] — 2026-10-18
+
+The second of three steps to make the console simpler without removing
+anything: fewer places to look.
+
+### Changed
+- **The sidebar has six groups by job:** Home, Keys & certificates, Data &
+  integrations, Monitor, Respond, Platform (was Overview, Keys & lifecycle,
+  a one-entry PKI group, Data & integrations, Security & compliance,
+  Platform). Only the group holding the open module starts expanded; a
+  click on a group's name opens it, and the filter still finds any module.
+- **Recommendations is a sub-option of Command Center** instead of a module
+  beside it. `#recommendations` links open it there.
+- **Administration's sections are sidebar sub-options.** System
+  Administration's twelve-tab strip (Health, Runtime Crypto, SNMP, Tags,
+  Password Policy, Login Security, Key Access Hardening, CLI / HSM,
+  Governance, Backup, Alert Rules, Approval Policies) is gone; each section
+  is listed under Administration with Tenant Administration and User
+  Management, and has its own address (`#admin/backup`). Recommendations
+  open the exact section (`admin/users`, `admin/backup`, `admin/runtime`),
+  and the top bar's CLI button opens CLI / HSM.
+- **Key Management has one main action.** Create Key stays; Form Key,
+  Import, PQC Key and Canary Key are in a "More ways" menu beside it.
+
+### Not changed, waiting on a decision
+- Approval policies can be created both in Administration → Approval
+  Policies and in Approvals. Encrypted backups live in Administration →
+  Backup while the Backup & Restore module is a labelled preview (the
+  scheduler). Each needs one home; neither was merged without the owner.
+
+ — 2026-10-18
 
 ### Changed
 - **The certificate lifetime policy is yours alone.** The certs service

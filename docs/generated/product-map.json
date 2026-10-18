@@ -19566,7 +19566,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setCollapsed((v) => !v)} title= aria-label= className=\"vk-icon-btn\" style={{...",
-      "line": 545,
+      "line": 469,
       "tabs": [],
       "tag": "button"
     },
@@ -19574,7 +19574,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "onLogout",
       "label": "Sign out",
-      "line": 794,
+      "line": 720,
       "tabs": [],
       "tag": "button"
     },
@@ -19582,15 +19582,15 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "togglePin(tab)} title= style={{ display: \"inline-flex\", alignItems: \"center\",...",
-      "line": 846,
+      "line": 772,
       "tabs": [],
       "tag": "button"
     },
     {
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
-      "label": "selectTab(\"admin\")} style={cliEnabled ? : }>",
-      "line": 880,
+      "label": "selectTab(\"admin/cli\")} style={cliEnabled ? : }>",
+      "line": 806,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19598,7 +19598,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" aria-label=\"About this KMS build\" aria-expanded= ti...",
-      "line": 917,
+      "line": 843,
       "tabs": [],
       "tag": "button"
     },
@@ -19606,7 +19606,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" style={{ display: \"inline-flex\", alignItems: \"cente...",
-      "line": 952,
+      "line": 878,
       "tabs": [],
       "tag": "button"
     },
@@ -19622,7 +19622,7 @@
       "file": "web/dashboard/src/components/v3/SidebarSubNav.tsx",
       "handler": "",
       "label": "onSelect(item.id)} style={ } >",
-      "line": 108,
+      "line": 126,
       "tabs": [],
       "tag": "button"
     },
@@ -21152,10 +21152,9 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "setOpen((v) => !v)} aria-expanded= style={ } >",
-      "line": 166,
+      "line": 167,
       "tabs": [
-        "home",
-        "recommendations"
+        "home"
       ],
       "tag": "button"
     },
@@ -21163,10 +21162,9 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "onNavigate(r.action.tab)} style={ } >",
-      "line": 179,
+      "line": 180,
       "tabs": [
-        "home",
-        "recommendations"
+        "home"
       ],
       "tag": "button"
     },
@@ -21174,10 +21172,9 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "setOpen((v) => !v)} aria-label=\"Details\" style={ }>",
-      "line": 186,
+      "line": 187,
       "tabs": [
-        "home",
-        "recommendations"
+        "home"
       ],
       "tag": "button"
     },
@@ -21185,10 +21182,9 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "onSnooze(r.id)} style={{ marginTop: 10, fontSize: 12, color: C.muted, backgro...",
-      "line": 201,
+      "line": 202,
       "tabs": [
-        "home",
-        "recommendations"
+        "home"
       ],
       "tag": "button"
     },
@@ -21196,21 +21192,19 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "void refresh()} disabled= style={{ display: \"inline-flex\", alignItems: \"cente...",
-      "line": 295,
+      "line": 296,
       "tabs": [
-        "home",
-        "recommendations"
+        "home"
       ],
       "tag": "button"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
-      "label": "onNavigate(\"recommendations\")} style={ }>View all \u2192",
-      "line": 334,
+      "label": "onNavigate(\"home/recommendations\")} style={ }>View all \u2192",
+      "line": 335,
       "tabs": [
-        "home",
-        "recommendations"
+        "home"
       ],
       "tag": "button"
     },
@@ -21218,10 +21212,9 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "onNavigate(\"ops\")} style={ }> Operations dashboard",
-      "line": 349,
+      "line": 350,
       "tabs": [
-        "home",
-        "recommendations"
+        "home"
       ],
       "tag": "button"
     },
@@ -21229,10 +21222,9 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "void refresh()} disabled= style={ }>",
-      "line": 379,
+      "line": 380,
       "tabs": [
-        "home",
-        "recommendations"
+        "home"
       ],
       "tag": "button"
     },
@@ -21240,10 +21232,9 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "setSev(\"all\")}>All ( )",
-      "line": 384,
+      "line": 385,
       "tabs": [
-        "home",
-        "recommendations"
+        "home"
       ],
       "tag": "button"
     },
@@ -21251,10 +21242,9 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "",
       "label": "setSev(s)}> ( )",
-      "line": 386,
+      "line": 387,
       "tabs": [
-        "home",
-        "recommendations"
+        "home"
       ],
       "tag": "button"
     },
@@ -21262,10 +21252,9 @@
       "file": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
       "handler": "unsnoozeAll",
       "label": "Show snoozed",
-      "line": 393,
+      "line": 394,
       "tabs": [
-        "home",
-        "recommendations"
+        "home"
       ],
       "tag": "button"
     },
@@ -22772,6 +22761,30 @@
       "tag": "Btn"
     },
     {
+      "file": "web/dashboard/src/components/v3/tabs/KeyCreateMenu.tsx",
+      "handler": "onCreate} style={{ ...btnStyle, padding: \"0 20px\", minWidth: 130",
+      "label": "Create Key",
+      "line": 22,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/KeyCreateMenu.tsx",
+      "handler": "",
+      "label": "setOpen((v) => !v)} aria-haspopup=\"menu\" aria-expanded= style={{ ...btnStyle,...",
+      "line": 25,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/KeyCreateMenu.tsx",
+      "handler": "",
+      "label": "} className=\"vk-nav-item\" style={ }>",
+      "line": 31,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
       "file": "web/dashboard/src/components/v3/tabs/KeyDerivationPanel.tsx",
       "handler": "",
       "label": "void load()}>Refresh",
@@ -22887,57 +22900,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "void refreshKeyInventory()} style={{height:40,padding:\"0 16px\",borderRadius:4...",
-      "line": 1737,
-      "tabs": [
-        "keys"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
-      "handler": "",
-      "label": "} primary style={ } > Create Key",
-      "line": 1740,
-      "tabs": [
-        "keys"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
-      "handler": "",
-      "label": "setModal(\"form-key\")} style={{height:40,padding:\"0 20px\",borderRadius:4,fontS...",
-      "line": 1747,
-      "tabs": [
-        "keys"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
-      "handler": "",
-      "label": "} style={{height:40,padding:\"0 20px\",borderRadius:4,fontSize:12,fontWeight:70...",
-      "line": 1750,
-      "tabs": [
-        "keys"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
-      "handler": "",
-      "label": "setModal(\"generate-pqc\")} style={{height:40,padding:\"0 20px\",borderRadius:4,f...",
-      "line": 1753,
-      "tabs": [
-        "keys"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
-      "handler": "",
-      "label": "setModal(\"canary\")} style={{height:40,padding:\"0 20px\",borderRadius:4,fontSiz...",
-      "line": 1756,
+      "line": 1738,
       "tabs": [
         "keys"
       ],
@@ -22947,7 +22910,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "{ e.stopPropagation(); const next=!showColumnMenu; if(next) setShowColumnMenu...",
-      "line": 1766,
+      "line": 1749,
       "tabs": [
         "keys"
       ],
@@ -22957,7 +22920,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "{ e.stopPropagation(); const isOpen=openActionMenuId===k.id; if(isOpen) const...",
-      "line": 1894,
+      "line": 1877,
       "tabs": [
         "keys"
       ],
@@ -22967,7 +22930,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} style={ } > Edit Key Policy",
-      "line": 1936,
+      "line": 1919,
       "tabs": [
         "keys"
       ],
@@ -22977,7 +22940,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} style={ } > Rotate",
-      "line": 1945,
+      "line": 1928,
       "tabs": [
         "keys"
       ],
@@ -22987,7 +22950,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} style={ } > Verify Integrity",
-      "line": 1958,
+      "line": 1941,
       "tabs": [
         "keys"
       ],
@@ -22997,7 +22960,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} style={ } > Attest",
-      "line": 1964,
+      "line": 1947,
       "tabs": [
         "keys"
       ],
@@ -23007,7 +22970,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} disabled= style={ } > Deactivate",
-      "line": 1970,
+      "line": 1953,
       "tabs": [
         "keys"
       ],
@@ -23017,7 +22980,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} disabled= style={ } > Activate",
-      "line": 1980,
+      "line": 1963,
       "tabs": [
         "keys"
       ],
@@ -23027,7 +22990,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} disabled= style={ } > Disable",
-      "line": 1990,
+      "line": 1973,
       "tabs": [
         "keys"
       ],
@@ -23037,7 +23000,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} style={ } > Export",
-      "line": 2000,
+      "line": 1983,
       "tabs": [
         "keys"
       ],
@@ -23047,7 +23010,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} style={ } > Delete",
-      "line": 2011,
+      "line": 1994,
       "tabs": [
         "keys"
       ],
@@ -23057,7 +23020,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev",
-      "line": 2044,
+      "line": 2027,
       "tabs": [
         "keys"
       ],
@@ -23067,7 +23030,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setPageIndex((prev)=>Math.min(totalPages-1,prev+1))} disabled= >Next",
-      "line": 2046,
+      "line": 2029,
       "tabs": [
         "keys"
       ],
@@ -23077,7 +23040,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setCreateTags((prev)=>prev.filter((t)=>t!==tag))} style={ } >",
-      "line": 2148,
+      "line": 2131,
       "tabs": [
         "keys"
       ],
@@ -23087,7 +23050,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setShowCreateTagPicker(!showCreateTagPicker)}>Add More Tags",
-      "line": 2158,
+      "line": 2141,
       "tabs": [
         "keys"
       ],
@@ -23097,7 +23060,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2175,
+      "line": 2158,
       "tabs": [
         "keys"
       ],
@@ -23107,7 +23070,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "addCustomerKey} disabled={creating",
       "label": "(icon or dynamic label)",
-      "line": 2176,
+      "line": 2159,
       "tabs": [
         "keys"
       ],
@@ -23117,7 +23080,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2297,
+      "line": 2280,
       "tabs": [
         "keys"
       ],
@@ -23127,7 +23090,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "submitFormKey} disabled={forming",
       "label": "(icon or dynamic label)",
-      "line": 2298,
+      "line": 2281,
       "tabs": [
         "keys"
       ],
@@ -23137,7 +23100,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2404,
+      "line": 2387,
       "tabs": [
         "keys"
       ],
@@ -23147,7 +23110,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "submitImportKey} disabled={importing",
       "label": "(icon or dynamic label)",
-      "line": 2405,
+      "line": 2388,
       "tabs": [
         "keys"
       ],
@@ -23157,7 +23120,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(comp,\"deactivated\")} disabled= >",
-      "line": 2464,
+      "line": 2447,
       "tabs": [
         "keys"
       ],
@@ -23167,7 +23130,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(comp,\"active\")} disabled= >",
-      "line": 2465,
+      "line": 2448,
       "tabs": [
         "keys"
       ],
@@ -23177,7 +23140,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(comp,\"disabled\")} disabled= >",
-      "line": 2466,
+      "line": 2449,
       "tabs": [
         "keys"
       ],
@@ -23187,7 +23150,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "}> Rotate",
-      "line": 2488,
+      "line": 2471,
       "tabs": [
         "keys"
       ],
@@ -23197,7 +23160,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(\"export\")}> Export",
-      "line": 2489,
+      "line": 2472,
       "tabs": [
         "keys"
       ],
@@ -23207,7 +23170,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "downloadSelectedPublicKey",
       "label": "Public key (PEM)",
-      "line": 2490,
+      "line": 2473,
       "tabs": [
         "keys"
       ],
@@ -23217,7 +23180,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "openPolicyEditor(selectedKey)}>Edit Key Policy",
-      "line": 2491,
+      "line": 2474,
       "tabs": [
         "keys"
       ],
@@ -23227,7 +23190,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(selectedKey,\"deactivated\")} disabled= >",
-      "line": 2492,
+      "line": 2475,
       "tabs": [
         "keys"
       ],
@@ -23237,7 +23200,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(selectedKey,\"active\")} disabled= >",
-      "line": 2493,
+      "line": 2476,
       "tabs": [
         "keys"
       ],
@@ -23247,7 +23210,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(selectedKey,\"disabled\")} disabled= >",
-      "line": 2494,
+      "line": 2477,
       "tabs": [
         "keys"
       ],
@@ -23257,7 +23220,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "}> Delete",
-      "line": 2495,
+      "line": 2478,
       "tabs": [
         "keys"
       ],
@@ -23267,7 +23230,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "addPolicyGrant",
       "label": "Add Assignment",
-      "line": 2561,
+      "line": 2544,
       "tabs": [
         "keys"
       ],
@@ -23277,7 +23240,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "removePolicyGrant(subjectType,subjectID)}>Remove",
-      "line": 2583,
+      "line": 2566,
       "tabs": [
         "keys"
       ],
@@ -23287,7 +23250,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2605,
+      "line": 2588,
       "tabs": [
         "keys"
       ],
@@ -23297,7 +23260,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "saveKeyPolicy} disabled={policySaving",
       "label": "(icon or dynamic label)",
-      "line": 2606,
+      "line": 2589,
       "tabs": [
         "keys"
       ],
@@ -23307,7 +23270,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2627,
+      "line": 2610,
       "tabs": [
         "keys"
       ],
@@ -23317,7 +23280,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "rotateSelectedKey} disabled={rotating",
       "label": "(icon or dynamic label)",
-      "line": 2627,
+      "line": 2610,
       "tabs": [
         "keys"
       ],
@@ -23327,7 +23290,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2654,
+      "line": 2637,
       "tabs": [
         "keys"
       ],
@@ -23337,7 +23300,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "destroySelectedKey} disabled={!destroyReady",
       "label": "(icon or dynamic label)",
-      "line": 2655,
+      "line": 2638,
       "tabs": [
         "keys"
       ],
@@ -23347,7 +23310,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2677,
+      "line": 2660,
       "tabs": [
         "keys"
       ],
@@ -23357,7 +23320,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "generatePQCKey} disabled={pqcGenerating",
       "label": "(icon or dynamic label)",
-      "line": 2677,
+      "line": 2660,
       "tabs": [
         "keys"
       ],
@@ -23367,7 +23330,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setAttestResult(null)}>Close",
-      "line": 2683,
+      "line": 2666,
       "tabs": [
         "keys"
       ],
@@ -23377,7 +23340,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "{const b=new Blob([JSON.stringify(attestResult,null,2)], );const a=document.c...",
-      "line": 2690,
+      "line": 2673,
       "tabs": [
         "keys"
       ],
@@ -23387,7 +23350,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "navigator.clipboard?.writeText(JSON.stringify(attestResult,null,2))}>Copy",
-      "line": 2691,
+      "line": 2674,
       "tabs": [
         "keys"
       ],
@@ -25639,7 +25602,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "inputRef.current?.click()} style={{ padding: \"8px 14px\", borderRadius: 4, box...",
-      "line": 240,
+      "line": 239,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25647,7 +25610,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{ onFileChange(null); if (inputRef.current) }} style={ } > Clear",
-      "line": 254,
+      "line": 253,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25655,7 +25618,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadHealth()}>",
-      "line": 1229,
+      "line": 1211,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25663,7 +25626,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadSystemState()} disabled= >",
-      "line": 1312,
+      "line": 1294,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25671,7 +25634,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setFipsConfigModalOpen(true)}>Configure FIPS",
-      "line": 1313,
+      "line": 1295,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25679,7 +25642,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{setSystemState((p)=>( ));onFipsModeChange(\"enabled\");}}>Enable FIPS",
-      "line": 1325,
+      "line": 1307,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25687,7 +25650,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{setSystemState((p)=>( ));onFipsModeChange(\"disabled\");}}>Disable FIPS",
-      "line": 1326,
+      "line": 1308,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25695,7 +25658,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setFipsConfigModalOpen(false)}>Cancel",
-      "line": 1381,
+      "line": 1363,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25703,7 +25666,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveFipsConfig()} disabled= >",
-      "line": 1382,
+      "line": 1364,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25711,7 +25674,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadSystemState()} disabled= >",
-      "line": 1389,
+      "line": 1371,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25719,7 +25682,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void testSnmpSettings()} disabled= >",
-      "line": 1390,
+      "line": 1372,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25727,7 +25690,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSnmpSettings()} disabled= >",
-      "line": 1391,
+      "line": 1373,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25735,7 +25698,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadTags()}>Refresh",
-      "line": 1473,
+      "line": 1455,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25743,7 +25706,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void addTag()} disabled= >",
-      "line": 1478,
+      "line": 1460,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25751,7 +25714,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void removeTag(name,usageCount)} disabled= >Delete",
-      "line": 1493,
+      "line": 1475,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25759,7 +25722,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadPasswordPolicy()} disabled= >",
-      "line": 1503,
+      "line": 1485,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25767,7 +25730,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void savePasswordPolicy()} disabled= >",
-      "line": 1503,
+      "line": 1485,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25775,7 +25738,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSecurityPolicy()} disabled= >",
-      "line": 1527,
+      "line": 1509,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25783,7 +25746,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadAccessHardening()} disabled= >",
-      "line": 1545,
+      "line": 1527,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25791,7 +25754,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveAccessHardening()} disabled= >",
-      "line": 1546,
+      "line": 1528,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25799,7 +25762,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadSystemState()} disabled= >",
-      "line": 1576,
+      "line": 1558,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25807,7 +25770,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSystemState()} disabled= >",
-      "line": 1576,
+      "line": 1558,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25815,7 +25778,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>",
-      "line": 1649,
+      "line": 1631,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25823,7 +25786,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void openCli()} disabled= >",
-      "line": 1656,
+      "line": 1638,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25831,7 +25794,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{ if(!session?.token) return; setHsmSaving(true); try{ const payload= ; const...",
-      "line": 1669,
+      "line": 1651,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25839,7 +25802,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; const lib=String(hsm.library_path||\"\").trim(); i...",
-      "line": 1700,
+      "line": 1682,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25847,7 +25810,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setHsm((p)=>( ))}>Use",
-      "line": 1703,
+      "line": 1685,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25855,7 +25818,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; setGovSaving(true); try{await updateGovernanceSe...",
-      "line": 1710,
+      "line": 1692,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25863,7 +25826,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!String(smtpTo||\"\").trim()) setSmtpTesting(true); try ca...",
-      "line": 1715,
+      "line": 1697,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25871,7 +25834,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; setWebhookTesting((p)=>( )); try{await testGover...",
-      "line": 1723,
+      "line": 1705,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25879,7 +25842,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadJobs()}>",
-      "line": 1730,
+      "line": 1712,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25887,7 +25850,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{ if(!session?.token) return; if(backupScope===\"tenant\"&&!String(backupTenant...",
-      "line": 1743,
+      "line": 1725,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25895,7 +25858,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "dl(sh.file_name,sh.content_base64,sh.content_type)}>Download",
-      "line": 1767,
+      "line": 1749,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25903,7 +25866,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setBackupCreatedShares([])}>All shares handed out: close",
-      "line": 1770,
+      "line": 1752,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25911,7 +25874,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "backupShareInputRef.current?.click()}>",
-      "line": 1798,
+      "line": 1780,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25919,7 +25882,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Clear",
-      "line": 1799,
+      "line": 1781,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25927,7 +25890,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void verifyBackup()} disabled= >",
-      "line": 1804,
+      "line": 1786,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25935,7 +25898,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void restoreBackup()} disabled= >",
-      "line": 1805,
+      "line": 1787,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25943,7 +25906,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDownloading(`$ :artifact`); try ca...",
-      "line": 1819,
+      "line": 1801,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25951,7 +25914,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDownloading(`$ :key`); try catch(e...",
-      "line": 1819,
+      "line": 1801,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25959,7 +25922,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDeleting(id); try catch(error){if(...",
-      "line": 1819,
+      "line": 1801,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25967,7 +25930,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void refreshAlertRules()} disabled= >",
-      "line": 1825,
+      "line": 1807,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25975,7 +25938,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openRuleModal()}>Create Rule",
-      "line": 1825,
+      "line": 1807,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25983,7 +25946,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; try{await updateReportingRule(session,id, )...",
-      "line": 1842,
+      "line": 1824,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25991,7 +25954,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openRuleModal(rule)}>Edit",
-      "line": 1845,
+      "line": 1827,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25999,7 +25962,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; try catch(error){if(!sessionGuard(error)) o...",
-      "line": 1846,
+      "line": 1828,
       "tabs": [],
       "tag": "Btn"
     },
@@ -26007,7 +25970,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void handleTestRule()} disabled= >",
-      "line": 1901,
+      "line": 1883,
       "tabs": [],
       "tag": "Btn"
     },
@@ -26015,7 +25978,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setRuleModalOpen(false)}>Cancel",
-      "line": 1914,
+      "line": 1896,
       "tabs": [],
       "tag": "Btn"
     },
@@ -26023,7 +25986,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void handleSaveRule()} disabled= >",
-      "line": 1915,
+      "line": 1897,
       "tabs": [],
       "tag": "Btn"
     },
@@ -26031,7 +25994,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadGovPolicies()} disabled= >",
-      "line": 1922,
+      "line": 1904,
       "tabs": [],
       "tag": "Btn"
     },
@@ -26039,7 +26002,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openGovPolicyModal()}>+ Create Policy",
-      "line": 1923,
+      "line": 1905,
       "tabs": [],
       "tag": "Btn"
     },
@@ -26047,7 +26010,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openGovPolicyModal(policy)} style={{fontSize:10,padding:\"3px 8px\",borderRadiu...",
-      "line": 1959,
+      "line": 1941,
       "tabs": [],
       "tag": "button"
     },
@@ -26055,7 +26018,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; try{await updateGovernancePolicy(session,policy....",
-      "line": 1960,
+      "line": 1942,
       "tabs": [],
       "tag": "button"
     },
@@ -26063,7 +26026,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Select All",
-      "line": 2033,
+      "line": 2015,
       "tabs": [],
       "tag": "Btn"
     },
@@ -26071,7 +26034,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setGpTriggers([])}>Clear All",
-      "line": 2034,
+      "line": 2016,
       "tabs": [],
       "tag": "Btn"
     },
@@ -26079,7 +26042,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setGovPolicyModal(false)}>Cancel",
-      "line": 2077,
+      "line": 2059,
       "tabs": [],
       "tag": "Btn"
     },
@@ -26087,7 +26050,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveGovPolicy()} disabled= >",
-      "line": 2078,
+      "line": 2060,
       "tabs": [],
       "tag": "Btn"
     },
@@ -33502,52 +33465,47 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-18T06:57:04Z",
+  "generated_at": "2026-10-18T07:24:42Z",
   "navigation": [
     {
-      "group": "Overview",
+      "group": "Home",
       "id": "home",
       "label": "Command Center"
     },
     {
-      "group": "Overview",
-      "id": "recommendations",
-      "label": "Recommendations"
-    },
-    {
-      "group": "Overview",
+      "group": "Home",
       "id": "ops",
       "label": "Operations"
     },
     {
-      "group": "Overview",
+      "group": "Home",
       "id": "workbench",
       "label": "Workbench"
     },
     {
-      "group": "Keys & lifecycle",
+      "group": "Keys & certificates",
       "id": "keys",
       "label": "Key Management"
     },
     {
-      "group": "Keys & lifecycle",
+      "group": "Keys & certificates",
+      "id": "certs",
+      "label": "Certificates / PKI"
+    },
+    {
+      "group": "Keys & certificates",
       "id": "rotation",
       "label": "Rotation & Scheduling"
     },
     {
-      "group": "Keys & lifecycle",
+      "group": "Keys & certificates",
       "id": "crypto_agility",
       "label": "Crypto Agility"
     },
     {
-      "group": "Keys & lifecycle",
+      "group": "Keys & certificates",
       "id": "discovery",
       "label": "Crypto Discovery"
-    },
-    {
-      "group": "PKI & certificates",
-      "id": "certs",
-      "label": "Certificates / PKI"
     },
     {
       "group": "Data & integrations",
@@ -33585,37 +33543,37 @@
       "label": "Confidential Compute"
     },
     {
-      "group": "Security & compliance",
+      "group": "Monitor",
       "id": "audit",
       "label": "Audit Log"
     },
     {
-      "group": "Security & compliance",
+      "group": "Monitor",
       "id": "alerts",
       "label": "Alert Center"
     },
     {
-      "group": "Security & compliance",
-      "id": "approvals",
-      "label": "Approvals"
-    },
-    {
-      "group": "Security & compliance",
+      "group": "Monitor",
       "id": "posture",
       "label": "Posture"
     },
     {
-      "group": "Security & compliance",
+      "group": "Monitor",
       "id": "compliance",
       "label": "Compliance"
     },
     {
-      "group": "Security & compliance",
+      "group": "Monitor",
       "id": "sbom",
       "label": "SBOM / CBOM"
     },
     {
-      "group": "Security & compliance",
+      "group": "Respond",
+      "id": "approvals",
+      "label": "Approvals"
+    },
+    {
+      "group": "Respond",
       "id": "playbooks",
       "label": "Playbooks"
     },
@@ -91270,7 +91228,7 @@
     "tab_dependencies": {
       "audit": 2,
       "auth": 4,
-      "auth-edge": 7,
+      "auth-edge": 6,
       "autokey": 1,
       "backup": 1,
       "certs": 3,
@@ -91297,8 +91255,52 @@
   "subpanes": {
     "admin": [
       {
-        "id": "system",
-        "label": "System Administration"
+        "id": "health",
+        "label": "Health"
+      },
+      {
+        "id": "runtime",
+        "label": "Runtime Crypto"
+      },
+      {
+        "id": "snmp",
+        "label": "SNMP"
+      },
+      {
+        "id": "tags",
+        "label": "Tags"
+      },
+      {
+        "id": "password",
+        "label": "Password Policy"
+      },
+      {
+        "id": "login",
+        "label": "Login Security"
+      },
+      {
+        "id": "keyaccess",
+        "label": "Key Access Hardening"
+      },
+      {
+        "id": "cli",
+        "label": "CLI / HSM"
+      },
+      {
+        "id": "governance",
+        "label": "Governance"
+      },
+      {
+        "id": "backup",
+        "label": "Backup"
+      },
+      {
+        "id": "alertrules",
+        "label": "Alert Rules"
+      },
+      {
+        "id": "approvals",
+        "label": "Approval Policies"
       },
       {
         "id": "tenant",
@@ -91391,6 +91393,16 @@
         "label": "KMIP"
       }
     ],
+    "home": [
+      {
+        "id": "overview",
+        "label": "Overview"
+      },
+      {
+        "id": "recommendations",
+        "label": "Recommendations"
+      }
+    ],
     "hsm": [
       {
         "id": "hsm-aws",
@@ -91473,24 +91485,24 @@
   "summary": {
     "backend_routes": 911,
     "backend_services": 28,
-    "button_inventory": 774,
+    "button_inventory": 772,
     "frontend_call_sites": 544,
     "matched_frontend_call_sites": 517,
-    "nav_items": 26,
+    "nav_items": 25,
     "request_flows": 911,
     "request_flows_with_frontend": 524,
     "request_flows_with_internal_package_calls": 195,
     "request_flows_with_service_calls": 536,
     "request_flows_with_store_calls": 647,
-    "subpane_groups": 9,
-    "tab_components": 33,
+    "subpane_groups": 10,
+    "tab_components": 32,
     "unmatched_frontend_call_sites": 27
   },
   "tabs": [
     {
       "call_count": 4,
       "component": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
-      "group": "Overview",
+      "group": "Home",
       "id": "home",
       "label": "Command Center",
       "services": [
@@ -91503,24 +91515,9 @@
       ]
     },
     {
-      "call_count": 4,
-      "component": "web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx",
-      "group": "Overview",
-      "id": "recommendations",
-      "label": "Recommendations",
-      "services": [
-        "auth-edge"
-      ],
-      "support_files": [
-        "web/dashboard/src/lib/auth.ts",
-        "web/dashboard/src/lib/platformSnapshot.ts",
-        "web/dashboard/src/lib/recommendations.ts"
-      ]
-    },
-    {
       "call_count": 205,
       "component": "web/dashboard/src/components/v3/tabs/DashboardTab.tsx",
-      "group": "Overview",
+      "group": "Home",
       "id": "ops",
       "label": "Operations",
       "services": [
@@ -91549,7 +91546,7 @@
     {
       "call_count": 0,
       "component": "web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx",
-      "group": "Overview",
+      "group": "Home",
       "id": "workbench",
       "label": "Workbench",
       "services": [],
@@ -91558,7 +91555,7 @@
     {
       "call_count": 97,
       "component": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
-      "group": "Keys & lifecycle",
+      "group": "Keys & certificates",
       "id": "keys",
       "label": "Key Management",
       "services": [
@@ -91578,9 +91575,26 @@
       ]
     },
     {
+      "call_count": 103,
+      "component": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "group": "Keys & certificates",
+      "id": "certs",
+      "label": "Certificates / PKI",
+      "services": [
+        "certs",
+        "keycore"
+      ],
+      "support_files": [
+        "web/dashboard/src/lib/certs.ts",
+        "web/dashboard/src/lib/keycore.ts",
+        "web/dashboard/src/modules/hsm/HSMPartitionTable.tsx",
+        "web/dashboard/src/modules/hsm/HSMTargetPicker.tsx"
+      ]
+    },
+    {
       "call_count": 0,
       "component": "web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx",
-      "group": "Keys & lifecycle",
+      "group": "Keys & certificates",
       "id": "rotation",
       "label": "Rotation & Scheduling",
       "services": [],
@@ -91589,7 +91603,7 @@
     {
       "call_count": 12,
       "component": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
-      "group": "Keys & lifecycle",
+      "group": "Keys & certificates",
       "id": "crypto_agility",
       "label": "Crypto Agility",
       "services": [
@@ -91602,7 +91616,7 @@
     {
       "call_count": 23,
       "component": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
-      "group": "Keys & lifecycle",
+      "group": "Keys & certificates",
       "id": "discovery",
       "label": "Crypto Discovery",
       "services": [
@@ -91611,23 +91625,6 @@
       ],
       "support_files": [
         "web/dashboard/src/lib/discovery.ts"
-      ]
-    },
-    {
-      "call_count": 103,
-      "component": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "group": "PKI & certificates",
-      "id": "certs",
-      "label": "Certificates / PKI",
-      "services": [
-        "certs",
-        "keycore"
-      ],
-      "support_files": [
-        "web/dashboard/src/lib/certs.ts",
-        "web/dashboard/src/lib/keycore.ts",
-        "web/dashboard/src/modules/hsm/HSMPartitionTable.tsx",
-        "web/dashboard/src/modules/hsm/HSMTargetPicker.tsx"
       ]
     },
     {
@@ -91724,7 +91721,7 @@
     {
       "call_count": 10,
       "component": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
-      "group": "Security & compliance",
+      "group": "Monitor",
       "id": "audit",
       "label": "Audit Log",
       "services": [
@@ -91737,7 +91734,7 @@
     {
       "call_count": 27,
       "component": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
-      "group": "Security & compliance",
+      "group": "Monitor",
       "id": "alerts",
       "label": "Alert Center",
       "services": [
@@ -91750,23 +91747,9 @@
       ]
     },
     {
-      "call_count": 24,
-      "component": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
-      "group": "Security & compliance",
-      "id": "approvals",
-      "label": "Approvals",
-      "services": [
-        "compliance",
-        "governance"
-      ],
-      "support_files": [
-        "web/dashboard/src/lib/governance.ts"
-      ]
-    },
-    {
       "call_count": 96,
       "component": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
-      "group": "Security & compliance",
+      "group": "Monitor",
       "id": "posture",
       "label": "Posture",
       "services": [
@@ -91789,7 +91772,7 @@
     {
       "call_count": 46,
       "component": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
-      "group": "Security & compliance",
+      "group": "Monitor",
       "id": "compliance",
       "label": "Compliance",
       "services": [
@@ -91806,7 +91789,7 @@
     {
       "call_count": 12,
       "component": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
-      "group": "Security & compliance",
+      "group": "Monitor",
       "id": "sbom",
       "label": "SBOM / CBOM",
       "services": [
@@ -91817,9 +91800,23 @@
       ]
     },
     {
+      "call_count": 24,
+      "component": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
+      "group": "Respond",
+      "id": "approvals",
+      "label": "Approvals",
+      "services": [
+        "compliance",
+        "governance"
+      ],
+      "support_files": [
+        "web/dashboard/src/lib/governance.ts"
+      ]
+    },
+    {
       "call_count": 6,
       "component": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
-      "group": "Security & compliance",
+      "group": "Respond",
       "id": "playbooks",
       "label": "Playbooks",
       "services": [
@@ -91965,7 +91962,40 @@
       "support_files": []
     }
   ],
-  "titles": {},
+  "titles": {
+    "admin": "Administration",
+    "alerts": "Alert Center",
+    "approvals": "Approvals",
+    "audit": "Audit Log",
+    "backup": "Backup & Restore",
+    "byok": "BYOK",
+    "certs": "Certificates / PKI",
+    "cloudctl": "Cloud Key Control",
+    "cluster": "Cluster",
+    "compliance": "Compliance",
+    "confidential": "Confidential Compute",
+    "crypto": "Crypto Console",
+    "crypto_agility": "Crypto Agility",
+    "dataenc": "Data Encryption",
+    "dataprotection": "Data Protection",
+    "discovery": "Crypto Discovery",
+    "ekm": "Enterprise Key Management",
+    "home": "Command Center",
+    "hsm": "HSM",
+    "hyok": "HYOK",
+    "keys": "Key Management",
+    "ops": "Operations Dashboard",
+    "pkcs11": "Java SDK",
+    "playbooks": "Playbooks",
+    "posture": "Posture Management",
+    "restapi": "REST API",
+    "rotation": "Rotation & Scheduling",
+    "sbom": "SBOM / CBOM",
+    "tokenize": "Tokenize / Mask / Redact",
+    "vault": "Secret Vault",
+    "workbench": "Workbench",
+    "workload": "Workload Identity"
+  },
   "unmatched_frontend_calls": [
     {
       "dynamic": false,
@@ -123775,7 +123805,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-18T06:57:04Z",
+    "generatedAt": "2026-10-18T07:24:42Z",
     "methods": [
       "DELETE",
       "GET",

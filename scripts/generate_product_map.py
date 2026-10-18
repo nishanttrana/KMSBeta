@@ -32,6 +32,8 @@ SERVICES_ROOT = REPO_ROOT / "services"
 OUT_DIR = REPO_ROOT / "docs" / "generated"
 SHELL_PATH = SRC_ROOT / "components" / "VectaDashboardV3Shell.tsx"
 SUB_PANES_PATH = SRC_ROOT / "components" / "v3" / "SidebarSubNav.tsx"
+# The sidebar's groups and modules (moved out of the shell in 13.23.0-beta).
+NAV_PATH = SRC_ROOT / "components" / "v3" / "shellNav.ts"
 
 SERVICE_ALIASES = {
     "cluster": "cluster-manager",
@@ -989,17 +991,18 @@ def extract_shell_maps() -> Tuple[List[Dict[str, str]], Dict[str, str], Dict[str
             tab_to_component[tab_id] = lazy_imports.get(component_name, component_name)
 
     titles: Dict[str, str] = {}
-    titles_end = text.find("const NAV")
+    titles_end = text.find("\n};", titles_start)
     if titles_start >= 0 and titles_end > titles_start:
         for match in re.finditer(r"^\s*([A-Za-z0-9_]+):\s*\"([^\"]+)\"", text[titles_start:titles_end], re.MULTILINE):
             titles[match.group(1)] = match.group(2)
 
     nav: List[Dict[str, str]] = []
-    nav_start = text.find("const NAV = [")
-    nav_end = text.find("\n];", nav_start)
+    nav_text = NAV_PATH.read_text(encoding="utf-8")
+    nav_start = nav_text.find("const NAV = [")
+    nav_end = nav_text.find("\n];", nav_start)
     if nav_start >= 0 and nav_end > nav_start:
         current_group = ""
-        for line in text[nav_start:nav_end].splitlines():
+        for line in nav_text[nav_start:nav_end].splitlines():
             group_match = re.search(r"\{\s*g:\s*\"([^\"]+)\"", line)
             if group_match:
                 current_group = group_match.group(1)

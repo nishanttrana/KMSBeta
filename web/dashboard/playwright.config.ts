@@ -11,7 +11,20 @@ export default defineConfig({
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : [["list"]],
   use: {
     baseURL: "http://127.0.0.1:4173",
-    trace: "retain-on-failure"
+    trace: "retain-on-failure",
+    // Specs open modules by name, so every sidebar group starts open. The
+    // console's own default (only the open module's group) is tested in
+    // smoke-tabs.spec.ts with an empty storage state (13.23.0-beta).
+    storageState: {
+      cookies: [],
+      origins: [{
+        origin: "http://127.0.0.1:4173",
+        localStorage: [{
+          name: "vecta_nav_open_groups_v2",
+          value: JSON.stringify({ Home: true, "Keys & certificates": true, "Data & integrations": true, Monitor: true, Respond: true, Platform: true })
+        }]
+      }]
+    }
   },
   webServer: {
     command: "npm run preview -- --host 127.0.0.1 --port 4173 --strictPort",

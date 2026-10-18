@@ -20,10 +20,12 @@ This guide follows that operational flow.
 
 The dashboard is organized around long-lived platform state rather than individual microservices.
 
-### Overview: Command Center, Recommendations, Operations
+### Home: Command Center, Operations, Workbench
 
-The sidebar is grouped by task (Overview, Keys & lifecycle, PKI & certificates,
-Data & integrations, Security & compliance, Platform). Type in **Filter modules**
+The sidebar is grouped by job (Home, Keys & certificates, Data & integrations,
+Monitor, Respond, Platform; [ADMINISTRATION.md §12](ADMINISTRATION.md) lists
+each group's modules). Only the group holding the open page starts expanded;
+click a group's name to open it. Type in **Filter modules**
 at the top of the sidebar (Enter opens the first match) to jump anywhere. The
 collapse button beside the mark folds the sidebar to an icon rail. The top bar
 shows where you are (group / page), FIPS mode,
@@ -43,7 +45,7 @@ use Back to return to the previous page (13.21.0-beta).
   PQC readiness, last good backup), the top recommended actions, control
   coverage and the crypto inventory split by quantum exposure. Start every
   session here: it answers "what should I fix next, and why?"
-- **Recommendations** — the full, filterable list (severity, category, free-text
+- **Recommendations** (Command Center's second sub-option) — the full, filterable list (severity, category, free-text
   search such as `PCI` or `DORA`). Each item explains the risk, the fix, the
   affected objects and the control it maps to, with a button that opens the
   right module. See [RECOMMENDATIONS.md](RECOMMENDATIONS.md) for the rule

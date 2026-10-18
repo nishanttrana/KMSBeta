@@ -75,7 +75,6 @@ import {
   Section,
   Sel,
   Stat,
-  Tabs,
   Txt,
   usePromptDialog
 } from "../../components/v3/legacyPrimitives";
@@ -336,7 +335,6 @@ type SystemAdminPanel =
   | "backup"
   | "alertrules"
   | "approvals";
-const SYSTEM_ADMIN_OPEN_CLI_KEY = "vecta_system_admin_open_cli";
 const SYSTEM_ADMIN_TABS: Array<{label:string;panel:SystemAdminPanel}> = [
   { label:"Health", panel:"health" },
   { label:"Runtime Crypto", panel:"runtime" },
@@ -420,7 +418,7 @@ const buildSNMPTargetFromState = (state: Record<string, any>): string => {
   return `${transport}://${host}:${port}?${qp.toString()}`;
 };
 
-export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange,tagCatalog,setTagCatalog}:AdminTabProps)=>{
+export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange,tagCatalog,setTagCatalog,subView}:AdminTabProps)=>{
   const promptDialog=usePromptDialog();
   const [health,setHealth]=useState<AuthSystemHealthSnapshot>({services:[],summary:{}});
   const [healthLoading,setHealthLoading]=useState(false);
@@ -477,7 +475,8 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const [slotsLoading,setSlotsLoading]=useState(false);
   const [slotHint,setSlotHint]=useState("");
   const [slotRaw,setSlotRaw]=useState("");
-  const [panel,setPanel]=useState<SystemAdminPanel>("health");
+  // The section is the sidebar sub-option (13.23.0-beta).
+  const panel:SystemAdminPanel=SYSTEM_ADMIN_TABS.some((item)=>item.panel===subView)?subView as SystemAdminPanel:"health";
   const [modal,setModal]=useState("");
   const [certSecurity,setCertSecurity]=useState<Record<string,any>|null>(null);
   const [certSecurityLoading,setCertSecurityLoading]=useState(false);
@@ -1114,14 +1113,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     loadSystemState,
     loadTags
   ]);
-  useEffect(()=>{
-    try{
-      if(localStorage.getItem(SYSTEM_ADMIN_OPEN_CLI_KEY)==="1"){
-        setPanel("cli");
-        localStorage.removeItem(SYSTEM_ADMIN_OPEN_CLI_KEY);
-      }
-    }catch { /* ignored */ }
-  },[]);
 
   useEffect(()=>{
     if(panel==="alertrules"&&session?.token) void refreshAlertRules();
@@ -1194,7 +1185,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const hardeningSummary = accessSettingsLoading
     ? "loading..."
     : `${String(accessSettings?.grant_default_type||"creator-default")} / replay ${Number(accessSettings?.replay_window_seconds||300)}s / interface ${Boolean(accessSettings?.interface_binding_required)?"required":"optional"}`;
-  const activeTabLabel = SYSTEM_ADMIN_TABS.find((item)=>item.panel===panel)?.label || "Health";
   return <div style={{display:"grid",gap:8}}>
     <style>{`
       @keyframes vectaStatusPulse {
@@ -1215,14 +1205,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       .vecta-hb-down { background:${C.red}; animation:none; opacity:0.95; }
       .vecta-hb-unknown { background:${C.blue}; animation:vectaStatusPulse 2.6s ease-in-out infinite; }
     `}</style>
-    <Tabs
-      tabs={SYSTEM_ADMIN_TABS.map((item)=>item.label)}
-      active={activeTabLabel}
-      onChange={(tabLabel)=>{
-        const next = SYSTEM_ADMIN_TABS.find((item)=>item.label===tabLabel)?.panel || "health";
-        setPanel(next);
-      }}
-    />
     {panel==="health"&&<>
     <Section
       title="System Health"

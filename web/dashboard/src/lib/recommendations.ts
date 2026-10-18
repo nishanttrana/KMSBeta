@@ -391,7 +391,7 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
         why: "The seeded admin/changeit credential is publicly documented.",
         fix: "Sign in as admin to force the password change, or disable the account after creating named administrators with MFA.",
         affected: 1, evidence: ["admin"],
-        action: { tab: "admin", label: "Open user management" },
+        action: { tab: "admin/users", label: "Open user management" },
       });
     }
     if (admins.length > 5) {
@@ -401,7 +401,7 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
         why: "Every administrator can change key policy; a large admin set weakens separation of duties.",
         fix: "Reduce to named break-glass + a small operator group; move others to key-custodian or read-only roles.",
         affected: admins.length, evidence: sample(admins.map((u) => u.username)),
-        action: { tab: "admin", label: "Review roles" },
+        action: { tab: "admin/users", label: "Review roles" },
       });
     }
   } else check("admin-count", "Administrator count is minimal", "Access control", false, false);
@@ -469,9 +469,9 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
         category: "Resilience",
         title: lastOk ? `Last encrypted backup was ${Math.floor((now - lastOk) / DAY)} days ago` : "No encrypted backup has been taken",
         why: "Losing the key store means losing every piece of data it protects — crypto-shredding by accident.",
-        fix: "System Administration > Backups: create a backup, keep the artifact and the key package in separate places, and test a restore.",
+        fix: "Administration > Backup: create a backup, keep the artifact and the key package in separate places, and test a restore.",
         affected: 0, evidence: [],
-        action: { tab: "admin", label: "Open System Administration" },
+        action: { tab: "admin/backup", label: "Open Backup" },
       });
     }
   } else check("backup", "An encrypted backup was completed in the last 7 days", "Resilience", false, false);
@@ -542,7 +542,7 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
         why: "With strict mode off, algorithms and modes outside the FIPS 140-3 approved set can run.",
         fix: "Enable FIPS strict mode in Administration if this tenant serves regulated workloads.",
         affected: 0, evidence: [],
-        action: { tab: "admin", label: "Open Administration" },
+        action: { tab: "admin/runtime", label: "Open Runtime Crypto" },
       });
     }
   }

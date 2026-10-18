@@ -1,38 +1,13 @@
 import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity,
-  ArrowLeftRight,
   Bell,
-  Boxes,
   ChevronRight,
-  ClipboardCheck,
-  CloudCog,
-  Cpu,
-  Database,
-  DatabaseBackup,
-  DatabaseZap,
-  FileBadge,
-  Fingerprint,
-  Gauge,
   Info,
-  KeyRound,
-  LayoutDashboard,
-  Lightbulb,
-  LockKeyhole,
-  Network,
   PanelLeftClose,
   PanelLeftOpen,
   Pin,
   PinOff,
-  RefreshCw,
-  ScanSearch,
-  ScrollText,
   Search,
-  SlidersHorizontal,
-  SquareTerminal,
-  Stamp,
-  Vault,
-  Workflow,
 } from "lucide-react";
 
 const BUILD_VERSION = String(import.meta.env.VITE_VERSION || "dev");
@@ -52,6 +27,7 @@ import { usePopover } from "./v3/usePopover";
 import { B, Btn } from "./v3/legacyPrimitives";
 import { isFipsModeEnabled, normalizeFipsModeValue, TabErrorBoundary } from "./v3/runtimeUtils";
 import { SidebarSubNav, SUB_PANES, type SubPane } from "./v3/SidebarSubNav";
+import { NAV, parseNavHash } from "./v3/shellNav";
 import { C } from "./v3/theme";
 import { ThemeToggle } from "./ThemeToggle";
 import { BrandMark, Wordmark } from "./BrandMark";
@@ -61,8 +37,7 @@ const AdminTab = lazy(() => import("./v3/tabs/AdminTab").then(m => ({ default: m
 const AlertsTab = lazy(() => import("./v3/tabs/AlertsTab").then(m => ({ default: m.AlertsTab })));
 const ClusterTab = lazy(() => import("./v3/tabs/ClusterTab").then(m => ({ default: m.ClusterTab })));
 const DashboardTab = lazy(() => import("./v3/tabs/DashboardTab").then(m => ({ default: m.DashboardTab })));
-const CommandCenterTab = lazy(() => import("./v3/tabs/CommandCenterTab").then(m => ({ default: m.CommandCenterTab })));
-const RecommendationsTab = lazy(() => import("./v3/tabs/CommandCenterTab").then(m => ({ default: m.RecommendationsTab })));
+const CommandCenterTab = lazy(() => import("./v3/tabs/CommandCenterTab").then(m => ({ default: m.HomeTab })));
 const GovernanceTab = lazy(() => import("./v3/tabs/GovernanceTab").then(m => ({ default: m.GovernanceTab })));
 const RestAPITab = lazy(() => import("./v3/tabs/RestAPITab").then(m => ({ default: m.RestAPITab })));
 const VaultTab = lazy(() => import("./v3/tabs/VaultTab").then(m => ({ default: m.VaultTab })));
@@ -101,7 +76,7 @@ type Props = {
 };
 
 const TAB_STORAGE_KEY = "vecta_active_tab";
-const NAV_GROUPS_KEY = "vecta_nav_open_groups";
+const NAV_GROUPS_KEY = "vecta_nav_open_groups_v2";
 const TZ_STORAGE_KEY = "vecta_timezone";
 const COMMON_TIMEZONES = [
   { label: "Local", value: "local" },
@@ -155,7 +130,6 @@ function toViewKey(k: any): any {
 
 const TABS: Record<string, any> = {
   home: CommandCenterTab,
-  recommendations: RecommendationsTab,
   ops: DashboardTab,
   keys: KeysTab,
   workbench: WorkbenchTab,
@@ -192,7 +166,6 @@ const TABS: Record<string, any> = {
 
 const TITLES: Record<string, string> = {
   home: "Command Center",
-  recommendations: "Recommendations",
   ops: "Operations Dashboard",
   keys: "Key Management",
   workbench: "Workbench",
@@ -226,68 +199,13 @@ const TITLES: Record<string, string> = {
   discovery: "Crypto Discovery",
 };
 
-const NAV = [
-  { g: "Overview", items: [
-    { id: "home", icon: LayoutDashboard, label: "Command Center" },
-    { id: "recommendations", icon: Lightbulb, label: "Recommendations" },
-    { id: "ops", icon: Activity, label: "Operations" },
-    { id: "workbench", icon: SquareTerminal, label: "Workbench" },
-  ]},
-  { g: "Keys & lifecycle", items: [
-    { id: "keys", icon: KeyRound, label: "Key Management" },
-    { id: "rotation", icon: RefreshCw, label: "Rotation & Scheduling" },
-    { id: "crypto_agility", icon: ArrowLeftRight, label: "Crypto Agility" },
-    { id: "discovery", icon: ScanSearch, label: "Crypto Discovery" },
-  ]},
-  { g: "PKI & certificates", items: [
-    { id: "certs", icon: FileBadge, label: "Certificates / PKI" },
-  ]},
-  { g: "Data & integrations", items: [
-    { id: "vault", icon: Vault, label: "Secret Vault" },
-    { id: "dataprotection", icon: DatabaseZap, label: "Data Protection" },
-    { id: "cloudctl", icon: CloudCog, label: "Cloud Key Control" },
-    { id: "ekm", icon: Database, label: "Enterprise KM" },
-    { id: "hsm", icon: Cpu, label: "HSM" },
-    { id: "workload", icon: Fingerprint, label: "Workload Identity" },
-    { id: "confidential", icon: LockKeyhole, label: "Confidential Compute" },
-  ]},
-  { g: "Security & compliance", items: [
-    { id: "audit", icon: ScrollText, label: "Audit Log" },
-    { id: "alerts", icon: Bell, label: "Alert Center" },
-    { id: "approvals", icon: Stamp, label: "Approvals" },
-    { id: "posture", icon: Gauge, label: "Posture" },
-    { id: "compliance", icon: ClipboardCheck, label: "Compliance" },
-    { id: "sbom", icon: Boxes, label: "SBOM / CBOM" },
-    { id: "playbooks", icon: Workflow, label: "Playbooks" },
-  ]},
-  { g: "Platform", items: [
-    { id: "cluster", icon: Network, label: "Cluster" },
-    { id: "backup", icon: DatabaseBackup, label: "Backup & Restore" },
-    { id: "admin", icon: SlidersHorizontal, label: "Administration" },
-  ]},
-];
-
-// Tabs merged into another; a saved or linked id opens the new home.
-// Platform > Health went to Administration > Health (1.38.0-beta),
-// Operations Metrics and Analytics to Overview > Operations (7.24.0-beta).
-// Documentation was removed (7.35.0-beta); its ids open the Command Center.
-const RETIRED_TABS: Record<string, string> = { health: "admin", ops_metrics: "ops", key_analytics: "ops", docs: "home", devsecops: "home" };
-
-// The address names the module and its sub-option (#certs/cert-enrollment).
-// Each move adds a history entry, so Back returns to the previous view, and
-// a pasted or edited address opens its view (13.21.0-beta); the address was
-// only read at load and overwritten in place.
-function parseNavHash(hash: string): { tab: string; sub: string } {
-  const [rawTab = "", sub = ""] = decodeURIComponent(String(hash || "").replace(/^#/, "")).split("/");
-  return { tab: RETIRED_TABS[rawTab] ?? rawTab, sub };
-}
 
 export default function VectaDashboardV3Shell(props: Props) {
   const { session: sessionBase, enabledFeatures, unreadAlerts, onLogout, markAlertsRead } = props;
   const [tab, setTab] = useState(() => {
     try {
-      const saved = parseNavHash(window.location.hash).tab || localStorage.getItem(TAB_STORAGE_KEY);
-      if (saved) return RETIRED_TABS[saved] ?? saved;
+      const saved = parseNavHash(window.location.hash).tab || parseNavHash(localStorage.getItem(TAB_STORAGE_KEY) || "").tab;
+      if (saved) return saved;
     } catch { /* ignored */ }
     return "home";
   });
@@ -342,7 +260,8 @@ export default function VectaDashboardV3Shell(props: Props) {
       hsm: "hsm-generic",
       cluster: "topology",
       playbooks: "overview",
-      admin: "system",
+      admin: "health",
+    home: "overview",
       ...(linked.tab && linked.sub ? { [linked.tab]: linked.sub } : {})
     };
   });
@@ -433,12 +352,14 @@ export default function VectaDashboardV3Shell(props: Props) {
       const raw = localStorage.getItem(NAV_GROUPS_KEY);
       if (raw) return JSON.parse(raw);
     } catch { /* ignored */ }
-    return {}; // default: all groups open
+    return {}; // default: only the group holding the open module
   });
-  // Semantics: a group is open unless explicitly set to false.
-  const toggleGroup = (name: string) => {
+  // A group is open when the user opened it, or, until they choose, when it
+  // holds the open module (13.23.0-beta; every group used to start open).
+  const isGroupOpen = (name: string, hasActive: boolean) => openGroups[name] ?? hasActive;
+  const toggleGroup = (name: string, hasActive: boolean) => {
     setOpenGroups((prev) => {
-      const next = { ...prev, [name]: prev[name] === false };
+      const next = { ...prev, [name]: !(prev[name] ?? hasActive) };
       try { localStorage.setItem(NAV_GROUPS_KEY, JSON.stringify(next)); } catch { /* ignored */ }
       return next;
     });
@@ -489,7 +410,10 @@ export default function VectaDashboardV3Shell(props: Props) {
   const activeSubPane = activePaneItems.find((item) => item.id === activeSubPaneSelection);
   const globalFipsEnabled = isFipsModeEnabled(fipsMode);
 
-  const selectTab = (nextTab: string) => {
+  // nextTab may name a sub-option too ("admin/users"), as links from pages do.
+  const selectTab = (target: string) => {
+    const { tab: nextTab, sub: nextSub } = parseNavHash(target);
+    if (nextSub) setSubPaneSelection((prev: any) => ({ ...prev, [nextTab]: nextSub }));
     try { localStorage.setItem(TAB_STORAGE_KEY, nextTab); } catch { /* ignored */ }
     navReplaceNext.current = false;
     const paneItems = subPanesFor(nextTab);
@@ -639,14 +563,16 @@ export default function VectaDashboardV3Shell(props: Props) {
         {/* Nav items */}
         <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "6px 0 8px" }}>
           {shownNavGroups.map((g: any) => {
-            const groupOpen = collapsed || Boolean(navFilter) || openGroups[g.g] !== false;
             const groupHasActive = g.items.some((it: any) => it.id === tab);
+            const groupOpen = collapsed || Boolean(navFilter) || isGroupOpen(g.g, groupHasActive);
             return (
             <div key={g.g} style={{ marginBottom: 6 }}>
               {!collapsed && (
                 <div
                   className="vk-nav-group"
-                  onClick={() => toggleGroup(g.g)}
+                  role="button"
+                  aria-expanded={groupOpen}
+                  onClick={() => toggleGroup(g.g, groupHasActive)}
                   style={{
                     padding: "12px 16px 4px",
                     fontSize: 10.5, fontWeight: 500, fontFamily: "var(--font-mono)", textTransform: "uppercase",
@@ -877,7 +803,7 @@ export default function VectaDashboardV3Shell(props: Props) {
 
             {/* CLI (system admin only) */}
             {isSystemAdminSession(session) && (
-              <Btn small onClick={() => selectTab("admin")} style={cliEnabled ? {} : { opacity: 0.4 }}>
+              <Btn small onClick={() => selectTab("admin/cli")} style={cliEnabled ? {} : { opacity: 0.4 }}>
                 {cliEnabled ? "CLI" : "CLI (off)"}
               </Btn>
             )}

@@ -126,7 +126,8 @@ test("tenant administration has no browser-only lock or HSM copy, and saves the 
   ]);
   expect(Object.keys(writes.find((w) => w.call.includes("security"))!.body as object).sort()).toEqual(["idle_timeout_minutes", "lockout_minutes", "max_failed_attempts"]);
 
-  await page.getByRole("button", { name: "Backup", exact: true }).click();
+  // Tenant Administration's own Backup tab, not the sidebar's Backup section.
+  await page.locator("main").getByRole("button", { name: "Backup", exact: true }).last().click();
   await expect(page.getByText("bk_t2")).toBeVisible();
   await expect(page.getByText("bk_root")).toHaveCount(0);
 

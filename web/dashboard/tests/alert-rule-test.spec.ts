@@ -32,8 +32,8 @@ async function stub(page: Page, sent: unknown[], answer: unknown): Promise<void>
 async function openRuleEditor(page: Page): Promise<void> {
   await page.goto("/");
   await page.getByText("Administration", { exact: true }).first().click();
-  await page.getByText("System Administration", { exact: true }).first().click();
-  await page.getByRole("button", { name: "Alert Rules", exact: true }).first().click();
+  // System Administration's sections are sidebar sub-options (13.23.0-beta).
+  await page.getByTestId("subnav-admin").getByRole("button", { name: "Alert Rules", exact: true }).click();
   await page.getByRole("button", { name: "Create Rule" }).first().click();
 }
 

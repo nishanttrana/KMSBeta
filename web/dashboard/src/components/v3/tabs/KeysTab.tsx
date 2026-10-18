@@ -1,6 +1,6 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDownToLine, Atom, Check, Cog, ExternalLink, MoreVertical, PenTool, Plus, Radar, RefreshCcw, X } from "lucide-react";
+import { ArrowDownToLine, Check, Cog, ExternalLink, MoreVertical, RefreshCcw, X } from "lucide-react";
 import {
   activateKey,
   createKey,
@@ -31,6 +31,7 @@ import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 import { B, Btn, Chk, FG, Inp, Modal, Radio, Row2, Row3, Section, Sel, Stat, Txt } from "../legacyPrimitives";
 import { HSMPartitionTable } from "../../../modules/hsm/HSMPartitionTable";
+import { KeyCreateMenu } from "./KeyCreateMenu";
 import { HSMKeyCheckPanel } from "../../../modules/hsm/HSMKeyCheckPanel";
 import { HSMTargetPicker } from "../../../modules/hsm/HSMTargetPicker";
 import { KeyHistoryPanel } from "../../../modules/keys/KeyHistoryPanel";
@@ -1737,25 +1738,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
           <Btn onClick={()=>void refreshKeyInventory()} style={{height:40,padding:"0 16px",borderRadius:4,fontSize:12,fontWeight:700,minWidth:108,color:C.text,border:`1px solid ${C.borderHi}`}} disabled={refreshingKeys}>
             <span style={{display:"inline-flex",alignItems:"center",gap:7}}><RefreshCcw size={13} strokeWidth={2.1}/>{refreshingKeys?"Refreshing...":"Refresh"}</span>
           </Btn>
-          <Btn
-            onClick={()=>{setInHSM(hsmKeysEnabled&&hsmSupportsAlgorithm(algo));setModal("create");}}
-            primary
-            style={{height:40,padding:"0 20px",borderRadius:4,fontSize:12,fontWeight:700,minWidth:130}}
-          >
-            <span style={{display:"inline-flex",alignItems:"center",gap:7}}><Plus size={13} strokeWidth={2.2}/>Create Key</span>
-          </Btn>
-          <Btn onClick={()=>setModal("form-key")} style={{height:40,padding:"0 20px",borderRadius:4,fontSize:12,fontWeight:700,minWidth:112,color:C.text,border:`1px solid ${C.borderHi}`}}>
-            <span style={{display:"inline-flex",alignItems:"center",gap:7}}><PenTool size={13} strokeWidth={2.1}/>Form Key</span>
-          </Btn>
-          <Btn onClick={()=>{resetImportForm();setModal("import");}} style={{height:40,padding:"0 20px",borderRadius:4,fontSize:12,fontWeight:700,minWidth:96,color:C.text,border:`1px solid ${C.borderHi}`}}>
-            <span style={{display:"inline-flex",alignItems:"center",gap:7}}><ArrowDownToLine size={13} strokeWidth={2.1}/>Import</span>
-          </Btn>
-          <Btn onClick={()=>setModal("generate-pqc")} style={{height:40,padding:"0 20px",borderRadius:4,fontSize:12,fontWeight:700,minWidth:110,color:C.text,border:`1px solid ${C.borderHi}`}}>
-            <span style={{display:"inline-flex",alignItems:"center",gap:7}}><Atom size={13} strokeWidth={2.1}/>PQC Key</span>
-          </Btn>
-          <Btn onClick={()=>setModal("canary")} style={{height:40,padding:"0 20px",borderRadius:4,fontSize:12,fontWeight:700,minWidth:110,color:C.text,border:`1px solid ${C.borderHi}`}}>
-            <span style={{display:"inline-flex",alignItems:"center",gap:7}}><Radar size={13} strokeWidth={2.1}/>Canary Key</span>
-          </Btn>
+          <KeyCreateMenu onCreate={()=>{setInHSM(hsmKeysEnabled&&hsmSupportsAlgorithm(algo));setModal("create");}} onForm={()=>setModal("form-key")} onImport={()=>{resetImportForm();setModal("import");}} onPQC={()=>setModal("generate-pqc")} onCanary={()=>setModal("canary")}/>
         </div>
       </div>
       <div style={{background:C.card,borderRadius:6,border:`1px solid ${C.borderHi}`,overflowX:"auto",overflowY:"visible"}}>

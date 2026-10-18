@@ -294,7 +294,7 @@ test("a module's sub-options expand under its name in the sidebar", async ({ pag
   for (const [label, id, options] of [
     ["Cloud Key Control", "cloudctl", ["BYOK", "HYOK", "Google CSE", "Azure EKM"]],
     ["Certificates / PKI", "certs", ["Certificate Operations", "Enrollment Protocols", "Service mTLS"]],
-    ["Administration", "admin", ["System Administration", "Tenant Administration", "User Management"]],
+    ["Administration", "admin", ["Health", "Runtime Crypto", "SNMP", "Tags", "Password Policy", "Login Security", "Key Access Hardening", "CLI / HSM", "Governance", "Backup", "Alert Rules", "Approval Policies", "Tenant Administration", "User Management"]],
   ] as const) {
     await module(label).click();
     const sub = page.getByTestId(`subnav-${id}`);
@@ -308,8 +308,61 @@ test("a module's sub-options expand under its name in the sidebar", async ({ pag
   await module("Administration").click();
   await expect(page.getByTestId("subnav-admin")).toHaveCount(0);
   await module("Administration").click();
-  await expect(page.getByTestId("subnav-admin").getByRole("button", { name: "Tenant Administration", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByTestId("subnav-admin").getByRole("button", { name: "Runtime Crypto", exact: true })).toHaveAttribute("aria-current", "page");
   await expect(page.locator(".vk-subcard")).toHaveCount(0);
+});
+
+// Six groups by job; only the open module's group starts expanded, and a
+// header opens its group (13.23.0-beta).
+test.describe("sidebar default", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+  test("only the open module's group starts expanded", async ({ page }) => {
+    const header = (name: string) => page.locator(".vk-nav-group", { hasText: name });
+    await expect(page.locator(".vk-nav-group")).toHaveText([/^Home/, /^Keys & certificates/, /^Data & integrations/, /^Monitor/, /^Respond/, /^Platform/]);
+    await expect(header("Home")).toHaveAttribute("aria-expanded", "true");
+    await expect(header("Monitor")).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByText("Audit Log", { exact: true })).toHaveCount(0);
+    await header("Monitor").click();
+    await page.getByText("Audit Log", { exact: true }).first().click();
+    await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toContainText("Audit Log");
+    // The filter still finds any module.
+    await page.getByLabel("Filter modules").fill("Playbooks");
+    await expect(page.getByText("Playbooks", { exact: true }).first()).toBeVisible();
+  });
+});
+
+// Recommendations is Command Center's sub-option; an old #recommendations
+// link opens it there. Administration's sections are sub-options too.
+test("old links open the view's new home", async ({ page }) => {
+  const crumb = page.getByRole("navigation", { name: "Breadcrumb" });
+  await page.goto("/#recommendations");
+  await expect(crumb).toContainText("Recommendations");
+  await expect(page).toHaveURL(/#home\/recommendations$/);
+  await expect(page.getByTestId("subnav-home").getByRole("button", { name: "Recommendations", exact: true })).toHaveAttribute("aria-current", "page");
+  await page.goto("/#admin/backup");
+  await expect(crumb).toContainText("Backup");
+  await expect(page.getByText("Encrypted Backups")).toBeVisible();
+  // No tab strip inside System Administration any more.
+  await expect(page.getByRole("button", { name: "Approval Policies", exact: true })).toHaveCount(1);
+  await page.goto("/#admin/system");
+  await expect(crumb).toContainText("Health");
+  await assertNoRenderBoundary(page);
+});
+
+// One main action on the key page: Create Key, with the other ways in one
+// menu (13.23.0-beta).
+test("the key page offers Create Key and one menu for the other ways", async ({ page }) => {
+  await page.getByText("Key Management", { exact: true }).first().click();
+  for (const name of ["Form Key", "Import", "PQC Key", "Canary Key"]) await expect(page.getByRole("button", { name, exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "More ways" }).click();
+  await expect(page.getByRole("menuitem")).toHaveText(["Form Key", "Import", "PQC Key", "Canary Key"]);
+  await page.getByRole("menuitem", { name: "Canary Key" }).click();
+  const dialog = page.getByRole("dialog", { name: "Canary Keys" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Close" }).click();
+  await page.getByRole("button", { name: "More ways" }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
 });
 
 // The address names the view, a pasted one opens it, and Back returns to
