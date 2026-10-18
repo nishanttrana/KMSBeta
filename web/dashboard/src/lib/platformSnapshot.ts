@@ -8,10 +8,11 @@ import { listCertificates } from "./certs";
 import { listPolicies as listRotationPolicies } from "./rotationScheduler";
 import { listGovernancePolicies, listGovernanceBackups } from "./governance";
 import { getPQCReadiness } from "./pqc";
+import { getAgilityPosture } from "./cryptoAgility";
 import { getPostureRisk, listPostureFindings } from "./posture";
 import { getClusterOverview } from "./cluster";
 import { listAuthUsers } from "./authAdmin";
-import type { PlatformSnapshot } from "./recommendations";
+import type { KeyAlgorithmFacts, PlatformSnapshot } from "./recommendations";
 
 // True only for a real capture time. The posture service answers a tenant it
 // has never scanned with a zero time, which is not a scan.
@@ -30,9 +31,10 @@ async function opt<T>(p: Promise<T>): Promise<T | undefined> {
 // clustered is false where the clustering feature is not deployed: there is
 // no cluster service to ask, and asking drew a 503 on every load.
 export async function loadPlatformSnapshot(session: AuthSession, fipsEnabled?: boolean, clustered = true): Promise<PlatformSnapshot> {
-  const [keys, certs, rotationPolicies, backups, keyAccess, governancePolicies, pqc, postureFindings, postureRisk, cluster, users] =
+  const [keys, keyAlgorithms, certs, rotationPolicies, backups, keyAccess, governancePolicies, pqc, postureFindings, postureRisk, cluster, users] =
     await Promise.all([
       opt(listKeys(session, { limit: 5000 })),
+      opt(getAgilityPosture(session).then((p) => p.algorithms as KeyAlgorithmFacts[])),
       opt(listCertificates(session, { limit: 500 })),
       opt(listRotationPolicies(session)),
       opt(listGovernanceBackups(session, { limit: 200 })),
@@ -47,6 +49,7 @@ export async function loadPlatformSnapshot(session: AuthSession, fipsEnabled?: b
   return {
     now: new Date(),
     keys,
+    keyAlgorithms,
     certs,
     rotationPolicies,
     backups: backups && backups.map((b) => ({ status: b.status, ...(b.completed_at ? { completed_at: b.completed_at } : {}), ...(b.created_at ? { created_at: b.created_at } : {}) })),

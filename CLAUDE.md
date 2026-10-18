@@ -180,8 +180,9 @@ an approach, record it here or in the matching doc below.
   customer decide when and what he wants to migrate as per his policy").
   The product states only technical facts about an algorithm (strength,
   post-quantum category, quantum vulnerability, weak), from
-  `pkg/cryptocatalog` alone; no service keeps its own algorithm list or
-  score, and a name without a parameter set is "not assessed". Migration
+  `pkg/cryptocatalog` alone; no service or dashboard page keeps its own
+  algorithm list or score (a page reads the facts a service returns, as the
+  recommendations do since 13.19.0-beta), and a name without a parameter set is "not assessed". Migration
   statuses and dates come only from the tenant's own policy rules, which
   keycore enforces. No standards citations, draft references or vendor-set
   deadlines in the UI or API

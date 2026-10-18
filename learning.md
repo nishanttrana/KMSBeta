@@ -3,6 +3,23 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-10-18
+
+### A rule followed everywhere but the home page (13.19.0-beta)
+- "The customer decides what to migrate and when" (2026-09-29) was applied
+  to Crypto Agility, the CBOM and keycore, but the Command Center kept its
+  own algorithm regexes, a "deprecated after 2030" sentence and a list of
+  standards per recommendation. The rule named the API and UI, but every
+  check for it looked at the services; the dashboard's recommendation
+  engine was a second algorithm list nobody tied to the catalogue.
+- **Rule: a page that judges an algorithm reads the catalogue's facts from
+  a service; it never matches the name itself.** A unit test now scans the
+  engine and the Command Center for citations, deadline years and
+  algorithm patterns.
+- The rule catalogue in the document had drifted from the code (a rule that
+  never existed). A document's table of rules is checked against the code
+  when the rules change, not copied forward.
+
 ## 2026-10-17
 
 ### Lessons that stayed in learning.md (13.18.0-beta)

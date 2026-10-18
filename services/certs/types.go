@@ -60,6 +60,8 @@ type Certificate struct {
 	CreatedAt        time.Time `json:"created_at"`
 	UpdatedAt        time.Time `json:"updated_at"`
 	KeyRef           string    `json:"key_ref"`
+	// AlgorithmFacts is computed when the certificate is read, never stored.
+	AlgorithmFacts *AlgorithmFacts `json:"algorithm_facts,omitempty"`
 }
 
 type CertificateProfile struct {

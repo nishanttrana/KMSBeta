@@ -7,6 +7,27 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-18 — Recommendations take algorithm facts from the catalogue and dates from the tenant
+**Decision:** the recommendation engine (Command Center, Overview →
+Recommendations) cites no standard and sets no date. Weak and
+quantum-vulnerable come from `pkg/cryptocatalog` (keycore's agility posture
+for keys, `algorithm_facts` from the certs service for certificates);
+deprecated, decrypt-only and disallowed come from the tenant's migration
+rules. Rules that only restated a standard's threshold are removed.
+**Why:** owner direction, 2026-10-18 ("yes" to removing the citations),
+applying the 2026-09-29 directive "avoid quoting direct sources, drafts,
+references, let customer decide when and what he wants to migrate as per
+his policy". The dashboard's own regexes were a second algorithm list.
+**Rejected:** keeping the citations behind a "references" toggle (still the
+product quoting standards); classifying certificates in the dashboard with
+the catalogue's rules copied into TypeScript (a third list); a new
+assessment endpoint (the facts belong with the certificate, as they are
+with keys).
+**Enforced by:** `tests/unit/recommendations.test.ts` (no citation, deadline
+year or algorithm pattern in the engine or the Command Center; rules not
+assessed without the catalogue's facts) and
+`TestCertificatesCarryCatalogueFacts`.
+
 ## 2026-10-17 — Every change documents its area, and the gate runs on every push
 **Decision:** a change to code, scripts, deployment or CI ships with a
 `CHANGELOG.md` section, a `learning.md` entry and an update to the document

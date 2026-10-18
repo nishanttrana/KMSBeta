@@ -672,7 +672,11 @@ func (s *Service) ListCertificates(ctx context.Context, tenantID string, status 
 		return nil, errors.New("tenant_id is required")
 	}
 	_ = s.RunTenantExpiryAlertSweep(ctx, tenantID)
-	return s.store.ListCertificates(ctx, tenantID, strings.TrimSpace(status), strings.TrimSpace(certClass), limit, offset)
+	items, err := s.store.ListCertificates(ctx, tenantID, strings.TrimSpace(status), strings.TrimSpace(certClass), limit, offset)
+	for i := range items {
+		items[i] = withAlgorithmFacts(items[i])
+	}
+	return items, err
 }
 
 func (s *Service) GetCertificate(ctx context.Context, tenantID string, certID string) (Certificate, error) {
@@ -681,7 +685,11 @@ func (s *Service) GetCertificate(ctx context.Context, tenantID string, certID st
 	if tenantID == "" || certID == "" {
 		return Certificate{}, errors.New("tenant_id and cert_id are required")
 	}
-	return s.store.GetCertificate(ctx, tenantID, certID)
+	c, err := s.store.GetCertificate(ctx, tenantID, certID)
+	if err != nil {
+		return c, err
+	}
+	return withAlgorithmFacts(c), nil
 }
 
 func (s *Service) DownloadCertificate(ctx context.Context, req DownloadCertificateRequest) (string, string, error) {

@@ -1455,6 +1455,20 @@ id, name, type (root/intermediate/issuing), keyId, subject (cn, o, ou, c, st, l)
 
 ---
 
+### GET /svc/certs/certs, GET /svc/certs/certs/{id}: algorithm facts (13.19.0-beta)
+
+Each certificate carries `algorithm_facts`, `pkg/cryptocatalog`'s assessment
+of its `algorithm`, computed when it is read and never stored:
+`assessed`, `security_bits`, `weak`, `quantum_vulnerable`, `post_quantum`
+and `note`. A name without a parameter set (`RSA`) is `assessed: false`
+with every other field unset. Clients judge a certificate's algorithm from
+these fields, never from its name (docs/RECOMMENDATIONS.md). Test:
+`TestCertificatesCarryCatalogueFacts`.
+
+```json
+"algorithm_facts": {"assessed": true, "security_bits": 128, "weak": false, "quantum_vulnerable": true, "post_quantum": false, "note": "strength is half the bit length of the curve order"}
+```
+
 ### GET/POST /svc/certs/certs/ca
 
 `GET` lists CAs (`items[]`: `id`, `tenant_id`, `name`, `parent_ca_id`,

@@ -5,10 +5,10 @@ a key-management operator: *what should I fix next, and why?*
 
 It evaluates live tenant state every time it loads (or on **Re-evaluate**),
 produces a posture score, and lists prioritised recommendations. Each
-recommendation says why it matters, how to fix it, which controls it maps to,
-which objects are affected, and links straight to the module where it is fixed.
-**Overview → Recommendations** shows the full list with severity, category and
-framework filters.
+recommendation says what was found, why it matters, how to fix it and which
+objects are affected, and links straight to the module where it is fixed.
+**Overview → Recommendations** shows the full list with severity and
+category filters.
 
 Source: `web/dashboard/src/lib/recommendations.ts` (rules, pure and unit-tested
 in `tests/unit/recommendations.test.ts`) and `src/lib/platformSnapshot.ts`
@@ -26,6 +26,19 @@ in `tests/unit/recommendations.test.ts`) and `src/lib/platformSnapshot.ts`
   into an empty value. `posture-open` therefore reads **not assessed** until
   a posture scan is on record, instead of passing (11.4.0-beta,
   `tests/unit/zeroTime.test.ts`).
+- **Algorithm facts come from the catalogue; dates and deprecations come from
+  you** (13.19.0-beta). Whether an algorithm is weak or quantum-vulnerable,
+  and its strength, comes only from `pkg/cryptocatalog`: for keys through
+  keycore's `GET /agility/posture` (which needs `key.agility.read`), for
+  certificates through the `algorithm_facts` the certs service returns with
+  each certificate. Whether an algorithm is deprecated, decrypt-only or
+  disallowed, and from when, comes only from the tenant's own migration
+  rules (Crypto Agility). No rule cites a standard, and no rule sets a
+  date. Without the agility posture the algorithm rules read **not
+  assessed**; an algorithm name without a parameter set (`RSA`) is never
+  judged. `tests/unit/recommendations.test.ts` fails if a citation, a
+  deadline year or an algorithm list returns to the engine or the
+  Command Center.
 - Snoozing a recommendation (30 days) is a per-browser convenience only; it does
   not change platform state or any audit record.
 
@@ -37,46 +50,50 @@ The score is shown only when at least one control could be assessed.
 
 ## Rule catalogue
 
-| ID | Severity | Triggers when | Maps to | Fix in |
-|---|---|---|---|---|
-| `algo-broken` | critical | Active key uses DES/3DES, RC4, MD5, SHA-1, RSA < 2048 or P-192/P-224 | NIST SP 800-131A r3, PCI DSS 4.0 §3.6.1, CNSA 2.0 | Key Management |
-| `algo-legacy` | medium | Active RSA-2048 key (112-bit security) | NIST IR 8547, SP 800-131A r3 | Crypto Agility |
-| `algo-aes128` | low | Active AES-128 key | CNSA 2.0 | Key Management |
-| `pqc-migrate` | high / medium | Quantum-vulnerable asymmetric keys (RSA/ECC/EdDSA/DH); **high** if any have no expiry or live past 2030 | NIST IR 8547, FIPS 203/204/205, CNSA 2.0 | Crypto Agility |
-| `no-cryptoperiod` | high / medium | Active keys without an expiry (high if > 50 % of keys) | NIST SP 800-57 Pt1 §5.3, PCI DSS 4.0 §3.6.4 | Key Management |
-| `expired-active` | high | Key past `expires_at` still active | NIST SP 800-57 Pt1 §5.3, PCI DSS 4.0 §3.6.4 | Key Management |
-| `never-rotated` | medium | Symmetric key still at version 1 after 365 days | NIST SP 800-57 Pt1, PCI DSS 4.0 §3.7.4 | Rotation & Scheduling |
-| `exportable` | medium / low | Keys with export allowed | PCI DSS 4.0 §3.6.1, FIPS 140-3 | Key Management |
-| `unowned` | low | Keys without an `owner` / `app` / `team` label | PCI DSS 4.0 §12.3.3, DORA Art. 9 | Key Management |
-| `no-rotation-policy` | high | No enabled automatic rotation policy for keys | NIST SP 800-57 Pt1, PCI DSS 4.0 §3.6.4 | Rotation & Scheduling |
-| `deny-default` | high | Key access not deny-by-default | NIST SP 800-207, PCI DSS 4.0 §7.2, DORA Art. 9 | Key Management → access settings |
-| `dual-control` | medium | Key access policy changes need no approval | PCI DSS 4.0 §3.6.1.2, ISO 27001 A.8.24 | Approvals |
-| `signed-requests` | low | Signed requests / replay protection not enforced | RFC 9421, RFC 9449 | Key Management → access settings |
-| `grant-ttl` | low | Access grants can exceed 24 h | NIST SP 800-207 | Key Management → access settings |
-| `no-quorum` | high | No governance (M-of-N) policy | PCI DSS 4.0 §3.6.1.2, DORA Art. 9 | Approvals |
-| `default-admin` | critical | Bootstrap `admin` still has its initial password | PCI DSS 4.0 §2.2.2, CIS 5.2 | Administration |
-| `too-many-admins` | medium | More than 5 active administrators | PCI DSS 4.0 §7.2.2, ISO 27001 A.5.15 | Administration |
-| `cert-expired` | high | Non-revoked certificate past `not_after` | NIST SP 1800-16 | Certificates / PKI |
-| `cert-expiring` | high / medium | Certificates expiring within 30 days (high if any within 7) | NIST SP 1800-16 | Certificates / PKI |
-| `cert-weak` | high | Certificate with a disallowed algorithm | NIST SP 800-131A r3, CA/B Forum BR | Certificates / PKI |
-| `cert-lifetime` | low | TLS leaf validity > 200 days | CA/B Forum SC-081 (200 d 2026 → 100 d 2027 → 47 d 2029) | Certificates / PKI |
-| `no-backup` | critical | No enabled key backup policy | DORA Art. 12, NIST SP 800-57 Pt2, ISO 27001 A.8.13 | Backup & Restore |
-| `backup-stale` | high | No successful backup in 7 days | DORA Art. 12, ISO 27001 A.8.13 | Backup & Restore |
-| `backup-plain` | critical | Backup policy without encryption | PCI DSS 4.0 §3.5, FIPS 140-3 | Backup & Restore |
-| `single-node` | medium | Cluster has one node | DORA Art. 11, ISO 22301 | Cluster |
-| `nodes-down` | high | Degraded or down cluster nodes | DORA Art. 11 | Cluster |
-| `posture-open` | high | Open critical/high posture findings | DORA Art. 10 | Posture |
-| `pqc-scan` | medium | No PQC readiness scan on record | NIST IR 8547, OMB M-23-02, CNSA 2.0 | SBOM / CBOM |
-| `fips-off` | low | FIPS strict mode disabled | FIPS 140-3, FedRAMP SC-13 | Administration |
+| ID | Severity | Triggers when | Fix in |
+|---|---|---|---|
+| `algo-weak` | critical | An active key's algorithm is weak in the catalogue | Key Management |
+| `algo-policy-stopped` | high | An active key's algorithm is decrypt-only or disallowed by one of your migration rules | Crypto Agility |
+| `algo-policy-deprecated` | medium | An active key's algorithm is deprecated by one of your migration rules | Crypto Agility |
+| `pqc-migrate` | medium | Active keys whose algorithm the catalogue marks quantum-vulnerable; says how many no migration rule of yours covers | Crypto Agility |
+| `no-cryptoperiod` | high / medium | Active keys without an expiry (high if > 50 % of keys) | Key Management |
+| `expired-active` | high | Key past `expires_at` still active | Key Management |
+| `never-rotated` | medium | Symmetric key (by the catalogue) still at version 1 after 365 days | Rotation & Scheduling |
+| `exportable` | medium / low | Keys with export allowed | Key Management |
+| `unowned` | low | Keys without an `owner` / `app` / `team` label | Key Management |
+| `no-rotation-policy` | high | No enabled automatic rotation policy for keys | Rotation & Scheduling |
+| `deny-default` | high | Key access not deny-by-default | Key Management → access settings |
+| `dual-control` | medium | Key access policy changes need no approval | Approvals |
+| `signed-requests` | low | Signed requests / replay protection not enforced | Key Management → access settings |
+| `grant-ttl` | low | Access grants can exceed 24 h | Key Management → access settings |
+| `no-quorum` | high | No governance (M-of-N) policy | Approvals |
+| `default-admin` | critical | Bootstrap `admin` still has its initial password | Administration |
+| `too-many-admins` | medium | More than 5 active administrators | Administration |
+| `cert-expired` | high | Non-revoked certificate past `not_after` | Certificates / PKI |
+| `cert-expiring` | high / medium | Certificates expiring within 30 days (high if any within 7) | Certificates / PKI |
+| `cert-weak` | high | A certificate's algorithm is weak in the catalogue | Certificates / PKI |
+| `no-backup` | critical | No completed encrypted backup on record | System Administration → Backups |
+| `backup-stale` | high | No completed encrypted backup in 7 days | System Administration → Backups |
+| `single-node` | medium | Cluster has one node | Cluster |
+| `nodes-down` | high | Degraded or down cluster nodes | Cluster |
+| `posture-open` | high | Open critical/high posture findings | Posture |
+| `pqc-scan` | medium | No PQC readiness scan on record | SBOM / CBOM |
+| `fips-off` | low | FIPS strict mode disabled | Administration |
 
-Framework references indicate which control a recommendation helps satisfy;
-they are not a certification or audit statement.
+Removed in 13.19.0-beta, because each restated a standard's threshold or
+deadline instead of a fact or the tenant's own rule: `algo-legacy`
+(RSA-2048 retirement dates), `algo-aes128` (AES-128 below a national
+profile) and `cert-lifetime` (a public-CA TLS lifetime limit). A tenant
+that wants any of them adds a migration rule (for example "below strength
+128") or a certificate profile, and the recommendation follows that.
 
 ## Adding a rule
 
 1. Add the check to `evaluate()` in `src/lib/recommendations.ts`. Call
    `check(id, label, category, known, failed)` so the coverage panel shows it,
-   and push a `Recommendation` only when it fails.
+   and push a `Recommendation` only when it fails. A rule about an algorithm
+   reads the catalogue's facts (`keyFacts`, `algorithm_facts`), never the
+   name, and a date comes from the tenant's rules, never from the rule.
 2. If it needs new data, add an independent loader to `platformSnapshot.ts`
    (wrapped in `opt()` so a failure means "not assessed").
 3. Add a unit test in `tests/unit/recommendations.test.ts`, then

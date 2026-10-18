@@ -16,8 +16,8 @@ import type { AuthSession } from "../../../lib/auth";
 import { loadPlatformSnapshot } from "../../../lib/platformSnapshot";
 import {
   evaluate,
-  isQuantumVulnerable,
-  algoStrength,
+  exposure,
+  keyFacts,
   postureScore,
   SEVERITY_ORDER,
   type ControlCheck,
@@ -172,9 +172,6 @@ export function RecommendationRow({ r, onNavigate, onSnooze, defaultOpen = false
           <div style={{ fontSize: 12.5, color: C.dim, marginTop: 3, lineHeight: 1.5 }}>{r.why}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 7 }}>
             <span style={{ fontSize: 11, color: C.muted }}>{r.category}</span>
-            {r.frameworks.map((f) => (
-              <span key={f} style={{ fontSize: 10.5, color: C.dim, border: `1px solid ${C.border}`, borderRadius: 4, padding: "0 6px", lineHeight: "17px" }}>{f}</span>
-            ))}
           </div>
         </button>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
@@ -244,15 +241,12 @@ function Coverage({ checks }: { checks: ControlCheck[] }) {
 function InventoryMix({ snapshot }: { snapshot: PlatformSnapshot | null }) {
   const keys = (snapshot?.keys || []).filter((k) => !/destroy|deleted/i.test(k.status));
   if (!snapshot?.keys) return null;
-  const buckets = { "Quantum-safe / symmetric": 0, "Classical asymmetric": 0, "Legacy / disallowed": 0 };
-  keys.forEach((k) => {
-    const st = algoStrength(k.algorithm);
-    if (st === "broken" || st === "legacy") buckets["Legacy / disallowed"]++;
-    else if (isQuantumVulnerable(k.algorithm)) buckets["Classical asymmetric"]++;
-    else buckets["Quantum-safe / symmetric"]++;
-  });
+  // Buckets are the algorithm catalogue's facts (keycore's agility posture), never a guess from the name.
+  const label = { neither: "Neither weak nor quantum-vulnerable", quantum_vulnerable: "Quantum-vulnerable", weak: "Weak", not_assessed: "Not assessed" } as const;
+  const buckets: Record<string, number> = Object.fromEntries(Object.values(label).map((l) => [l, 0]));
+  keys.forEach((k) => { buckets[label[exposure(keyFacts(snapshot, k.algorithm))]]! += 1; });
   const total = Math.max(1, keys.length);
-  const colors = [C.greenFg, C.amberFg, C.redFg];
+  const colors = [C.greenFg, C.amberFg, C.redFg, C.muted];
   return (
     <div style={{ ...card, padding: 16 }}>
       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Crypto inventory</div>
@@ -282,7 +276,7 @@ export const CommandCenterTab = ({ session, fipsMode, clustered, onNavigate }: P
   const activeKeys = (snapshot?.keys || []).filter((k) => /active|enabled/i.test(k.status));
   // A scan summary without its counts is no scan: show "no scan on record", never NaN.
   const pqcScan = snapshot?.pqc && Number.isFinite(snapshot.pqc.total_assets) ? snapshot.pqc : null;
-  const pqcExposed = activeKeys.filter((k) => isQuantumVulnerable(k.algorithm)).length;
+  const pqcExposed = snapshot?.keyAlgorithms ? activeKeys.filter((k) => keyFacts(snapshot, k.algorithm)?.quantum_vulnerable).length : null;
   const certsSoon = (snapshot?.certs || []).filter((c) => {
     const e = Date.parse(c.not_after || "");
     return !/revoked|deleted/i.test(c.status) && Number.isFinite(e) && e - now < 30 * 86_400_000;
@@ -326,7 +320,7 @@ export const CommandCenterTab = ({ session, fipsMode, clustered, onNavigate }: P
             </div>
           </div>
         </div>
-        <Kpi icon={KeyRound} label="Active keys" value={snapshot?.keys ? activeKeys.length.toLocaleString() : "—"} sub={snapshot?.keys ? `${pqcExposed} quantum-vulnerable` : "keycore unreachable"} />
+        <Kpi icon={KeyRound} label="Active keys" value={snapshot?.keys ? activeKeys.length.toLocaleString() : "—"} sub={!snapshot?.keys ? "keycore unreachable" : pqcExposed === null ? "quantum exposure not assessed" : `${pqcExposed} quantum-vulnerable`} />
         <Kpi icon={FileCheck2} label="Certs expiring ≤30d" value={snapshot?.certs ? String(certsSoon) : "—"} sub={snapshot?.certs ? `${snapshot.certs.length} certificates tracked` : "PKI not reachable"} tone={certsSoon ? C.amberFg : undefined} />
         <Kpi icon={Atom} label="PQC or hybrid assets" value={pqcScan ? `${pqcScan.pqc_ready_assets + pqcScan.hybrid_assets} / ${pqcScan.total_assets}` : "—"} sub={pqcScan ? `${pqcScan.classical_assets} classical, latest scan` : "no scan on record"} />
         <Kpi icon={LifeBuoy} label="Last good backup" value={lastBackup ? `${Math.max(0, Math.floor((now - lastBackup) / 86_400_000))}d` : "—"} sub={lastBackup ? new Date(lastBackup).toLocaleDateString() : snapshot?.backups ? "none completed" : "not assessed"} tone={!lastBackup && snapshot?.backups ? C.redFg : undefined} />
@@ -374,7 +368,7 @@ export const RecommendationsTab = ({ session, fipsMode, clustered, onNavigate }:
   const rows = visible.filter((r) =>
     (sev === "all" || r.severity === sev) &&
     (cat === "all" || r.category === cat) &&
-    (!q || `${r.title} ${r.why} ${r.frameworks.join(" ")}`.toLowerCase().includes(q.toLowerCase()))
+    (!q || `${r.title} ${r.why}`.toLowerCase().includes(q.toLowerCase()))
   );
   const snoozedCount = all.filter((r) => snoozed[r.id]).length;
   const chip = (active: boolean): React.CSSProperties => ({ fontSize: 12, fontWeight: 500, borderRadius: 4, padding: "4px 11px", cursor: "pointer", border: `1px solid ${active ? C.accentFg : C.border}`, background: active ? C.accentDim : "transparent", color: active ? C.accentFg : C.dim });
@@ -383,7 +377,6 @@ export const RecommendationsTab = ({ session, fipsMode, clustered, onNavigate }:
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 12, flexWrap: "wrap" }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 650, letterSpacing: -0.5 }}>Recommendations</h1>
-          <div style={{ fontSize: 13, color: C.dim, marginTop: 4 }}>Every finding is computed from live tenant state and links to the control it satisfies.</div>
         </div>
         <button onClick={() => void refresh()} disabled={loading} style={{ ...chip(false), display: "inline-flex", alignItems: "center", gap: 6 }}>
           <RefreshCw size={13} /> {loading ? "Evaluating…" : "Re-evaluate"}
@@ -398,7 +391,7 @@ export const RecommendationsTab = ({ session, fipsMode, clustered, onNavigate }:
           <option value="all">All categories</option>
           {CATEGORY_ORDER.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search title or framework (e.g. PCI, DORA)…" style={{ flex: 1, minWidth: 220, fontSize: 12.5, padding: "6px 10px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.surface, color: C.text }} />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search recommendations…" style={{ flex: 1, minWidth: 220, fontSize: 12.5, padding: "6px 10px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.surface, color: C.text }} />
         {snoozedCount > 0 && <button style={chip(false)} onClick={unsnoozeAll}>Show {snoozedCount} snoozed</button>}
       </div>
       <div style={{ ...card, overflow: "hidden" }}>

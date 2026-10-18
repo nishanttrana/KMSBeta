@@ -4,6 +4,43 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.19.0-beta] — 2026-10-18
+
+### Changed
+- **Recommendations cite no standard and set no date.** The Command Center
+  and Overview → Recommendations showed a list of standards next to every
+  recommendation (NIST, PCI DSS, DORA, CNSA 2.0, ISO, CA/B Forum, FedRAMP)
+  and stated deadlines ("deprecated after 2030 and disallowed after 2035").
+  They are gone from the rules, the page, its search and its document.
+- **Recommendations judge an algorithm only by the algorithm catalogue and
+  your migration rules.** The dashboard kept its own list of weak and
+  quantum-vulnerable algorithms. Weak and quantum-vulnerable now come from
+  `pkg/cryptocatalog`: for keys through keycore's agility posture, for
+  certificates through the new `algorithm_facts` on each certificate.
+  Deprecated, decrypt-only and disallowed come only from the tenant's own
+  migration rules (new `algo-policy-stopped` and `algo-policy-deprecated`).
+  The "Active keys" tile and the crypto inventory bar use the same facts,
+  and read "not assessed" without them.
+- Removed three rules that only restated a standard's threshold:
+  `algo-legacy` (RSA-2048 retirement dates), `algo-aes128` and
+  `cert-lifetime` (a public-CA TLS lifetime). A tenant that wants them
+  adds a migration rule or a certificate profile.
+
+### Added
+- `GET /certs` and `GET /certs/{id}` return `algorithm_facts` per
+  certificate (`assessed`, `security_bits`, `weak`, `quantum_vulnerable`,
+  `post_quantum`, `note`), computed from `pkg/cryptocatalog` when read.
+  Test: `TestCertificatesCarryCatalogueFacts`.
+
+### Fixed
+- The recommendations document listed a `backup-plain` rule that does not
+  exist and described `no-backup` as a policy check; it matches the code
+  now.
+
+Enforced by `tests/unit/recommendations.test.ts`: it fails if a standard,
+a deadline year or an algorithm list returns to the engine or the Command
+Center.
+
 ## [13.18.0-beta] — 2026-10-17
 
 ### Documentation

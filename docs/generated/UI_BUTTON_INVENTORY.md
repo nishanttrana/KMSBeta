@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-17T14:46:31Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-18T05:36:12Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -187,17 +187,17 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 473 | - | Btn | void refreshSyncEvents()}>Refresh |  |
 | web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 563 | - | Btn | void refreshClusterLogs()}>Refresh |  |
 | web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 576 | - | Btn | void refreshClusterLogs()}>Apply |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 166 | home, recommendations | button | setOpen((v) => !v)} aria-expanded= style={ } > {r.frameworks.map((f) => ( ))} |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 182 | home, recommendations | button | onNavigate(r.action.tab)} style={ } > |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 189 | home, recommendations | button | setOpen((v) => !v)} aria-label="Details" style={ }> |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 204 | home, recommendations | button | onSnooze(r.id)} style={{ marginTop: 10, fontSize: 12, color: C.muted, backgro... |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 303 | home, recommendations | button | void refresh()} disabled= style={{ display: "inline-flex", alignItems: "cente... |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 342 | home, recommendations | button | onNavigate("recommendations")} style={ }>View all → |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 357 | home, recommendations | button | onNavigate("ops")} style={ }> Operations dashboard |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 388 | home, recommendations | button | void refresh()} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 393 | home, recommendations | button | setSev("all")}>All ( ) |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 395 | home, recommendations | button | setSev(s)}> ( ) |  |
-| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 402 | home, recommendations | button | Show snoozed | unsnoozeAll |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 166 | home, recommendations | button | setOpen((v) => !v)} aria-expanded= style={ } > |  |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 179 | home, recommendations | button | onNavigate(r.action.tab)} style={ } > |  |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 186 | home, recommendations | button | setOpen((v) => !v)} aria-label="Details" style={ }> |  |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 201 | home, recommendations | button | onSnooze(r.id)} style={{ marginTop: 10, fontSize: 12, color: C.muted, backgro... |  |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 297 | home, recommendations | button | void refresh()} disabled= style={{ display: "inline-flex", alignItems: "cente... |  |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 336 | home, recommendations | button | onNavigate("recommendations")} style={ }>View all → |  |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 351 | home, recommendations | button | onNavigate("ops")} style={ }> Operations dashboard |  |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 381 | home, recommendations | button | void refresh()} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 386 | home, recommendations | button | setSev("all")}>All ( ) |  |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 388 | home, recommendations | button | setSev(s)}> ( ) |  |
+| web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 395 | home, recommendations | button | Show snoozed | unsnoozeAll |
 | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 520 | compliance | Btn | setView("assessment")} style={ }>Assessment |  |
 | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 521 | compliance | Btn | setView("reporting")} style={ }>Reports |  |
 | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 524 | compliance | Btn | void loadReporting()} disabled= > |  |

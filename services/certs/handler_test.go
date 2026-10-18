@@ -583,3 +583,44 @@ func mustCSRPEM(t *testing.T, commonName string) string {
 	}
 	return string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: der}))
 }
+
+// A certificate is listed with the catalogue's facts about its algorithm,
+// so the dashboard keeps no algorithm list of its own (13.19.0-beta).
+func TestCertificatesCarryCatalogueFacts(t *testing.T) {
+	h, svc := newCertsHandler(t)
+	ctx := context.Background()
+	ca, err := svc.CreateCA(ctx, CreateCARequest{TenantID: "t-facts", Name: "root", CALevel: "root", Algorithm: "ECDSA-P384", KeyBackend: "software", Subject: "CN=Root"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	issued, _, err := svc.IssueCertificate(ctx, IssueCertificateRequest{TenantID: "t-facts", CAID: ca.ID, SubjectCN: "svc.facts.local", CertType: "tls-server", Algorithm: "ECDSA-P256"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/certs?tenant_id=t-facts", nil))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("list status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	var out struct {
+		Items []Certificate `json:"items"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	var got *AlgorithmFacts
+	for _, c := range out.Items {
+		if c.ID == issued.ID {
+			got = c.AlgorithmFacts
+		}
+	}
+	if got == nil || !got.Assessed || !got.QuantumVulnerable || got.Weak || got.SecurityBits != 128 {
+		t.Fatalf("ECDSA-P256 facts = %+v, want assessed, quantum-vulnerable, not weak, 128 bits", got)
+	}
+	if f := algorithmFacts("RSA-1024"); !f.Weak {
+		t.Fatalf("RSA-1024 facts = %+v, want weak", f)
+	}
+	if f := algorithmFacts("RSA"); f.Assessed || f.Weak || f.QuantumVulnerable {
+		t.Fatalf("a name without a parameter set must be not assessed, got %+v", f)
+	}
+}
