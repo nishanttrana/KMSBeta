@@ -11,7 +11,7 @@ faults".
 |---|---|---|
 | No customer-settable switch turns an outage into "allow" (`fail_open`, `FAIL_CLOSED=false`). When one dependency check is made fail closed, every such branch in the service goes in the same change. | A fail-open switch survived the fix of its sibling in the same service (learning 2026-09-30). | Review; grep `fail_open` / `FAIL_CLOSED` when touching a dependency check |
 | A security listener has one configuration path. A missing input makes it wait or refuse to start; it never swaps in a weaker or `dev` configuration. | A "dev" fallback in a production path became the production behaviour (2026-09-29). | `make conformance` `tls-only`; [INTERNAL_TLS.md](INTERNAL_TLS.md) |
-| A key that must verify data later has no random fallback: it is derived from the service master key (`pkg/mek`) or the service refuses. | A random fallback is lost at every restart, and everything signed under it stops verifying (2026-09-28). | [SERVICE_MASTER_KEYS.md](SERVICE_MASTER_KEYS.md); **open item below** |
+| A key that must verify data later has no random fallback: it is derived from the service master key (`pkg/mek`), or, where it must open before keycore can be reached, made once and kept on the service's own volume; a damaged key stops the service. | A random fallback is lost at every restart, and everything signed under it stops verifying (2026-09-28). | [SERVICE_MASTER_KEYS.md](SERVICE_MASTER_KEYS.md); `TestWALKeySurvivesARestart`, `TestMalformedWALKeyStopsTheService`; `pkg/crypto.LoadKey32` removed (13.20.0-beta) |
 | A guard keeps "not applicable" (may return quietly) apart from "unable" (a failure, audited). | An early return hid the failure it guarded (2026-09-29). | Review |
 | A fetch helper returns its error; a caller of an optional service reads whether it is deployed from the deployment, and unknown fails closed; a fallback taken on every call is counted or audited. | `return empty, nil` produced fake results, and a client that never authenticated made a fail-open fallback the only path (2026-09-29, 2026-09-30). | `TestEvaluateSendsServiceToken`; CLAUDE.md "Every internal call carries a credential" |
 | Unattended work re-checks the authorising person with auth when it runs, and fails closed when it can't ask. | Authority checked once was kept forever (playbooks, 2026-09-28). | [PLATFORM_CONTRACT.md](../PLATFORM_CONTRACT.md) |
@@ -69,18 +69,15 @@ faults".
   refusal stored as success is wrong evidence even when its chain verifies
   ([AUDIT_INTEGRITY.md](AUDIT_INTEGRITY.md#recorded-outcome-13150-beta)).
 
+## Fixed since this page was written
+
+- **The audit write-ahead buffer's HMAC key** (listed open in
+  13.18.0-beta) is made once and kept on the audit volume with the buffer;
+  a record that fails its HMAC is quarantined and audited
+  (`audit.audit.wal_record_refused`). `pkg/crypto.LoadKey32`, which returned
+  a random key for a missing variable, is removed (13.20.0-beta;
+  [AUDIT_INTEGRITY.md](AUDIT_INTEGRITY.md#the-write-ahead-buffer-13200-beta)).
+
 ## Still open
 
-- **The audit write-ahead buffer's HMAC key is random at every start.**
-  `services/audit/main.go` reads `AUDIT_WAL_HMAC_KEY_B64` through
-  `pkg/crypto.LoadKey32`, which returns a random key when the variable is
-  unset, and no installer sets it. After a restart, every record still in
-  the buffer (events held while Postgres or NATS was unavailable) fails its
-  HMAC, is skipped without a word in `DrainWAL`, and is then dropped when
-  the buffer is rewritten. Those audit events are lost unaudited. Recorded
-  in learning.md on 2026-09-28 and not fixed since; found again in the
-  13.18.0-beta review. The fix needs a key that survives restarts and is
-  available before keycore is (the buffer exists for outages), and a drop
-  for a bad HMAC must be audited instead of silent.
-- `pkg/crypto.LoadKey32` itself still returns a random key for a missing
-  variable; any new caller inherits the fault above.
+- None recorded.

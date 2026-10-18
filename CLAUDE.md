@@ -97,6 +97,10 @@ an approach, record it here or in the matching doc below.
    A service's master key for data at rest comes from `pkg/mek` (a protected
    keycore system key), never from an environment variable or a fallback
    ([docs/SECURITY/SERVICE_MASTER_KEYS.md](docs/SECURITY/SERVICE_MASTER_KEYS.md)).
+   The one exception is a key that must open before keycore can be
+   reached, such as the audit write-ahead buffer's HMAC key (owner, 2026-10-17:
+   "yes do it"): it is made once and kept on the service's own volume, and a
+   damaged key stops the service (docs/DECISIONS.md).
    A KCV, key ID or other metadata is never key material. Changing how
    existing data is keyed needs a per-key migration, never a silent switch
    ([docs/SECURITY/DATAPROTECT_KEY_DERIVATION.md](docs/SECURITY/DATAPROTECT_KEY_DERIVATION.md)).
@@ -703,6 +707,13 @@ Security rules are explained in
 - A service that opts out of the platform JWT middleware has a test that a
   tokenless call is refused and audited
   (`TestUnauthenticatedRequestsAreRefusedAndAudited`).
+- A check whose cost grows with stored data has a bounded form for
+  requests and a full form on a schedule, and says which one ran and when
+  the full one last passed; it never stops early or samples and reports
+  everything as checked (13.20).
+- Data kept for an outage (a write-ahead buffer) and the key that protects
+  it live on the service's own volume together; a record that fails its
+  check is quarantined and audited, never skipped (13.20).
 
 **Fix the class; remove completely**
 - A hole found in one route means every route of that service is listed

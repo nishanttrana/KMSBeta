@@ -5,10 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/base64"
 	"math/big"
-	"os"
-	"strings"
 	"time"
 )
 
@@ -60,27 +57,4 @@ func randSerial() (*big.Int, error) {
 	}
 	b[0] &= 0x3f // keep below 1<<62 and non-negative
 	return new(big.Int).SetBytes(b), nil
-}
-
-// LoadKey32 decodes a base64 32-byte key from an env var. If the variable is
-// missing or invalid it returns a random ephemeral key and warns via logf,
-// matching the loadKey32 helpers previously duplicated across services.
-func LoadKey32(envVar string, logf func(string, ...interface{})) []byte {
-	raw := strings.TrimSpace(os.Getenv(envVar))
-	if raw != "" {
-		key, err := base64.StdEncoding.DecodeString(raw)
-		if err == nil && len(key) >= 16 {
-			out := make([]byte, 32)
-			copy(out, key)
-			return out
-		}
-		if logf != nil {
-			logf("WARNING: %s is set but invalid — generating ephemeral key", envVar)
-		}
-	}
-	out, err := RandomBytes(32)
-	if err != nil {
-		panic("crypto: system randomness unavailable: " + err.Error())
-	}
-	return out
 }

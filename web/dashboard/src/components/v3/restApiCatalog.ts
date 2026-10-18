@@ -1542,9 +1542,9 @@ export const REST_API_CATALOG = [
     method: "GET",
     pathTemplate: "/audit/chain/verify?tenant_id={{tenant_id}}",
     bodyTemplate: "",
-    description: "Verifies tamper-proof audit chain integrity.",
+    description: "Verifies the tenant's audit chains from each chain's newest signed checkpoint (add full=true to walk every row), and reports when the hourly full walk last passed.",
     requestExample: "GET /svc/audit/audit/chain/verify?tenant_id=root",
-    responseExample: {"breaks": null, "ok": true, "request_id": "req_0303b43af34cfcf8"},
+    responseExample: {"breaks": null, "from_sequence": {}, "last_full_verification": null, "ok": true, "request_id": "req_c3b2e0276164f02f", "rows_checked": 0, "scope": "since_checkpoint"},
     errorCodes: [
       { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
       { code: 401, meaning: "Token missing, invalid or expired" },

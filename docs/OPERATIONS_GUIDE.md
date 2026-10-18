@@ -243,6 +243,9 @@ Pay special attention to:
 - SCIM token rotation
 - bulk user disable or deprovision activity
 - unexpected SCIM group deletions or membership churn
+- `audit.audit.chain_broken`, `audit.audit.wal_record_refused`, and a
+  `last_full_verification` from `GET /svc/audit/audit/chain/verify` older
+  than two hours (the full walk runs hourly)
 
 ### Check Backup Freshness
 
@@ -290,6 +293,11 @@ Backups should preserve control-plane state such as:
 - confidential-compute policy
 - PQC migration state
 - governance metadata
+- the audit volume (`audit-data`, mounted at `/app/data`): the cluster
+  audit signing key, the write-ahead buffer and its HMAC key
+  (`audit-wal-hmac-key.b64`). Losing the key makes records still in the
+  buffer unverifiable; they are then quarantined in `buffer.log.rejected`
+  and audited, not ingested (docs/SECURITY/AUDIT_INTEGRITY.md)
 
 ### What Not To Treat As Recovery State
 

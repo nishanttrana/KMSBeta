@@ -1,5 +1,6 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useEffect, useMemo, useState } from "react";
+import { ChainStatus } from "./ChainStatus";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 import { B, Btn, Card, Inp, Modal, Section, Sel, Tabs } from "../legacyPrimitives";
@@ -387,13 +388,10 @@ export const AuditLogTab = ({ session, onToast }: any) => {
 
   /* ── integrity status bar ── */
 
-  const chainOk = chainResult ? chainResult.ok : null;
 
   const IntegrityBar = () => (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 14, padding: "8px 12px", borderRadius: 4, background: C.card, border: `1px solid ${C.border}` }}>
-      <B c={chainOk === false ? "red" : "green"} pulse={chainOk === false}>
-        {chainOk === null ? "CHAIN: UNVERIFIED" : chainOk ? "CHAIN: INTACT" : "CHAIN: BROKEN"}
-      </B>
+      <ChainStatus result={chainResult} />
       <B c="accent">{filteredEvents.length} events loaded</B>
       <B c={config?.fail_closed ? "green" : "amber"}>
         Fail-closed: {config?.fail_closed ? "ACTIVE" : "INACTIVE"}

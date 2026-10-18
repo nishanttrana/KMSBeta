@@ -86,6 +86,12 @@ export async function getAuditStats(session: AuthSession, window: { from?: strin
 export type ChainVerifyResult = {
   ok: boolean;
   breaks: Array<{ sequence: number; event_id: string; reason: string }>;
+  // "since_checkpoint" (the default walk) or "full".
+  scope: string;
+  from_sequence: Record<string, number>;
+  rows_checked: number;
+  // When the hourly full walk last passed; null if it never has.
+  last_full_verification: string | null;
   request_id: string;
 };
 
@@ -230,6 +236,10 @@ export async function verifyAuditChain(session: AuthSession): Promise<ChainVerif
   return {
     ok: Boolean(out?.ok),
     breaks: Array.isArray(out?.breaks) ? out.breaks : [],
+    scope: String(out?.scope || ""),
+    from_sequence: out?.from_sequence && typeof out.from_sequence === "object" ? out.from_sequence : {},
+    rows_checked: Number(out?.rows_checked || 0),
+    last_full_verification: out?.last_full_verification ? String(out.last_full_verification) : null,
     request_id: String(out?.request_id || "")
   };
 }

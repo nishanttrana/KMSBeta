@@ -1658,9 +1658,13 @@ every 10 minutes for each chain that moved; see
 [SECURITY/AUDIT_INTEGRITY.md](SECURITY/AUDIT_INTEGRITY.md) for trust rules
 and how to verify with openssl.
 
-`GET /svc/audit/audit/chain/verify` also checks every checkpoint; its break
-reasons add `checkpoint_key_unknown`, `checkpoint_signature_invalid` and
-`checkpoint_head_mismatch`.
+`GET /svc/audit/audit/chain/verify` checks every checkpoint's signature and
+walks each chain from its newest verified checkpoint (13.20.0-beta); add
+`full=true` to walk every row now. Response: `ok`, `breaks[]`, `scope`
+(`since_checkpoint` or `full`), `from_sequence` (per chain node; `""` is
+this node), `rows_checked`, `last_full_verification` (when the hourly full
+walk last passed, or `null`). Break reasons add `checkpoint_key_unknown`,
+`checkpoint_signature_invalid` and `checkpoint_head_mismatch`.
 
 ---
 

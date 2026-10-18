@@ -19837,7 +19837,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si...",
-      "line": 444,
+      "line": 442,
       "tabs": [
         "audit"
       ],
@@ -19847,7 +19847,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "verifyChain} disabled={chainVerifying",
       "label": "(icon or dynamic label)",
-      "line": 445,
+      "line": 443,
       "tabs": [
         "audit"
       ],
@@ -19857,7 +19857,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "load()} disabled= >Refresh",
-      "line": 448,
+      "line": 446,
       "tabs": [
         "audit"
       ],
@@ -19867,7 +19867,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "setOffset(Math.max(0, offset - PAGE_SIZE))}>Previous",
-      "line": 539,
+      "line": 537,
       "tabs": [
         "audit"
       ],
@@ -19877,7 +19877,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "setOffset(offset + PAGE_SIZE)}>Next",
-      "line": 540,
+      "line": 538,
       "tabs": [
         "audit"
       ],
@@ -19887,7 +19887,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "loadForensic} disabled={forensicLoading",
       "label": "(icon or dynamic label)",
-      "line": 566,
+      "line": 564,
       "tabs": [
         "audit"
       ],
@@ -19897,7 +19897,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "}> View Timeline ( )",
-      "line": 674,
+      "line": 672,
       "tabs": [
         "audit"
       ],
@@ -19907,7 +19907,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "}> View Session ( )",
-      "line": 679,
+      "line": 677,
       "tabs": [
         "audit"
       ],
@@ -19917,7 +19917,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "}> View Correlation ( )",
-      "line": 684,
+      "line": 682,
       "tabs": [
         "audit"
       ],
@@ -26423,7 +26423,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/events?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 123,
+      "line": 129,
       "match_key": "audit|GET|/audit/events",
       "method": "GET",
       "normalized_path": "/audit/events",
@@ -26436,7 +26436,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 128,
+      "line": 134,
       "match_key": "audit|GET|/audit/events/{param}",
       "method": "GET",
       "normalized_path": "/audit/events/{param}",
@@ -26449,7 +26449,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/timeline/${encodeURIComponent(String(targetId || \"\").trim())}?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 145,
+      "line": 151,
       "match_key": "audit|GET|/audit/timeline/{param}",
       "method": "GET",
       "normalized_path": "/audit/timeline/{param}",
@@ -26462,7 +26462,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 186,
+      "line": 192,
       "match_key": "audit|GET|/audit/targets/{param}/integrity",
       "method": "GET",
       "normalized_path": "/audit/targets/{param}/integrity",
@@ -26475,7 +26475,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/session/${encodeURIComponent(String(sessionId || \"\").trim())}?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 202,
+      "line": 208,
       "match_key": "audit|GET|/audit/session/{param}",
       "method": "GET",
       "normalized_path": "/audit/session/{param}",
@@ -26488,7 +26488,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/correlation/${encodeURIComponent(String(correlationId || \"\").trim())}?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 218,
+      "line": 224,
       "match_key": "audit|GET|/audit/correlation/{param}",
       "method": "GET",
       "normalized_path": "/audit/correlation/{param}",
@@ -26501,7 +26501,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 226,
+      "line": 232,
       "match_key": "audit|GET|/audit/chain/verify",
       "method": "GET",
       "normalized_path": "/audit/chain/verify",
@@ -26514,7 +26514,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 238,
+      "line": 248,
       "match_key": "audit|GET|/audit/config",
       "method": "GET",
       "normalized_path": "/audit/config",
@@ -26527,7 +26527,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/checkpoints?${tenantQuery(session)}&limit=${limit}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 268,
+      "line": 278,
       "match_key": "audit|GET|/audit/checkpoints",
       "method": "GET",
       "normalized_path": "/audit/checkpoints",
@@ -33466,7 +33466,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-18T05:36:12Z",
+  "generated_at": "2026-10-18T05:41:51Z",
   "navigation": [
     {
       "group": "Overview",
@@ -33632,7 +33632,8 @@
         "handleCorrelation",
         "handleSearch",
         "handleChainVerify",
-        "VerifyChain",
+        "VerifyChainWalk",
+        "LastChainVerified",
         "handleAuditConfig",
         "handleFIPSBoundary",
         "signing",
@@ -33651,11 +33652,12 @@
       ],
       "handler_service_calls": [
         "PublishAudit",
-        "VerifyChain"
+        "VerifyChainWalk"
       ],
       "handler_store_calls": [
         "QueryEvents",
-        "GetEvent"
+        "GetEvent",
+        "LastChainVerified"
       ],
       "method": "POST",
       "normalized_path": "/audit/publish",
@@ -33670,7 +33672,8 @@
       "service_helper_calls": [
         "Append",
         "mustJSON",
-        "Publish"
+        "Publish",
+        "reportChainBroken"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -33697,26 +33700,32 @@
         {
           "external_package_calls": [],
           "file": "services/audit/service.go",
-          "helper_calls": [],
+          "helper_calls": [
+            "reportChainBroken"
+          ],
           "internal_package_calls": [],
-          "line": 239,
-          "name": "VerifyChain",
+          "line": 265,
+          "name": "VerifyChainWalk",
           "receiver_calls": [],
-          "store_calls": []
+          "store_calls": [
+            "VerifyChainWalk"
+          ]
         }
       ],
       "service_receiver_calls": [
         "s.wal.Append",
         "s.publisher.Publish"
       ],
-      "service_store_calls": []
+      "service_store_calls": [
+        "VerifyChainWalk"
+      ]
     },
     {
       "frontend_call_sites": [
         {
           "expression": "serviceRequest(\"audit\", `/audit/events?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 123,
+          "line": 129,
           "source": "serviceRequest"
         }
       ],
@@ -33761,7 +33770,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 128,
+          "line": 134,
           "source": "serviceRequest"
         }
       ],
@@ -33804,7 +33813,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/timeline/${encodeURIComponent(String(targetId || \"\").trim())}?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 145,
+          "line": 151,
           "source": "serviceRequest"
         }
       ],
@@ -33846,7 +33855,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/session/${encodeURIComponent(String(sessionId || \"\").trim())}?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 202,
+          "line": 208,
           "source": "serviceRequest"
         }
       ],
@@ -33888,7 +33897,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/correlation/${encodeURIComponent(String(correlationId || \"\").trim())}?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 218,
+          "line": 224,
           "source": "serviceRequest"
         }
       ],
@@ -33957,29 +33966,52 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 226,
+          "line": 232,
           "source": "serviceRequest"
         }
       ],
       "handler": "h.handleChainVerify",
-      "handler_external_package_calls": [],
+      "handler_external_package_calls": [
+        "encoding/json.NewDecoder",
+        "encoding/json.NewEncoder",
+        "strconv.Atoi",
+        "strings.EqualFold",
+        "strings.TrimSpace",
+        "time.Parse"
+      ],
       "handler_file": "services/audit/handler.go",
       "handler_helper_calls": [
         "requestID",
         "mustTenant",
-        "VerifyChain",
+        "VerifyChainWalk",
         "writeErr",
         "Error",
-        "writeJSON"
+        "LastChainVerified",
+        "writeJSON",
+        "handleAuditConfig",
+        "handleFIPSBoundary",
+        "signing",
+        "decodeJSON",
+        "newID",
+        "parseTS",
+        "atoi",
+        "publishClusterSync",
+        "Publish"
       ],
-      "handler_internal_package_calls": [],
+      "handler_internal_package_calls": [
+        "pkg/tenantcheck.Enforce"
+      ],
       "handler_line": 289,
       "handler_name": "handleChainVerify",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "VerifyChain"
+      "handler_receiver_calls": [
+        "h.cluster.Publish"
       ],
-      "handler_store_calls": [],
+      "handler_service_calls": [
+        "VerifyChainWalk"
+      ],
+      "handler_store_calls": [
+        "LastChainVerified"
+      ],
       "method": "GET",
       "normalized_path": "/audit/chain/verify",
       "path": "/audit/chain/verify",
@@ -33987,22 +34019,30 @@
       "route_line": 79,
       "service": "audit",
       "service_external_package_calls": [],
-      "service_helper_calls": [],
+      "service_helper_calls": [
+        "reportChainBroken"
+      ],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
           "external_package_calls": [],
           "file": "services/audit/service.go",
-          "helper_calls": [],
+          "helper_calls": [
+            "reportChainBroken"
+          ],
           "internal_package_calls": [],
-          "line": 239,
-          "name": "VerifyChain",
+          "line": 265,
+          "name": "VerifyChainWalk",
           "receiver_calls": [],
-          "store_calls": []
+          "store_calls": [
+            "VerifyChainWalk"
+          ]
         }
       ],
       "service_receiver_calls": [],
-      "service_store_calls": []
+      "service_store_calls": [
+        "VerifyChainWalk"
+      ]
     },
     {
       "frontend_call_sites": [],
@@ -34038,7 +34078,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 238,
+          "line": 248,
           "source": "serviceRequest"
         }
       ],
@@ -34052,7 +34092,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 303,
+      "handler_line": 314,
       "handler_name": "handleAuditConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -34451,7 +34491,7 @@
         "signing"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 318,
+      "handler_line": 329,
       "handler_name": "handleFIPSBoundary",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -34874,7 +34914,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 186,
+          "line": 192,
           "source": "serviceRequest"
         }
       ],
@@ -34933,7 +34973,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/checkpoints?${tenantQuery(session)}&limit=${limit}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 268,
+          "line": 278,
           "source": "serviceRequest"
         }
       ],
@@ -34946,7 +34986,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 526,
+      "handler_line": 527,
       "handler_name": "listCheckpoints",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -34972,7 +35012,7 @@
             "reportChainBroken"
           ],
           "internal_package_calls": [],
-          "line": 505,
+          "line": 506,
           "name": "ListCheckpoints",
           "receiver_calls": [],
           "store_calls": [
@@ -91356,9 +91396,9 @@
     "nav_items": 26,
     "request_flows": 910,
     "request_flows_with_frontend": 523,
-    "request_flows_with_internal_package_calls": 194,
+    "request_flows_with_internal_package_calls": 195,
     "request_flows_with_service_calls": 535,
-    "request_flows_with_store_calls": 646,
+    "request_flows_with_store_calls": 647,
     "subpane_groups": 9,
     "tab_components": 33,
     "unmatched_frontend_call_sites": 27
@@ -92199,7 +92239,7 @@
   "visual_graph": {
     "flows": [
       {
-        "complexity": 7,
+        "complexity": 9,
         "externalPackages": [
           "encoding/json.NewDecoder",
           "encoding/json.NewEncoder",
@@ -92234,11 +92274,13 @@
         "service": "audit",
         "serviceCalls": [
           "PublishAudit",
-          "VerifyChain"
+          "VerifyChainWalk"
         ],
         "storeCalls": [
           "QueryEvents",
-          "GetEvent"
+          "GetEvent",
+          "LastChainVerified",
+          "VerifyChainWalk"
         ],
         "uiLabels": [
           "API only"
@@ -92253,7 +92295,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/events?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 123,
+            "line": 129,
             "source": "serviceRequest"
           }
         ],
@@ -92287,7 +92329,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 128,
+            "line": 134,
             "source": "serviceRequest"
           }
         ],
@@ -92319,7 +92361,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/timeline/${encodeURIComponent(String(targetId || \"\").trim())}?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 145,
+            "line": 151,
             "source": "serviceRequest"
           }
         ],
@@ -92351,7 +92393,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/session/${encodeURIComponent(String(sessionId || \"\").trim())}?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 202,
+            "line": 208,
             "source": "serviceRequest"
           }
         ],
@@ -92383,7 +92425,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/correlation/${encodeURIComponent(String(correlationId || \"\").trim())}?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 218,
+            "line": 224,
             "source": "serviceRequest"
           }
         ],
@@ -92432,13 +92474,20 @@
         ]
       },
       {
-        "complexity": 0,
-        "externalPackages": [],
+        "complexity": 4,
+        "externalPackages": [
+          "encoding/json.NewDecoder",
+          "encoding/json.NewEncoder",
+          "strconv.Atoi",
+          "strings.EqualFold",
+          "strings.TrimSpace",
+          "time.Parse"
+        ],
         "frontendSites": [
           {
             "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 226,
+            "line": 232,
             "source": "serviceRequest"
           }
         ],
@@ -92446,19 +92495,26 @@
         "handlerFile": "services/audit/handler.go",
         "handlerLine": 289,
         "hasFrontend": true,
-        "internalPackages": [],
+        "internalPackages": [
+          "pkg/tenantcheck.Enforce"
+        ],
         "method": "GET",
         "normalizedPath": "/audit/chain/verify",
         "path": "/audit/chain/verify",
-        "receiverCalls": [],
-        "risk": "low",
+        "receiverCalls": [
+          "h.cluster.Publish"
+        ],
+        "risk": "medium",
         "routeKey": "audit|GET|/audit/chain/verify",
         "sensitive": false,
         "service": "audit",
         "serviceCalls": [
-          "VerifyChain"
+          "VerifyChainWalk"
         ],
-        "storeCalls": [],
+        "storeCalls": [
+          "LastChainVerified",
+          "VerifyChainWalk"
+        ],
         "uiLabels": [
           "Audit Log"
         ]
@@ -92495,13 +92551,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 238,
+            "line": 248,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleAuditConfig",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 303,
+        "handlerLine": 314,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -92761,7 +92817,7 @@
         "frontendSites": [],
         "handler": "handleFIPSBoundary",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 318,
+        "handlerLine": 329,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -93108,7 +93164,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 186,
+            "line": 192,
             "source": "serviceRequest"
           }
         ],
@@ -93142,13 +93198,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/checkpoints?${tenantQuery(session)}&limit=${limit}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 268,
+            "line": 278,
             "source": "serviceRequest"
           }
         ],
         "handler": "listCheckpoints",
         "handlerFile": "services/audit/checkpoint.go",
-        "handlerLine": 526,
+        "handlerLine": 527,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -123604,7 +123660,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-18T05:36:12Z",
+    "generatedAt": "2026-10-18T05:41:51Z",
     "methods": [
       "DELETE",
       "GET",

@@ -64,6 +64,29 @@ layout for no gain).
 by a plain `useState(false)`) and the smoke test "the build popover closes
 on an outside press, on Escape and on its button".
 
+## 2026-10-18 — Audit verification walks from the newest checkpoint; the write-ahead key lives on the audit volume
+**Decision:** `GET /audit/chain/verify` checks every checkpoint's
+signature and walks each chain from the row its newest verified checkpoint
+signed; the hourly job keeps the full walk and records each pass
+(`audit.audit.chain_verified`), which the API reports. The write-ahead
+buffer and its HMAC key move to the audit volume; the key is made once
+(or adopted from `AUDIT_WAL_HMAC_KEY_B64`), a damaged key stops the
+service, and a record that fails is quarantined and audited.
+**Why:** the full walk on every request grew with the log and stopped
+answering within the edge's 20 seconds at 78,196 rows; the buffer's key was
+random at each start, so buffered events were dropped at a restart. Both
+approved by the owner (2026-10-17).
+**Rejected:** a time limit or a sampled walk (a check that stops early or
+samples proves less and says it proved all); caching the last result (a
+stale "ok" after tampering); deriving the buffer key from `pkg/mek` (the
+buffer exists for outages and must open before keycore answers); a key in
+`.env` (installers never set it, which is how it became random).
+**Enforced by:** `TestQuickWalkCatchesChangesAtAndAfterTheCheckpoint`,
+`TestOnlyTheFullWalkRecomputesRowsBeforeTheCheckpoint`,
+`TestChainVerifyAPIQuickByDefaultAndReportsTheLastFullPass`,
+`TestWALKeySurvivesARestart`, `TestMalformedWALKeyStopsTheService`,
+`TestATamperedBufferedRecordIsQuarantinedAndAudited`.
+
 ## 2026-10-17 — Tenants are administered from the platform tenant; a tenant's roles are the only roles
 **Decision:** acting on another tenant (the tenant list, lifecycle and roles,
 or another tenant's users, groups, identity providers, SCIM settings and

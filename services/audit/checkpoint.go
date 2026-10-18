@@ -29,6 +29,7 @@ import (
 
 const (
 	actionCheckpointSigned     = "audit.audit.checkpoint_signed"
+	actionChainVerified        = "audit.audit.chain_verified"
 	actionCheckpointKeyCreated = "audit.audit.checkpoint_key_created"
 	actionCheckpointRefused    = "audit.audit.checkpoint_refused"
 

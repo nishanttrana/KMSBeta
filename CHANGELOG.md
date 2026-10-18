@@ -4,6 +4,38 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.20.0-beta] — 2026-10-18
+
+### Fixed
+- **`GET /audit/chain/verify` answers in seconds however long the log.**
+  It walked every row of a tenant's chains on every call: 78,196 rows for
+  `root` took 15 to 20 seconds and then outran the edge's 20-second limit
+  (the live check reported it). It now checks every checkpoint's signature
+  and walks each chain from the row its newest verified checkpoint signed,
+  recomputing that row and every later one. `?full=true` walks every row.
+  The hourly job still walks every row of every tenant and records each
+  pass as `audit.audit.chain_verified`; the response reports it as
+  `last_full_verification`, with `scope`, `from_sequence` and
+  `rows_checked`.
+- **Audit events buffered during an outage survive a restart.** The
+  write-ahead buffer (used when `AUDIT_FAIL_CLOSED=false`) was HMAC'd with
+  a key that was random at every start, because no installer set
+  `AUDIT_WAL_HMAC_KEY_B64`, and the buffer lay outside the audit volume. At
+  a restart every buffered record failed its HMAC and was dropped without
+  a trace. The buffer and its key now live on the audit volume
+  (`/app/data`); the key is made once, or adopted from
+  `AUDIT_WAL_HMAC_KEY_B64` where an operator set it, and a damaged key
+  stops the service. A record that fails its HMAC or can't be read is moved
+  to `buffer.log.rejected` and audited as `audit.audit.wal_record_refused`.
+  `pkg/crypto.LoadKey32`, which handed out a random key for a missing
+  variable, is removed.
+
+### Upgrade note
+- On upgrade the audit container is recreated: anything in the old buffer
+  (`/app/var/audit-wal`, inside the container) was already lost to the
+  random key. Back up the `audit-data` volume from now on; it holds the new
+  key.
+
 ## [13.19.0-beta] — 2026-10-18
 
 ### Changed

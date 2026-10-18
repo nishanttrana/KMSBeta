@@ -70,10 +70,30 @@ under any other key reports `key_unknown`.
 
 ## Verification
 
-- `GET /audit/chain/verify` walks every chain: links, hashes, HMACs, and
-  every checkpoint (signature under a trusted key, and the row at the
-  signed head must still carry the signed hash; a missing head row is a
-  break). Break reasons: `previous_hash_mismatch`, `chain_hash_mismatch`,
+- **Two walks** (13.20.0-beta). Both check every checkpoint's signature
+  under a trusted key.
+  - **Full** (`VerifyChain`): every row of every chain, links, hashes and
+    HMACs, and the row at every signed head must still carry the signed
+    hash. The audit service runs it every hour for every tenant; a pass is
+    recorded as `audit.audit.chain_verified` (`rows_checked`,
+    `duration_ms`; the primary only), a failure as `audit.audit.chain_broken`.
+    `GET /audit/chain/verify?full=true` runs it now.
+  - **Since the checkpoint** (`GET /audit/chain/verify`, the default): each
+    chain from the row its newest verified checkpoint signed. That row must
+    still carry the signed hash and produce it from its own content; every
+    later row must link, hash and HMAC correctly. A chain with no verified
+    checkpoint is walked from its first row. The response says
+    `scope`, `from_sequence` per chain, `rows_checked`, and
+    `last_full_verification` (the newest `chain_verified`).
+  - **Why two.** The full walk grew with the log: 78,196 rows for `root`
+    took 15 to 20 seconds and then outran the edge's 20-second limit. The
+    signed hash commits to every earlier row, but only the full walk
+    recomputes them: an edit to a row before the newest checkpoint that
+    leaves the stored hash unchanged is found by the hourly walk, not the
+    quick one (`TestOnlyTheFullWalkRecomputesRowsBeforeTheCheckpoint`).
+    What the quick walk catches is pinned by
+    `TestQuickWalkCatchesChangesAtAndAfterTheCheckpoint`.
+- Break reasons: `previous_hash_mismatch`, `chain_hash_mismatch`,
   `hmac_mismatch`, `hmac_key_unknown`, `checkpoint_key_unknown`,
   `checkpoint_signature_invalid`, `checkpoint_head_mismatch`.
 - `GET /audit/targets/{target_id}/integrity` checks one target's events:
@@ -121,6 +141,23 @@ break the chain. On a stack upgraded from an earlier release, filter those
 refusals by action and `details.result`, not by the `result` column. A new
 event's test checks the row as stored at least once, not only the payload
 published (CLAUDE.md, "Before calling a change done").
+
+## The write-ahead buffer (13.20.0-beta)
+
+With `AUDIT_FAIL_CLOSED=false`, audit buffers events on disk while Postgres
+or NATS is down and ingests them later. The buffer and its HMAC key are on
+the audit volume (`/app/data/audit-wal/buffer.log`,
+`/app/data/audit-wal-hmac-key.b64`, `AUDIT_DATA_DIR` to move both). The key
+is made once at first start (or adopted from `AUDIT_WAL_HMAC_KEY_B64` when
+an operator had set it) and a damaged key file stops the service. A record
+that fails its HMAC or can't be read is moved to `buffer.log.rejected` and
+recorded as `audit.audit.wal_record_refused` (`reason` `hmac_mismatch` or
+`unreadable`); it is never ingested and never dropped unseen.
+
+Before 13.20.0-beta the key was random at every start and the buffer was
+outside the volume, so every record still buffered at a restart was
+dropped without a trace. With the default `AUDIT_FAIL_CLOSED=true` nothing
+is buffered and this did not apply.
 
 ## What it does not prove
 

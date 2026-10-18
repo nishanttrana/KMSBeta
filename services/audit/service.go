@@ -233,6 +233,79 @@ func (s *Service) DrainWAL(ctx context.Context) error {
 		default:
 			return nil
 		}
+	}, func(rec WALRecord, reason string) {
+		s.reportWALRecordRefused(ctx, rec, reason)
+	})
+}
+
+// reportWALRecordRefused audits a buffered record that was not ingested
+// because it failed its HMAC or could not be read. Its payload is not
+// trusted, so only the envelope is recorded; the line itself is kept in the
+// quarantine file.
+func (s *Service) reportWALRecordRefused(ctx context.Context, rec WALRecord, reason string) {
+	s.reportChainBroken(ctx, AuditEvent{
+		TenantID:  platformTenantID,
+		Service:   "audit",
+		Action:    "audit.audit.wal_record_refused",
+		ActorID:   "system",
+		ActorType: "system",
+		Result:    "refused",
+		Details: map[string]interface{}{
+			"reason":      reason,
+			"record_type": rec.Type,
+			"subject":     rec.Subject,
+			"buffered_at": rec.Timestamp,
+			"severity":    "critical",
+		},
+	})
+}
+
+// VerifyChainWalk verifies a tenant's chains, in full or from each chain's
+// newest verified checkpoint, and reports a break.
+func (s *Service) VerifyChainWalk(ctx context.Context, tenantID string, sinceCheckpoint bool) (ChainVerification, error) {
+	res, err := s.store.VerifyChainWalk(ctx, tenantID, sinceCheckpoint)
+	if err != nil {
+		return res, err
+	}
+	if !res.OK {
+		s.reportChainBroken(ctx, AuditEvent{
+			TenantID:  tenantID,
+			Service:   "audit",
+			Action:    "audit.audit.chain_broken",
+			ActorID:   "system",
+			ActorType: "system",
+			Result:    "failure",
+			Details: map[string]interface{}{
+				"scope":       "chain",
+				"walk":        res.Scope,
+				"break_count": len(res.Breaks),
+				"breaks":      res.Breaks,
+			},
+		})
+	}
+	return res, nil
+}
+
+// RecordFullVerification records that a full walk of a tenant's chains
+// passed (audit.audit.chain_verified), so a quick check since the latest
+// checkpoint can say when everything before it was last proven.
+func (s *Service) RecordFullVerification(ctx context.Context, tenantID string, res ChainVerification, took time.Duration) {
+	if !res.OK || res.Scope != "full" {
+		return
+	}
+	s.reportChainBroken(ctx, AuditEvent{
+		TenantID:  tenantID,
+		Service:   "audit",
+		Action:    actionChainVerified,
+		ActorID:   "system",
+		ActorType: "system",
+		Result:    "success",
+		Details: map[string]interface{}{
+			"scope":        "chain",
+			"walk":         res.Scope,
+			"rows_checked": res.Rows,
+			"duration_ms":  took.Milliseconds(),
+		},
 	})
 }
 

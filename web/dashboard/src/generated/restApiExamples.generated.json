@@ -7,8 +7,12 @@
     "bodyTemplate": "",
     "responseExample": {
       "breaks": null,
+      "from_sequence": {},
+      "last_full_verification": null,
       "ok": true,
-      "request_id": "req_0303b43af34cfcf8"
+      "request_id": "req_c3b2e0276164f02f",
+      "rows_checked": 0,
+      "scope": "since_checkpoint"
     }
   },
   {

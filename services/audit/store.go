@@ -21,6 +21,8 @@ type Store interface {
 	AuditStats(ctx context.Context, tenantID string, from, to time.Time) (AuditStats, error)
 	GetEvent(ctx context.Context, tenantID string, id string) (AuditEvent, error)
 	VerifyChain(ctx context.Context, tenantID string) (bool, []map[string]interface{}, error)
+	VerifyChainWalk(ctx context.Context, tenantID string, sinceCheckpoint bool) (ChainVerification, error)
+	LastChainVerified(ctx context.Context, tenantID string) (time.Time, bool, error)
 	VerifyTarget(ctx context.Context, tenantID, targetID string, limit int) (TargetIntegrity, error)
 	ListCheckpoints(ctx context.Context, tenantID string, limit int) ([]CheckpointStatus, error)
 
@@ -316,6 +318,39 @@ func scanChainRow(rows interface {
 }
 
 func (s *SQLStore) VerifyChain(ctx context.Context, tenantID string) (bool, []map[string]interface{}, error) {
+	res, err := s.verifyChain(ctx, tenantID, false)
+	return res.OK, res.Breaks, err
+}
+
+// ChainVerification is the outcome of one walk of a tenant's chains.
+type ChainVerification struct {
+	OK     bool                     `json:"ok"`
+	Breaks []map[string]interface{} `json:"breaks"`
+	// Scope is "full" (every row from the start of each chain) or
+	// "since_checkpoint" (each chain from its newest verified checkpoint).
+	Scope string `json:"scope"`
+	// From is the first sequence walked per chain node ("" is this node).
+	From map[string]int64 `json:"from_sequence"`
+	Rows int64            `json:"rows_checked"`
+}
+
+// VerifyChainWalk is VerifyChain with its scope: with sinceCheckpoint it
+// checks every checkpoint signature, then walks
+// each chain from the row its newest verified checkpoint signed. That row
+// must still carry the signed hash, and every later row must link to it and
+// carry a valid hash and HMAC. A chain with no verified checkpoint is walked
+// in full. Rows before a checkpoint are proven by the full walk the audit
+// service runs every hour (VerifyChain); the signed hash commits to them,
+// but this walk does not recompute them.
+func (s *SQLStore) VerifyChainWalk(ctx context.Context, tenantID string, sinceCheckpoint bool) (ChainVerification, error) {
+	return s.verifyChain(ctx, tenantID, sinceCheckpoint)
+}
+
+func (s *SQLStore) verifyChain(ctx context.Context, tenantID string, sinceCheckpoint bool) (ChainVerification, error) {
+	res := ChainVerification{Scope: "full", From: map[string]int64{}}
+	if sinceCheckpoint {
+		res.Scope = "since_checkpoint"
+	}
 	self := s.chainNode(ctx)
 	chainOf := func(node string) string {
 		if node == "" {
@@ -334,44 +369,105 @@ func (s *SQLStore) VerifyChain(ctx context.Context, tenantID string) (bool, []ma
 	// changes that row.
 	cps, err := s.loadCheckpoints(ctx, tenantID, 0)
 	if err != nil {
-		return false, nil, err
+		return res, err
 	}
 	heads := map[string]checkpoint{}
+	anchors := map[string]checkpoint{} // newest verified checkpoint per chain
 	for _, cp := range cps {
 		status, err := s.verifyCheckpointSignature(ctx, cp)
 		if err != nil {
-			return false, nil, err
+			return res, err
 		}
 		if status != checkpointVerified {
 			brk(cp.Head.Sequence, cp.EventID, cp.Head.ChainNode, "checkpoint_"+status)
 			continue
 		}
-		heads[fmt.Sprintf("%s|%d", chainOf(cp.Head.ChainNode), cp.Head.Sequence)] = cp
+		chain := chainOf(cp.Head.ChainNode)
+		heads[fmt.Sprintf("%s|%d", chain, cp.Head.Sequence)] = cp
+		if a, ok := anchors[chain]; !ok || cp.Head.Sequence > a.Head.Sequence {
+			anchors[chain] = cp
+		}
+	}
+
+	// Where the walk starts: the start of the table for a full walk, else
+	// the lowest of each chain's anchor (or first row, for a chain with no
+	// verified checkpoint).
+	start := int64(0)
+	if sinceCheckpoint {
+		firsts, err := s.chainFirstSequences(ctx, tenantID, chainOf)
+		if err != nil {
+			return res, err
+		}
+		start = -1
+		for chain, first := range firsts {
+			from := first
+			if a, ok := anchors[chain]; ok && a.Head.Sequence > first {
+				from = a.Head.Sequence
+			}
+			res.From[chain] = from
+			if start < 0 || from < start {
+				start = from
+			}
+		}
+		if start < 0 {
+			start = 0
+		}
+		// Older heads lie before the walk; the full walk checks them.
+		for key, cp := range heads {
+			if a, ok := anchors[chainOf(cp.Head.ChainNode)]; ok && cp.Head.Sequence < a.Head.Sequence {
+				delete(heads, key)
+			}
+		}
+	} else {
+		anchors = map[string]checkpoint{}
 	}
 
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT `+chainRowColumns+`
 FROM audit_events
-WHERE tenant_id=$1
+WHERE tenant_id=$1 AND sequence >= $2
 ORDER BY sequence ASC
-`, tenantID)
+`, tenantID, start)
 	if err != nil {
-		return false, nil, err
+		return res, err
 	}
 	defer rows.Close() //nolint:errcheck
 
 	// Each node's chain is verified on its own. This node's chain starts at
 	// GENESIS ('' rows continue into its clustered rows). Another node's
 	// chain arrives from the point that node was clustered, so its first row
-	// here anchors it; from there every link and hash is checked.
+	// here anchors it; from there every link and hash is checked. In a walk
+	// since a checkpoint, a chain starts at the row its checkpoint signed.
 	prevByChain := map[string]string{}
 	for rows.Next() {
 		ev, err := scanChainRow(rows, tenantID)
 		if err != nil {
-			return false, nil, err
+			return res, err
 		}
 
 		chain := chainOf(ev.ChainNode)
+		key := fmt.Sprintf("%s|%d", chain, ev.Sequence)
+		if a, ok := anchors[chain]; ok {
+			if ev.Sequence < a.Head.Sequence {
+				continue // before this chain's anchor
+			}
+			if ev.Sequence == a.Head.Sequence {
+				res.Rows++
+				if ev.ChainHash != a.Head.ChainHash {
+					brk(ev.Sequence, ev.ID, ev.ChainNode, "checkpoint_head_mismatch")
+				}
+				// The signed row's own content must still produce its hash
+				// from the link it stores.
+				if ev.ChainHash != chainHash(ev.PreviousHash, eventHashInput(ev)) {
+					brk(ev.Sequence, ev.ID, ev.ChainNode, "chain_hash_mismatch")
+				}
+				s.checkRowHMAC(ev, brk)
+				delete(heads, key)
+				prevByChain[chain] = a.Head.ChainHash
+				continue
+			}
+		}
+		res.Rows++
 		prevHash, seen := prevByChain[chain]
 		if !seen {
 			prevHash = "GENESIS"
@@ -386,15 +482,7 @@ ORDER BY sequence ASC
 		if ev.ChainHash != expected {
 			brk(ev.Sequence, ev.ID, ev.ChainNode, "chain_hash_mismatch")
 		}
-		if ev.HMACSig != "" && s.keys.configured() {
-			switch ok, known := s.keys.verify(ev.ChainHash, ev.HMACSig, ev.HMACKeyID); {
-			case !known:
-				brk(ev.Sequence, ev.ID, ev.ChainNode, "hmac_key_unknown")
-			case !ok:
-				brk(ev.Sequence, ev.ID, ev.ChainNode, "hmac_mismatch")
-			}
-		}
-		key := fmt.Sprintf("%s|%d", chain, ev.Sequence)
+		s.checkRowHMAC(ev, brk)
 		if cp, ok := heads[key]; ok {
 			if ev.ChainHash != cp.Head.ChainHash {
 				brk(ev.Sequence, ev.ID, ev.ChainNode, "checkpoint_head_mismatch")
@@ -404,13 +492,64 @@ ORDER BY sequence ASC
 		prevByChain[chain] = ev.ChainHash
 	}
 	if err := rows.Err(); err != nil {
-		return false, nil, err
+		return res, err
 	}
 	// A signed head with no row: the row was removed.
 	for _, cp := range heads {
 		brk(cp.Head.Sequence, cp.EventID, cp.Head.ChainNode, "checkpoint_head_mismatch")
 	}
-	return len(breaks) == 0, breaks, nil
+	res.OK, res.Breaks = len(breaks) == 0, breaks
+	return res, nil
+}
+
+func (s *SQLStore) checkRowHMAC(ev AuditEvent, brk func(int64, string, string, string)) {
+	if ev.HMACSig == "" || !s.keys.configured() {
+		return
+	}
+	switch ok, known := s.keys.verify(ev.ChainHash, ev.HMACSig, ev.HMACKeyID); {
+	case !known:
+		brk(ev.Sequence, ev.ID, ev.ChainNode, "hmac_key_unknown")
+	case !ok:
+		brk(ev.Sequence, ev.ID, ev.ChainNode, "hmac_mismatch")
+	}
+}
+
+// LastChainVerified is when the last full walk of the tenant's chains
+// passed (audit.audit.chain_verified), if one has.
+func (s *SQLStore) LastChainVerified(ctx context.Context, tenantID string) (time.Time, bool, error) {
+	var raw interface{}
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT MAX(timestamp) FROM audit_events WHERE tenant_id=$1 AND action=$2
+`, tenantID, actionChainVerified).Scan(&raw)
+	if err != nil || raw == nil {
+		return time.Time{}, false, err
+	}
+	t := parseTimeValue(raw)
+	return t, !t.IsZero(), nil
+}
+
+// chainFirstSequences returns the first stored sequence of each chain.
+func (s *SQLStore) chainFirstSequences(ctx context.Context, tenantID string, chainOf func(string) string) (map[string]int64, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT COALESCE(chain_node,''), MIN(sequence) FROM audit_events WHERE tenant_id=$1 GROUP BY COALESCE(chain_node,'')
+`, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := map[string]int64{}
+	for rows.Next() {
+		var node string
+		var first int64
+		if err := rows.Scan(&node, &first); err != nil {
+			return nil, err
+		}
+		chain := chainOf(node)
+		if cur, ok := out[chain]; !ok || first < cur {
+			out[chain] = first
+		}
+	}
+	return out, rows.Err()
 }
 
 func (s *SQLStore) CountDistinctIPsForTarget(ctx context.Context, tenantID string, targetID string, since time.Time) (int, error) {

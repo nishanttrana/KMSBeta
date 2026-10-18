@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-18T05:36:12Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-18T05:41:51Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -51,15 +51,15 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 343 | - | Btn | void removeProfile(item)}>Delete |  |
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 366 | - | Btn | void verifyRecord(item)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/AuditAnalyticsPanel.tsx | 72 | - | Btn | void load()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 444 | audit | Btn | void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si... |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 445 | audit | Btn | (icon or dynamic label) | verifyChain} disabled={chainVerifying |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 448 | audit | Btn | load()} disabled= >Refresh |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 539 | audit | Btn | setOffset(Math.max(0, offset - PAGE_SIZE))}>Previous |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 540 | audit | Btn | setOffset(offset + PAGE_SIZE)}>Next |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 566 | audit | Btn | (icon or dynamic label) | loadForensic} disabled={forensicLoading |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 674 | audit | Btn | }> View Timeline ( ) |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 679 | audit | Btn | }> View Session ( ) |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 684 | audit | Btn | }> View Correlation ( ) |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 442 | audit | Btn | void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si... |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 443 | audit | Btn | (icon or dynamic label) | verifyChain} disabled={chainVerifying |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 446 | audit | Btn | load()} disabled= >Refresh |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 537 | audit | Btn | setOffset(Math.max(0, offset - PAGE_SIZE))}>Previous |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 538 | audit | Btn | setOffset(offset + PAGE_SIZE)}>Next |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 564 | audit | Btn | (icon or dynamic label) | loadForensic} disabled={forensicLoading |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 672 | audit | Btn | }> View Timeline ( ) |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 677 | audit | Btn | }> View Session ( ) |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 682 | audit | Btn | }> View Correlation ( ) |  |
 | web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 371 | - | Btn | refresh(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 372 | - | Btn | Save Settings | saveSettings} disabled={busy \|\| loading |
 | web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 476 | - | Btn | Save Settings | saveSettings} disabled={busy |

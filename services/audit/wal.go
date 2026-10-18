@@ -67,7 +67,11 @@ func (w *WALBuffer) Append(recType string, subject string, payload []byte) error
 	return nil
 }
 
-func (w *WALBuffer) Drain(processor func(rec WALRecord, payload []byte) error) error {
+// Drain hands every buffered record to processor and keeps those it fails.
+// A record that can't be read or whose HMAC doesn't verify is never
+// ingested and never dropped unseen: it is moved to the quarantine file
+// (path + ".rejected") and passed to reject with its reason, which audits it.
+func (w *WALBuffer) Drain(processor func(rec WALRecord, payload []byte) error, reject func(rec WALRecord, reason string)) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	f, err := os.OpenFile(w.path, os.O_RDONLY|os.O_CREATE, 0o600)
@@ -85,13 +89,16 @@ func (w *WALBuffer) Drain(processor func(rec WALRecord, payload []byte) error) e
 		}
 		var rec WALRecord
 		if err := json.Unmarshal(line, &rec); err != nil {
+			w.quarantine(line, WALRecord{}, reasonWALUnreadable, reject)
 			continue
 		}
-		if rec.HMAC != w.sign(rec) {
+		if !hmac.Equal([]byte(rec.HMAC), []byte(w.sign(rec))) {
+			w.quarantine(line, rec, reasonWALHMACMismatch, reject)
 			continue
 		}
 		payload, err := base64.StdEncoding.DecodeString(rec.PayloadB64)
 		if err != nil {
+			w.quarantine(line, rec, reasonWALUnreadable, reject)
 			continue
 		}
 		if err := processor(rec, payload); err != nil {
@@ -102,6 +109,22 @@ func (w *WALBuffer) Drain(processor func(rec WALRecord, payload []byte) error) e
 		return err
 	}
 	return w.rewrite(pending)
+}
+
+const (
+	reasonWALHMACMismatch = "hmac_mismatch"
+	reasonWALUnreadable   = "unreadable"
+)
+
+// quarantine keeps a rejected line, byte for byte, for investigation.
+func (w *WALBuffer) quarantine(line []byte, rec WALRecord, reason string, reject func(WALRecord, string)) {
+	if f, err := os.OpenFile(w.path+".rejected", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600); err == nil {
+		_, _ = f.Write(append(append([]byte(nil), line...), '\n'))
+		_ = f.Close()
+	}
+	if reject != nil {
+		reject(rec, reason)
+	}
 }
 
 func (w *WALBuffer) rewrite(records []WALRecord) error {

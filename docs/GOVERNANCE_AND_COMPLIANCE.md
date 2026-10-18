@@ -1701,7 +1701,7 @@ curl "https://localhost/svc/governance/governance/backups?tenant_id=root&date_fr
 | GET | `/timeline/{resource_id}` | All events for a specific resource |
 | GET | `/session/{session_id}` | All events in a session |
 | GET | `/correlation/{correlation_id}` | All events in a correlation group |
-| GET | `/chain/verify` | Verify entire audit chain integrity |
+| GET | `/chain/verify` | Verify the audit chains from the newest signed checkpoint (`full=true`: every row); reports the last hourly full pass |
 | GET | `/checkpoints` | Signed checkpoints, each re-verified |
 | GET | `/targets/{target_id}/integrity` | Verify one resource's audit trail |
 | GET/POST | `/svc/audit/webhooks` (no `audit/` prefix) | List or add event streams (each names a connection) |

@@ -292,12 +292,23 @@ func (h *Handler) handleChainVerify(w http.ResponseWriter, r *http.Request) {
 	if tenantID == "" {
 		return
 	}
-	ok, breaks, err := h.svc.VerifyChain(r.Context(), tenantID)
+	// By default each chain is walked from its newest verified checkpoint,
+	// which takes seconds however long the log; ?full=true walks every row
+	// now. The hourly full walk's last pass is reported either way.
+	full := strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("full")), "true")
+	res, err := h.svc.VerifyChainWalk(r.Context(), tenantID, !full)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "verify_failed", err.Error(), reqID, tenantID)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"ok": ok, "breaks": breaks, "request_id": reqID})
+	out := map[string]interface{}{
+		"ok": res.OK, "breaks": res.Breaks, "scope": res.Scope, "from_sequence": res.From,
+		"rows_checked": res.Rows, "last_full_verification": nil, "request_id": reqID,
+	}
+	if at, ok, err := h.svc.store.LastChainVerified(r.Context(), tenantID); err == nil && ok {
+		out["last_full_verification"] = at.UTC().Format(time.RFC3339)
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (h *Handler) handleAuditConfig(w http.ResponseWriter, r *http.Request) {

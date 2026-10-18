@@ -24,7 +24,6 @@ import (
 	pkgclustersync "vecta-kms/pkg/clustersync"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
-	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
@@ -94,6 +93,11 @@ func main() {
 	defer hb.Stop()
 
 	ac := loadAuditConfig()
+	walKey, err := loadOrCreateWALKey(filepath.Join(auditDataDir(), walKeyFileName))
+	if err != nil {
+		logger.Fatalf("audit WAL HMAC key: %v", err)
+	}
+	ac.WALHMACKey = walKey
 	wal := NewWALBuffer(ac.WALPath, ac.WALMaxSizeMB, ac.WALHMACKey)
 	store := NewSQLStore(dbConn)
 	store.SetEventSigningKey(ac.EventSigningKey)
@@ -233,7 +237,15 @@ func main() {
 				for rows.Next() {
 					var tenantID string
 					if err := rows.Scan(&tenantID); err == nil {
-						_, _, _ = svc.VerifyChain(ctx, tenantID)
+						// The full walk proves every row; the API's quick
+						// check starts from the newest checkpoint and
+						// reports when this last passed. Only the primary
+						// records the pass, so a cluster records it once.
+						started := time.Now()
+						res, err := svc.VerifyChainWalk(ctx, tenantID, false)
+						if err == nil && clusterstate.RunsPrimaryJobs(ctx) {
+							svc.RecordFullVerification(ctx, tenantID, res, time.Since(started))
+						}
 					}
 				}
 				rows.Close() //nolint:errcheck
@@ -286,15 +298,10 @@ func main() {
 func loadAuditConfig() AuditConfig {
 	return AuditConfig{
 		FailClosed:      envBool("AUDIT_FAIL_CLOSED", true),
-		WALPath:         envOr("AUDIT_WAL_PATH", filepath.Join("var", "audit-wal", "buffer.log")),
+		WALPath:         envOr("AUDIT_WAL_PATH", filepath.Join(auditDataDir(), "audit-wal", "buffer.log")),
 		WALMaxSizeMB:    int64(envInt("AUDIT_WAL_MAX_SIZE_MB", 512)),
-		WALHMACKey:      loadKey32("AUDIT_WAL_HMAC_KEY_B64"),
 		EventSigningKey: legacyEventKey(),
 	}
-}
-
-func loadKey32(envVar string) []byte {
-	return pkgcrypto.LoadKey32(envVar, logger.Printf)
 }
 
 func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {

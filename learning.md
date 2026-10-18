@@ -5,6 +5,23 @@ Newest entries on top.
 
 ## 2026-10-18
 
+### A check that grew with the log, and a buffer that forgot its key (13.20.0-beta)
+- The chain verification walked every row on each request. It passed every
+  test (a few rows) and every deploy until the log reached about 78,000
+  rows, then timed out in the live check. Its run time had been creeping up
+  in the edge log (15, 17, 19 seconds) for days; nothing watched it. **Rule:
+  a check whose cost grows with stored data has a bounded request form and
+  a scheduled full form, and reports which ran.**
+- The quick walk first compared the signed row's stored hash with the
+  signature and not with the row's own content, so an edit to that one row
+  would have passed. Writing the test case list ("the signed row's
+  content") found it before shipping.
+- The write-ahead buffer's key came from an environment variable no
+  installer set, through a helper whose name (`LoadKey32`) did not say it
+  makes a random key when the variable is missing. Recorded as open on
+  2026-09-28; nothing tracked it. The buffer file also sat outside the
+  volume. **Rule: a key that must verify data later is never a fallback; a
+  helper that can return a random key is removed, not reused.**
 ### A rule followed everywhere but the home page (13.19.0-beta)
 - "The customer decides what to migrate and when" (2026-09-29) was applied
   to Crypto Agility, the CBOM and keycore, but the Command Center kept its
