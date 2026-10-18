@@ -666,26 +666,17 @@ export async function updateCertExpiryAlertPolicy(
 export type CertCLMPolicy = {
   tenant_id: string;
   mode: "off" | "warn" | "enforce";
+  /** The tenant's own limit; 0 when none is set. */
   max_validity_days: number;
-  schedule_aware: boolean;
-  renew_before_days: number;
   updated_by?: string;
   updated_at?: string;
 };
 
-export type CertCLMMilestone = {
-  effective_from: string;
-  max_validity_days: number;
-  active: boolean;
-};
-
 export type CertCLMStatus = {
   policy: CertCLMPolicy;
-  effective_max_days: number;
-  cab_schedule_days: number;
-  milestones: CertCLMMilestone[];
   active_tls_certs: number;
-  over_limit_certs: number;
+  /** Absent when the tenant has set no limit. */
+  over_limit_certs?: number;
   longest_validity_days: number;
 };
 
@@ -699,16 +690,13 @@ export async function getCertCLMStatus(session: AuthSession): Promise<CertCLMSta
 
 export async function updateCertCLMPolicy(
   session: AuthSession,
-  input: { mode: string; max_validity_days: number; schedule_aware: boolean; renew_before_days: number; updated_by?: string }
+  input: { mode: string; max_validity_days: number }
 ): Promise<CertCLMPolicy> {
   const out = await serviceRequest<CLMPolicyResponse>(session, "certs", `/certs/clm/policy?${tenantQuery(session)}`, {
     method: "PUT",
     body: JSON.stringify({
-      mode: String(input.mode || "warn").toLowerCase(),
-      max_validity_days: Math.max(1, Math.min(398, Math.trunc(Number(input.max_validity_days || 47)))),
-      schedule_aware: Boolean(input.schedule_aware),
-      renew_before_days: Math.max(0, Math.trunc(Number(input.renew_before_days || 15))),
-      updated_by: String(input.updated_by || session.username || "dashboard").trim() || "dashboard"
+      mode: String(input.mode || "off").toLowerCase(),
+      max_validity_days: Math.max(0, Math.trunc(Number(input.max_validity_days || 0)))
     })
   });
   return out.policy;

@@ -29,8 +29,6 @@ func (h *Handler) handleUpsertCLMPolicy(w http.ResponseWriter, r *http.Request) 
 	var body struct {
 		Mode            string `json:"mode"`
 		MaxValidityDays int64  `json:"max_validity_days"`
-		ScheduleAware   bool   `json:"schedule_aware"`
-		RenewBeforeDays int64  `json:"renew_before_days"`
 		UpdatedBy       string `json:"updated_by"`
 	}
 	if err := decodeJSON(r, &body); err != nil {
@@ -42,8 +40,6 @@ func (h *Handler) handleUpsertCLMPolicy(w http.ResponseWriter, r *http.Request) 
 		TenantID:        tenantID,
 		Mode:            body.Mode,
 		MaxValidityDays: body.MaxValidityDays,
-		ScheduleAware:   body.ScheduleAware,
-		RenewBeforeDays: body.RenewBeforeDays,
 		UpdatedBy:       body.UpdatedBy,
 	})
 	if err != nil {

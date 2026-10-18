@@ -7,6 +7,22 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-18 — The certificate lifetime limit is the tenant's own
+**Decision:** the certs lifetime policy applies only the tenant's mode and
+limit. No industry schedule shortens it on dates the product chose, and a
+tenant that has saved no policy has none.
+**Why:** owner direction, 2026-10-18 ("implement recommendations", on
+removing the CA/B Forum SC-081 schedule and the 47-day preset), applying
+the 2026-09-29 directive that the customer decides what to migrate and
+when.
+**Rejected:** keeping the schedule behind an opt-in switch (still dates
+the product chooses for the customer, and the former default was on);
+keeping 398 days as the upper bound (CA/B's number again; the bound is now
+only a sanity limit).
+**Enforced by:** `TestCLMPolicyIsTheTenantsOwn`,
+`TestCLMIssuanceFollowsTheTenantsPolicy` and the smoke test "the
+certificate lifetime policy shows and sends only the tenant's own values".
+
 ## 2026-10-18 — Recommendations take algorithm facts from the catalogue and dates from the tenant
 **Decision:** the recommendation engine (Command Center, Overview →
 Recommendations) cites no standard and sets no date. Weak and

@@ -732,3 +732,25 @@ test("certificate tiles are the console's flat stat tiles", async ({ page }) => 
     expect(look.number).toBe(looks[0]!.number);
   }
 });
+
+// The lifetime policy is the tenant's own (13.22.0-beta): no CA/B Forum
+// schedule, no 47-day preset, and the save sends only mode and limit.
+test("the certificate lifetime policy shows and sends only the tenant's own values", async ({ page }) => {
+  await page.route("**/svc/certs/certs/clm/status?**", (r) => r.fulfill(json({ status: {
+    policy: { tenant_id: "root", mode: "off", max_validity_days: 0 }, active_tls_certs: 4200, longest_validity_days: 398,
+  } })));
+  let sent: Record<string, unknown> | null = null;
+  await page.route("**/svc/certs/certs/clm/policy?**", async (r) => {
+    sent = r.request().postDataJSON();
+    await r.fulfill(json({ policy: { tenant_id: "root", ...sent } }));
+  });
+  await page.getByText("Certificates / PKI", { exact: true }).first().click();
+  await page.getByRole("button", { name: "Lifetime policy" }).click();
+  const dialog = page.getByText("Certificate lifetime policy").locator("xpath=ancestor::*[.//button[normalize-space()='Save Policy']][1]");
+  await expect(dialog).toContainText("none set");
+  await expect(dialog).not.toContainText(/CA\/B|SC-081|schedule|47/i);
+  await page.getByText("Enforce (shorten to the limit)").click();
+  await page.getByPlaceholder("your limit").fill("90");
+  await page.getByRole("button", { name: "Save Policy" }).click();
+  await expect.poll(() => sent).toEqual({ mode: "enforce", max_validity_days: 90 });
+});

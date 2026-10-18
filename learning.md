@@ -5,6 +5,18 @@ Newest entries on top.
 
 ## 2026-10-18
 
+### A vendor schedule inside an issuance path (13.22.0-beta)
+- The certificate lifetime policy shortened certificates on dates a
+  standards body chose, and warned every tenant at a preset 47 days without
+  anyone choosing it. The directive "the customer decides what to migrate
+  and when" was read as being about algorithms, and certificates were never
+  checked against it. It surfaced only by searching the served dashboard
+  for the citations removed in 13.19.0-beta. **Rule: after removing a
+  class of content, search the built product for it, not only the files
+  changed.**
+- Three audit events and the whole feature were in no document, and a
+  "renew before" field was saved and shown but read by nothing. Removing a
+  rule is a moment to read the feature end to end.
 ### Three numbers for one quantity, and a cap nobody saw (13.21.0-beta)
 - Command Center, Operations and Certificates each fetched a certificate
   list and counted "expiring" themselves, with different filters, over a

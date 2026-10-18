@@ -20322,7 +20322,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "toggleCA(caID)} style={ }> {open? : } :",
-      "line": 1457,
+      "line": 1450,
       "tabs": [
         "certs"
       ],
@@ -20332,7 +20332,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actCRL(ca)} disabled= >",
-      "line": 1471,
+      "line": 1464,
       "tabs": [
         "certs"
       ],
@@ -20342,7 +20342,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actDeleteCA(ca)} disabled= >",
-      "line": 1472,
+      "line": 1465,
       "tabs": [
         "certs"
       ],
@@ -20352,7 +20352,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "toggleIssued(caID)} style={ }> {issuedOpen? : } Issued Certificates ( )",
-      "line": 1478,
+      "line": 1471,
       "tabs": [
         "certs"
       ],
@@ -20362,7 +20362,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "openProtocolModal(meta.name)}> Configure",
-      "line": 1620,
+      "line": 1613,
       "tabs": [
         "certs"
       ],
@@ -20372,7 +20372,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void runProtocolTest(meta.name)} >",
-      "line": 1621,
+      "line": 1614,
       "tabs": [
         "certs"
       ],
@@ -20382,7 +20382,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"acme-wizard\")}> ACME Wizard",
-      "line": 1629,
+      "line": 1622,
       "tabs": [
         "certs"
       ],
@@ -20392,7 +20392,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"acme-star\")}> STAR",
-      "line": 1630,
+      "line": 1623,
       "tabs": [
         "certs"
       ],
@@ -20402,7 +20402,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"est-wizard\")}> EST Enroll",
-      "line": 1631,
+      "line": 1624,
       "tabs": [
         "certs"
       ],
@@ -20412,7 +20412,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"scep-wizard\")}> SCEP Enroll",
-      "line": 1632,
+      "line": 1625,
       "tabs": [
         "certs"
       ],
@@ -20422,7 +20422,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"cmpv2-wizard\")}> CMPv2 Request",
-      "line": 1633,
+      "line": 1626,
       "tabs": [
         "certs"
       ],
@@ -20432,7 +20432,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCAStatusView(\"all\")} style={ }>{`All $ `}",
-      "line": 1649,
+      "line": 1642,
       "tabs": [
         "certs"
       ],
@@ -20442,7 +20442,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCAStatusView(\"active\")} style={ }>{`Active $ `}",
-      "line": 1650,
+      "line": 1643,
       "tabs": [
         "certs"
       ],
@@ -20452,7 +20452,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCAStatusView(\"revoked\")} style={ }>{`Revoked $ `}",
-      "line": 1651,
+      "line": 1644,
       "tabs": [
         "certs"
       ],
@@ -20462,7 +20462,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshCAs()} disabled= >",
-      "line": 1652,
+      "line": 1645,
       "tabs": [
         "certs"
       ],
@@ -20472,7 +20472,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"create-ca\")}> Create CA",
-      "line": 1653,
+      "line": 1646,
       "tabs": [
         "certs"
       ],
@@ -20482,7 +20482,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshRenewalIntel()} disabled= >",
-      "line": 1745,
+      "line": 1738,
       "tabs": [
         "certs"
       ],
@@ -20492,7 +20492,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshSTARIntel()} disabled= >",
-      "line": 1771,
+      "line": 1764,
       "tabs": [
         "certs"
       ],
@@ -20502,7 +20502,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"acme-star\")}>New",
-      "line": 1772,
+      "line": 1765,
       "tabs": [
         "certs"
       ],
@@ -20512,7 +20512,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actRefreshSTARSubscription(item,true)} disabled={rowActionBusy===`star-r...",
-      "line": 1800,
+      "line": 1793,
       "tabs": [
         "certs"
       ],
@@ -20522,7 +20522,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actDeleteSTARSubscription(item)} disabled={rowActionBusy===`star-delete-...",
-      "line": 1801,
+      "line": 1794,
       "tabs": [
         "certs"
       ],
@@ -20532,7 +20532,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"issue\")} style={ }> Issue Certificate",
-      "line": 1828,
+      "line": 1821,
       "tabs": [
         "certs"
       ],
@@ -20542,7 +20542,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"sign-csr\")} style={ }> Sign CSR",
-      "line": 1829,
+      "line": 1822,
       "tabs": [
         "certs"
       ],
@@ -20552,7 +20552,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"upload-3p\")} style={ }> Upload 3rd-Party",
-      "line": 1830,
+      "line": 1823,
       "tabs": [
         "certs"
       ],
@@ -20562,7 +20562,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"cert-alert-policy\")} style={ }> Alert Policy",
-      "line": 1831,
+      "line": 1824,
       "tabs": [
         "certs"
       ],
@@ -20571,8 +20571,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
-      "label": "setModal(\"cert-clm-policy\")} style={ }> CLM 47-Day",
-      "line": 1832,
+      "label": "setModal(\"cert-clm-policy\")} style={ }> Lifetime policy",
+      "line": 1825,
       "tabs": [
         "certs"
       ],
@@ -20582,7 +20582,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertStatusView(\"all\")} style={ }> {`All ($ )`}",
-      "line": 1847,
+      "line": 1840,
       "tabs": [
         "certs"
       ],
@@ -20592,7 +20592,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertStatusView(\"active\")} style={ }> {`Active ($ )`}",
-      "line": 1850,
+      "line": 1843,
       "tabs": [
         "certs"
       ],
@@ -20602,7 +20602,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertStatusView(\"revoked\")} style={ }> {`Revoked ($ )`}",
-      "line": 1853,
+      "line": 1846,
       "tabs": [
         "certs"
       ],
@@ -20612,7 +20612,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshCerts()} disabled= >",
-      "line": 1857,
+      "line": 1850,
       "tabs": [
         "certs"
       ],
@@ -20622,7 +20622,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "openCertActionMenu(e,certID)} aria-label=\"Certificate actions\" style={{ backg...",
-      "line": 1888,
+      "line": 1881,
       "tabs": [
         "certs"
       ],
@@ -20632,7 +20632,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} onMouseEnter={(e)=> } onMouseLeave={(e)=> } style={ } > Download",
-      "line": 1920,
+      "line": 1913,
       "tabs": [
         "certs"
       ],
@@ -20642,7 +20642,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`renew-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } st...",
-      "line": 1934,
+      "line": 1927,
       "tabs": [
         "certs"
       ],
@@ -20652,7 +20652,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`revoke-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } s...",
-      "line": 1947,
+      "line": 1940,
       "tabs": [
         "certs"
       ],
@@ -20662,7 +20662,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`ocsp-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } sty...",
-      "line": 1960,
+      "line": 1953,
       "tabs": [
         "certs"
       ],
@@ -20672,7 +20672,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`delete-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } s...",
-      "line": 1975,
+      "line": 1968,
       "tabs": [
         "certs"
       ],
@@ -20682,7 +20682,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev",
-      "line": 2011,
+      "line": 2004,
       "tabs": [
         "certs"
       ],
@@ -20692,7 +20692,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertPageIndex((prev)=>Math.min(certTotalPages-1,prev+1))} disabled= >Next",
-      "line": 2013,
+      "line": 2006,
       "tabs": [
         "certs"
       ],
@@ -20702,7 +20702,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2058,
+      "line": 2051,
       "tabs": [
         "certs"
       ],
@@ -20712,7 +20712,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitCreateCA()} disabled= >",
-      "line": 2059,
+      "line": 2052,
       "tabs": [
         "certs"
       ],
@@ -20722,7 +20722,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2134,
+      "line": 2127,
       "tabs": [
         "certs"
       ],
@@ -20732,7 +20732,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitIssueCert()} disabled= >",
-      "line": 2135,
+      "line": 2128,
       "tabs": [
         "certs"
       ],
@@ -20742,7 +20742,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2195,
+      "line": 2188,
       "tabs": [
         "certs"
       ],
@@ -20752,7 +20752,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitSignCSR()} disabled= >",
-      "line": 2196,
+      "line": 2189,
       "tabs": [
         "certs"
       ],
@@ -20762,7 +20762,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2225,
+      "line": 2218,
       "tabs": [
         "certs"
       ],
@@ -20772,7 +20772,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitDownloadCert()} disabled= >",
-      "line": 2226,
+      "line": 2219,
       "tabs": [
         "certs"
       ],
@@ -20782,7 +20782,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2250,
+      "line": 2243,
       "tabs": [
         "certs"
       ],
@@ -20792,7 +20792,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitUpload()} disabled= >",
-      "line": 2251,
+      "line": 2244,
       "tabs": [
         "certs"
       ],
@@ -20802,7 +20802,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2270,
+      "line": 2263,
       "tabs": [
         "certs"
       ],
@@ -20812,7 +20812,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void saveAlertPolicy()} disabled= >",
-      "line": 2271,
+      "line": 2264,
       "tabs": [
         "certs"
       ],
@@ -20822,7 +20822,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2309,
+      "line": 2284,
       "tabs": [
         "certs"
       ],
@@ -20832,7 +20832,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void saveCLMPolicy()} disabled= >",
-      "line": 2310,
+      "line": 2285,
       "tabs": [
         "certs"
       ],
@@ -20842,7 +20842,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setProtocolConfigText(JSON.stringify(protocolDefaultConfigs[String(protocolNa...",
-      "line": 2336,
+      "line": 2311,
       "tabs": [
         "certs"
       ],
@@ -20852,7 +20852,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2338,
+      "line": 2313,
       "tabs": [
         "certs"
       ],
@@ -20862,7 +20862,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void saveProtocol()} disabled= >",
-      "line": 2339,
+      "line": 2314,
       "tabs": [
         "certs"
       ],
@@ -20872,7 +20872,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2413,
+      "line": 2388,
       "tabs": [
         "certs"
       ],
@@ -20882,7 +20882,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitCreateSTARSubscription()} disabled= >",
-      "line": 2414,
+      "line": 2389,
       "tabs": [
         "certs"
       ],
@@ -20892,7 +20892,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2450,
+      "line": 2425,
       "tabs": [
         "certs"
       ],
@@ -20902,7 +20902,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ const email=String((document.getElementById(\"acme-wiz-email\") as any)?.valu...",
-      "line": 2451,
+      "line": 2426,
       "tabs": [
         "certs"
       ],
@@ -20912,7 +20912,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2509,
+      "line": 2484,
       "tabs": [
         "certs"
       ],
@@ -20922,7 +20922,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ if(!session)return; try{ const attrs=await estCSRAttributes(session); onToa...",
-      "line": 2510,
+      "line": 2485,
       "tabs": [
         "certs"
       ],
@@ -20932,7 +20932,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ const cn=String((document.getElementById(\"est-wiz-cn\") as any)?.value||\"\")....",
-      "line": 2517,
+      "line": 2492,
       "tabs": [
         "certs"
       ],
@@ -20942,7 +20942,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2570,
+      "line": 2545,
       "tabs": [
         "certs"
       ],
@@ -20952,7 +20952,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ if(!session||!activeCA)return; setSubmitting(true); try{ const msgType=scep...",
-      "line": 2571,
+      "line": 2546,
       "tabs": [
         "certs"
       ],
@@ -20962,7 +20962,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2633,
+      "line": 2608,
       "tabs": [
         "certs"
       ],
@@ -20972,7 +20972,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ const msgType=cmpMsgType as \"ir\"|\"cr\"|\"kur\"|\"rr\",cn=String((document.getEle...",
-      "line": 2634,
+      "line": 2609,
       "tabs": [
         "certs"
       ],
@@ -27980,7 +27980,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/clm/status?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 696,
+      "line": 687,
       "match_key": "certs|GET|/certs/clm/status",
       "method": "GET",
       "normalized_path": "/certs/clm/status",
@@ -27993,7 +27993,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/clm/policy?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 704,
+      "line": 695,
       "match_key": "certs|PUT|/certs/clm/policy",
       "method": "PUT",
       "normalized_path": "/certs/clm/policy",
@@ -28006,7 +28006,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 718,
+      "line": 706,
       "match_key": "certs|GET|/certs/renewal-intelligence",
       "method": "GET",
       "normalized_path": "/certs/renewal-intelligence",
@@ -28019,7 +28019,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence/refresh?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 727,
+      "line": 715,
       "match_key": "certs|POST|/certs/renewal-intelligence/refresh",
       "method": "POST",
       "normalized_path": "/certs/renewal-intelligence/refresh",
@@ -28032,7 +28032,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence/${encodeURIComponent(String(certId || \"\").trim())}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 739,
+      "line": 727,
       "match_key": "certs|GET|/certs/renewal-intelligence/{param}",
       "method": "GET",
       "normalized_path": "/certs/renewal-intelligence/{param}",
@@ -28045,7 +28045,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/star/summary?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 748,
+      "line": 736,
       "match_key": "certs|GET|/certs/star/summary",
       "method": "GET",
       "normalized_path": "/certs/star/summary",
@@ -28058,7 +28058,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions?${q.toString()}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 760,
+      "line": 748,
       "match_key": "certs|GET|/certs/star/subscriptions",
       "method": "GET",
       "normalized_path": "/certs/star/subscriptions",
@@ -28071,7 +28071,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/certs/star/subscriptions\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 772,
+      "line": 760,
       "match_key": "certs|POST|/certs/star/subscriptions",
       "method": "POST",
       "normalized_path": "/certs/star/subscriptions",
@@ -28084,7 +28084,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions/${encodeURIComponent(String(subscriptionId || \"\").trim())}/refresh`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 788,
+      "line": 776,
       "match_key": "certs|POST|/certs/star/subscriptions/{param}/refresh",
       "method": "POST",
       "normalized_path": "/certs/star/subscriptions/{param}/refresh",
@@ -28097,7 +28097,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions/${encodeURIComponent(String(subscriptionId || \"\").trim())}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 805,
+      "line": 793,
       "match_key": "certs|DELETE|/certs/star/subscriptions/{param}",
       "method": "DELETE",
       "normalized_path": "/certs/star/subscriptions/{param}",
@@ -28110,7 +28110,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/certs/upload-3p\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 819,
+      "line": 807,
       "match_key": "certs|POST|/certs/upload-3p",
       "method": "POST",
       "normalized_path": "/certs/upload-3p",
@@ -28123,7 +28123,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/protocols?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 837,
+      "line": 825,
       "match_key": "certs|GET|/certs/protocols",
       "method": "GET",
       "normalized_path": "/certs/protocols",
@@ -28136,7 +28136,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/protocols/schema?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 842,
+      "line": 830,
       "match_key": "certs|GET|/certs/protocols/schema",
       "method": "GET",
       "normalized_path": "/certs/protocols/schema",
@@ -28149,7 +28149,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/protocols/${encodeURIComponent(protocol)}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 855,
+      "line": 843,
       "match_key": "certs|PUT|/certs/protocols/{param}",
       "method": "PUT",
       "normalized_path": "/certs/protocols/{param}",
@@ -28162,7 +28162,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/acme/new-account\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 872,
+      "line": 860,
       "match_key": "certs|POST|/acme/new-account",
       "method": "POST",
       "normalized_path": "/acme/new-account",
@@ -28175,7 +28175,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/acme/new-order\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 882,
+      "line": 870,
       "match_key": "certs|POST|/acme/new-order",
       "method": "POST",
       "normalized_path": "/acme/new-order",
@@ -28188,7 +28188,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/acme/challenge/${encodeURIComponent(challengeId)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 902,
+      "line": 890,
       "match_key": "certs|POST|/acme/challenge/{param}",
       "method": "POST",
       "normalized_path": "/acme/challenge/{param}",
@@ -28201,7 +28201,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/acme/finalize/${encodeURIComponent(orderId)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 913,
+      "line": 901,
       "match_key": "certs|POST|/acme/finalize/{param}",
       "method": "POST",
       "normalized_path": "/acme/finalize/{param}",
@@ -28214,7 +28214,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/est/.well-known/est/serverkeygen\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 929,
+      "line": 917,
       "match_key": "certs|POST|/est/.well-known/est/serverkeygen",
       "method": "POST",
       "normalized_path": "/est/.well-known/est/serverkeygen",
@@ -28227,7 +28227,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/scep/pkiclient.exe?operation=pkioperation\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 945,
+      "line": 933,
       "match_key": "certs|POST|/scep/pkiclient.exe",
       "method": "POST",
       "normalized_path": "/scep/pkiclient.exe",
@@ -28240,7 +28240,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/cmpv2\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 966,
+      "line": 954,
       "match_key": "certs|POST|/cmpv2",
       "method": "POST",
       "normalized_path": "/cmpv2",
@@ -28253,7 +28253,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/acme/challenge/${encodeURIComponent(challengeId)}?${tenantQuery(session)}&order_id=${encodeURIComponent(orderId...",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 990,
+      "line": 978,
       "match_key": "certs|GET|/acme/challenge/{param}",
       "method": "GET",
       "normalized_path": "/acme/challenge/{param}",
@@ -28266,7 +28266,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/est/.well-known/est/csrattrs?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1001,
+      "line": 989,
       "match_key": "certs|GET|/est/.well-known/est/csrattrs",
       "method": "GET",
       "normalized_path": "/est/.well-known/est/csrattrs",
@@ -28279,7 +28279,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/est/.well-known/est/simpleenroll\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1014,
+      "line": 1002,
       "match_key": "certs|POST|/est/.well-known/est/simpleenroll",
       "method": "POST",
       "normalized_path": "/est/.well-known/est/simpleenroll",
@@ -28292,7 +28292,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/scep/pkiclient.exe?${q.toString()}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1044,
+      "line": 1032,
       "match_key": "certs|GET|/scep/pkiclient.exe",
       "method": "GET",
       "normalized_path": "/scep/pkiclient.exe",
@@ -28305,7 +28305,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/cmpv2/confirm\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1060,
+      "line": 1048,
       "match_key": "certs|POST|/cmpv2/confirm",
       "method": "POST",
       "normalized_path": "/cmpv2/confirm",
@@ -28318,7 +28318,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/internal-mtls?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1129,
+      "line": 1117,
       "match_key": "certs|GET|/certs/internal-mtls",
       "method": "GET",
       "normalized_path": "/certs/internal-mtls",
@@ -28331,7 +28331,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/policy?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1137,
+      "line": 1125,
       "match_key": "certs|PUT|/certs/internal-mtls/{param}/policy",
       "method": "PUT",
       "normalized_path": "/certs/internal-mtls/{param}/policy",
@@ -28344,7 +28344,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/rotate?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1144,
+      "line": 1132,
       "match_key": "certs|POST|/certs/internal-mtls/{param}/rotate",
       "method": "POST",
       "normalized_path": "/certs/internal-mtls/{param}/rotate",
@@ -28357,7 +28357,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/rotate-all?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1156,
+      "line": 1144,
       "match_key": "certs|POST|/certs/internal-mtls/rotate-all",
       "method": "POST",
       "normalized_path": "/certs/internal-mtls/rotate-all",
@@ -28370,7 +28370,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1191,
+      "line": 1179,
       "match_key": "certs|GET|/certs/edge-tls",
       "method": "GET",
       "normalized_path": "/certs/edge-tls",
@@ -28383,7 +28383,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1196,
+      "line": 1184,
       "match_key": "certs|PUT|/certs/edge-tls",
       "method": "PUT",
       "normalized_path": "/certs/edge-tls",
@@ -28396,7 +28396,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1208,
+      "line": 1196,
       "match_key": "certs|PUT|/certs/edge-tls/certificate",
       "method": "PUT",
       "normalized_path": "/certs/edge-tls/certificate",
@@ -28409,7 +28409,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/edge-tls/csr?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1218,
+      "line": 1206,
       "match_key": "certs|POST|/certs/edge-tls/csr",
       "method": "POST",
       "normalized_path": "/certs/edge-tls/csr",
@@ -28422,7 +28422,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate/install?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1226,
+      "line": 1214,
       "match_key": "certs|POST|/certs/edge-tls/certificate/install",
       "method": "POST",
       "normalized_path": "/certs/edge-tls/certificate/install",
@@ -33502,7 +33502,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-18T06:46:50Z",
+  "generated_at": "2026-10-18T06:57:04Z",
   "navigation": [
     {
       "group": "Overview",
@@ -43219,9 +43219,7 @@
         "errors.New",
         "strings.TrimSpace"
       ],
-      "service_helper_calls": [
-        "defaultCLMPolicy"
-      ],
+      "service_helper_calls": [],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
@@ -43230,11 +43228,9 @@
             "strings.TrimSpace"
           ],
           "file": "services/certs/clm.go",
-          "helper_calls": [
-            "defaultCLMPolicy"
-          ],
+          "helper_calls": [],
           "internal_package_calls": [],
-          "line": 78,
+          "line": 46,
           "name": "GetCLMPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -43252,7 +43248,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/clm/policy?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 704,
+          "line": 695,
           "source": "serviceRequest"
         }
       ],
@@ -43307,7 +43303,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 93,
+          "line": 61,
           "name": "UpsertCLMPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -43325,7 +43321,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/clm/status?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 696,
+          "line": 687,
           "source": "serviceRequest"
         }
       ],
@@ -43341,7 +43337,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 56,
+      "handler_line": 52,
       "handler_name": "handleCLMStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -43354,30 +43350,24 @@
       "route_file": "services/certs/handler.go",
       "route_line": 64,
       "service": "certs",
-      "service_external_package_calls": [
-        "time.Now"
-      ],
+      "service_external_package_calls": [],
       "service_helper_calls": [
         "GetCLMPolicy",
         "effectiveMaxValidityDays",
-        "cabForumMaxValidityDays",
         "CertValidityStats"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
-          "external_package_calls": [
-            "time.Now"
-          ],
+          "external_package_calls": [],
           "file": "services/certs/clm.go",
           "helper_calls": [
             "GetCLMPolicy",
             "effectiveMaxValidityDays",
-            "cabForumMaxValidityDays",
             "CertValidityStats"
           ],
           "internal_package_calls": [],
-          "line": 186,
+          "line": 143,
           "name": "GetCLMStatus",
           "receiver_calls": [],
           "store_calls": [
@@ -43395,7 +43385,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 718,
+          "line": 706,
           "source": "serviceRequest"
         }
       ],
@@ -43481,7 +43471,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence/${encodeURIComponent(String(certId || \"\").trim())}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 739,
+          "line": 727,
           "source": "serviceRequest"
         }
       ],
@@ -43553,7 +43543,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence/refresh?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 727,
+          "line": 715,
           "source": "serviceRequest"
         }
       ],
@@ -43675,7 +43665,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/star/summary?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 748,
+          "line": 736,
           "source": "serviceRequest"
         }
       ],
@@ -43761,7 +43751,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions?${q.toString()}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 760,
+          "line": 748,
           "source": "serviceRequest"
         }
       ],
@@ -43803,7 +43793,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/certs/star/subscriptions\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 772,
+          "line": 760,
           "source": "serviceRequest"
         }
       ],
@@ -43895,7 +43885,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions/${encodeURIComponent(String(subscriptionId || \"\").trim())}/refresh`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 788,
+          "line": 776,
           "source": "serviceRequest"
         }
       ],
@@ -43987,7 +43977,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions/${encodeURIComponent(String(subscriptionId || \"\").trim())}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 805,
+          "line": 793,
           "source": "serviceRequest"
         }
       ],
@@ -44044,7 +44034,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/protocols?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 837,
+          "line": 825,
           "source": "serviceRequest"
         }
       ],
@@ -44112,7 +44102,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/protocols/schema?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 842,
+          "line": 830,
           "source": "serviceRequest"
         }
       ],
@@ -44165,7 +44155,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/protocols/${encodeURIComponent(protocol)}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 855,
+          "line": 843,
           "source": "serviceRequest"
         }
       ],
@@ -44244,7 +44234,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/certs/upload-3p\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 819,
+          "line": 807,
           "source": "serviceRequest"
         }
       ],
@@ -44505,7 +44495,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/acme/new-account\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 872,
+          "line": 860,
           "source": "serviceRequest"
         }
       ],
@@ -44623,7 +44613,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/acme/new-order\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 882,
+          "line": 870,
           "source": "serviceRequest"
         }
       ],
@@ -44819,7 +44809,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/acme/challenge/${encodeURIComponent(challengeId)}?${tenantQuery(session)}&order_id=${encodeURIComponent(orderId...",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 990,
+          "line": 978,
           "source": "serviceRequest"
         }
       ],
@@ -44895,7 +44885,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/acme/challenge/${encodeURIComponent(challengeId)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 902,
+          "line": 890,
           "source": "serviceRequest"
         }
       ],
@@ -44969,7 +44959,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/acme/finalize/${encodeURIComponent(orderId)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 913,
+          "line": 901,
           "source": "serviceRequest"
         }
       ],
@@ -45238,7 +45228,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/est/.well-known/est/csrattrs?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1001,
+          "line": 989,
           "source": "serviceRequest"
         }
       ],
@@ -45306,7 +45296,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/est/.well-known/est/simpleenroll\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1014,
+          "line": 1002,
           "source": "serviceRequest"
         }
       ],
@@ -45463,7 +45453,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/est/.well-known/est/serverkeygen\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 929,
+          "line": 917,
           "source": "serviceRequest"
         }
       ],
@@ -45531,7 +45521,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/scep/pkiclient.exe?${q.toString()}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1044,
+          "line": 1032,
           "source": "serviceRequest"
         }
       ],
@@ -45652,7 +45642,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/scep/pkiclient.exe?operation=pkioperation\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 945,
+          "line": 933,
           "source": "serviceRequest"
         }
       ],
@@ -45757,7 +45747,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/cmpv2\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 966,
+          "line": 954,
           "source": "serviceRequest"
         }
       ],
@@ -45855,7 +45845,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/cmpv2/confirm\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1060,
+          "line": 1048,
           "source": "serviceRequest"
         }
       ],
@@ -45945,7 +45935,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/internal-mtls?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1129,
+          "line": 1117,
           "source": "serviceRequest"
         }
       ],
@@ -45981,7 +45971,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/policy?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1137,
+          "line": 1125,
           "source": "serviceRequest"
         }
       ],
@@ -46020,7 +46010,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/rotate?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1144,
+          "line": 1132,
           "source": "serviceRequest"
         }
       ],
@@ -46059,7 +46049,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/rotate-all?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1156,
+          "line": 1144,
           "source": "serviceRequest"
         }
       ],
@@ -46097,7 +46087,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1191,
+          "line": 1179,
           "source": "serviceRequest"
         }
       ],
@@ -46133,7 +46123,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1196,
+          "line": 1184,
           "source": "serviceRequest"
         }
       ],
@@ -46173,7 +46163,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1208,
+          "line": 1196,
           "source": "serviceRequest"
         }
       ],
@@ -46213,7 +46203,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/edge-tls/csr?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1218,
+          "line": 1206,
           "source": "serviceRequest"
         }
       ],
@@ -46253,7 +46243,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate/install?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1226,
+          "line": 1214,
           "source": "serviceRequest"
         }
       ],
@@ -98234,7 +98224,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/clm/policy?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 704,
+            "line": 695,
             "source": "serviceRequest"
           }
         ],
@@ -98267,20 +98257,18 @@
       },
       {
         "complexity": 1,
-        "externalPackages": [
-          "time.Now"
-        ],
+        "externalPackages": [],
         "frontendSites": [
           {
             "expression": "serviceRequest(\"certs\", `/certs/clm/status?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 696,
+            "line": 687,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleCLMStatus",
         "handlerFile": "services/certs/handler_clm.go",
-        "handlerLine": 56,
+        "handlerLine": 52,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -98313,7 +98301,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 718,
+            "line": 706,
             "source": "serviceRequest"
           }
         ],
@@ -98354,7 +98342,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence/${encodeURIComponent(String(certId || \"\").trim())}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 739,
+            "line": 727,
             "source": "serviceRequest"
           }
         ],
@@ -98396,7 +98384,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence/refresh?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 727,
+            "line": 715,
             "source": "serviceRequest"
           }
         ],
@@ -98443,7 +98431,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/star/summary?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 748,
+            "line": 736,
             "source": "serviceRequest"
           }
         ],
@@ -98479,7 +98467,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions?${q.toString()}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 760,
+            "line": 748,
             "source": "serviceRequest"
           }
         ],
@@ -98517,7 +98505,7 @@
           {
             "expression": "serviceRequest(\"certs\", \"/certs/star/subscriptions\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 772,
+            "line": 760,
             "source": "serviceRequest"
           }
         ],
@@ -98561,7 +98549,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions/${encodeURIComponent(String(subscriptionId || \"\").trim())}/refresh`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 788,
+            "line": 776,
             "source": "serviceRequest"
           }
         ],
@@ -98602,7 +98590,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions/${encodeURIComponent(String(subscriptionId || \"\").trim())}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 805,
+            "line": 793,
             "source": "serviceRequest"
           }
         ],
@@ -98641,7 +98629,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/protocols?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 837,
+            "line": 825,
             "source": "serviceRequest"
           }
         ],
@@ -98677,7 +98665,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/protocols/schema?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 842,
+            "line": 830,
             "source": "serviceRequest"
           }
         ],
@@ -98714,7 +98702,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/protocols/${encodeURIComponent(protocol)}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 855,
+            "line": 843,
             "source": "serviceRequest"
           }
         ],
@@ -98758,7 +98746,7 @@
           {
             "expression": "serviceRequest(\"certs\", \"/certs/upload-3p\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 819,
+            "line": 807,
             "source": "serviceRequest"
           }
         ],
@@ -98891,7 +98879,7 @@
           {
             "expression": "serviceRequest(\"certs\", \"/acme/new-account\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 872,
+            "line": 860,
             "source": "serviceRequest"
           }
         ],
@@ -98942,7 +98930,7 @@
           {
             "expression": "serviceRequest(\"certs\", \"/acme/new-order\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 882,
+            "line": 870,
             "source": "serviceRequest"
           }
         ],
@@ -99020,7 +99008,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/acme/challenge/${encodeURIComponent(challengeId)}?${tenantQuery(session)}&order_id=${encodeURIComponent(orderId...",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 990,
+            "line": 978,
             "source": "serviceRequest"
           }
         ],
@@ -99059,7 +99047,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/acme/challenge/${encodeURIComponent(challengeId)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 902,
+            "line": 890,
             "source": "serviceRequest"
           }
         ],
@@ -99102,7 +99090,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/acme/finalize/${encodeURIComponent(orderId)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 913,
+            "line": 901,
             "source": "serviceRequest"
           }
         ],
@@ -99214,7 +99202,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/est/.well-known/est/csrattrs?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1001,
+            "line": 989,
             "source": "serviceRequest"
           }
         ],
@@ -99254,7 +99242,7 @@
           {
             "expression": "serviceRequest(\"certs\", \"/est/.well-known/est/simpleenroll\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1014,
+            "line": 1002,
             "source": "serviceRequest"
           }
         ],
@@ -99321,7 +99309,7 @@
           {
             "expression": "serviceRequest(\"certs\", \"/est/.well-known/est/serverkeygen\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 929,
+            "line": 917,
             "source": "serviceRequest"
           }
         ],
@@ -99360,7 +99348,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/scep/pkiclient.exe?${q.toString()}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1044,
+            "line": 1032,
             "source": "serviceRequest"
           }
         ],
@@ -99408,7 +99396,7 @@
           {
             "expression": "serviceRequest(\"certs\", \"/scep/pkiclient.exe?operation=pkioperation\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 945,
+            "line": 933,
             "source": "serviceRequest"
           }
         ],
@@ -99454,7 +99442,7 @@
           {
             "expression": "serviceRequest(\"certs\", \"/cmpv2\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 966,
+            "line": 954,
             "source": "serviceRequest"
           }
         ],
@@ -99495,7 +99483,7 @@
           {
             "expression": "serviceRequest(\"certs\", \"/cmpv2/confirm\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1060,
+            "line": 1048,
             "source": "serviceRequest"
           }
         ],
@@ -99532,7 +99520,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/internal-mtls?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1129,
+            "line": 1117,
             "source": "serviceRequest"
           }
         ],
@@ -99566,7 +99554,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/policy?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1137,
+            "line": 1125,
             "source": "serviceRequest"
           }
         ],
@@ -99600,7 +99588,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/rotate?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1144,
+            "line": 1132,
             "source": "serviceRequest"
           }
         ],
@@ -99634,7 +99622,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/rotate-all?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1156,
+            "line": 1144,
             "source": "serviceRequest"
           }
         ],
@@ -99666,7 +99654,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1191,
+            "line": 1179,
             "source": "serviceRequest"
           }
         ],
@@ -99700,7 +99688,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1196,
+            "line": 1184,
             "source": "serviceRequest"
           }
         ],
@@ -99736,7 +99724,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1208,
+            "line": 1196,
             "source": "serviceRequest"
           }
         ],
@@ -99770,7 +99758,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/edge-tls/csr?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1218,
+            "line": 1206,
             "source": "serviceRequest"
           }
         ],
@@ -99802,7 +99790,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate/install?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1226,
+            "line": 1214,
             "source": "serviceRequest"
           }
         ],
@@ -123787,7 +123775,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-18T06:46:50Z",
+    "generatedAt": "2026-10-18T06:57:04Z",
     "methods": [
       "DELETE",
       "GET",

@@ -625,6 +625,32 @@ Vecta runs an expiry scanner on a configurable schedule. When a certificate cros
 3. **STAR subscriptions auto-renew** — no human intervention required for STAR-enrolled certificates.
 4. **Manual certificates** — require operator action or integration with the renew API.
 
+### 4.7 Certificate Lifetime Policy
+
+Certificates / PKI → **Lifetime policy** sets the longest lifetime your
+tenant allows for a TLS leaf certificate it issues. Every value is yours:
+the product applies no industry schedule and no preset limit, and a tenant
+that has saved no policy has none.
+
+| Mode | At issuance of a TLS leaf certificate longer than your limit |
+|---|---|
+| `off` (default) | nothing |
+| `warn` | issued as requested; `audit.cert.clm_validity_warning` |
+| `enforce` | shortened to your limit; `audit.cert.clm_validity_clamped` |
+
+`warn` and `enforce` need a limit of 1 to 36500 days (the upper bound only
+rejects nonsense input). CA certificates and other types are not affected.
+The panel counts your active TLS certificates, how many are longer than your
+limit (only once you have set one) and the longest lifetime in use.
+
+Until 13.22.0-beta the policy also followed the CA/B Forum SC-081 schedule
+(200 days from March 2026, 100 from March 2027, 47 from March 2029) when
+"schedule-aware" was on, and a tenant with no saved policy was warned at 47
+days. Both are removed: the customer decides the limit and when it changes.
+A saved policy keeps its mode and limit; one that relied on the schedule to
+tighten it now applies its own limit only. The unused "renew before" field
+is removed too.
+
 ---
 
 ## 5. Signing External CSRs

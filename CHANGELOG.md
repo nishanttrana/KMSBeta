@@ -4,6 +4,37 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.22.0-beta] — 2026-10-18
+
+### Changed
+- **The certificate lifetime policy is yours alone.** The certs service
+  applied the CA/B Forum SC-081 schedule (200 days from March 2026, 100
+  from March 2027, 47 from March 2029) whenever "schedule-aware" was on,
+  and a tenant that had never saved a policy was warned on every TLS
+  certificate longer than a preset 47 days. The schedule, the
+  "schedule-aware" option and the preset are removed. A tenant with no
+  saved policy has none (mode `off`), and `warn` and `enforce` apply the
+  limit you set, nothing stricter. A saved policy keeps its mode and
+  limit; one that relied on the schedule to tighten it now applies its own
+  limit only. The Certificates tab's "CLM 47-Day" button is now
+  "Lifetime policy" and shows your limit, your TLS certificates, how many
+  are over it and the longest lifetime; the CA/B panel is gone.
+- `PUT /certs/clm/policy` takes `mode` and `max_validity_days` only. The
+  unused `renew_before_days` (stored, shown, read by nothing) is removed
+  with `schedule_aware`; `GET /certs/clm/status` no longer returns
+  `effective_max_days`, `cab_schedule_days` or `milestones`, and
+  `over_limit_certs` is absent until you set a limit. The limit's upper
+  bound is 36500 days, not CA/B's 398. Migration `016` drops both columns.
+- The dashboard no longer sends `updated_by` with the policy: the service
+  records the signed-in person.
+
+Tests: `TestCLMPolicyIsTheTenantsOwn`, `TestCLMIssuanceFollowsTheTenantsPolicy`
+(issuance in each mode, audit details) and the smoke test "the certificate
+lifetime policy shows and sends only the tenant's own values". The three
+lifetime audit events now have rows in
+[docs/SECURITY/AUDIT_EVENTS_2026-09.md](docs/SECURITY/AUDIT_EVENTS_2026-09.md);
+they had none.
+
 ## [13.21.0-beta] — 2026-10-18
 
 The first of three steps to make the console simpler without removing

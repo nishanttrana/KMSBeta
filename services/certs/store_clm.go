@@ -9,40 +9,32 @@ import (
 func (s *SQLStore) GetCLMPolicy(ctx context.Context, tenantID string) (CLMPolicy, bool, error) {
 	var (
 		p          CLMPolicy
-		schedule   interface{}
 		updatedRaw interface{}
 	)
 	err := s.db.SQL().QueryRowContext(ctx, `
-SELECT tenant_id, mode, max_validity_days, schedule_aware, renew_before_days, updated_by, updated_at
+SELECT tenant_id, mode, max_validity_days, updated_by, updated_at
 FROM cert_clm_policies WHERE tenant_id=$1
-`, tenantID).Scan(&p.TenantID, &p.Mode, &p.MaxValidityDays, &schedule, &p.RenewBeforeDays, &p.UpdatedBy, &updatedRaw)
+`, tenantID).Scan(&p.TenantID, &p.Mode, &p.MaxValidityDays, &p.UpdatedBy, &updatedRaw)
 	if errors.Is(err, sql.ErrNoRows) {
 		return CLMPolicy{}, false, nil
 	}
 	if err != nil {
 		return CLMPolicy{}, false, err
 	}
-	p.ScheduleAware = parseBool(schedule)
 	p.UpdatedAt = parseTimeValue(updatedRaw)
 	return p, true, nil
 }
 
 func (s *SQLStore) UpsertCLMPolicy(ctx context.Context, p CLMPolicy) error {
-	schedule := 0
-	if p.ScheduleAware {
-		schedule = 1
-	}
 	_, err := s.db.SQL().ExecContext(ctx, `
-INSERT INTO cert_clm_policies (tenant_id, mode, max_validity_days, schedule_aware, renew_before_days, updated_by, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7)
+INSERT INTO cert_clm_policies (tenant_id, mode, max_validity_days, updated_by, updated_at)
+VALUES ($1,$2,$3,$4,$5)
 ON CONFLICT (tenant_id) DO UPDATE SET
   mode=EXCLUDED.mode,
   max_validity_days=EXCLUDED.max_validity_days,
-  schedule_aware=EXCLUDED.schedule_aware,
-  renew_before_days=EXCLUDED.renew_before_days,
   updated_by=EXCLUDED.updated_by,
   updated_at=EXCLUDED.updated_at
-`, p.TenantID, p.Mode, p.MaxValidityDays, schedule, p.RenewBeforeDays, p.UpdatedBy, p.UpdatedAt)
+`, p.TenantID, p.Mode, p.MaxValidityDays, p.UpdatedBy, p.UpdatedAt)
 	return err
 }
 

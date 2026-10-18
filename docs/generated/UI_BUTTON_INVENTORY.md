@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-18T06:46:50Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-18T06:57:04Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -101,72 +101,72 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/CanaryKeysPanel.tsx | 85 | - | Btn | Create canary | create} disabled={busy \|\| !name.trim() |
 | web/dashboard/src/components/v3/tabs/CanaryKeysPanel.tsx | 105 | - | Btn | showTrips(k)}>Trips |  |
 | web/dashboard/src/components/v3/tabs/CanaryKeysPanel.tsx | 106 | - | Btn | deactivate(k)}>Deactivate |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1457 | certs | button | toggleCA(caID)} style={ }> {open? : } : |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1471 | certs | Btn | void actCRL(ca)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1472 | certs | Btn | void actDeleteCA(ca)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1478 | certs | button | toggleIssued(caID)} style={ }> {issuedOpen? : } Issued Certificates ( ) |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1620 | certs | Btn | openProtocolModal(meta.name)}> Configure |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1621 | certs | Btn | void runProtocolTest(meta.name)} > |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1629 | certs | Btn | setModal("acme-wizard")}> ACME Wizard |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1630 | certs | Btn | setModal("acme-star")}> STAR |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1631 | certs | Btn | setModal("est-wizard")}> EST Enroll |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1632 | certs | Btn | setModal("scep-wizard")}> SCEP Enroll |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1633 | certs | Btn | setModal("cmpv2-wizard")}> CMPv2 Request |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1649 | certs | Btn | setCAStatusView("all")} style={ }>{`All $ `} |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1650 | certs | Btn | setCAStatusView("active")} style={ }>{`Active $ `} |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1651 | certs | Btn | setCAStatusView("revoked")} style={ }>{`Revoked $ `} |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1652 | certs | Btn | void refreshCAs()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1653 | certs | Btn | setModal("create-ca")}> Create CA |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1745 | certs | Btn | void refreshRenewalIntel()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1771 | certs | Btn | void refreshSTARIntel()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1772 | certs | Btn | setModal("acme-star")}>New |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1800 | certs | Btn | void actRefreshSTARSubscription(item,true)} disabled={rowActionBusy===`star-r... |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1801 | certs | Btn | void actDeleteSTARSubscription(item)} disabled={rowActionBusy===`star-delete-... |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1828 | certs | Btn | setModal("issue")} style={ }> Issue Certificate |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1829 | certs | Btn | setModal("sign-csr")} style={ }> Sign CSR |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1830 | certs | Btn | setModal("upload-3p")} style={ }> Upload 3rd-Party |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1831 | certs | Btn | setModal("cert-alert-policy")} style={ }> Alert Policy |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1832 | certs | Btn | setModal("cert-clm-policy")} style={ }> CLM 47-Day |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1847 | certs | Btn | setCertStatusView("all")} style={ }> {`All ($ )`} |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1850 | certs | Btn | setCertStatusView("active")} style={ }> {`Active ($ )`} |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1853 | certs | Btn | setCertStatusView("revoked")} style={ }> {`Revoked ($ )`} |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1857 | certs | Btn | void refreshCerts()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1888 | certs | button | openCertActionMenu(e,certID)} aria-label="Certificate actions" style={{ backg... |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1920 | certs | button | } onMouseEnter={(e)=> } onMouseLeave={(e)=> } style={ } > Download |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1934 | certs | button | } disabled={busy===`renew-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } st... |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1947 | certs | button | } disabled={busy===`revoke-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } s... |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1960 | certs | button | } disabled={busy===`ocsp-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } sty... |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1975 | certs | button | } disabled={busy===`delete-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } s... |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2011 | certs | Btn | setCertPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2013 | certs | Btn | setCertPageIndex((prev)=>Math.min(certTotalPages-1,prev+1))} disabled= >Next |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2058 | certs | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2059 | certs | Btn | void submitCreateCA()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2134 | certs | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2135 | certs | Btn | void submitIssueCert()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2195 | certs | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2196 | certs | Btn | void submitSignCSR()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2225 | certs | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2226 | certs | Btn | void submitDownloadCert()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2250 | certs | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2251 | certs | Btn | void submitUpload()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2270 | certs | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2271 | certs | Btn | void saveAlertPolicy()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2309 | certs | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2310 | certs | Btn | void saveCLMPolicy()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2336 | certs | Btn | setProtocolConfigText(JSON.stringify(protocolDefaultConfigs[String(protocolNa... |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2338 | certs | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2339 | certs | Btn | void saveProtocol()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2413 | certs | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2414 | certs | Btn | void submitCreateSTARSubscription()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2450 | certs | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2451 | certs | Btn | { const email=String((document.getElementById("acme-wiz-email") as any)?.valu... |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2509 | certs | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2510 | certs | Btn | { if(!session)return; try{ const attrs=await estCSRAttributes(session); onToa... |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2517 | certs | Btn | { const cn=String((document.getElementById("est-wiz-cn") as any)?.value\|\|"").... |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2570 | certs | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2571 | certs | Btn | { if(!session\|\|!activeCA)return; setSubmitting(true); try{ const msgType=scep... |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2633 | certs | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2634 | certs | Btn | { const msgType=cmpMsgType as "ir"\|"cr"\|"kur"\|"rr",cn=String((document.getEle... |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1450 | certs | button | toggleCA(caID)} style={ }> {open? : } : |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1464 | certs | Btn | void actCRL(ca)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1465 | certs | Btn | void actDeleteCA(ca)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1471 | certs | button | toggleIssued(caID)} style={ }> {issuedOpen? : } Issued Certificates ( ) |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1613 | certs | Btn | openProtocolModal(meta.name)}> Configure |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1614 | certs | Btn | void runProtocolTest(meta.name)} > |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1622 | certs | Btn | setModal("acme-wizard")}> ACME Wizard |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1623 | certs | Btn | setModal("acme-star")}> STAR |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1624 | certs | Btn | setModal("est-wizard")}> EST Enroll |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1625 | certs | Btn | setModal("scep-wizard")}> SCEP Enroll |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1626 | certs | Btn | setModal("cmpv2-wizard")}> CMPv2 Request |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1642 | certs | Btn | setCAStatusView("all")} style={ }>{`All $ `} |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1643 | certs | Btn | setCAStatusView("active")} style={ }>{`Active $ `} |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1644 | certs | Btn | setCAStatusView("revoked")} style={ }>{`Revoked $ `} |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1645 | certs | Btn | void refreshCAs()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1646 | certs | Btn | setModal("create-ca")}> Create CA |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1738 | certs | Btn | void refreshRenewalIntel()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1764 | certs | Btn | void refreshSTARIntel()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1765 | certs | Btn | setModal("acme-star")}>New |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1793 | certs | Btn | void actRefreshSTARSubscription(item,true)} disabled={rowActionBusy===`star-r... |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1794 | certs | Btn | void actDeleteSTARSubscription(item)} disabled={rowActionBusy===`star-delete-... |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1821 | certs | Btn | setModal("issue")} style={ }> Issue Certificate |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1822 | certs | Btn | setModal("sign-csr")} style={ }> Sign CSR |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1823 | certs | Btn | setModal("upload-3p")} style={ }> Upload 3rd-Party |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1824 | certs | Btn | setModal("cert-alert-policy")} style={ }> Alert Policy |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1825 | certs | Btn | setModal("cert-clm-policy")} style={ }> Lifetime policy |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1840 | certs | Btn | setCertStatusView("all")} style={ }> {`All ($ )`} |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1843 | certs | Btn | setCertStatusView("active")} style={ }> {`Active ($ )`} |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1846 | certs | Btn | setCertStatusView("revoked")} style={ }> {`Revoked ($ )`} |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1850 | certs | Btn | void refreshCerts()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1881 | certs | button | openCertActionMenu(e,certID)} aria-label="Certificate actions" style={{ backg... |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1913 | certs | button | } onMouseEnter={(e)=> } onMouseLeave={(e)=> } style={ } > Download |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1927 | certs | button | } disabled={busy===`renew-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } st... |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1940 | certs | button | } disabled={busy===`revoke-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } s... |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1953 | certs | button | } disabled={busy===`ocsp-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } sty... |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1968 | certs | button | } disabled={busy===`delete-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } s... |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2004 | certs | Btn | setCertPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2006 | certs | Btn | setCertPageIndex((prev)=>Math.min(certTotalPages-1,prev+1))} disabled= >Next |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2051 | certs | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2052 | certs | Btn | void submitCreateCA()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2127 | certs | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2128 | certs | Btn | void submitIssueCert()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2188 | certs | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2189 | certs | Btn | void submitSignCSR()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2218 | certs | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2219 | certs | Btn | void submitDownloadCert()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2243 | certs | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2244 | certs | Btn | void submitUpload()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2263 | certs | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2264 | certs | Btn | void saveAlertPolicy()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2284 | certs | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2285 | certs | Btn | void saveCLMPolicy()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2311 | certs | Btn | setProtocolConfigText(JSON.stringify(protocolDefaultConfigs[String(protocolNa... |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2313 | certs | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2314 | certs | Btn | void saveProtocol()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2388 | certs | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2389 | certs | Btn | void submitCreateSTARSubscription()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2425 | certs | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2426 | certs | Btn | { const email=String((document.getElementById("acme-wiz-email") as any)?.valu... |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2484 | certs | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2485 | certs | Btn | { if(!session)return; try{ const attrs=await estCSRAttributes(session); onToa... |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2492 | certs | Btn | { const cn=String((document.getElementById("est-wiz-cn") as any)?.value\|\|"").... |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2545 | certs | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2546 | certs | Btn | { if(!session\|\|!activeCA)return; setSubmitting(true); try{ const msgType=scep... |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2608 | certs | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2609 | certs | Btn | { const msgType=cmpMsgType as "ir"\|"cr"\|"kur"\|"rr",cn=String((document.getEle... |  |
 | web/dashboard/src/components/v3/tabs/ClientSDKTab.tsx | 53 | pkcs11 | Btn | void download()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | 30 | cloudctl | Btn | selectSubtab("byok")}>BYOK |  |
 | web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | 31 | cloudctl | Btn | selectSubtab("hyok")}>HYOK |  |

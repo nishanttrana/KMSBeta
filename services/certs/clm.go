@@ -7,10 +7,14 @@ import (
 	"time"
 )
 
-// Certificate Lifecycle Management (CLM): short-validity enforcement aligned
-// with the CA/Browser Forum SC-081 schedule, which steps the maximum TLS
-// certificate lifetime down to 47 days by March 2029. The policy is
-// per-tenant; "enforce" clamps issuance, "warn" only audits, "off" disables.
+// Certificate lifetime policy (CLM): the longest lifetime the tenant allows
+// for a TLS leaf certificate it issues. Every value is the tenant's own: a
+// tenant that has saved no policy has none (mode off, no limit), and the
+// product applies no external schedule or preset (CLAUDE.md, "The customer
+// decides what to migrate and when"; 13.22.0-beta removed the CA/B Forum
+// SC-081 schedule and the 47-day default). "enforce" shortens a longer
+// lifetime to the limit at issuance, "warn" issues it unchanged and audits
+// it, "off" does neither.
 
 const (
 	CLMModeOff     = "off"
@@ -18,61 +22,25 @@ const (
 	CLMModeEnforce = "enforce"
 )
 
+// maxCLMValidityDays only rejects nonsense input (a hundred years); it is
+// not a recommended lifetime.
+const maxCLMValidityDays = 36500
+
 type CLMPolicy struct {
 	TenantID        string    `json:"tenant_id"`
 	Mode            string    `json:"mode"`
 	MaxValidityDays int64     `json:"max_validity_days"`
-	ScheduleAware   bool      `json:"schedule_aware"`
-	RenewBeforeDays int64     `json:"renew_before_days"`
 	UpdatedBy       string    `json:"updated_by"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 
-type CABMilestone struct {
-	EffectiveFrom   string `json:"effective_from"`
-	MaxValidityDays int64  `json:"max_validity_days"`
-	Active          bool   `json:"active"`
-}
-
+// CLMStatus counts the tenant's active TLS leaf certificates against its own
+// limit. OverLimitCerts is nil when the tenant has set no limit.
 type CLMStatus struct {
-	Policy           CLMPolicy      `json:"policy"`
-	EffectiveMaxDays int64          `json:"effective_max_days"`
-	CABScheduleDays  int64          `json:"cab_schedule_days"`
-	Milestones       []CABMilestone `json:"milestones"`
-	ActiveTLSCerts   int64          `json:"active_tls_certs"`
-	OverLimitCerts   int64          `json:"over_limit_certs"`
-	LongestValidity  int64          `json:"longest_validity_days"`
-}
-
-func defaultCLMPolicy(tenantID string) CLMPolicy {
-	return CLMPolicy{
-		TenantID:        tenantID,
-		Mode:            CLMModeWarn,
-		MaxValidityDays: 47,
-		ScheduleAware:   true,
-		RenewBeforeDays: 15,
-	}
-}
-
-var cabMilestones = []struct {
-	from time.Time
-	days int64
-}{
-	{time.Date(2029, 3, 15, 0, 0, 0, 0, time.UTC), 47},
-	{time.Date(2027, 3, 15, 0, 0, 0, 0, time.UTC), 100},
-	{time.Date(2026, 3, 15, 0, 0, 0, 0, time.UTC), 200},
-	{time.Time{}, 398},
-}
-
-// cabForumMaxValidityDays returns the CA/B Forum SC-081 maximum TLS leaf
-// certificate lifetime in effect at t.
-func cabForumMaxValidityDays(t time.Time) int64 {
-	for _, m := range cabMilestones {
-		if !t.Before(m.from) {
-			return m.days
-		}
-	}
-	return 398
+	Policy          CLMPolicy `json:"policy"`
+	ActiveTLSCerts  int64     `json:"active_tls_certs"`
+	OverLimitCerts  *int64    `json:"over_limit_certs,omitempty"`
+	LongestValidity int64     `json:"longest_validity_days"`
 }
 
 func (s *Service) GetCLMPolicy(ctx context.Context, tenantID string) (CLMPolicy, error) {
@@ -85,7 +53,7 @@ func (s *Service) GetCLMPolicy(ctx context.Context, tenantID string) (CLMPolicy,
 		return CLMPolicy{}, err
 	}
 	if !found {
-		return defaultCLMPolicy(tenantID), nil
+		return CLMPolicy{TenantID: tenantID, Mode: CLMModeOff}, nil
 	}
 	return p, nil
 }
@@ -97,15 +65,16 @@ func (s *Service) UpsertCLMPolicy(ctx context.Context, p CLMPolicy) (CLMPolicy, 
 		return CLMPolicy{}, errors.New("tenant_id is required")
 	}
 	switch p.Mode {
-	case CLMModeOff, CLMModeWarn, CLMModeEnforce:
+	case CLMModeOff:
+		if p.MaxValidityDays < 0 || p.MaxValidityDays > maxCLMValidityDays {
+			return CLMPolicy{}, errors.New("max_validity_days must be between 0 and 36500")
+		}
+	case CLMModeWarn, CLMModeEnforce:
+		if p.MaxValidityDays < 1 || p.MaxValidityDays > maxCLMValidityDays {
+			return CLMPolicy{}, errors.New("max_validity_days must be between 1 and 36500 in warn or enforce mode")
+		}
 	default:
 		return CLMPolicy{}, errors.New("mode must be off, warn or enforce")
-	}
-	if p.MaxValidityDays < 1 || p.MaxValidityDays > 398 {
-		return CLMPolicy{}, errors.New("max_validity_days must be between 1 and 398")
-	}
-	if p.RenewBeforeDays < 0 || p.RenewBeforeDays >= p.MaxValidityDays {
-		return CLMPolicy{}, errors.New("renew_before_days must be non-negative and below max_validity_days")
 	}
 	if p.UpdatedBy == "" {
 		p.UpdatedBy = "system"
@@ -117,31 +86,21 @@ func (s *Service) UpsertCLMPolicy(ctx context.Context, p CLMPolicy) (CLMPolicy, 
 	_ = s.publishAudit(ctx, "audit.cert.clm_policy_updated", p.TenantID, map[string]interface{}{
 		"mode":              p.Mode,
 		"max_validity_days": p.MaxValidityDays,
-		"schedule_aware":    p.ScheduleAware,
-		"renew_before_days": p.RenewBeforeDays,
 		"updated_by":        p.UpdatedBy,
 	})
 	return p, nil
 }
 
-// effectiveMaxValidityDays resolves the cap in force for a tenant now: the
-// stricter of the tenant policy and (if schedule-aware) the CA/B schedule.
-// Returns 0 when no cap applies.
-func effectiveMaxValidityDays(p CLMPolicy, now time.Time) int64 {
+// effectiveMaxValidityDays is the tenant's limit in force, or 0 for none.
+func effectiveMaxValidityDays(p CLMPolicy) int64 {
 	if p.Mode == CLMModeOff {
 		return 0
 	}
-	cap := p.MaxValidityDays
-	if p.ScheduleAware {
-		if cab := cabForumMaxValidityDays(now); cap == 0 || cab < cap {
-			cap = cab
-		}
-	}
-	return cap
+	return p.MaxValidityDays
 }
 
-// clmAppliesTo limits lifecycle caps to TLS leaf certificates, matching the
-// scope of the CA/B Forum ballot. CA certs and non-TLS types are exempt.
+// clmAppliesTo limits the policy to TLS leaf certificates; CA certificates
+// and other types are exempt.
 func clmAppliesTo(certType string) bool {
 	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(certType)), "tls")
 }
@@ -158,7 +117,7 @@ func (s *Service) enforceCLM(ctx context.Context, tenantID string, certType stri
 	if err != nil {
 		return notAfter
 	}
-	cap := effectiveMaxValidityDays(policy, now)
+	cap := effectiveMaxValidityDays(policy)
 	if cap <= 0 {
 		return notAfter
 	}
@@ -172,8 +131,6 @@ func (s *Service) enforceCLM(ctx context.Context, tenantID string, certType stri
 		"requested_days":    requestedDays,
 		"max_validity_days": cap,
 		"mode":              policy.Mode,
-		"schedule_aware":    policy.ScheduleAware,
-		"cab_schedule_days": cabForumMaxValidityDays(now),
 	}
 	if policy.Mode == CLMModeEnforce {
 		_ = s.publishAudit(ctx, "audit.cert.clm_validity_clamped", tenantID, detail)
@@ -188,37 +145,14 @@ func (s *Service) GetCLMStatus(ctx context.Context, tenantID string) (CLMStatus,
 	if err != nil {
 		return CLMStatus{}, err
 	}
-	now := time.Now().UTC()
-	cap := effectiveMaxValidityDays(policy, now)
-	statsCap := cap
-	if statsCap <= 0 {
-		statsCap = cabForumMaxValidityDays(now)
-	}
-	total, over, longest, err := s.store.CertValidityStats(ctx, tenantID, statsCap)
+	cap := effectiveMaxValidityDays(policy)
+	total, over, longest, err := s.store.CertValidityStats(ctx, tenantID, cap)
 	if err != nil {
 		return CLMStatus{}, err
 	}
-	milestones := make([]CABMilestone, 0, len(cabMilestones))
-	active := cabForumMaxValidityDays(now)
-	for i := len(cabMilestones) - 1; i >= 0; i-- {
-		m := cabMilestones[i]
-		from := "baseline"
-		if !m.from.IsZero() {
-			from = m.from.Format("2006-01-02")
-		}
-		milestones = append(milestones, CABMilestone{
-			EffectiveFrom:   from,
-			MaxValidityDays: m.days,
-			Active:          m.days == active,
-		})
+	st := CLMStatus{Policy: policy, ActiveTLSCerts: total, LongestValidity: longest}
+	if cap > 0 {
+		st.OverLimitCerts = &over
 	}
-	return CLMStatus{
-		Policy:           policy,
-		EffectiveMaxDays: cap,
-		CABScheduleDays:  active,
-		Milestones:       milestones,
-		ActiveTLSCerts:   total,
-		OverLimitCerts:   over,
-		LongestValidity:  longest,
-	}, nil
+	return st, nil
 }

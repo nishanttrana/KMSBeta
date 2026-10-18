@@ -1455,6 +1455,21 @@ id, name, type (root/intermediate/issuing), keyId, subject (cn, o, ou, c, st, l)
 
 ---
 
+### GET/PUT /svc/certs/certs/clm/policy, GET /svc/certs/certs/clm/status (13.22.0-beta)
+
+The tenant's certificate lifetime policy (docs/CERTIFICATES.md §4.7).
+`PUT` takes `mode` (`off` | `warn` | `enforce`) and `max_validity_days`
+(1–36500 in `warn` or `enforce`, 0–36500 in `off`); any other field is
+refused, including the removed `schedule_aware` and `renew_before_days`.
+The policy route answers `{"policy": {"tenant_id", "mode",
+"max_validity_days", "updated_by", "updated_at"}}`, `mode: "off"` and
+`max_validity_days: 0` for a tenant that has saved none. The status route
+answers `{"status": {"policy", "active_tls_certs", "over_limit_certs",
+"longest_validity_days"}}`; `over_limit_certs` is absent while no limit is
+in force. The removed status fields are `effective_max_days`,
+`cab_schedule_days` and `milestones`. Tests: `TestCLMPolicyIsTheTenantsOwn`,
+`TestCLMIssuanceFollowsTheTenantsPolicy`.
+
 ### GET /svc/certs/certs, GET /svc/certs/certs/{id}: algorithm facts (13.19.0-beta)
 
 Each certificate carries `algorithm_facts`, `pkg/cryptocatalog`'s assessment

@@ -79,6 +79,11 @@ func newCertsService(t *testing.T) (*Service, *SQLStore) {
 
 func createCertsSchemaForTest(conn *pkgdb.DB) error {
 	stmts := []string{
+		// Columns as migrations 009 and 016 leave them.
+		`CREATE TABLE cert_clm_policies (
+			tenant_id TEXT NOT NULL, mode TEXT NOT NULL DEFAULT 'off', max_validity_days INTEGER NOT NULL DEFAULT 0,
+			updated_by TEXT NOT NULL DEFAULT '', updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id)
+		);`,
 		`CREATE TABLE cert_cas (
 			id TEXT NOT NULL, tenant_id TEXT NOT NULL, name TEXT NOT NULL, parent_ca_id TEXT,
 			ca_level TEXT NOT NULL, algorithm TEXT NOT NULL, ca_type TEXT NOT NULL, key_backend TEXT NOT NULL,
