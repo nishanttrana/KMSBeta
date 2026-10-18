@@ -32,6 +32,7 @@ import {
   updateProtocolConfig,
   uploadThirdPartyCertificate,
   getCertExpiryAlertPolicy,
+  getCertSummary,
   updateCertExpiryAlertPolicy,
   getCertCLMStatus,
   updateCertCLMPolicy,
@@ -173,6 +174,8 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
   const [clmRenewBefore,setClmRenewBefore]=useState(15);
   const [clmSaving,setClmSaving]=useState(false);
   const [renewalSummary,setRenewalSummary]=useState(null);
+  // Counted by the certs service over every certificate (13.21.0-beta).
+  const [certSummary,setCertSummary]=useState<any>(null);
   const [renewalRefreshing,setRenewalRefreshing]=useState(false);
   const [starSummary,setStarSummary]=useState(null);
   const [starRefreshing,setStarRefreshing]=useState(false);
@@ -250,6 +253,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
       setInventory(Array.isArray(inventoryItems)?inventoryItems:[]);
       setAlertPolicyDaysBefore(Math.max(1,Math.min(3650,Number(alertPolicy?.days_before||30))));
       setAlertPolicyIncludeExternal(Boolean(alertPolicy?.include_external ?? true));
+      setCertSummary(await getCertSummary(session).catch(()=>null));
       setRenewalSummary(await getCertRenewalSummary(session).catch(()=>null));
       setStarSummary(await getCertSTARSummary(session).catch(()=>null));
     }catch(e){
@@ -286,6 +290,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
       setAlertPolicyDaysBefore(Math.max(1,Math.min(3650,Number(alertPolicy?.days_before||30))));
       setAlertPolicyIncludeExternal(Boolean(alertPolicy?.include_external ?? true));
       setRenewalSummary(renewalSummaryOut||null);
+      setCertSummary(await getCertSummary(session).catch(()=>null));
       setStarSummary(starSummaryOut||null);
       if(clmStatusOut){
         setClmStatus(clmStatusOut);
@@ -496,26 +501,19 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
     }
   },[downloadAsset,downloadFormat]);
 
+  // Active, revoked and expiring come from the service's count; counting the
+  // inventory here took revoked certificates as expiring (723 for 60 active).
   const stats=useMemo(()=>{
-    const all=Array.isArray(certs)?certs:[];
-    const active=all.filter((c)=>String(c.status||"").toLowerCase()==="active").length;
-    const revoked=all.filter((c)=>String(c.status||"").toLowerCase()==="revoked").length;
-    const expiring=(Array.isArray(inventory)?inventory:[]).filter((it)=>{
-      const cert=certByID.get(String(it.cert_id||""));
-      if(!alertPolicyIncludeExternal&&String(cert?.ca_id||"").toLowerCase()==="external-ca"){
-        return false;
-      }
-      const ts=new Date(String(it.not_after||"")).getTime();
-      if(Number.isNaN(ts)){
-        return false;
-      }
-      const left=ts-Date.now();
-      return left>=0&&left<=alertPolicyDaysBefore*24*3600*1000;
-    }).length;
     const missedWindows=Number(renewalSummary?.missed_window_count||0);
     const emergencyRotations=Number(renewalSummary?.emergency_rotation_count||0);
-    return {active,revoked,expiring,missedWindows,emergencyRotations,total:all.length,cas:(Array.isArray(cas)?cas:[]).length};
-  },[cas,certs,inventory,certByID,alertPolicyDaysBefore,alertPolicyIncludeExternal,renewalSummary]);
+    return {
+      active:certSummary?Number(certSummary.active):null,
+      revoked:certSummary?Number(certSummary.revoked):null,
+      expiring:certSummary?Number(certSummary.expiring):null,
+      total:certSummary?Number(certSummary.total):null,
+      missedWindows,emergencyRotations,cas:(Array.isArray(cas)?cas:[]).length
+    };
+  },[cas,certSummary,renewalSummary]);
 
   const expiryItems=useMemo(()=>{
     const items=(Array.isArray(inventory)?inventory:[]).map((it)=>{
@@ -1498,10 +1496,10 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
     {showServiceMTLSPane&&<ServiceMTLSPanel session={session} onToast={onToast}/>}
     {showOverviewPane&&<>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginBottom:14}}>
-        <Stat l="Active" v={String(stats.active)} s={stats.total?`${Math.round((stats.active*100)/stats.total)}% of total`:"—"} i={ShieldCheck}/>
-        <Stat l="Revoked" v={String(stats.revoked)} i={ShieldX}/>
+        <Stat l="Active" v={stats.active===null?"—":String(stats.active)} s={stats.total?`${Math.round(((stats.active||0)*100)/stats.total)}% of ${stats.total}`:stats.total===null?"unavailable":"—"} i={ShieldCheck}/>
+        <Stat l="Revoked" v={stats.revoked===null?"—":String(stats.revoked)} i={ShieldX}/>
         <Stat l="CAs" v={String(stats.cas)} s={`${roots.length} root`} i={Shield}/>
-        <Stat l="Expiring" v={String(stats.expiring)} s={`within ${alertPolicyDaysBefore}d`} c={stats.expiring>0?"amber":"accent"} i={Clock}/>
+        <Stat l="Expiring" v={stats.expiring===null?"—":String(stats.expiring)} s={`within ${certSummary?.alert_days??alertPolicyDaysBefore}d`} c={(stats.expiring||0)>0?"amber":"accent"} i={Clock}/>
         <Stat l="Missed windows" v={String(stats.missedWindows)} s="renewal windows" c={stats.missedWindows>0?"red":"accent"} i={AlertTriangle}/>
         <Stat l="Emergency" v={String(stats.emergencyRotations)} s={`rotations · ${renewalSummary?.ari_enabled===false?"local policy":"CA-directed"}`} c={stats.emergencyRotations>0?"red":"accent"} i={ShieldAlert}/>
       </div>

@@ -153,12 +153,29 @@ test("tenant administration says why when the tenant list is refused", async ({ 
   await stub(page, { platformAdmin: false });
   await page.addInitScript(() => {
     window.sessionStorage.setItem("vecta_ui_session", JSON.stringify({
-      tenantId: "root", username: "reader", token: "smoke-token", mode: "local", mustChangePassword: false, role: "readonly", permissions: ["auth.user.read"],
+      tenantId: "root", username: "reader", token: "smoke-token", mode: "local", mustChangePassword: false, role: "readonly", permissions: ["auth.user.read", "auth.tenant.read"],
     }));
   });
   await openAdmin(page, "Tenant Administration");
   await expect(page.getByText("Tenants unavailable")).toBeVisible();
   await expect(page.getByText(/administrator of the platform \(root\) tenant/)).toBeVisible();
+});
+
+// Being in the root tenant is not platform administration: without
+// auth.tenant.read the console offers User Management only (13.21.0-beta).
+test("a root-tenant user without auth.tenant.read is not a system administrator", async ({ page }) => {
+  await stub(page, { platformAdmin: false });
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem("vecta_ui_session", JSON.stringify({
+      tenantId: "root", username: "reader", token: "smoke-token", mode: "local", mustChangePassword: false, role: "readonly", permissions: ["auth.user.read"],
+    }));
+  });
+  await openAdmin(page, "User Management");
+  const subnav = page.getByTestId("subnav-admin");
+  await expect(subnav.getByRole("button", { name: "User Management", exact: true })).toBeVisible();
+  await expect(subnav.getByRole("button", { name: "Tenant Administration", exact: true })).toHaveCount(0);
+  await expect(subnav.getByRole("button", { name: "System Administration", exact: true })).toHaveCount(0);
+  await expect(page.getByText("System Admin", { exact: true })).toHaveCount(0);
 });
 
 test("a user list that fails to load reads unavailable, never 0", async ({ page }) => {

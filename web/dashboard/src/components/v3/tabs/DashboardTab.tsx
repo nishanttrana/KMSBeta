@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { AuthSession } from "../../../lib/auth";
 import { getOverview } from "../../../lib/opsMetrics";
 import { listKeys } from "../../../lib/keycore";
-import { getCertExpiryAlertPolicy, listCertificates } from "../../../lib/certs";
+import { getCertExpiryAlertPolicy, getCertSummary } from "../../../lib/certs";
 import { listSecrets } from "../../../lib/secrets";
 import { getUnreadAlertCounts } from "../../../lib/reporting";
 import { getClusterOverview } from "../../../lib/cluster";
@@ -165,11 +165,11 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     const refreshHome=async()=>{
       setHomeLoading(true);
       try{
-        const [keys,secretItems,certItems,counts,policy,pendingRequests,governancePolicies,governanceSettings,clusterOverview,governanceSystemState,complianceAssessment,complianceHistory,opsDay,opsWeek]=await Promise.all([
+        const [keys,secretItems,certSummary,counts,policy,pendingRequests,governancePolicies,governanceSettings,clusterOverview,governanceSystemState,complianceAssessment,complianceHistory,opsDay,opsWeek]=await Promise.all([
           // A failed source is null and shows "unavailable", never 0.
           listKeys(session).catch(()=>null),
           listSecrets(session).catch(()=>null),
-          listCertificates(session,{limit:1000,offset:0}).catch(()=>null),
+          getCertSummary(session).catch(()=>null),
           getUnreadAlertCounts(session).catch(()=>null),
           getCertExpiryAlertPolicy(session).catch(()=>null),
           listGovernanceRequests(session,{status:"pending"}).catch(()=>[]),
@@ -187,36 +187,10 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
         }
         const keyItems=Array.isArray(keys)?keys:[];
         const keyCount=keyItems.length;
-        const alertDays=Math.max(1,Math.min(3650,Number(policy?.days_before||30)));
-        const includeExternal=Boolean(policy?.include_external);
+        // Certificate counts come from the certs service over every
+        // certificate; counting a capped list here showed 500 (13.21.0-beta).
+        const alertDays=certSummary?Math.max(1,Number(certSummary.alert_days||30)):Math.max(1,Math.min(3650,Number(policy?.days_before||30)));
         const now=Date.now();
-        const threshold=now+(alertDays*24*60*60*1000);
-        const activeCerts=(Array.isArray(certItems)?certItems:[]).filter((item)=>{
-          const status=String(item?.status||"").toLowerCase();
-          if(status==="deleted"){
-            return false;
-          }
-          if(!includeExternal&&String(item?.ca_id||"").toLowerCase()==="external-ca"){
-            return false;
-          }
-          return true;
-        });
-        const expiringItems=activeCerts
-          .map((item)=>{
-            const expiresAt=new Date(String(item?.not_after||"")).getTime();
-            if(!Number.isFinite(expiresAt)){
-              return null;
-            }
-            return {
-              id:String(item?.id||""),
-              subject:String(item?.subject_cn||item?.id||"certificate"),
-              daysLeft:Math.ceil((expiresAt-now)/(24*60*60*1000)),
-              expiresAt
-            };
-          })
-          .filter((item:any)=>Boolean(item))
-          .filter((item:any)=>item.expiresAt<=threshold)
-          .sort((a:any,b:any)=>a.expiresAt-b.expiresAt);
         const unreadTotal=counts?Object.values(counts).reduce((sum:any,val:any)=>sum+Math.max(0,Number(val||0)),0):null;
         const criticalAlerts=counts?Math.max(0,Number(counts.critical||0)):null;
         const weekAgo=now-7*24*60*60*1000;
@@ -377,7 +351,7 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
         setHomeSummary({
           keys:Array.isArray(keys)?keyCount:null,
           secrets:Array.isArray(secretItems)?secretItems.length:null,
-          certs:Array.isArray(certItems)?certItems.length:null,
+          certs:certSummary?certSummary.total:null,
           alerts:unreadTotal,
           criticalAlerts,
           keyGrowthWeek,
@@ -387,7 +361,7 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
           complianceDeltaWeek,
           complianceHasAssessment,
           alertDays,
-          expiring:Array.isArray(certItems)?expiringItems.length:null,
+          expiring:certSummary?certSummary.expiring:null,
           myPendingApprovals:userPendingApprovals.length,
           approverIdentity,
           govChallengeRequired:Boolean(governanceSettings?.challenge_response_enabled),

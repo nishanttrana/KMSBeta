@@ -386,7 +386,7 @@ func (s *Service) DeleteCA(ctx context.Context, tenantID string, caID string, fo
 			return fmt.Errorf("cannot delete CA: %d issued certificate(s) exist — use force delete to revoke and remove all certificates under this CA", certCount)
 		}
 		// Force mode: revoke all active certs then delete them
-		certs, listErr := s.store.ListCertificates(ctx, tenantID, "", "", 10000, 0)
+		certs, listErr := s.allCertificates(ctx, tenantID, "", "")
 		if listErr != nil {
 			return fmt.Errorf("force delete: failed to list certificates: %w", listErr)
 		}
@@ -1342,7 +1342,7 @@ func (s *Service) RunTenantExpiryAlertSweep(ctx context.Context, tenantID string
 	if err != nil {
 		return err
 	}
-	all, err := s.store.ListCertificates(ctx, tenantID, "", "", 5000, 0)
+	all, err := s.allCertificates(ctx, tenantID, "", "")
 	if err != nil {
 		return err
 	}

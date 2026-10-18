@@ -1469,6 +1469,25 @@ these fields, never from its name (docs/RECOMMENDATIONS.md). Test:
 "algorithm_facts": {"assessed": true, "security_bits": 128, "weak": false, "quantum_vulnerable": true, "post_quantum": false, "note": "strength is half the bit length of the curve order"}
 ```
 
+### GET /svc/certs/certs/summary (13.21.0-beta)
+
+Kernel route (`audit.certs.summary_read`, any signed-in caller of the
+tenant, as for listing certificates). Counts every certificate of the
+tenant, past the 500-row page of `GET /certs`, so every dashboard page shows
+the same numbers:
+
+```json
+{"summary": {"total": 725, "active": 60, "revoked": 665, "expired": 0,
+  "expiring": 49, "expiring_7d": 12, "alert_days": 30, "include_external": true}}
+```
+
+`expiring` follows the expiry sweep's rule: active, not past `not_after`,
+external certificates only when the alert policy includes them, and at most
+`alert_days` (the alert policy's `days_before`) whole days left. `expired`
+includes active certificates past `not_after` that the sweep has not yet
+marked. Tests: `TestCertSummaryCountsWholeSetWithSweepRule`,
+`TestCertSummaryRouteAudited`, `TestCertSummaryRouteRefusalsAudited`.
+
 ### GET/POST /svc/certs/certs/ca
 
 `GET` lists CAs (`items[]`: `id`, `tenant_id`, `name`, `parent_ca_id`,
@@ -4177,6 +4196,7 @@ Selected events with dedicated audit classification:
 - `audit.auth.password_change_refused` (`reason`: `invalid_current_password`): a signed-in user gave a wrong current password. `POST /auth/change-password` answers `403 invalid_current_password` and `POST /auth/cli/session` answers `403 invalid_credentials` for a wrong password; neither answers 401, which is kept for a missing or unverifiable token (10.4.0-beta)
 - `audit.auth.cli_session_refused` (`reason`: `invalid_credentials`, `public_default_password`), `audit.auth.cli_ssh_password_synced`, `audit.auth.cli_password_revoked`: CLI/SSH access to hsm-integration (docs/SECURITY/HSM_INTEGRATION.md)
 - `audit.hsm.provider_library_inventory`, `audit.hsm.provider_library_added`, `audit.hsm.provider_library_changed`, `audit.hsm.provider_library_removed`: files in the PKCS#11 provider workspace, with SHA-256
+- `audit.certs.summary_read`: certificate counts read (`GET /certs/summary`), with `total` and `expiring` (13.21.0-beta)
 - `audit.certs.internal_mtls_inventory_read`, `audit.certs.internal_mtls_policy_updated`, `audit.certs.internal_mtls_rotated`, `audit.certs.internal_mtls_rotated_all` (refusals: `not_root_tenant`, `unchanged`, `invalid_policy`, `unknown_identity`, `kx_profile_not_applicable`, `force_not_available`, `confirmation_required`), `audit.certs.internal_mtls_applied` (a change is running on every instance), `audit.certs.edge_tls_read`, `audit.certs.edge_tls_policy_updated` (refusals: `not_root_tenant`, `invalid_policy`, `unchanged`), `audit.certs.edge_tls_applied` (every external listener was measured accepting exactly the new groups), `audit.certs.edge_tls_certificate_source_updated`, `audit.certs.edge_tls_csr_created`, `audit.certs.edge_tls_certificate_installed` (refusals listed under Edge certificate), `audit.certs.edge_tls_certificate_restored` (an external certificate copied back into the tmpfs runtime volume after a restart), `audit.certs.edge_tls_measurement_read`, `audit.certs.certificate_key_label_corrected`: Service mTLS (docs/SECURITY/INTERNAL_TLS.md)
 - `audit.cert.pqc_issuance_refused` (`reason: pqc_certificates_removed`), `audit.certs.pqc_profile_removed`: post-quantum and hybrid certificates are removed (1.19.0); `POST /certs/validate-pqc`, `POST /certs/pqc/migrate/{id}`, `GET /certs/pqc-readiness` and `GET /certs/ots-status/{ca_id}` no longer exist, and `audit.cert.pqc_cert_issued`, `pqc_cert_validated` and `pqc_migration_executed` are no longer emitted
 - `audit.certs.crwk_rotated` (`reason`: `passphrase_rotation`, `public_default_passphrase`; failures `result: failure`, `reason: rewrap_failed`): certs root wrapping key re-keyed and every CA signer rewrapped (docs/SECURITY/SECRET_ROTATION.md)

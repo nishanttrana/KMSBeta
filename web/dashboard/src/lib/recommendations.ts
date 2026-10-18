@@ -13,6 +13,8 @@
 // the snapshot and its rules are reported as "not assessed" — they never pass
 // or fail on fabricated data, and never reduce the score.
 
+import type { CertSummary } from "./certs";
+
 export type Severity = "critical" | "high" | "medium" | "low";
 
 export type RecCategory =
@@ -95,6 +97,8 @@ export type PlatformSnapshot = {
   /** Catalogue facts and policy status per key algorithm; undefined when keycore's agility posture could not be read. */
   keyAlgorithms?: KeyAlgorithmFacts[] | undefined;
   certs?: SnapshotCert[] | undefined;
+  /** Counted by the certs service over every certificate; certs is the newest 500 only. */
+  certSummary?: CertSummary | undefined;
   rotationPolicies?: Array<{ enabled: boolean; target_type: string; auto_rotate: boolean; interval_days: number }> | undefined;
   /** Real encrypted backups (governance). The Backup tab's scheduler is a preview and never counts. */
   backups?: Array<{ status: string; completed_at?: string; created_at?: string }> | undefined;
@@ -403,29 +407,39 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
   } else check("admin-count", "Administrator count is minimal", "Access control", false, false);
 
   // ── Certificates ──
-  if (s.certs) {
-    const live = s.certs.filter((c) => !/revoked|deleted/i.test(c.status));
+  if (s.certs || s.certSummary) {
+    const sum = s.certSummary;
+    const days = sum ? Math.max(1, sum.alert_days) : 30;
+    const live = (s.certs || []).filter((c) => !/revoked|deleted/i.test(c.status));
     const expired = live.filter((c) => { const e = ts(c.not_after); return e !== null && e < now; });
-    const soon = live.filter((c) => { const e = ts(c.not_after); return e !== null && e >= now && e - now < 30 * DAY; });
+    const soon = live.filter((c) => { const e = ts(c.not_after); return e !== null && e >= now && e - now < days * DAY; });
     const urgent = soon.filter((c) => (ts(c.not_after) as number) - now < 7 * DAY);
-    check("cert-expiry", "No certificates expire within 30 days", "Certificates", live.length > 0, soon.length + expired.length > 0);
-    if (expired.length) {
+    // Counts come from the service over every certificate (the list is the
+    // newest 500 and only names examples). Without the summary, a full
+    // list (under 500) is still a complete count; a capped one is not.
+    const listComplete = (s.certs?.length ?? 500) < 500;
+    const expiredN = sum ? sum.expired : listComplete ? expired.length : null;
+    const soonN = sum ? sum.expiring : listComplete ? soon.length : null;
+    const urgentN = sum ? sum.expiring_7d : urgent.length;
+    const assessed = expiredN !== null && soonN !== null;
+    check("cert-expiry", `No certificates expire within ${days} days`, "Certificates", assessed && (sum ? sum.total : live.length) > 0, assessed && soonN + expiredN > 0);
+    if (expiredN) {
       recs.push({
         id: "cert-expired", severity: "high", category: "Certificates",
-        title: `${expired.length} certificate${expired.length > 1 ? "s have" : " has"} expired`,
+        title: `${expiredN} certificate${expiredN > 1 ? "s have" : " has"} expired`,
         why: "Expired certificates cause outages and are frequently still deployed.",
         fix: "Renew or revoke; enable automatic renewal (ACME/ARI) for the issuing profile.",
-        affected: expired.length, evidence: sample(expired.map((c) => c.subject_cn)),
+        affected: expiredN, evidence: sample(expired.map((c) => c.subject_cn)),
         action: { tab: "certs", label: "Open PKI" },
       });
     }
-    if (soon.length) {
+    if (soonN) {
       recs.push({
-        id: "cert-expiring", severity: urgent.length ? "high" : "medium", category: "Certificates",
-        title: `${soon.length} certificate${soon.length > 1 ? "s expire" : " expires"} within 30 days`,
-        why: `${urgent.length} expire within 7 days.`,
+        id: "cert-expiring", severity: urgentN ? "high" : "medium", category: "Certificates",
+        title: `${soonN} certificate${soonN > 1 ? "s expire" : " expires"} within ${days} days`,
+        why: `${urgentN} expire within 7 days.`,
         fix: "Renew now and move these endpoints to automated renewal (ACME with ARI) so expiry stops being a manual task.",
-        affected: soon.length, evidence: sample(soon.map((c) => c.subject_cn)),
+        affected: soonN, evidence: sample(soon.map((c) => c.subject_cn)),
         action: { tab: "certs", label: "Renew certificates" },
       });
     }
@@ -537,11 +551,17 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
   return { recommendations: recs, checks };
 }
 
-export function postureScore(recs: Recommendation[], checks: ControlCheck[]): { score: number; grade: string; assessed: number } {
+// The score is graded only once at least half the controls can be assessed,
+// and never exceeds the share of assessed controls that pass: open
+// recommendations alone left "0 of 3 controls passing" at 81, grade B
+// (13.21.0-beta).
+export function postureScore(recs: Recommendation[], checks: ControlCheck[]): { score: number; grade: string; assessed: number; total: number } {
+  const total = checks.length;
   const assessed = checks.filter((c) => c.status !== "unknown").length;
-  if (!assessed) return { score: 0, grade: "–", assessed };
+  if (!assessed || assessed * 2 < total) return { score: 0, grade: "–", assessed: 0, total };
+  const passing = checks.filter((c) => c.status === "pass").length;
   const penalty = recs.reduce((sum, r) => sum + SEV_WEIGHT[r.severity], 0);
-  const score = Math.max(0, Math.min(100, Math.round(100 - penalty)));
+  const score = Math.max(0, Math.min(100, Math.round(100 - penalty), Math.round((100 * passing) / assessed)));
   const grade = score >= 90 ? "A" : score >= 80 ? "B" : score >= 65 ? "C" : score >= 50 ? "D" : "F";
-  return { score, grade, assessed };
+  return { score, grade, assessed, total };
 }

@@ -4,6 +4,55 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.21.0-beta] — 2026-10-18
+
+The first of three steps to make the console simpler without removing
+anything: fix what was wrong or confusing.
+
+### Fixed
+- **One count of expiring certificates.** For the same tenant the Command
+  Center showed 49, Operations 500 and Certificates / PKI 723. Each page
+  counted in the browser over a list the store caps at 500, with its own
+  filter: Operations included revoked and already-expired certificates, the
+  Certificates page counted revoked ones as expiring. New
+  `GET /certs/summary` counts every certificate once (total, active,
+  revoked, expired, expiring within the alert policy's window, expiring
+  within 7 days), with the expiry sweep's own rule; all three pages and
+  the `cert-expiring` recommendation use it. Audited as
+  `audit.certs.summary_read`.
+- **Certificate jobs saw only the newest 100 certificates.** The store
+  answers a list call asking for more than 500 rows with 100 rows and no
+  error. The expiry-alert sweep (asked 5000), renewal intelligence (5000),
+  CA force delete (10000) and internal-certificate supersession (1000) all
+  did, so expiry alerts and renewal windows ignored older certificates and
+  a rotated service's older certificates stayed active. They now page
+  through every certificate; `TestNoCertificateListPastTheStoreCap` fails
+  on any call that asks past the cap.
+- **Posture score no longer says "Grade B" with 0 of 3 controls passing.**
+  The score is graded only once half the controls can be assessed and never
+  exceeds the share of assessed controls that pass. The caption says how
+  many controls were assessed out of how many.
+- **Only platform administrators are "System Admin".** The console treated
+  anyone signed in to the root tenant as a platform administrator: the
+  bootstrap CLI account, which holds only `auth.password.change`, saw every
+  module, System and Tenant Administration, and pages full of "missing
+  permission" errors. The console now uses the server's rule (root tenant
+  and `auth.tenant.read` or `auth.tenant.write`), and the sidebar card shows
+  the user's role.
+- **A module is listed only for a user who can read its data.** Secret
+  Vault, Crypto Agility, Crypto Discovery, Workload Identity, Confidential
+  Compute, Alert Center, Posture, SBOM / CBOM and Playbooks each name the
+  permission their data needs (`MODULE_READ`); without it the module is not
+  in the sidebar. Modules readable by any signed-in user stay listed.
+- **Posture reads "unavailable" when its service does not answer**, instead
+  of "Critical 0 · All clear", and shows one tab strip: Executive /
+  Operations is a toggle on the Dashboard view, not a second strip that
+  showed two tabs selected.
+- **Links and Back work.** The address names the module and its sub-option
+  (`#certs/cert-enrollment`); each move adds a history entry, Back returns
+  to the previous view, and an edited or pasted address opens its view. It
+  was read once at load and overwritten in place, so Back left the console.
+
 ## [13.20.0-beta] — 2026-10-18
 
 ### Fixed

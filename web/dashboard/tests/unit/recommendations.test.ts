@@ -112,3 +112,30 @@ describe("evaluate", () => {
     expect(recommendations[0]).toMatchObject({ id: "default-admin", severity: "critical" });
   });
 });
+
+describe("posture score and certificate counts (13.21.0-beta)", () => {
+  const checks = (pass: number, fail: number, unknown: number) => [
+    ...Array.from({ length: pass }, (_, i) => ({ id: `p${i}`, label: "", category: "Keys" as const, status: "pass" as const })),
+    ...Array.from({ length: fail }, (_, i) => ({ id: `f${i}`, label: "", category: "Keys" as const, status: "fail" as const })),
+    ...Array.from({ length: unknown }, (_, i) => ({ id: `u${i}`, label: "", category: "Keys" as const, status: "unknown" as const })),
+  ];
+
+  it("is not graded until half the controls are assessed", () => {
+    expect(postureScore([], checks(0, 3, 14) as any)).toMatchObject({ grade: "–", assessed: 0, total: 17 });
+  });
+
+  it("never exceeds the share of assessed controls that pass", () => {
+    const { score, grade } = postureScore([], checks(2, 8, 0) as any);
+    expect(score).toBe(20);
+    expect(grade).toBe("F");
+  });
+
+  it("counts expiring certificates from the service summary, not the capped list", () => {
+    const certs = Array.from({ length: 500 }, (_, i) => ({ id: `c${i}`, subject_cn: `h${i}`, algorithm: "ECDSA-P256", status: "revoked", not_after: "2026-09-26T00:00:00Z" }));
+    const certSummary = { total: 725, active: 60, revoked: 665, expired: 0, expiring: 49, expiring_7d: 49, alert_days: 30, include_external: true };
+    const rec = evaluate({ now, certs, certSummary }).recommendations.find((r) => r.id === "cert-expiring");
+    expect(rec).toMatchObject({ affected: 49, severity: "high", title: "49 certificates expire within 30 days" });
+    // A capped list without the summary is no count.
+    expect(evaluate({ now, certs }).checks.find((c) => c.id === "cert-expiry")?.status).toBe("unknown");
+  });
+});

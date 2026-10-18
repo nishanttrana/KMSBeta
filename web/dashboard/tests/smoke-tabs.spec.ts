@@ -312,6 +312,25 @@ test("a module's sub-options expand under its name in the sidebar", async ({ pag
   await expect(page.locator(".vk-subcard")).toHaveCount(0);
 });
 
+// The address names the view, a pasted one opens it, and Back returns to
+// the previous view (13.21.0-beta): the address was read once at load and
+// overwritten in place, so Back left the console.
+test("the address opens a view and Back returns to the previous one", async ({ page }) => {
+  const crumb = page.getByRole("navigation", { name: "Breadcrumb" });
+  await page.goto("/#certs/cert-enrollment");
+  await expect(crumb).toContainText("Enrollment Protocols");
+  await expect(page.getByTestId("subnav-certs").getByRole("button", { name: "Enrollment Protocols", exact: true })).toHaveAttribute("aria-current", "page");
+  await page.getByText("Key Management", { exact: true }).first().click();
+  await expect(page).toHaveURL(/#keys$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/#certs\/cert-enrollment$/);
+  await expect(crumb).toContainText("Enrollment Protocols");
+  // An address typed into the bar opens its view without a reload.
+  await page.evaluate(() => { window.location.hash = "#playbooks/runs"; });
+  await expect(crumb).toContainText("Runs");
+  await assertNoRenderBoundary(page);
+});
+
 // The top bar has no search box and ⌘K opens nothing (11.5.0-beta): the
 // sidebar's "Filter modules" is the one way to find a module.
 test("the top bar has no search box and no command palette", async ({ page }) => {
@@ -675,6 +694,31 @@ test("Service mTLS shows state and controls without paragraphs, and each chip li
 
 // Counts read the same everywhere (11.6.0-beta): flat tiles, a neutral number,
 // hue only on the icon of a count that needs attention.
+// Certificate counts are the service's, over every certificate: the page
+// counted revoked certificates as expiring (13.21.0-beta).
+test("certificate tiles show the service's counts", async ({ page }) => {
+  await page.route("**/svc/certs/certs/summary**", (r) => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ summary: { total: 725, active: 60, revoked: 665, expired: 0, expiring: 49, expiring_7d: 12, alert_days: 30, include_external: true } }) }));
+  await page.getByText("Certificates / PKI", { exact: true }).first().click();
+  await expect(page.locator(".vecta-stat-card", { hasText: "Expiring" })).toContainText("49");
+  await expect(page.locator(".vecta-stat-card", { hasText: "Revoked" })).toContainText("665");
+  await expect(page.locator(".vecta-stat-card", { hasText: "Active" })).toContainText("8% of 725");
+});
+
+// A posture service that does not answer reads unavailable, never
+// "0 · All clear" (13.21.0-beta).
+test("posture cards read unavailable when the service fails", async ({ page }) => {
+  await page.route("**/svc/posture/**", (r) => r.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: { message: "down" } }) }));
+  await page.getByText("Posture", { exact: true }).first().click();
+  await expect(page.getByText(/^Posture unavailable/)).toBeVisible();
+  await expect(page.getByText("All clear", { exact: true })).toHaveCount(0);
+  await expect(page.locator(".vecta-stat-card", { hasText: "Critical" })).toContainText("unavailable");
+  // One tab strip: Executive/Operations is a toggle on the Dashboard view only.
+  await expect(page.locator("[aria-current='page']", { hasText: /^(Executive|Operations)$/ })).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Dashboard view" })).toBeVisible();
+  await page.getByRole("button", { name: "Findings", exact: true }).click();
+  await expect(page.getByRole("group", { name: "Dashboard view" })).toHaveCount(0);
+});
+
 test("certificate tiles are the console's flat stat tiles", async ({ page }) => {
   await page.getByText("Certificates / PKI", { exact: true }).first().click();
   const tiles = page.locator(".vecta-stat-card");

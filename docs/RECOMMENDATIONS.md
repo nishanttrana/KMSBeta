@@ -45,8 +45,13 @@ in `tests/unit/recommendations.test.ts`) and `src/lib/platformSnapshot.ts`
 ## Score
 
 `100 − Σ severity weight` over open recommendations (critical 18, high 9,
-medium 4, low 1.5), floored at 0. Grades: A ≥ 90, B ≥ 80, C ≥ 65, D ≥ 50, F.
-The score is shown only when at least one control could be assessed.
+medium 4, low 1.5), floored at 0, and never more than the share of assessed
+controls that pass (`100 × passing ÷ assessed`). Grades: A ≥ 90, B ≥ 80,
+C ≥ 65, D ≥ 50, F. The score and grade are shown only when at least half the
+controls could be assessed; until then the ring reads "not assessed". The
+caption counts passing controls out of assessed ones, and names the total.
+Before 13.21.0-beta open recommendations alone set the score, so "0 of 3
+controls passing" read 81, grade B.
 
 ## Rule catalogue
 
@@ -69,8 +74,8 @@ The score is shown only when at least one control could be assessed.
 | `no-quorum` | high | No governance (M-of-N) policy | Approvals |
 | `default-admin` | critical | Bootstrap `admin` still has its initial password | Administration |
 | `too-many-admins` | medium | More than 5 active administrators | Administration |
-| `cert-expired` | high | Non-revoked certificate past `not_after` | Certificates / PKI |
-| `cert-expiring` | high / medium | Certificates expiring within 30 days (high if any within 7) | Certificates / PKI |
+| `cert-expired` | high | Non-revoked certificate past `not_after` (count from `GET /certs/summary`) | Certificates / PKI |
+| `cert-expiring` | high / medium | Certificates expiring within the alert policy's window (default 30 days; high if any within 7), counted by `GET /certs/summary` over every certificate. Without the summary, a list capped at 500 is "not assessed" | Certificates / PKI |
 | `cert-weak` | high | A certificate's algorithm is weak in the catalogue | Certificates / PKI |
 | `no-backup` | critical | No completed encrypted backup on record | System Administration → Backups |
 | `backup-stale` | high | No completed encrypted backup in 7 days | System Administration → Backups |

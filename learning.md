@@ -5,6 +5,29 @@ Newest entries on top.
 
 ## 2026-10-18
 
+### Three numbers for one quantity, and a cap nobody saw (13.21.0-beta)
+- Command Center, Operations and Certificates each fetched a certificate
+  list and counted "expiring" themselves, with different filters, over a
+  list capped at 500: 49, 500 and 723 for the same tenant. Each page's
+  tests passed because each checked its own arithmetic, never that the
+  pages agreed. **Rule (CLAUDE.md): a number on a page is counted by its
+  service over the whole set.**
+- Following the count to the store showed `ListCertificates` turns any
+  request above 500 rows into 100 rows, silently. Five callers asked for
+  1000 to 10000; the expiry sweep, renewal intelligence and internal
+  certificate supersession had only ever seen the newest 100. A clamp that
+  returns less than asked, without an error, looks like a complete answer.
+  The cap now has a test that reads every call site.
+- The console's "System Admin" was "signed in to the root tenant", not the
+  server's rule (root and `auth.tenant.*`). The bootstrap CLI account, with
+  one permission, was shown every module and pages of refusals; the live
+  check signs in as that account, so this was in every screenshot and
+  read as "the console is complicated". **A UI rule that mirrors a server
+  rule is written from the server's code, not from the role's name.**
+- The page-height measurement I first reported (Certificates 45,000 px)
+  was an inner scroll box's height, not the page's. Measure the document,
+  not the tallest element, before calling a page too long.
+
 ### A check that grew with the log, and a buffer that forgot its key (13.20.0-beta)
 - The chain verification walked every row on each request. It passed every
   test (a few rows) and every deploy until the log reached about 78,000

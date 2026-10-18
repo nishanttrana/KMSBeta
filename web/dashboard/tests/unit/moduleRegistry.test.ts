@@ -5,7 +5,9 @@ import { enabledFeatures, type DeploymentConfig } from "../../src/lib/deployment
 describe("moduleRegistry", () => {
   it("opens Administration to root and to a tenant's user administrators", () => {
     const features = new Set();
-    expect(canAccessModule("admin", features, { tenantId: "root", role: "admin", permissions: [] })).toBe(true);
+    expect(canAccessModule("admin", features, { tenantId: "root", role: "admin", permissions: ["*"] })).toBe(true);
+    // A role name grants nothing: root with no permissions is no administrator.
+    expect(canAccessModule("admin", features, { tenantId: "root", role: "admin", permissions: [] })).toBe(false);
     expect(canAccessModule("admin", features, { tenantId: "root", role: "viewer", permissions: ["auth.tenant.read"] })).toBe(true);
     // A tenant's own administrator manages its users (User Management only).
     expect(canAccessModule("admin", features, { tenantId: "bank-a", role: "admin", permissions: ["*"] })).toBe(true);
@@ -48,7 +50,10 @@ describe("moduleRegistry", () => {
   });
 
   it("recognizes system admin session", () => {
-    expect(isSystemAdminSession({ tenantId: "root", role: "super-admin" })).toBe(true);
+    expect(isSystemAdminSession({ tenantId: "root", role: "admin", permissions: ["*"] })).toBe(true);
+    expect(isSystemAdminSession({ tenantId: "root", role: "super-admin" })).toBe(false);
+    // The bootstrap CLI account: root tenant, one permission (13.21.0-beta).
+    expect(isSystemAdminSession({ tenantId: "root", role: "cli-user", permissions: ["auth.password.change"] })).toBe(false);
     expect(isSystemAdminSession({ tenantId: "root", role: "viewer", permissions: ["auth.tenant.write"] })).toBe(true);
     expect(isSystemAdminSession({ tenantId: "tenant-a", role: "super-admin" })).toBe(false);
   });

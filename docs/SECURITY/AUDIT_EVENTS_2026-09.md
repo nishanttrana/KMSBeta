@@ -223,6 +223,7 @@ SSH logins themselves are in the hsm-integration container log (sshd,
 
 | Event | When | Severity | Test |
 |---|---|---|---|
+| `audit.certs.summary_read` | certificate counts were read (`GET /certs/summary`); `total`, `expiring`; refusals unauthenticated or other tenant | info | `TestCertSummaryRouteAudited`, `TestCertSummaryRouteRefusalsAudited` |
 | `audit.certs.internal_mtls_inventory_read` | the Service mTLS page was read (root only) | info | `TestMTLSRoutesRootOnlyAndAudited` |
 | `audit.certs.internal_mtls_policy_updated` | an identity's certificate key or key-exchange profile changed; previous and new values, generation, certificates revoked | warning | `TestMTLSRoutesRootOnlyAndAudited`, `TestMTLSRoutesRefusalsAudited` |
 | `audit.certs.internal_mtls_rotated` | an identity's certificate was revoked and replaced; `restart_mode` graceful or force | warning | `TestMTLSRoutesRootOnlyAndAudited` |

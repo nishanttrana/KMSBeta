@@ -150,7 +150,7 @@ func (s *Service) EnrollInternal(ctx context.Context, tenantID, identity string,
 }
 
 func (s *Service) supersedeInternalCerts(ctx context.Context, tenantID, identity, keepID string) int {
-	certs, err := s.store.ListCertificates(ctx, tenantID, CertStatusActive, "internal-mtls", 1000, 0)
+	certs, err := s.allCertificates(ctx, tenantID, CertStatusActive, "internal-mtls")
 	if err != nil {
 		return 0
 	}

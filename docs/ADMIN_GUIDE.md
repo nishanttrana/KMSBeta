@@ -27,10 +27,19 @@ Data & integrations, Security & compliance, Platform). Type in **Filter modules*
 at the top of the sidebar (Enter opens the first match) to jump anywhere. The
 collapse button beside the mark folds the sidebar to an icon rail. The top bar
 shows where you are (group / page), FIPS mode,
-the tenant switcher, alerts and the light/dark toggle.
+the tenant, alerts and the light/dark toggle.
+
+The sidebar lists only modules you can use: a module whose data needs a
+permission you do not hold (for example Posture without `posture.read`) is
+not shown, and System and Tenant Administration appear only to platform
+administrators (root tenant and `auth.tenant.read` or `auth.tenant.write`).
+The address names the page and its sub-option, for example
+`https://kms.example/#certs/cert-enrollment`: share it, bookmark it, and
+use Back to return to the previous page (13.21.0-beta).
 
 - **Command Center** (home) — live key-management posture score, KPIs (active
-  keys and how many are quantum-vulnerable, certificates expiring in 30 days,
+  keys and how many are quantum-vulnerable, certificates expiring within the
+  alert window (counted by the certs service over every certificate),
   PQC readiness, last good backup), the top recommended actions, control
   coverage and the crypto inventory split by quantum exposure. Start every
   session here: it answers "what should I fix next, and why?"

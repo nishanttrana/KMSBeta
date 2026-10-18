@@ -625,6 +625,24 @@ export async function getCertSecurityStatus(session: AuthSession): Promise<CertS
   };
 }
 
+// Counted by the certs service over every certificate of the tenant; every
+// page shows these numbers rather than counting a capped list (13.21.0-beta).
+export type CertSummary = {
+  total: number;
+  active: number;
+  revoked: number;
+  expired: number;
+  expiring: number;
+  expiring_7d: number;
+  alert_days: number;
+  include_external: boolean;
+};
+
+export async function getCertSummary(session: AuthSession): Promise<CertSummary> {
+  const out = await serviceRequest<{ summary: CertSummary }>(session, "certs", `/certs/summary?${tenantQuery(session)}`);
+  return out.summary;
+}
+
 export async function getCertExpiryAlertPolicy(session: AuthSession): Promise<CertExpiryAlertPolicy> {
   const out = await serviceRequest<AlertPolicyResponse>(session, "certs", `/certs/alert-policy?${tenantQuery(session)}`);
   return out.policy;

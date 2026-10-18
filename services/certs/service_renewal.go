@@ -90,7 +90,7 @@ func (s *Service) RefreshTenantRenewalIntelligence(ctx context.Context, tenantID
 	if err != nil {
 		return err
 	}
-	certs, err := s.store.ListCertificates(ctx, tenantID, "", "", 5000, 0)
+	certs, err := s.allCertificates(ctx, tenantID, "", "")
 	if err != nil {
 		return err
 	}

@@ -83,14 +83,47 @@ export function matchesFeatureNeed(need: ModuleFeatureNeed | undefined, features
   return features.has(need);
 }
 
+// A platform administrator: signed in to the root tenant and holding
+// auth.tenant.read or auth.tenant.write, the server's own rule (auth
+// platformAdministrator).
+// Being in the root tenant alone made the bootstrap CLI account, which holds
+// only auth.password.change, a "System Admin" shown every module
+// (13.21.0-beta).
 export function isSystemAdminSession(session: unknown): boolean {
   const tenantID = String((session as { tenantId?: unknown })?.tenantId || "").trim().toLowerCase();
-  return tenantID === "root";
+  return tenantID === "root" && (hasPermission(session, "auth.tenant.read") || hasPermission(session, "auth.tenant.write"));
+}
+
+// The permission a module's own data needs (any one of them). The service
+// refuses everything else on the page without it, so the module is not
+// listed: a page of "missing permission" errors and zeros is no page.
+// Modules whose data is readable by any signed-in user of the tenant are
+// not listed here. Checked against docs/generated/backend-routes.csv by
+// tests/unit/moduleAccess.test.ts.
+export const MODULE_READ: Record<string, string[]> = {
+  vault: ["secrets.read"],
+  crypto_agility: ["key.agility.read"],
+  discovery: ["discovery.read"],
+  workload: ["workload.read"],
+  confidential: ["confidential.read"],
+  alerts: ["reporting.read"],
+  posture: ["posture.read"],
+  sbom: ["sbom.read"],
+  playbooks: ["compliance.playbook.read", "compliance.connection.use"],
+};
+
+function holdsModuleRead(tabID: string, session: unknown): boolean {
+  const need = MODULE_READ[tabID];
+  return !need || need.some((perm) => hasPermission(session, perm));
 }
 
 export function canAccessModule(tabID: string, features: Set<FeatureKey>, session?: unknown): boolean {
   const normalizedTab = String(tabID || "").trim().toLowerCase();
   if (!normalizedTab) {
+    return false;
+  }
+
+  if (!holdsModuleRead(normalizedTab, session)) {
     return false;
   }
 

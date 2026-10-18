@@ -2,9 +2,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
   Cloud,
   HardDrive,
   KeyRound,
@@ -14,8 +11,7 @@ import {
   RefreshCcw,
   Server,
   ShieldAlert,
-  Wrench,
-  Zap
+  Wrench
 } from "lucide-react";
 import {
   AreaChart,
@@ -42,6 +38,7 @@ import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 import { B, Btn, Card, Chk, Inp, Modal, Sel, Stat, Tabs } from "../legacyPrimitives";
 import { PostureBaselineCard } from "./PostureBaselineCard";
+import { PostureCountCards, PostureModeToggle } from "./PostureHeaderParts";
 import { bucketUnit, clickable, clickedIndex, DEFAULT_WINDOW, DrillHint, DrillPanel, windowFrom, windowLabel, WindowSelect, type Drill, type WindowId } from "../chartDrill";
 import {
   executePostureAction,
@@ -231,6 +228,7 @@ export const PostureTab = ({ session, onToast }: any) => {
   const [baseline, setBaseline] = useState<any>(null);
   const [baselineErr, setBaselineErr] = useState("");
   const [snapshot, setSnapshot] = useState<any>(null);
+  const [loadErr, setLoadErr] = useState(""); // the service did not answer
 
   // ── Data loading ──────────────────────────────────────────────
 
@@ -268,8 +266,10 @@ export const PostureTab = ({ session, onToast }: any) => {
       setRestClientSecurity(restClientSecurityOut || null);
       setKeyAccessSummary(keyAccessSummaryOut || null);
       setSigningSummary(signingSummaryOut || null);
+      setLoadErr("");
       if (!silent) onToast?.("Posture view refreshed.");
     } catch (error) {
+      setLoadErr(errMsg(error));
       onToast?.(`Posture load failed: ${errMsg(error)}`);
     } finally {
       if (!silent) setLoading(false);
@@ -530,17 +530,15 @@ export const PostureTab = ({ session, onToast }: any) => {
       {assessed
         ? <Stat l="Risk Score" v={`${risk24}/100`} s={`7d: ${risk7d}`} c={riskTone24} i={ShieldAlert} />
         : <Stat l="Risk Score" v="Not assessed" s={buildingText} c="blue" i={ShieldAlert} />}
-      <Stat l="Open Findings" v={Number(dashboard?.open_findings || 0)} s={`${findings.length} total`} c="amber" i={AlertTriangle} />
-      <Stat l="Critical" v={Number(dashboard?.critical_findings || 0)} s={Number(dashboard?.critical_findings || 0) > 0 ? "Action needed" : "All clear"} c="red" i={Zap} />
-      <Stat l="Pending Actions" v={pendingActionCount} s={`${actions.length} total`} c="blue" i={Clock} />
-      <Stat l="Resolved" v={statusCounts.resolved} s={statusTotal > 0 ? `${Math.round((statusCounts.resolved / statusTotal) * 100)}% resolved` : "No findings"} c="green" i={CheckCircle2} />
+      <PostureCountCards loadErr={loadErr} assessed={Boolean(assessed)} open={Number(dashboard?.open_findings || 0)} critical={Number(dashboard?.critical_findings || 0)} findings={findings.length} pending={pendingActionCount} actions={actions.length} resolved={statusCounts.resolved} statusTotal={statusTotal} />
     </div>
+    {loadErr && <div style={{ fontSize: 12, color: C.redFg }}>Posture unavailable: {loadErr}</div>}
 
     {/* Sub-tabs + Controls */}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <Tabs tabs={["Dashboard", "Findings", "Actions", "Domains"]} active={tab} onChange={setTab} />
-        <Tabs tabs={["Executive", "Operations"]} active={mode} onChange={setMode} />
+        {tab === "Dashboard" && <PostureModeToggle mode={mode} onChange={setMode} />}
       </div>
       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
         <WindowSelect value={windowId} onChange={setWindowId} />

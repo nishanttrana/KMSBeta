@@ -203,11 +203,11 @@ test("a source's link opens that source's own page", async ({ page }) => {
   await stub(page);
   await open(page);
   await page.getByRole("button", { name: "Accounts", exact: true }).click();
-  await expect(page).toHaveURL(/#cloudctl$/);
+  await expect(page).toHaveURL(/#cloudctl\/byok$/);
   await expect(page.getByText("Crypto Discovery", { exact: true }).first()).toBeVisible();
   await page.getByText("Crypto Discovery", { exact: true }).first().click();
   await page.getByRole("button", { name: "Open PKI", exact: true }).click();
-  await expect(page).toHaveURL(/#certs$/);
+  await expect(page).toHaveURL(/#certs\/cert-overview$/);
 });
 
 test("mounted code shows how to mount it, without a second upload button", async ({ page }) => {

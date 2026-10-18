@@ -279,6 +279,7 @@ func main() {
 	kernel := route.New("cert", audit, logger)
 	keyring.Routes(kernel, "cert")
 	svc.RegisterInternalMTLSRoutes(kernel)
+	handler.RegisterSummaryRoutes(kernel)
 	kernel.MountOn(handler.mux)
 	if err := rt.Serve(handler); err != nil {
 		rt.Logger.Fatalf("serve failed: %v", err)

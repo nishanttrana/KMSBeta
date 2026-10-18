@@ -1,4 +1,4 @@
-import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   ArrowLeftRight,
@@ -273,11 +273,20 @@ const NAV = [
 // Documentation was removed (7.35.0-beta); its ids open the Command Center.
 const RETIRED_TABS: Record<string, string> = { health: "admin", ops_metrics: "ops", key_analytics: "ops", docs: "home", devsecops: "home" };
 
+// The address names the module and its sub-option (#certs/cert-enrollment).
+// Each move adds a history entry, so Back returns to the previous view, and
+// a pasted or edited address opens its view (13.21.0-beta); the address was
+// only read at load and overwritten in place.
+function parseNavHash(hash: string): { tab: string; sub: string } {
+  const [rawTab = "", sub = ""] = decodeURIComponent(String(hash || "").replace(/^#/, "")).split("/");
+  return { tab: RETIRED_TABS[rawTab] ?? rawTab, sub };
+}
+
 export default function VectaDashboardV3Shell(props: Props) {
   const { session: sessionBase, enabledFeatures, unreadAlerts, onLogout, markAlertsRead } = props;
   const [tab, setTab] = useState(() => {
     try {
-      const saved = window.location.hash.replace("#", "") || localStorage.getItem(TAB_STORAGE_KEY);
+      const saved = parseNavHash(window.location.hash).tab || localStorage.getItem(TAB_STORAGE_KEY);
       if (saved) return RETIRED_TABS[saved] ?? saved;
     } catch { /* ignored */ }
     return "home";
@@ -322,17 +331,21 @@ export default function VectaDashboardV3Shell(props: Props) {
   // Counts sub-option clicks, so a module can leave a local view (an editor)
   // when its current sub-option is chosen again.
   const [subNavTick, setSubNavTick] = useState(0);
-  const [subPaneSelection, setSubPaneSelection] = useState<any>(() => ({
-    workbench: "crypto",
-    dataprotection: "fieldenc",
-    cloudctl: "byok",
-    ekm: "db",
-    certs: "cert-overview",
-    hsm: "hsm-generic",
-    cluster: "topology",
-    playbooks: "overview",
-    admin: "system"
-  }));
+  const [subPaneSelection, setSubPaneSelection] = useState<any>(() => {
+    const linked = parseNavHash(window.location.hash);
+    return {
+      workbench: "crypto",
+      dataprotection: "fieldenc",
+      cloudctl: "byok",
+      ekm: "db",
+      certs: "cert-overview",
+      hsm: "hsm-generic",
+      cluster: "topology",
+      playbooks: "overview",
+      admin: "system",
+      ...(linked.tab && linked.sub ? { [linked.tab]: linked.sub } : {})
+    };
+  });
   // The one module whose sub-options are listed in the sidebar.
   const [expandedTab, setExpandedTab] = useState(tab);
 
@@ -455,8 +468,13 @@ export default function VectaDashboardV3Shell(props: Props) {
     [navGroups]
   );
 
+  // Set when the view changes without the user moving (a redirect, or Back
+  // to an address the view then completes): the address is replaced, so
+  // Back never lands on an entry that sends it forward again.
+  const navReplaceNext = useRef(false);
   useEffect(() => {
     if (!visibleTabIDs.includes(String(tab || ""))) {
+      navReplaceNext.current = true;
       setTab(String(visibleTabIDs[0] || "home"));
     }
   }, [tab, visibleTabIDs]);
@@ -473,7 +491,7 @@ export default function VectaDashboardV3Shell(props: Props) {
 
   const selectTab = (nextTab: string) => {
     try { localStorage.setItem(TAB_STORAGE_KEY, nextTab); } catch { /* ignored */ }
-    try { window.history.replaceState(null, "", `#${nextTab}`); } catch { /* ignored */ }
+    navReplaceNext.current = false;
     const paneItems = subPanesFor(nextTab);
     setExpandedTab(nextTab);
     // Use startTransition so React keeps the current tab visible until the new
@@ -487,16 +505,39 @@ export default function VectaDashboardV3Shell(props: Props) {
     });
   };
 
-  // One-time cleanup: strip query params, set hash to current tab
+  // The address follows the view: the first write replaces (and drops any
+  // query string), later ones add a history entry.
+  const navHash = `#${tab}${activePaneItems.length && activeSubPaneSelection ? `/${activeSubPaneSelection}` : ""}`;
+  const navHashWritten = useRef(false);
   useEffect(() => {
     try {
-      if (window.location.search) {
-        window.history.replaceState(null, "", window.location.pathname + `#${tab}`);
-      } else if (!window.location.hash) {
-        window.history.replaceState(null, "", `#${tab}`);
+      if (!navHashWritten.current || navReplaceNext.current || window.location.search) {
+        window.history.replaceState(null, "", window.location.pathname + navHash);
+      } else if (window.location.hash !== navHash) {
+        window.history.pushState(null, "", navHash);
       }
     } catch { /* ignored */ }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    navHashWritten.current = true;
+    navReplaceNext.current = false;
+  }, [navHash]);
+
+  // Back, Forward, or an edited address: open the view it names.
+  useEffect(() => {
+    const follow = () => {
+      const linked = parseNavHash(window.location.hash);
+      if (!linked.tab) return;
+      navReplaceNext.current = true;
+      setTab(linked.tab);
+      setExpandedTab(linked.tab);
+      if (linked.sub) setSubPaneSelection((prev: any) => ({ ...prev, [linked.tab]: linked.sub }));
+    };
+    window.addEventListener("popstate", follow);
+    window.addEventListener("hashchange", follow);
+    return () => {
+      window.removeEventListener("popstate", follow);
+      window.removeEventListener("hashchange", follow);
+    };
+  }, []);
 
   const Tab = TABS[tab] || DashboardTab;
 
@@ -704,6 +745,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                       items={subItems}
                       activeId={isActive ? activeSubPaneSelection : ""}
                       onSelect={(subId) => {
+                        navReplaceNext.current = false;
                         setSubPaneSelection((prev: any) => ({ ...prev, [it.id]: subId }));
                         setSubNavTick((n) => n + 1);
                         if (!isActive) selectTab(it.id);
@@ -746,7 +788,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                   {session?.username || "admin"}
                 </div>
                 <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.4 }}>
-                  {isSystemAdminSession(session) ? "System Admin" : "Admin"}
+                  {isSystemAdminSession(session) ? "System Admin" : String(session?.role || "User")}
                 </div>
               </div>
               <button
@@ -968,7 +1010,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                   onUnreadSync={setReportedUnread}
                   subView={activeSubPaneSelection}
                   subViewTick={subNavTick}
-                  onSubViewChange={(next: string) => setSubPaneSelection((prev: any) => ({ ...prev, [tab]: String(next || "") }))}
+                  onSubViewChange={(next: string) => { navReplaceNext.current = false; setSubPaneSelection((prev: any) => ({ ...prev, [tab]: String(next || "") })); }}
                   pinnedTabs={pinnedTabs}
                   onTogglePin={togglePin}
                   onNavigate={(tabId: string) => selectTab(tabId)}

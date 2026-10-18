@@ -2411,6 +2411,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "certs-get-certs-summary",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /certs/summary",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/certs/summary?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/certs/summary?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "certs-get-est-well-known-est-cacerts",
     "group": "Certificates / PKI (certs)",
     "title": "GET /est/.well-known/est/cacerts",

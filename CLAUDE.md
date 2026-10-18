@@ -369,6 +369,23 @@ an approach, record it here or in the matching doc below.
   `chartDrill.tsx`), and the server counts the whole window, never a sample.
   Its buckets come from `pkg/timebucket`.
 
+- **A number on a page is counted by its service over the whole set**
+  (13.21.0-beta, after the Command Center, Operations and Certificates
+  showed 49, 500 and 723 expiring certificates for one tenant). A page
+  never counts over a list it fetched: lists are paged and capped. A store
+  call that is asked for more rows than it returns is a fault: callers page
+  through (certs `allCertificates`, `TestNoCertificateListPastTheStoreCap`).
+  Two pages showing the same quantity read the same endpoint.
+
+- **The console shows a module only to someone who can read its data**
+  (13.21.0-beta). A module whose data needs a permission names it in
+  `MODULE_READ` (`web/dashboard/src/config/moduleRegistry.ts`;
+  `tests/unit/moduleAccess.test.ts` checks the permission guards a real GET
+  route). "System Admin" in the console is the server's platform
+  administrator (root tenant and `auth.tenant.read`/`write`), never the
+  tenant alone. Every view has an address (`#module/sub-option`) with real
+  history; the shell writes it, and nothing else does.
+
 - **Sub-options live in the sidebar** (owner directive, 2026-10-11: "not
   have sub tab", "the options should be as a sub option on the left when I
   expand", "for every sub tab", "click on the name to expand"). A module

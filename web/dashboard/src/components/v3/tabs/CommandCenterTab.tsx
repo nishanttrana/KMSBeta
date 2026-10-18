@@ -126,7 +126,7 @@ function SevPill({ s }: { s: Severity }) {
   );
 }
 
-function ScoreRing({ score, grade, assessed }: { score: number; grade: string; assessed: number }) {
+function ScoreRing({ score, grade, assessed }: { score: number; grade: string; assessed: number; total: number }) {
   const r = 52;
   const circ = 2 * Math.PI * r;
   const color = !assessed ? C.muted : score >= 80 ? C.greenFg : score >= 65 ? C.amberFg : C.redFg;
@@ -139,7 +139,7 @@ function ScoreRing({ score, grade, assessed }: { score: number; grade: string; a
         transform="rotate(-90 66 66)" style={{ transition: "stroke-dasharray .6s ease" }}
       />
       <text x="66" y="64" textAnchor="middle" fontSize="30" fontWeight="650" fill={C.text} fontFamily="inherit">{assessed ? score : "–"}</text>
-      <text x="66" y="86" textAnchor="middle" fontSize="12" fill={C.muted} fontFamily="inherit">Grade {grade}</text>
+      <text x="66" y="86" textAnchor="middle" fontSize="12" fill={C.muted} fontFamily="inherit">{assessed ? `Grade ${grade}` : "not assessed"}</text>
     </svg>
   );
 }
@@ -277,10 +277,8 @@ export const CommandCenterTab = ({ session, fipsMode, clustered, onNavigate }: P
   // A scan summary without its counts is no scan: show "no scan on record", never NaN.
   const pqcScan = snapshot?.pqc && Number.isFinite(snapshot.pqc.total_assets) ? snapshot.pqc : null;
   const pqcExposed = snapshot?.keyAlgorithms ? activeKeys.filter((k) => keyFacts(snapshot, k.algorithm)?.quantum_vulnerable).length : null;
-  const certsSoon = (snapshot?.certs || []).filter((c) => {
-    const e = Date.parse(c.not_after || "");
-    return !/revoked|deleted/i.test(c.status) && Number.isFinite(e) && e - now < 30 * 86_400_000;
-  }).length;
+  // Counted by the certs service over every certificate (13.21.0-beta).
+  const certSum = snapshot?.certSummary;
   const bySev = SEVERITY_ORDER.map((s) => visible.filter((r) => r.severity === s).length);
   // Real encrypted backups (governance); the Backup tab scheduler is a preview.
   const lastBackup = (snapshot?.backups || []).filter((b) => b.status === "completed").map((b) => Date.parse(b.completed_at || b.created_at || "")).sort((a, b) => b - a)[0];
@@ -311,9 +309,9 @@ export const CommandCenterTab = ({ session, fipsMode, clustered, onNavigate }: P
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 14, fontWeight: 600 }}>Key management posture</div>
             <div style={{ fontSize: 12.5, color: C.dim, marginTop: 4, lineHeight: 1.5 }}>
-              {score.assessed
-                ? <>{checks.filter((c) => c.status === "pass").length} of {score.assessed} controls passing. {visible.length ? `${visible.length} open recommendation${visible.length > 1 ? "s" : ""}.` : "No open recommendations."}</>
-                : loading ? "Collecting live state…" : "No data sources reachable yet."}
+              {loading && !snapshot ? "Collecting live state…" : <>
+                {checks.filter((c) => c.status === "pass").length} of {checks.filter((c) => c.status !== "unknown").length} assessed controls passing ({score.total} in all). {visible.length ? `${visible.length} open recommendation${visible.length > 1 ? "s" : ""}.` : "No open recommendations."}
+              </>}
             </div>
             <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
               {SEVERITY_ORDER.map((s, i) => bySev[i] ? <span key={s} style={{ fontSize: 11, color: SEV_COLOR[s].fg, background: SEV_COLOR[s].bg, borderRadius: 4, padding: "1px 8px" }}>{bySev[i]} {SEV_COLOR[s].label.toLowerCase()}</span> : null)}
@@ -321,7 +319,7 @@ export const CommandCenterTab = ({ session, fipsMode, clustered, onNavigate }: P
           </div>
         </div>
         <Kpi icon={KeyRound} label="Active keys" value={snapshot?.keys ? activeKeys.length.toLocaleString() : "—"} sub={!snapshot?.keys ? "keycore unreachable" : pqcExposed === null ? "quantum exposure not assessed" : `${pqcExposed} quantum-vulnerable`} />
-        <Kpi icon={FileCheck2} label="Certs expiring ≤30d" value={snapshot?.certs ? String(certsSoon) : "—"} sub={snapshot?.certs ? `${snapshot.certs.length} certificates tracked` : "PKI not reachable"} tone={certsSoon ? C.amberFg : undefined} />
+        <Kpi icon={FileCheck2} label={`Certs expiring ≤${certSum?.alert_days ?? 30}d`} value={certSum ? certSum.expiring.toLocaleString() : "—"} sub={certSum ? `${certSum.total.toLocaleString()} certificates tracked` : "PKI not reachable"} tone={certSum?.expiring ? C.amberFg : undefined} />
         <Kpi icon={Atom} label="PQC or hybrid assets" value={pqcScan ? `${pqcScan.pqc_ready_assets + pqcScan.hybrid_assets} / ${pqcScan.total_assets}` : "—"} sub={pqcScan ? `${pqcScan.classical_assets} classical, latest scan` : "no scan on record"} />
         <Kpi icon={LifeBuoy} label="Last good backup" value={lastBackup ? `${Math.max(0, Math.floor((now - lastBackup) / 86_400_000))}d` : "—"} sub={lastBackup ? new Date(lastBackup).toLocaleDateString() : snapshot?.backups ? "none completed" : "not assessed"} tone={!lastBackup && snapshot?.backups ? C.redFg : undefined} />
       </div>
