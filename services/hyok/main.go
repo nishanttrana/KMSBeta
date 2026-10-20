@@ -120,6 +120,11 @@ func main() {
 		}
 	}()
 
+	azureSrv, err := startAzureListener(ctx, azureListenerConfigFromEnv(), NewAzureEKMHandler(svc, envOr("BUILD_VERSION", "dev")), logger.Printf)
+	if err != nil {
+		logger.Fatalf("refusing to start: %v", err)
+	}
+
 	grpcPort := envOr("GRPC_PORT", "18120")
 	tlsCfg, err := devMTLSConfig()
 	if err != nil {
@@ -149,6 +154,9 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_ = httpSrv.Shutdown(shutdownCtx)
+	if azureSrv != nil {
+		_ = azureSrv.Shutdown(shutdownCtx)
+	}
 	grpcSrv.GracefulStop()
 }
 

@@ -30,7 +30,6 @@ var connectionUsers = map[string]string{
 	"kms-governance": "approval_notice",
 	"kms-discovery":  "scan_source",
 	"kms-cloud":      "cloud_account",
-	"kms-ekm":        "azure_ekm",
 	"kms-hsm":        "hsm_session",
 }
 
@@ -201,7 +200,7 @@ type ConnectionUsage interface {
 // service identity.
 type platformUsage struct {
 	auditURL, governanceURL, discoveryURL string
-	cloudURL, ekmURL, keycoreURL, hsmURL  string
+	cloudURL, keycoreURL, hsmURL          string
 	http                                  *http.Client
 }
 

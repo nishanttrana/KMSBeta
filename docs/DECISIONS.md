@@ -7,6 +7,37 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-21 — Azure EKM is a HYOK protocol on its own mTLS listener
+**Decision:** Azure EKM is Azure Managed HSM external key management: the
+hyok service implements the EKM Proxy API (`0.1-preview`) and Managed HSM
+calls it to wrap and unwrap with a key that stays in the KMS. It is served
+on the hyok service's own TLS 1.3 listener, not Envoy's edge, and the
+Managed HSM client certificate is the credential, checked per request
+against the CA and subject CN on the tenant's endpoint (found by path
+prefix). The listener serves the `https` edge certificate. The old "Azure
+EKM" page and its ekm-service routes are removed (owner: "azure ekm should
+be under HYOK"; chose "rebuild as real HYOK").
+**Why:** the old page had Azure generate its own key in Key Vault, called
+it an import, never used the Vecta key (and sent empty material to Managed
+HSM): a BYOK-shaped feature under an EKM name, and BYOK has its own real
+path. Microsoft's protocol needs mutual TLS, which Envoy's edge does not
+verify (rule 4: behind Envoy the peer is always Envoy). On a listener with
+no proxy in front, the TLS peer is the caller, and verifying its
+certificate is verifying a credential.
+**Rejected:** moving the page under HYOK as it was (a mislabelled
+feature); terminating Azure's mTLS at Envoy and trusting a header (the
+service would trust Envoy's word, not a credential it verified); a separate
+edge certificate for this listener (more certificate plumbing for the same
+host name; can follow if a customer needs a distinct one); governance
+approval on this endpoint (Managed HSM waits 250 ms).
+**Enforced:** `TestAzureEKMWrapsAndUnwrapsOverMutualTLS`,
+`TestAzureEKMRefusesUntrustedCallersAndBadRequests`,
+`TestAzureEndpointSettingsAreChecked`, keycore
+`TestWrapAlgorithmA256KWSurvivesRotation`; a forwarded header is dropped so
+`clientip.From` reads the connection; `tests/hyok-azure.spec.ts`.
+
+---
+
 ## 2026-10-20 — Approval policies live in Approvals, backups in Backup & Restore
 **Decision:** approval policies are managed only in Approvals → Policies, and
 encrypted backups only in Backup & Restore → Encrypted Backups (owner:

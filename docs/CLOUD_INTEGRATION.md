@@ -682,6 +682,38 @@ keeps the sizes of what was sent and returned (`plaintext_bytes`,
 stored each request and response whole, keys included, and migration
 `002_request_log_without_key_bytes.sql` removes them from older rows.
 
+### 2.6 Azure Managed HSM External Key Management (Azure EKM)
+
+Managed HSM keeps a reference to a key that stays in the KMS and calls the
+KMS to wrap and unwrap Azure services' data keys (EKM Proxy API
+`0.1-preview`, 13.30.0-beta). Nothing is created or imported in Azure; to
+put key material into Azure, use Cloud BYOK.
+
+- **Listener.** The hyok service's own TLS 1.3 listener (`AZURE_EKM_PORT`,
+  compose `8443`, host port `AZURE_EKM_HOST_PORT`), serving the external
+  edge certificate chosen in the PKI tab. Managed HSM's EKM connection is
+  `https://<kms host>:8443/<path prefix>`, trusting the CA that issued that
+  certificate.
+- **Who may call.** A client certificate is required at the handshake and
+  checked per request against the endpoint's `client_ca_pem` (chain,
+  validity, client-auth usage) and `client_subject_cn`. The endpoint is
+  found by its path prefix, unique across tenants. A forwarded-address
+  header is dropped: no proxy stands in front of this listener.
+- **Keys.** Each key name Managed HSM uses maps to one Vecta key: AES-256
+  (`A256KW`, `A256KWP`) or RSA 2048/3072/4096 (`RSA-OAEP-256`,
+  `RSA-OAEP`). `metadata` returns `n` and `e` for RSA keys. Unwrap finds the
+  key version that wrapped the value, so rotating the Vecta key doesn't
+  strand data wrapped before.
+- **Controls.** Wrap and unwrap go through the HYOK pipeline: the
+  endpoint's policy, key access justifications, the request log (sizes
+  only) and audit. Governance approval is refused for this endpoint:
+  Managed HSM waits 250 ms.
+- **FIPS strict mode** allows only RSA keys with `RSA-OAEP-256`.
+- **Health.** Managed HSM calls `info` about three times a minute; HYOK
+  health shows when it last reached the node (`last_probe_at`).
+
+Console: **Cloud Key Control → HYOK → Azure EKM → Configure**.
+
 ## 3. EKM (External Key Manager)
 
 ### 3.1 Database Transparent Data Encryption (TDE)

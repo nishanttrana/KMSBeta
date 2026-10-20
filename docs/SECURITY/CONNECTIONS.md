@@ -122,7 +122,10 @@ from `GET /compliance/connections?type=`.
   types. An account holds a credential ID; every provider call opens it and
   keeps the fields in memory for that call. With an AWS `role_arn` the
   access key only calls `sts:AssumeRole`.
-- **Azure EKM** (8.0.0-beta) is admitted as `kms-ekm` for `azure` only.
+- **Azure EKM** vaults (8.0.0-beta) were admitted as `kms-ekm` for
+  `azure`; the feature was removed in 13.30.0-beta and `kms-ekm` opens no
+  credential. Azure EKM is now a HYOK protocol that needs none: Managed HSM
+  authenticates to the KMS with its client certificate.
 - **The HSM connector** (8.0.0-beta) is admitted as `kms-hsm` for
   `pkcs11_hsm` only, and caches an opened credential for 15 seconds, as it
   does a profile. The library path is confined to the provider workspace
@@ -216,8 +219,8 @@ governance for its notice settings, as `kms-compliance`. If either service
 can't answer, the delete is refused (`connection_usage_unverified`): a
 silently broken SIEM feed is worse than a delayed delete.
 
-Since 8.0.0-beta the same guard covers cloud accounts and Azure EKM vaults
-(asked of the cloud and ekm services), the governance mail relay, and HSM
+Since 8.0.0-beta the same guard covers cloud accounts (asked of the cloud
+service; Azure EKM vaults until 13.30.0-beta), the governance mail relay, and HSM
 keys (asked of keycore, which counts live keys only: a destroyed key's
 objects are gone from the HSM).
 
@@ -257,6 +260,8 @@ the store won't take keeps working from its own copy and is reported once.
   cloud exposure register listed it.
 - **Azure EKM vaults** kept the client secret in **plaintext**.
   `pbconn_ekm_<config id>`, recorded as exposed: rotate the secret in Entra.
+  (Feature removed in 13.30.0-beta; migration `011_drop_azure_ekm.sql`
+  drops its tables. Database backups made before still hold old rows.)
 - **Governance** kept the SMTP host, account and password in
   **plaintext**. `pbconn_governance_governance_smtp`, recorded as exposed
   when a password was stored: change it on the relay.

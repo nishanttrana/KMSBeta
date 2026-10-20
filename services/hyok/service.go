@@ -27,6 +27,7 @@ type Service struct {
 	governance GovernanceClient
 	events     EventPublisher
 	keyAccess  pkgkeyaccess.Gate
+	azure      azureProbes
 }
 
 func NewService(store Store, keycore KeyCoreClient, policy PolicyClient, governance GovernanceClient, events EventPublisher) *Service {
@@ -56,7 +57,16 @@ func (s *Service) ConfigureEndpoint(ctx context.Context, cfg EndpointConfig) (En
 	if cfg.AuthMode == "" {
 		return EndpointConfig{}, newServiceError(http.StatusBadRequest, "bad_request", "invalid auth_mode")
 	}
-	if cfg.AuthMode == AuthModeMTLS {
+	if cfg.Protocol == ProtocolAzureEKM {
+		// Azure has its own listener, which verifies the Managed HSM client
+		// certificate against this endpoint's CA and subject CN.
+		if err := s.validateAzureEndpoint(ctx, &cfg); err != nil {
+			_ = s.publishAudit(ctx, "audit.hyok.endpoint_refused", cfg.TenantID, map[string]interface{}{
+				"protocol": cfg.Protocol, "reason": err.Error(), "result": "refused", "severity": "warning",
+			})
+			return EndpointConfig{}, err
+		}
+	} else if cfg.AuthMode == AuthModeMTLS {
 		// Envoy's edge listener does not verify client certificates, so no
 		// request could ever prove an mTLS identity; refuse rather than store a
 		// mode that looks enforced.
@@ -91,7 +101,7 @@ func (s *Service) ListEndpoints(ctx context.Context, tenantID string) ([]Endpoin
 	for _, item := range current {
 		index[item.Protocol] = item
 	}
-	protocols := []string{ProtocolDKE, ProtocolSalesforce, ProtocolGoogleEKM, ProtocolGeneric, ProtocolServiceNow, ProtocolAlibaba}
+	protocols := []string{ProtocolDKE, ProtocolSalesforce, ProtocolGoogleEKM, ProtocolGeneric, ProtocolServiceNow, ProtocolAlibaba, ProtocolAzureEKM}
 	out := make([]EndpointConfig, 0, len(protocols))
 	for _, p := range protocols {
 		if item, ok := index[p]; ok {
@@ -188,6 +198,13 @@ func (s *Service) Health(ctx context.Context, tenantID string) (map[string]inter
 			"reason":     reason,
 			"configured": configured,
 			"enabled":    item.Enabled,
+		}
+		if protocol == ProtocolAzureEKM {
+			// Managed HSM's health probe (POST info) on this node; empty
+			// until it first reaches the listener.
+			if at := s.azure.get(tenantID); !at.IsZero() {
+				protocolStatuses[protocol]["last_probe_at"] = at.Format(time.RFC3339)
+			}
 		}
 	}
 
@@ -451,6 +468,12 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 	raw, callErr := s.keycoreDispatch(ctx, tenantID, keyID, operation, req)
 	if callErr != nil {
 		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", callErr.Error(), "", policyDecision)
+		// keycore's own refusal (bad ciphertext, key access, FIPS, ops
+		// limit) keeps its status; an unreachable keycore is a 502.
+		var kcErr keycoreError
+		if errors.As(callErr, &kcErr) && kcErr.Status >= 400 && kcErr.Status < 500 {
+			return ProxyCryptoResponse{}, newServiceError(kcErr.Status, firstNonEmpty(kcErr.Code, "keycore_refused"), kcErr.Message)
+		}
 		return ProxyCryptoResponse{}, newServiceError(http.StatusBadGateway, "keycore_failed", callErr.Error())
 	}
 	resp := ProxyCryptoResponse{
@@ -577,13 +600,13 @@ func (s *Service) GetDKEPublicKey(ctx context.Context, tenantID string, keyID st
 		return DKEPublicKeyResponse{}, newServiceError(http.StatusForbidden, "policy_denied", firstNonEmpty(policyReason, "blocked by policy"))
 	}
 
-	keyMeta, err := s.keycore.GetKey(ctx, tenantID, keyID)
+	keyMeta, err := s.keycore.PublicKey(ctx, tenantID, keyID)
 	if err != nil {
 		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", err.Error(), "", policyDecision)
 		return DKEPublicKeyResponse{}, newServiceError(http.StatusBadGateway, "keycore_failed", err.Error())
 	}
 	algorithm := strings.TrimSpace(firstString(keyMeta["algorithm"], "unknown"))
-	publicKey := strings.TrimSpace(firstString(keyMeta["public_key_pem"], keyMeta["public_key"]))
+	publicKey := strings.TrimSpace(firstString(keyMeta["public_key_pem"]))
 	format := "opaque"
 	if strings.Contains(publicKey, "BEGIN") {
 		format = "pem"
@@ -597,7 +620,7 @@ func (s *Service) GetDKEPublicKey(ctx context.Context, tenantID string, keyID st
 		Algorithm:  algorithm,
 		PublicKey:  publicKey,
 		Format:     format,
-		KeyVersion: extractInt(keyMeta["current_version"]),
+		KeyVersion: extractInt(keyMeta["version"]),
 	}
 	_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "success", mustJSON(out), "", "", policyDecision)
 	_ = s.publishAudit(ctx, "audit.hyok.dke_request", tenantID, map[string]interface{}{
@@ -676,12 +699,12 @@ func (s *Service) GetMicrosoftDKEKey(ctx context.Context, tenantID string, keyID
 		return MicrosoftDKEKeyResponse{}, newServiceError(http.StatusForbidden, "policy_denied", firstNonEmpty(policyReason, "blocked by policy"))
 	}
 
-	keyMeta, err := s.keycore.GetKey(ctx, tenantID, keyID)
+	keyMeta, err := s.keycore.PublicKey(ctx, tenantID, keyID)
 	if err != nil {
 		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", err.Error(), "", policyDecision)
 		return MicrosoftDKEKeyResponse{}, newServiceError(http.StatusBadGateway, "keycore_failed", err.Error())
 	}
-	publicKeyPEM := strings.TrimSpace(firstString(keyMeta["public_key_pem"], keyMeta["public_key"]))
+	publicKeyPEM := strings.TrimSpace(firstString(keyMeta["public_key_pem"]))
 	if publicKeyPEM == "" {
 		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", "public key is unavailable for key", "", policyDecision)
 		return MicrosoftDKEKeyResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "public key is unavailable for this key")
@@ -696,7 +719,7 @@ func (s *Service) GetMicrosoftDKEKey(ctx context.Context, tenantID string, keyID
 		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", err.Error(), "", policyDecision)
 		return MicrosoftDKEKeyResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "key is not RSA-compatible for DKE")
 	}
-	version := extractInt(keyMeta["current_version"])
+	version := extractInt(keyMeta["version"])
 	if version <= 0 {
 		version = 1
 	}
@@ -851,10 +874,16 @@ func (s *Service) keycoreDispatch(ctx context.Context, tenantID string, keyID st
 		if strings.TrimSpace(req.PlaintextB64) == "" {
 			return nil, errors.New("plaintext is required")
 		}
+		if req.WrapAlgorithm != "" {
+			return s.keycore.WrapAs(ctx, tenantID, keyID, req.PlaintextB64, req.WrapAlgorithm, req.ReferenceID)
+		}
 		return s.keycore.Wrap(ctx, tenantID, keyID, req.PlaintextB64, req.IVB64, req.ReferenceID)
 	case "unwrap":
 		if strings.TrimSpace(req.CiphertextB64) == "" {
 			return nil, errors.New("ciphertext is required")
+		}
+		if req.WrapAlgorithm != "" {
+			return s.keycore.UnwrapAs(ctx, tenantID, keyID, req.CiphertextB64, req.WrapAlgorithm)
 		}
 		return s.keycore.Unwrap(ctx, tenantID, keyID, req.CiphertextB64, req.IVB64)
 	default:
@@ -898,6 +927,8 @@ func protocolEventSubject(protocol string, operation string) string {
 		return "audit.hyok.servicenow_request"
 	case ProtocolAlibaba:
 		return "audit.hyok.alibaba_request"
+	case ProtocolAzureEKM:
+		return "audit.hyok.azure_ekm_request"
 	default:
 		return "audit.hyok.wrap_request"
 	}
@@ -912,7 +943,12 @@ func checkAuthMode(required string, actual string) error {
 	actual = strings.TrimSpace(strings.ToLower(actual))
 	switch required {
 	case AuthModeMTLS:
-		// Stored before mTLS was refused: no request can satisfy it.
+		// Only the Azure EKM listener verifies a client certificate and sets
+		// this mode (verifyAzureClient). Elsewhere it was stored before mTLS
+		// was refused, and no request can satisfy it.
+		if actual == AuthModeMTLS {
+			return nil
+		}
 		return errors.New("this endpoint requires mTLS, which the edge cannot verify; reconfigure it to jwt")
 	case AuthModeJWT:
 		if actual == "jwt" {

@@ -291,7 +291,7 @@ an approach, record it here or in the matching doc below.
   where credentials to be added first before it can be used", "under
   playbooks credentials"). Every URL, account, PIN, key or token the KMS
   uses to reach an external system (notification, ticketing, SIEM, scan
-  sources, cloud accounts, Azure EKM, mail relay, PKCS#11 HSMs) lives only
+  sources, cloud accounts, mail relay, PKCS#11 HSMs) lives only
   in compliance's sealed connections. A feature never takes a secret in its
   own form or API: it holds the credential's ID, checks the caller holds
   `compliance.connection.use` when it is attached, and opens it for each use
@@ -723,6 +723,12 @@ Security rules are explained in
   outbound address is checked where it is dialled (`pkg/ssrfguard`), not by
   hostname. A URL that carries a credential is a secret, and errors name
   only its host.
+- An audit event's subject starts with `audit.`; anything else never
+  reaches the AUDIT stream (Google CSE until 13.30.0-beta). A client never
+  maps an unknown name to a default value; it refuses (the HYOK console
+  saved ServiceNow settings onto Generic).
+- Before moving or renaming a feature, trace what it sends: "Azure EKM"
+  created Azure-native keys under an import label (13.30.0-beta).
 - A log, history or request record of a crypto call keeps sizes and the
   outcome, never the bytes sent or returned: the HYOK request log was an
   unsealed copy of every key it wrapped (13.29.0-beta).

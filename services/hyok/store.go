@@ -17,6 +17,9 @@ type Store interface {
 	GetEndpoint(ctx context.Context, tenantID string, protocol string) (EndpointConfig, error)
 	ListEndpoints(ctx context.Context, tenantID string) ([]EndpointConfig, error)
 	ListEnabledEndpointsByProtocol(ctx context.Context, protocol string) ([]EndpointConfig, error)
+	// ListEndpointsByProtocol is every tenant's endpoint for protocol,
+	// enabled or not (Azure EKM path prefixes are unique across tenants).
+	ListEndpointsByProtocol(ctx context.Context, protocol string) ([]EndpointConfig, error)
 	DeleteEndpoint(ctx context.Context, tenantID string, protocol string) error
 
 	CreateRequestLog(ctx context.Context, req ProxyRequestLog) error
@@ -95,6 +98,28 @@ func (s *SQLStore) ListEnabledEndpointsByProtocol(ctx context.Context, protocol 
 SELECT tenant_id, protocol, enabled, auth_mode, policy_id, governance_required, metadata_json, created_at, updated_at
 FROM hyok_endpoints
 WHERE protocol = $1 AND enabled = TRUE
+ORDER BY tenant_id
+`, protocol)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]EndpointConfig, 0)
+	for rows.Next() {
+		item, err := scanEndpoint(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) ListEndpointsByProtocol(ctx context.Context, protocol string) ([]EndpointConfig, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT tenant_id, protocol, enabled, auth_mode, policy_id, governance_required, metadata_json, created_at, updated_at
+FROM hyok_endpoints
+WHERE protocol = $1
 ORDER BY tenant_id
 `, protocol)
 	if err != nil {

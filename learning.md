@@ -3,6 +3,28 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-10-21
+
+### A feature named for a protocol it didn't speak (13.30.0-beta)
+- "Azure EKM" created keys in Azure and called it an import; the Vecta key
+  in each mapping was never read, and the Managed HSM path sent empty key
+  material. Nothing tested the import against what Azure received. Asked
+  to move it under HYOK, reading the code showed it wasn't HYOK at all.
+  **Before moving or relabelling a feature, trace what it sends; a label
+  is a claim.** The rebuild is tested over real mutual TLS, and the wire
+  value is opened directly with the key the KMS holds.
+
+### Three faults the old tests hid (13.30.0-beta)
+- HYOK's keycore double returned `public_key_pem` on `GET /keys/{id}`,
+  which keycore never does, so DKE public-key reads passed in tests and
+  failed for real. The double now answers only what the route returns.
+- Google CSE events went to `google_cse.*`, a subject outside `audit.>`:
+  every Workspace key unwrap was unaudited. A test now reads the subject
+  on the stream. **An audit event's subject starts with `audit.`.**
+- The console's HYOK client mapped any protocol it didn't know to
+  `generic`, so saving the ServiceNow card replaced the Generic endpoint.
+  **A client never turns an unknown name into a default; it fails.**
+
 ## 2026-10-20
 
 ### A request log is a copy of the request (13.29.0-beta)

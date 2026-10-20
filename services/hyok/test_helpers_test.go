@@ -13,6 +13,7 @@ import (
 	"testing"
 	pkgauth "vecta-kms/pkg/auth"
 
+	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 	pkgkeyaccess "vecta-kms/pkg/keyaccess"
 )
@@ -50,19 +51,26 @@ func (p *nopHYOKPublisher) Count(subject string) int {
 	return total
 }
 
+// fakeHYOKKeyCore answers in keycore's response shapes: GET /keys/{id}
+// carries no public key (GET /keys/{id}/public-key does), and WrapAs /
+// UnwrapAs do the named algorithm on key material it holds, so a test uses
+// what was produced.
 type fakeHYOKKeyCore struct {
-	mu   sync.Mutex
-	keys map[string]map[string]interface{}
+	mu       sync.Mutex
+	keys     map[string]map[string]interface{}
+	material map[string][]byte
+	calls    []string
 }
 
 var (
-	testRSAPublicPEM     string
-	testRSAPublicPEMOnce sync.Once
+	testRSAKey     *rsa.PrivateKey
+	testRSAKeyOnce sync.Once
 )
 
 func newFakeHYOKKeyCore() *fakeHYOKKeyCore {
 	return &fakeHYOKKeyCore{
-		keys: map[string]map[string]interface{}{},
+		keys:     map[string]map[string]interface{}{},
+		material: map[string][]byte{},
 	}
 }
 
@@ -72,47 +80,113 @@ func (f *fakeHYOKKeyCore) Seed(tenantID string, keyID string, algorithm string) 
 	if algorithm == "" {
 		algorithm = "AES-256"
 	}
-	publicKey := "-----BEGIN PUBLIC KEY-----\nFAKE\n-----END PUBLIC KEY-----"
-	if strings.Contains(strings.ToUpper(algorithm), "RSA") {
-		publicKey = getTestRSAPublicPEM()
-	}
 	f.keys[tenantID+":"+keyID] = map[string]interface{}{
 		"id":              keyID,
 		"algorithm":       algorithm,
+		"status":          "active",
 		"current_version": 1,
-		"public_key_pem":  publicKey,
 	}
+	m := make([]byte, 32)
+	_, _ = rand.Read(m)
+	f.material[tenantID+":"+keyID] = m
+}
+
+// SetStatus changes a seeded key's lifecycle status.
+func (f *fakeHYOKKeyCore) SetStatus(tenantID, keyID, status string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.keys[tenantID+":"+keyID]["status"] = status
+}
+
+func getTestRSAKey() *rsa.PrivateKey {
+	testRSAKeyOnce.Do(func() {
+		k, err := rsa.GenerateKey(rand.Reader, 2048)
+		if err != nil {
+			panic(err)
+		}
+		testRSAKey = k
+	})
+	return testRSAKey
 }
 
 func getTestRSAPublicPEM() string {
-	testRSAPublicPEMOnce.Do(func() {
-		priv, err := rsa.GenerateKey(rand.Reader, 2048)
-		if err != nil {
-			testRSAPublicPEM = "-----BEGIN PUBLIC KEY-----\nFAKE\n-----END PUBLIC KEY-----"
-			return
-		}
-		raw, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
-		if err != nil {
-			testRSAPublicPEM = "-----BEGIN PUBLIC KEY-----\nFAKE\n-----END PUBLIC KEY-----"
-			return
-		}
-		testRSAPublicPEM = string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: raw}))
-	})
-	return testRSAPublicPEM
+	raw, _ := x509.MarshalPKIXPublicKey(&getTestRSAKey().PublicKey)
+	return string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: raw}))
 }
 
 func (f *fakeHYOKKeyCore) GetKey(_ context.Context, tenantID string, keyID string) (map[string]interface{}, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	f.calls = append(f.calls, "GET /keys/"+keyID)
 	k, ok := f.keys[tenantID+":"+keyID]
 	if !ok {
-		return nil, errors.New("key not found")
+		return nil, keycoreError{Status: 404, Code: "not_found", Message: "key not found"}
 	}
 	out := map[string]interface{}{}
 	for kk, vv := range k {
 		out[kk] = vv
 	}
 	return out, nil
+}
+
+func (f *fakeHYOKKeyCore) PublicKey(ctx context.Context, tenantID string, keyID string) (map[string]interface{}, error) {
+	k, err := f.GetKey(ctx, tenantID, keyID)
+	if err != nil {
+		return nil, err
+	}
+	alg := firstString(k["algorithm"])
+	if !strings.Contains(strings.ToUpper(alg), "RSA") {
+		return nil, keycoreError{Status: 409, Code: "not_asymmetric", Message: "key has no public part"}
+	}
+	return map[string]interface{}{"key_id": keyID, "version": 1, "algorithm": alg, "format": "spki-pem", "public_key_pem": getTestRSAPublicPEM()}, nil
+}
+
+func (f *fakeHYOKKeyCore) WrapAs(ctx context.Context, tenantID string, keyID string, plaintextB64 string, alg string, _ string) (map[string]interface{}, error) {
+	k, err := f.GetKey(ctx, tenantID, keyID)
+	if err != nil {
+		return nil, err
+	}
+	plain, err := base64.StdEncoding.DecodeString(plaintextB64)
+	if err != nil {
+		return nil, keycoreError{Status: 400, Code: "bad_request", Message: "plaintext must be base64"}
+	}
+	var out []byte
+	if strings.Contains(strings.ToUpper(firstString(k["algorithm"])), "RSA") {
+		out, err = pkgcrypto.JWAWrapRSA(alg, &getTestRSAKey().PublicKey, plain)
+	} else {
+		f.mu.Lock()
+		m := f.material[tenantID+":"+keyID]
+		f.mu.Unlock()
+		out, err = pkgcrypto.JWAWrapAES(alg, m, plain)
+	}
+	if err != nil {
+		return nil, keycoreError{Status: 400, Code: "encrypt_failed", Message: err.Error()}
+	}
+	return map[string]interface{}{"key_id": keyID, "version": 1, "ciphertext": base64.StdEncoding.EncodeToString(out), "iv": ""}, nil
+}
+
+func (f *fakeHYOKKeyCore) UnwrapAs(ctx context.Context, tenantID string, keyID string, ciphertextB64 string, alg string) (map[string]interface{}, error) {
+	k, err := f.GetKey(ctx, tenantID, keyID)
+	if err != nil {
+		return nil, err
+	}
+	wrapped, err := base64.StdEncoding.DecodeString(ciphertextB64)
+	if err != nil {
+		return nil, keycoreError{Status: 400, Code: "bad_request", Message: "ciphertext must be base64"}
+	}
+	var out []byte
+	if strings.Contains(strings.ToUpper(firstString(k["algorithm"])), "RSA") {
+		out, err = pkgcrypto.JWAUnwrapRSA(alg, getTestRSAKey(), wrapped)
+	} else {
+		f.mu.Lock()
+		m := f.material[tenantID+":"+keyID]
+		f.mu.Unlock()
+		out, err = pkgcrypto.JWAUnwrapAES(alg, m, wrapped)
+	}
+	if err != nil {
+		return nil, keycoreError{Status: 400, Code: "decrypt_failed", Message: "the wrapped key does not open under this key version"}
+	}
+	return map[string]interface{}{"key_id": keyID, "version": 1, "plaintext": base64.StdEncoding.EncodeToString(out)}, nil
 }
 
 func (f *fakeHYOKKeyCore) Encrypt(_ context.Context, tenantID string, keyID string, plaintextB64 string, ivB64 string, _ string) (map[string]interface{}, error) {

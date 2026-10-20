@@ -13,6 +13,7 @@ import (
 func TestHandlerProtocolFlow(t *testing.T) {
 	h, _, keycore, _, _, _ := newHYOKHandler(t)
 	keycore.Seed("tenant-a", "key-1", "AES-256")
+	keycore.Seed("tenant-a", "dke-1", "RSA-2048")
 
 	wrapBody := []byte(`{"plaintext":"aGVsbG8=","iv":"aXYxMjM0NTY3ODkw"}`)
 	wrapReq := httptest.NewRequest(http.MethodPost, "/hyok/generic/v1/keys/key-1/wrap?tenant_id=tenant-a", bytes.NewReader(wrapBody))
@@ -45,7 +46,7 @@ func TestHandlerProtocolFlow(t *testing.T) {
 		t.Fatalf("unexpected unwrap response body=%s", unwrapRR.Body.String())
 	}
 
-	dkeReq := httptest.NewRequest(http.MethodGet, "/hyok/dke/v1/keys/key-1/publickey?tenant_id=tenant-a", nil)
+	dkeReq := httptest.NewRequest(http.MethodGet, "/hyok/dke/v1/keys/dke-1/publickey?tenant_id=tenant-a", nil)
 	dkeReq.Header.Set("Authorization", "Bearer jwt:tenant-a:operator")
 	dkeRR := httptest.NewRecorder()
 	h.ServeHTTP(dkeRR, dkeReq)

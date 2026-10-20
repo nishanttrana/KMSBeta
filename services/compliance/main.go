@@ -112,7 +112,6 @@ func main() {
 	usage := platformUsage{auditURL: strings.TrimRight(auditURL, "/"), governanceURL: urls.Governance,
 		discoveryURL: strings.TrimRight(envOr("DISCOVERY_URL", "https://discovery:8100"), "/"),
 		cloudURL:     strings.TrimRight(envOr("CLOUD_URL", "https://cloud:8080"), "/"),
-		ekmURL:       strings.TrimRight(envOr("EKM_URL", "https://ekm:8130"), "/"),
 		keycoreURL:   strings.TrimRight(keycoreURL, "/"),
 		hsmURL:       strings.TrimRight(envOr("HSM_CONNECTOR_URL", "https://hsm-connector:8430"), "/"),
 		http:         executor.platform}

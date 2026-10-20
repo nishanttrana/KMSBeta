@@ -9,6 +9,9 @@ const (
 	ProtocolGeneric    = "generic"
 	ProtocolServiceNow = "servicenow" // ServiceNow HYOK/Cache-Only Key
 	ProtocolAlibaba    = "alibaba"    // Alibaba Cloud EKM
+	// Azure Managed HSM external key management (EKM Proxy API), served on
+	// its own mTLS listener (azure_ekm.go).
+	ProtocolAzureEKM = "azure"
 )
 
 const (
@@ -81,6 +84,10 @@ type ProxyCryptoRequest struct {
 	ApproverEmails    []string `json:"approver_emails"`
 	// ApprovalRequestID retries a pending request once governance approved it.
 	ApprovalRequestID string `json:"approval_request_id,omitempty"`
+	// WrapAlgorithm asks keycore for a named wrap format (A256KW, A256KWP,
+	// RSA-OAEP-256, RSA-OAEP). Set only by the Azure EKM listener; no
+	// request body names it.
+	WrapAlgorithm string `json:"-"`
 }
 
 type ProxyCryptoResponse struct {

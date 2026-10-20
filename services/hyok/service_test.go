@@ -110,13 +110,19 @@ func TestServiceGovernancePendingApproval(t *testing.T) {
 func TestServiceGetDKEPublicKey(t *testing.T) {
 	svc, _, keycore, _, _, pub := newHYOKService(t)
 	ctx := context.Background()
-	keycore.Seed("tenant-4", "key-4", "AES-256")
+	// GET /keys/{id} carries no public key; the public part comes from
+	// /keys/{id}/public-key (13.30.0-beta: the double used to invent one).
+	keycore.Seed("tenant-4", "key-4", "RSA-2048")
 	resp, err := svc.GetDKEPublicKey(ctx, "tenant-4", "key-4", "/hyok/dke/v1/keys/key-4/publickey", AuthIdentity{Mode: "jwt", Subject: "tenant-4:cloud"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.KeyID != "key-4" || resp.PublicKey == "" {
+	if resp.KeyID != "key-4" || resp.PublicKey != strings.TrimSpace(getTestRSAPublicPEM()) || resp.Format != "pem" {
 		t.Fatalf("unexpected response %+v", resp)
+	}
+	keycore.Seed("tenant-4", "aes-4", "AES-256")
+	if _, err := svc.GetDKEPublicKey(ctx, "tenant-4", "aes-4", "/hyok/dke/v1/keys/aes-4/publickey", AuthIdentity{Mode: "jwt", Subject: "tenant-4:cloud"}); err == nil {
+		t.Fatal("an AES key served a DKE public key")
 	}
 	if pub.Count("audit.hyok.dke_request") == 0 {
 		t.Fatalf("expected dke_request audit event")

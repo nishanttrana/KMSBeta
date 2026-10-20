@@ -292,7 +292,7 @@ test("a module's sub-options expand under its name in the sidebar", async ({ pag
   const module = (label: string) => page.getByText(label, { exact: true }).first();
   const crumb = page.getByRole("navigation", { name: "Breadcrumb" });
   for (const [label, id, options] of [
-    ["Cloud Key Control", "cloudctl", ["BYOK", "HYOK", "Google CSE", "Azure EKM"]],
+    ["Cloud Key Control", "cloudctl", ["BYOK", "HYOK", "Google CSE"]],
     ["Certificates / PKI", "certs", ["Certificate Operations", "Enrollment Protocols", "Service mTLS"]],
     ["Administration", "admin", ["Health", "Runtime Crypto", "SNMP", "Tags", "Password Policy", "Login Security", "Key Access Hardening", "CLI / HSM", "Governance", "Alert Rules", "Tenant Administration", "User Management"]],
   ] as const) {

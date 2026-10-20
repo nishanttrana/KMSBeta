@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 	"vecta-kms/pkg/servicetoken"
@@ -17,7 +18,23 @@ type KeyCoreClient interface {
 	Decrypt(ctx context.Context, tenantID string, keyID string, ciphertextB64 string, ivB64 string) (map[string]interface{}, error)
 	Wrap(ctx context.Context, tenantID string, keyID string, plaintextB64 string, ivB64 string, referenceID string) (map[string]interface{}, error)
 	Unwrap(ctx context.Context, tenantID string, keyID string, ciphertextB64 string, ivB64 string) (map[string]interface{}, error)
+	// WrapAs and UnwrapAs produce and open a named wrap format
+	// (wrap_algorithm); the output carries no IV or version.
+	WrapAs(ctx context.Context, tenantID string, keyID string, plaintextB64 string, alg string, referenceID string) (map[string]interface{}, error)
+	UnwrapAs(ctx context.Context, tenantID string, keyID string, ciphertextB64 string, alg string) (map[string]interface{}, error)
+	// PublicKey is GET /keys/{id}/public-key: public_key_pem, version and
+	// algorithm of the current version. GET /keys/{id} carries no public key.
+	PublicKey(ctx context.Context, tenantID string, keyID string) (map[string]interface{}, error)
 }
+
+// keycoreError is keycore's answer to a refused call.
+type keycoreError struct {
+	Status  int
+	Code    string
+	Message string
+}
+
+func (e keycoreError) Error() string { return e.Message }
 
 type HTTPKeyCoreClient struct {
 	baseURL string
@@ -85,6 +102,27 @@ func (c *HTTPKeyCoreClient) Unwrap(ctx context.Context, tenantID string, keyID s
 	})
 }
 
+func (c *HTTPKeyCoreClient) WrapAs(ctx context.Context, tenantID string, keyID string, plaintextB64 string, alg string, referenceID string) (map[string]interface{}, error) {
+	return c.doJSON(ctx, http.MethodPost, "/keys/"+url.PathEscape(strings.TrimSpace(keyID))+"/wrap?tenant_id="+url.QueryEscape(strings.TrimSpace(tenantID)), map[string]interface{}{
+		"tenant_id":      strings.TrimSpace(tenantID),
+		"plaintext":      strings.TrimSpace(plaintextB64),
+		"wrap_algorithm": strings.TrimSpace(alg),
+		"reference_id":   strings.TrimSpace(referenceID),
+	})
+}
+
+func (c *HTTPKeyCoreClient) UnwrapAs(ctx context.Context, tenantID string, keyID string, ciphertextB64 string, alg string) (map[string]interface{}, error) {
+	return c.doJSON(ctx, http.MethodPost, "/keys/"+url.PathEscape(strings.TrimSpace(keyID))+"/unwrap?tenant_id="+url.QueryEscape(strings.TrimSpace(tenantID)), map[string]interface{}{
+		"tenant_id":      strings.TrimSpace(tenantID),
+		"ciphertext":     strings.TrimSpace(ciphertextB64),
+		"wrap_algorithm": strings.TrimSpace(alg),
+	})
+}
+
+func (c *HTTPKeyCoreClient) PublicKey(ctx context.Context, tenantID string, keyID string) (map[string]interface{}, error) {
+	return c.doJSON(ctx, http.MethodGet, "/keys/"+url.PathEscape(strings.TrimSpace(keyID))+"/public-key?tenant_id="+url.QueryEscape(strings.TrimSpace(tenantID)), nil)
+}
+
 func (c *HTTPKeyCoreClient) doJSON(ctx context.Context, method string, path string, payload interface{}) (map[string]interface{}, error) {
 	if strings.TrimSpace(c.baseURL) == "" {
 		return nil, errors.New("keycore base url is empty")
@@ -118,7 +156,11 @@ func (c *HTTPKeyCoreClient) doJSON(ctx context.Context, method string, path stri
 		if msg == "" {
 			msg = "keycore request failed"
 		}
-		return nil, errors.New(msg)
+		code := ""
+		if e, ok := out["error"].(map[string]interface{}); ok {
+			code, _ = e["code"].(string)
+		}
+		return nil, keycoreError{Status: resp.StatusCode, Code: code, Message: msg}
 	}
 	return out, nil
 }

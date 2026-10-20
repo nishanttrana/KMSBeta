@@ -65,19 +65,6 @@ type Store interface {
 	CountBitLockerRecoveryKeys(ctx context.Context, tenantID string, clientID string) (int, error)
 	PurgeBitLockerClient(ctx context.Context, tenantID string, clientID string) (int, int, int, error)
 
-	// Azure EKM
-	CreateAzureEKMConfig(ctx context.Context, cfg AzureEKMConfig) error
-	GetAzureEKMConfig(ctx context.Context, tenantID, configID string) (AzureEKMConfig, error)
-	ListLegacyAzureSecrets(ctx context.Context) ([]AzureEKMConfig, error)
-	SetAzureConfigConnection(ctx context.Context, tenantID, configID, connectionID string) error
-	ListAzureEKMConfigs(ctx context.Context, tenantID string) ([]AzureEKMConfig, error)
-	UpdateAzureEKMConfig(ctx context.Context, cfg AzureEKMConfig) error
-	DeleteAzureEKMConfig(ctx context.Context, tenantID, configID string) error
-	CreateAzureKeyMapping(ctx context.Context, m AzureKeyMapping) error
-	ListAzureKeyMappings(ctx context.Context, tenantID, configID string) ([]AzureKeyMapping, error)
-	UpdateAzureKeyMappingSync(ctx context.Context, tenantID, mappingID, azureKeyID, azureKeyVersion, syncStatus string) error
-	DeleteAzureKeyMapping(ctx context.Context, tenantID, mappingID string) error
-
 	// Google CSE KACLS
 	CreateGoogleCSEConfig(ctx context.Context, cfg GoogleCSEConfig) error
 	GetGoogleCSEConfig(ctx context.Context, tenantID, configID string) (GoogleCSEConfig, error)

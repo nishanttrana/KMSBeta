@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { LayoutGrid, List, RefreshCcw } from "lucide-react";
 import { B, Btn, Card, Chk, FG, Inp, Modal, Row2, Sel, usePromptDialog } from "../legacyPrimitives";
 import { C } from "../theme";
-import { CredentialPicker } from "../CredentialPicker";
 import { errMsg } from "../runtimeUtils";
 import {
   deleteBitLockerClient,
@@ -20,18 +19,6 @@ import {
   registerBitLockerClient,
   scanBitLockerWindows,
   revokeDatabaseTDE,
-  listAzureEKMConfigs,
-  createAzureEKMConfig,
-  deleteAzureEKMConfig,
-  testAzureConnection,
-  syncAzureKeys,
-  listAzureKeyMappings,
-  createAzureKeyMapping,
-  deleteAzureKeyMapping,
-  importKeyToAzure,
-  rotateAzureKey,
-  wrapAzureKey,
-  unwrapAzureKey,
   listGoogleCSEConfigs,
   createGoogleCSEConfig,
   deleteGoogleCSEConfig,
@@ -40,7 +27,6 @@ import {
   createGoogleCSEKey,
   deleteGoogleCSEKey
 } from "../../../lib/ekm";
-import type { AzureEKMConfig, AzureKeyMapping } from "../../../lib/ekm";
 import { EKMClients } from "./ekm/Clients";
 import { KMIPTab } from "./KMIPTab";
 
@@ -143,18 +129,6 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
   const [bitLockerSearch,setBitLockerSearch]=useState("");
   const promptDialog=usePromptDialog();
 
-  /* ── Azure EKM state ── */
-  const [azureConfigs,setAzureConfigs]=useState<AzureEKMConfig[]>([]);
-  const [azureMappings,setAzureMappings]=useState<AzureKeyMapping[]>([]);
-  const [azureLoading,setAzureLoading]=useState(false);
-  const [azureConfigForm,setAzureConfigForm]=useState({
-    azure_tenant_id:"", subscription_id:"", resource_group:"", vault_name:"", vault_url:"",
-    managed_hsm_name:"", managed_hsm_url:"", connection_id:"", auth_mode:"client_secret"
-  });
-  const [azureMappingForm,setAzureMappingForm]=useState({ config_id:"", vecta_key_id:"", azure_key_name:"", purpose:"tde" });
-  const [azureTestResults,setAzureTestResults]=useState<Record<string,{connected:boolean;error?:string}>>({});
-  const [azureSyncing,setAzureSyncing]=useState("");
-  const [azureOpLoading,setAzureOpLoading]=useState("");
 
   /* ── Google CSE state ── */
   const [googleCSEConfigs,setGoogleCSEConfigs]=useState<any[]>([]);
@@ -257,8 +231,6 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
       setAgents(items);
       try{ const dbItems=await listEKMDatabases(session); setDatabases(Array.isArray(dbItems)?dbItems:[]); }catch{ setDatabases([]); }
       try{ const blItems=await listBitLockerClients(session,1000); setBitLockerClients(Array.isArray(blItems)?blItems:[]); }catch{ setBitLockerClients([]); }
-      try{ const azCfgs=await listAzureEKMConfigs(session); setAzureConfigs(Array.isArray(azCfgs)?azCfgs:[]); }catch{ setAzureConfigs([]); }
-      try{ const azMaps=await listAzureKeyMappings(session); setAzureMappings(Array.isArray(azMaps)?azMaps:[]); }catch{ setAzureMappings([]); }
       try{ const gcseC=await listGoogleCSEConfigs(session); setGoogleCSEConfigs(Array.isArray(gcseC)?gcseC:[]); }catch{ setGoogleCSEConfigs([]); }
       try{ const gcseK=await listGoogleCSEKeys(session); setGoogleCSEKeys(Array.isArray(gcseK)?gcseK:[]); }catch{ setGoogleCSEKeys([]); }
     }catch(error){
@@ -588,118 +560,6 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
       )}
     </div>)}
 
-    {/* ═══════════════════════ AZURE EKM SUBTAB ═══════════════════════ */}
-    {subView==="azure"&&(<div>
-      {/* ── Summary stats bar ── */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:16}}>
-        {[
-          {label:"Vault Configs",value:azureConfigs.length,color:C.accent},
-          {label:"Key Mappings",value:azureMappings.length,color:C.blue||C.accent},
-          {label:"Synced",value:azureMappings.filter(m=>m.sync_status==="synced").length,color:C.green},
-          {label:"Pending",value:azureMappings.filter(m=>m.sync_status==="pending").length,color:C.amber},
-          {label:"Errors",value:azureMappings.filter(m=>m.sync_status==="error").length,color:C.red}
-        ].map(s=>(<Card key={s.label} style={{padding:"10px 14px",textAlign:"center"}}>
-          <div style={{fontSize:20,fontWeight:700,color:s.color}}>{s.value}</div>
-          <div style={{fontSize:11,color:C.dim}}>{s.label}</div>
-        </Card>))}
-      </div>
-
-      {/* ── Action bar ── */}
-      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-        <Btn onClick={()=>setModal("azure-add-config")}>+ Add Azure Vault</Btn>
-        <Btn onClick={()=>setModal("azure-add-mapping")}>+ Add Key Mapping</Btn>
-        <Btn onClick={()=>refresh(true)} disabled={loading}><RefreshCcw size={14}/> Refresh</Btn>
-      </div>
-
-      {/* ── Vault Configs Table ── */}
-      <B style={{fontSize:14,marginBottom:8,display:"block"}}>Azure Key Vault Configurations</B>
-      {azureConfigs.length===0?(<div style={{color:C.dim,fontSize:12,padding:16,textAlign:"center"}}>No Azure vault configurations. Click "+ Add Azure Vault" to connect.</div>):(
-        <div style={{border:"1px solid "+C.border,borderRadius:4,overflow:"hidden",marginBottom:24}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 100px 80px 180px",padding:"8px 12px",fontSize:11,fontWeight:600,color:C.dim,borderBottom:"1px solid "+C.border,background:C.surface}}>
-            <span>Vault Name</span><span>Azure Tenant</span><span>Auth Mode</span><span>Mappings</span><span>Status</span><span>Actions</span>
-          </div>
-          {azureConfigs.map(cfg=>(<div key={cfg.id} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 100px 80px 180px",padding:"8px 12px",fontSize:12,borderBottom:"1px solid "+C.border,alignItems:"center"}}>
-            <div>
-              <div style={{fontWeight:600}}>{cfg.vault_name}</div>
-              <div style={{fontSize:10,color:C.dim,fontFamily:"var(--font-mono)"}}>{cfg.vault_url}</div>
-              {cfg.managed_hsm_name&&(<div style={{fontSize:10,color:C.accentFg}}>HSM: {cfg.managed_hsm_name}</div>)}
-            </div>
-            <span style={{fontFamily:"var(--font-mono)",fontSize:10,color:C.dim}}>{cfg.azure_tenant_id}</span>
-            <span>{cfg.auth_mode}</span>
-            <span>{cfg.key_mappings}</span>
-            <span style={{color:cfg.status==="active"?C.greenFg:C.redFg}}>{cfg.status}</span>
-            <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-              <Btn onClick={async()=>{
-                setAzureTestResults(prev=>({...prev,[cfg.id]:{connected:false}}));
-                try{
-                  const res=await testAzureConnection(session,cfg.id);
-                  setAzureTestResults(prev=>({...prev,[cfg.id]:res}));
-                  onToast?.(res.connected?"Connection successful":"Connection failed: "+(res.error||"unknown"));
-                }catch(e){setAzureTestResults(prev=>({...prev,[cfg.id]:{connected:false,error:errMsg(e)}}));onToast?.(`Test failed: ${errMsg(e)}`);}
-              }} style={{fontSize:10,padding:"3px 8px"}}>Test</Btn>
-              <Btn onClick={async()=>{
-                setAzureSyncing(cfg.id);
-                try{
-                  const res=await syncAzureKeys(session,cfg.id);
-                  onToast?.(`Synced ${res.synced}/${res.total} keys`);
-                  await refresh(true);
-                }catch(e){onToast?.(`Sync failed: ${errMsg(e)}`);}finally{setAzureSyncing("");}
-              }} disabled={azureSyncing===cfg.id} style={{fontSize:10,padding:"3px 8px"}}>{azureSyncing===cfg.id?"Syncing...":"Sync"}</Btn>
-              <Btn onClick={async()=>{
-                if(!confirm("Delete this Azure vault configuration?")) return;
-                try{await deleteAzureEKMConfig(session,cfg.id);onToast?.("Config deleted");await refresh(true);}catch(e){onToast?.(`Delete failed: ${errMsg(e)}`);}
-              }} style={{fontSize:10,padding:"3px 8px",color:C.redFg}}>Delete</Btn>
-            </div>
-          </div>))}
-        </div>
-      )}
-
-      {/* ── Test results ── */}
-      {Object.keys(azureTestResults).length>0&&(<div style={{marginBottom:16}}>
-        {Object.entries(azureTestResults).map(([cfgId,res])=>{
-          const cfg=azureConfigs.find(c=>c.id===cfgId);
-          return (<div key={cfgId} style={{fontSize:12,padding:"6px 10px",background:res.connected?C.green+"15":C.red+"15",borderRadius:3,marginBottom:4}}>
-            <span style={{fontWeight:600}}>{cfg?.vault_name||cfgId}:</span>{" "}
-            <span style={{color:res.connected?C.greenFg:C.redFg}}>{res.connected?"Connected":"Failed"}</span>
-            {res.error&&(<span style={{color:C.redFg,marginLeft:8,fontSize:11}}>{res.error}</span>)}
-          </div>);
-        })}
-      </div>)}
-
-      {/* ── Key Mappings Table ── */}
-      <B style={{fontSize:14,marginBottom:8,display:"block"}}>Key Mappings (Vecta KMS to Azure)</B>
-      {azureMappings.length===0?(<div style={{color:C.dim,fontSize:12,padding:16,textAlign:"center"}}>No key mappings. Click "+ Add Key Mapping" to map a Vecta key to Azure.</div>):(
-        <div style={{border:"1px solid "+C.border,borderRadius:4,overflow:"hidden"}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 100px 80px 200px",padding:"8px 12px",fontSize:11,fontWeight:600,color:C.dim,borderBottom:"1px solid "+C.border,background:C.surface}}>
-            <span>Azure Key</span><span>Vecta Key</span><span>Azure Key ID</span><span>Purpose</span><span>Sync</span><span>Actions</span>
-          </div>
-          {azureMappings.map(m=>(<div key={m.id} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 100px 80px 200px",padding:"8px 12px",fontSize:12,borderBottom:"1px solid "+C.border,alignItems:"center"}}>
-            <span style={{fontWeight:600}}>{m.azure_key_name}</span>
-            <span style={{fontFamily:"var(--font-mono)",fontSize:10,color:C.dim}}>{m.vecta_key_id.slice(0,20)}</span>
-            <span style={{fontFamily:"var(--font-mono)",fontSize:10,color:C.dim}}>{m.azure_key_id?m.azure_key_id.split("/").slice(-2).join("/"):"(not imported)"}</span>
-            <span style={{textTransform:"uppercase",fontSize:10}}>{m.purpose}</span>
-            <span style={{color:m.sync_status==="synced"?C.greenFg:m.sync_status==="error"?C.redFg:C.amberFg,fontSize:11}}>{m.sync_status}</span>
-            <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-              <Btn onClick={async()=>{
-                setAzureOpLoading(`import-${m.id}`);
-                try{const res=await importKeyToAzure(session,m.id);onToast?.(`Imported: ${res.azure_key_id}`);await refresh(true);}catch(e){onToast?.(`Import failed: ${errMsg(e)}`);}finally{setAzureOpLoading("");}
-              }} disabled={azureOpLoading===`import-${m.id}`} style={{fontSize:10,padding:"3px 6px"}}>{azureOpLoading===`import-${m.id}`?"...":"Import"}</Btn>
-              <Btn onClick={async()=>{
-                setAzureOpLoading(`rotate-${m.id}`);
-                try{const res=await rotateAzureKey(session,m.id);onToast?.(`Rotated: v${res.new_version}`);await refresh(true);}catch(e){onToast?.(`Rotate failed: ${errMsg(e)}`);}finally{setAzureOpLoading("");}
-              }} disabled={azureOpLoading===`rotate-${m.id}`} style={{fontSize:10,padding:"3px 6px"}}>{azureOpLoading===`rotate-${m.id}`?"...":"Rotate"}</Btn>
-              <Btn onClick={()=>{setModal("azure-wrap");setAzureMappingForm(prev=>({...prev,config_id:m.id}));}} style={{fontSize:10,padding:"3px 6px"}}>Wrap</Btn>
-              <Btn onClick={()=>{setModal("azure-unwrap");setAzureMappingForm(prev=>({...prev,config_id:m.id}));}} style={{fontSize:10,padding:"3px 6px"}}>Unwrap</Btn>
-              <Btn onClick={async()=>{
-                if(!confirm("Delete this key mapping?")) return;
-                try{await deleteAzureKeyMapping(session,m.id);onToast?.("Mapping deleted");await refresh(true);}catch(e){onToast?.(`Delete failed: ${errMsg(e)}`);}
-              }} style={{fontSize:10,padding:"3px 6px",color:C.redFg}}>Del</Btn>
-            </div>
-          </div>))}
-        </div>
-      )}
-    </div>)}
-
     {/* ═══════════════════════ GOOGLE CSE SUBTAB ═══════════════════════ */}
     {subView==="google-cse"&&(<div>
       {/* ── Summary stats bar ── */}
@@ -1025,113 +885,6 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
           <div style={{fontSize:11,color:C.dim}}>{desc}</div>
         </Btn>))}
       </div>
-    </Modal>)}
-
-    {/* ── Azure Add Config Modal ── */}
-    {modal==="azure-add-config"&&(<Modal open={true} title="Add Azure Key Vault Connection" onClose={()=>setModal(null)}>
-      <Row2>
-        <FG label="Vault Name"><Inp value={azureConfigForm.vault_name} onChange={(e)=>setAzureConfigForm({...azureConfigForm,vault_name:e.target.value})} placeholder="my-keyvault"/></FG>
-        <FG label="Vault URL (auto-generated if empty)"><Inp value={azureConfigForm.vault_url} onChange={(e)=>setAzureConfigForm({...azureConfigForm,vault_url:e.target.value})} placeholder="https://my-keyvault.vault.azure.net"/></FG>
-      </Row2>
-      <Row2>
-        <FG label="Subscription ID"><Inp value={azureConfigForm.subscription_id} onChange={(e)=>setAzureConfigForm({...azureConfigForm,subscription_id:e.target.value})}/></FG>
-        <FG label="Resource Group"><Inp value={azureConfigForm.resource_group} onChange={(e)=>setAzureConfigForm({...azureConfigForm,resource_group:e.target.value})}/></FG>
-      </Row2>
-      <Row2>
-        <FG label="Managed HSM Name (optional)"><Inp value={azureConfigForm.managed_hsm_name} onChange={(e)=>setAzureConfigForm({...azureConfigForm,managed_hsm_name:e.target.value})}/></FG>
-        <FG label="Managed HSM URL (optional)"><Inp value={azureConfigForm.managed_hsm_url} onChange={(e)=>setAzureConfigForm({...azureConfigForm,managed_hsm_url:e.target.value})}/></FG>
-      </Row2>
-      <FG label="Sign-in"><Sel value={azureConfigForm.auth_mode} onChange={(e)=>setAzureConfigForm({...azureConfigForm,auth_mode:e.target.value})}>
-        <option value="client_secret">App registration (credential)</option><option value="managed_identity">Managed identity</option>
-      </Sel></FG>
-      {azureConfigForm.auth_mode==="managed_identity"
-        ? <FG label="Entra tenant ID"><Inp value={azureConfigForm.azure_tenant_id} onChange={(e)=>setAzureConfigForm({...azureConfigForm,azure_tenant_id:e.target.value})} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/></FG>
-        : <FG label="App registration credential" required>
-            <CredentialPicker session={session} type="azure" value={azureConfigForm.connection_id} onChange={(id:string)=>setAzureConfigForm({...azureConfigForm,connection_id:id})} onNavigate={onNavigate}/>
-          </FG>}
-      <div style={{fontSize:11,color:C.dim,marginTop:4}}>Vecta KMS will authenticate to Azure AD and manage keys in the specified Key Vault as an external key provider.</div>
-      <div style={{display:"flex",gap:8,marginTop:12}}>
-        <Btn onClick={async()=>{
-          setAzureLoading(true);
-          try{
-            await createAzureEKMConfig(session,azureConfigForm);
-            onToast?.("Azure vault config created");
-            setModal(null);
-            setAzureConfigForm({azure_tenant_id:"",subscription_id:"",resource_group:"",vault_name:"",vault_url:"",managed_hsm_name:"",managed_hsm_url:"",connection_id:"",auth_mode:"client_secret"});
-            await refresh(true);
-          }catch(e){onToast?.(`Failed: ${errMsg(e)}`);}finally{setAzureLoading(false);}
-        }} disabled={azureLoading||!azureConfigForm.vault_name||(azureConfigForm.auth_mode==="managed_identity"?!azureConfigForm.azure_tenant_id:!azureConfigForm.connection_id)}>{azureLoading?"Creating...":"Create Config"}</Btn>
-        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
-      </div>
-    </Modal>)}
-
-    {/* ── Azure Add Mapping Modal ── */}
-    {modal==="azure-add-mapping"&&(<Modal open={true} title="Add Key Mapping" onClose={()=>setModal(null)}>
-      <FG label="Vault Config"><Sel value={azureMappingForm.config_id} onChange={(e)=>setAzureMappingForm({...azureMappingForm,config_id:e.target.value})}>
-        <option value="">Select a vault...</option>
-        {azureConfigs.map(c=>(<option key={c.id} value={c.id}>{c.vault_name} ({c.vault_url})</option>))}
-      </Sel></FG>
-      <Row2>
-        <FG label="Vecta Key ID"><Inp value={azureMappingForm.vecta_key_id} onChange={(e)=>setAzureMappingForm({...azureMappingForm,vecta_key_id:e.target.value})} placeholder="key-xxxxxxxxxx"/></FG>
-        <FG label="Azure Key Name"><Inp value={azureMappingForm.azure_key_name} onChange={(e)=>setAzureMappingForm({...azureMappingForm,azure_key_name:e.target.value})} placeholder="vecta-tde-key-01"/></FG>
-      </Row2>
-      <FG label="Purpose"><Sel value={azureMappingForm.purpose} onChange={(e)=>setAzureMappingForm({...azureMappingForm,purpose:e.target.value})}>
-        <option value="tde">TDE (Database Encryption)</option><option value="always_encrypted">Always Encrypted</option><option value="storage">Azure Storage Encryption</option><option value="disk">Azure Disk Encryption</option>
-      </Sel></FG>
-      <div style={{fontSize:11,color:C.dim,marginTop:4}}>Maps a Vecta KMS key to an Azure Key Vault key. Use "Import" after creation to push the key to Azure.</div>
-      <div style={{display:"flex",gap:8,marginTop:12}}>
-        <Btn onClick={async()=>{
-          setAzureLoading(true);
-          try{
-            await createAzureKeyMapping(session,azureMappingForm);
-            onToast?.("Key mapping created");
-            setModal(null);
-            setAzureMappingForm({config_id:"",vecta_key_id:"",azure_key_name:"",purpose:"tde"});
-            await refresh(true);
-          }catch(e){onToast?.(`Failed: ${errMsg(e)}`);}finally{setAzureLoading(false);}
-        }} disabled={azureLoading||!azureMappingForm.config_id||!azureMappingForm.vecta_key_id||!azureMappingForm.azure_key_name}>{azureLoading?"Creating...":"Create Mapping"}</Btn>
-        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
-      </div>
-    </Modal>)}
-
-    {/* ── Azure Wrap Key Modal ── */}
-    {modal==="azure-wrap"&&(<Modal open={true} title="Wrap Key (Azure Key Vault)" onClose={()=>setModal(null)}>
-      <FG label="Plaintext (Base64)"><Inp value={azureMappingForm.vecta_key_id} onChange={(e)=>setAzureMappingForm({...azureMappingForm,vecta_key_id:e.target.value})} placeholder="Base64-encoded plaintext"/></FG>
-      <div style={{display:"flex",gap:8,marginTop:12}}>
-        <Btn onClick={async()=>{
-          setAzureLoading(true);
-          try{
-            const res=await wrapAzureKey(session,azureMappingForm.config_id,azureMappingForm.vecta_key_id);
-            onToast?.("Wrapped successfully");
-            setAzureMappingForm(prev=>({...prev,azure_key_name:res.wrapped}));
-          }catch(e){onToast?.(`Wrap failed: ${errMsg(e)}`);}finally{setAzureLoading(false);}
-        }} disabled={azureLoading}>{azureLoading?"Wrapping...":"Wrap"}</Btn>
-        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
-      </div>
-      {azureMappingForm.azure_key_name&&azureMappingForm.azure_key_name.length>20&&(<div style={{marginTop:12}}>
-        <B style={{fontSize:12}}>Wrapped Result:</B>
-        <pre style={{fontSize:10,background:C.surface,padding:8,borderRadius:4,maxHeight:120,overflow:"auto",wordBreak:"break-all"}}>{azureMappingForm.azure_key_name}</pre>
-      </div>)}
-    </Modal>)}
-
-    {/* ── Azure Unwrap Key Modal ── */}
-    {modal==="azure-unwrap"&&(<Modal open={true} title="Unwrap Key (Azure Key Vault)" onClose={()=>setModal(null)}>
-      <FG label="Ciphertext (Base64)"><Inp value={azureMappingForm.vecta_key_id} onChange={(e)=>setAzureMappingForm({...azureMappingForm,vecta_key_id:e.target.value})} placeholder="Base64-encoded ciphertext"/></FG>
-      <div style={{display:"flex",gap:8,marginTop:12}}>
-        <Btn onClick={async()=>{
-          setAzureLoading(true);
-          try{
-            const res=await unwrapAzureKey(session,azureMappingForm.config_id,azureMappingForm.vecta_key_id);
-            onToast?.("Unwrapped successfully");
-            setAzureMappingForm(prev=>({...prev,azure_key_name:res.unwrapped}));
-          }catch(e){onToast?.(`Unwrap failed: ${errMsg(e)}`);}finally{setAzureLoading(false);}
-        }} disabled={azureLoading}>{azureLoading?"Unwrapping...":"Unwrap"}</Btn>
-        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
-      </div>
-      {azureMappingForm.azure_key_name&&azureMappingForm.azure_key_name.length>20&&(<div style={{marginTop:12}}>
-        <B style={{fontSize:12}}>Unwrapped Result:</B>
-        <pre style={{fontSize:10,background:C.surface,padding:8,borderRadius:4,maxHeight:120,overflow:"auto",wordBreak:"break-all"}}>{azureMappingForm.azure_key_name}</pre>
-      </div>)}
     </Modal>)}
 
     {promptDialog.ui}

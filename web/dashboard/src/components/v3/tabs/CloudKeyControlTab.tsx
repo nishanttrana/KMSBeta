@@ -30,14 +30,13 @@ export const CloudKeyControlTab=({
       <Btn small primary={currentSubtab==="byok"} onClick={()=>selectSubtab("byok")}>BYOK</Btn>
       <Btn small primary={currentSubtab==="hyok"} onClick={()=>selectSubtab("hyok")}>HYOK</Btn>
       <Btn small primary={currentSubtab==="google-cse"} onClick={()=>selectSubtab("google-cse")}>Google CSE</Btn>
-      <Btn small primary={currentSubtab==="azure"} onClick={()=>selectSubtab("azure")}>Azure EKM</Btn>
     </div>}
     {currentSubtab==="hyok" && <HYOKTab session={session} keyCatalog={keyCatalog} onToast={onToast}/>}
-    {(currentSubtab==="google-cse"||currentSubtab==="azure") && (
+    {currentSubtab==="google-cse" && (
       <Suspense fallback={SubFallback}>
         <EKMTab session={session} keyCatalog={keyCatalog} onToast={onToast} subView={currentSubtab}/>
       </Suspense>
     )}
-    {currentSubtab!=="hyok" && currentSubtab!=="google-cse" && currentSubtab!=="azure" && <BYOKTab session={session} keyCatalog={keyCatalog} onToast={onToast}/>}
+    {currentSubtab!=="hyok" && currentSubtab!=="google-cse" && <BYOKTab session={session} keyCatalog={keyCatalog} onToast={onToast}/>}
   </div>;
 };

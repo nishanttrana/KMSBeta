@@ -174,3 +174,31 @@ func TestGoogleCSEConfigKeepsAuthenticationClientIDs(t *testing.T) {
 		t.Fatalf("config without client IDs accepted: %d %s", rr.Code, rr.Body.String())
 	}
 }
+
+// A Google CSE action is an audit event on audit.> (13.30.0-beta: it was
+// published to google_cse.*, which the audit stream never received).
+func TestGoogleCSEActionsReachTheAuditStream(t *testing.T) {
+	svc, store, _, pub := newEKMService(t)
+	migration, err := os.ReadFile("migrations/004_google_cse.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, q := range []string{string(migration), `ALTER TABLE ekm_google_cse_configs ADD COLUMN authentication_client_ids TEXT NOT NULL DEFAULT '[]'`} {
+		if _, err := store.db.SQL().Exec(q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	h := NewHandler(svc)
+	h.SetJWTParser(testEKMJWT)
+	req := httptest.NewRequest(http.MethodPost, "/ekm/google-cse/configs?tenant_id=t1",
+		strings.NewReader(`{"tenant_id":"t1","google_workspace_customer_id":"C2","allowed_domains":["corp.test"],"authentication_client_ids":["cse.apps.googleusercontent.com"]}`))
+	req.Header.Set("Authorization", "Bearer jwt:t1:admin")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code >= 300 {
+		t.Fatalf("create: %d %s", rr.Code, rr.Body.String())
+	}
+	if pub.Count("audit.ekm.google_cse_config_created") != 1 || pub.Count("google_cse.config.created") != 0 {
+		t.Fatalf("config creation was not audited on audit.>")
+	}
+}

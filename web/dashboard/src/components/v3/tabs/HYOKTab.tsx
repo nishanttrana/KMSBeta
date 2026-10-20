@@ -11,6 +11,8 @@ import {
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 import { B, Btn, Card, Chk, FG, Inp, Modal, Row2, Section, Sel, Txt, usePromptDialog } from "../legacyPrimitives";
+import { HYOKAzureConfig } from "./HYOKAzureConfig";
+import { HYOK_OPS_BY_PROTOCOL, HYOK_PROTOCOLS, HYOK_PROTOCOL_DETAILS, HYOK_PROTOCOL_KEY_HINTS, HYOK_PROTOCOL_LABELS, HYOK_PROTOCOL_URLS, HYOK_SETUP_GUIDES } from "./hyokProtocols";
 
 function formatAgo(value: unknown): string {
   const raw = String(value || "").trim();
@@ -61,125 +63,8 @@ function copyToClipboard(text: string) {
   try { navigator.clipboard.writeText(text); } catch { /* ignore */ }
 }
 
-const HYOK_PROTOCOL_LABELS: Record<string, string> = {
-  dke: "Microsoft DKE",
-  salesforce: "Salesforce Cache-Only",
-  google: "Google Cloud EKM",
-  generic: "Generic HYOK",
-  servicenow: "ServiceNow HYOK",
-  alibaba: "Alibaba Cloud EKM"
-};
-
-const HYOK_PROTOCOL_DETAILS: Record<string, string> = {
-  dke: "Double Key Encryption for Microsoft 365 / Purview Information Protection",
-  salesforce: "Shield Platform Encryption with Cache-Only Key Service",
-  google: "External Key Manager for Google Cloud CMEK",
-  generic: "Generic encrypt / decrypt / wrap / unwrap proxy",
-  servicenow: "ServiceNow Shield Platform Encryption with Cache-Only Key Service (HYOK)",
-  alibaba: "Alibaba Cloud External Key Manager for BYOK/EKM integration"
-};
-
-const HYOK_PROTOCOL_KEY_HINTS: Record<string, string> = {
-  dke: "Requires RSA key (2048+ bits). Public key is served via DKE endpoint for Microsoft clients.",
-  salesforce: "Supports AES-256 or RSA keys for wrap/unwrap operations.",
-  google: "Supports AES-256 or RSA keys for wrap/unwrap operations with Google Cloud CMEK.",
-  generic: "Any symmetric or asymmetric key supported by your Vecta KMS instance.",
-  servicenow: "Supports AES-256 keys for wrap/unwrap operations using AES-KWP (RFC 5649).",
-  alibaba: "Supports AES-256 keys for encrypt/decrypt operations using AES-256-GCM."
-};
-
-const HYOK_OPS_BY_PROTOCOL: Record<string, string[]> = {
-  dke: ["decrypt", "publickey"],
-  salesforce: ["wrap", "unwrap"],
-  google: ["wrap", "unwrap"],
-  generic: ["encrypt", "decrypt", "wrap", "unwrap"],
-  servicenow: ["wrap", "unwrap"],
-  alibaba: ["encrypt", "decrypt"]
-};
-
-const HYOK_PROTOCOL_URLS: Record<string, { path: string; methods: string; description: string }[]> = {
-  dke: [
-    { path: "/api/v1/keys/{keyId}", methods: "GET", description: "Microsoft-compatible public key endpoint (JWK format)" },
-    { path: "/api/v1/keys/{keyId}/decrypt", methods: "POST", description: "Microsoft-compatible DKE decrypt endpoint" },
-    { path: "/hyok/dke/v1/keys/{keyId}/publickey", methods: "GET", description: "Standard DKE public key endpoint" },
-    { path: "/hyok/dke/v1/keys/{keyId}/decrypt", methods: "POST", description: "Standard DKE decrypt endpoint" },
-  ],
-  salesforce: [
-    { path: "/hyok/salesforce/v1/keys/{keyId}/wrap", methods: "POST", description: "Salesforce key wrap endpoint" },
-    { path: "/hyok/salesforce/v1/keys/{keyId}/unwrap", methods: "POST", description: "Salesforce key unwrap endpoint" },
-  ],
-  google: [
-    { path: "/hyok/google/v1/keys/{keyId}/wrap", methods: "POST", description: "Google EKM key wrap endpoint" },
-    { path: "/hyok/google/v1/keys/{keyId}/unwrap", methods: "POST", description: "Google EKM key unwrap endpoint" },
-  ],
-  generic: [
-    { path: "/hyok/generic/v1/keys/{keyId}/encrypt", methods: "POST", description: "Generic encrypt endpoint" },
-    { path: "/hyok/generic/v1/keys/{keyId}/decrypt", methods: "POST", description: "Generic decrypt endpoint" },
-    { path: "/hyok/generic/v1/keys/{keyId}/wrap", methods: "POST", description: "Generic key wrap endpoint" },
-    { path: "/hyok/generic/v1/keys/{keyId}/unwrap", methods: "POST", description: "Generic key unwrap endpoint" },
-  ],
-  servicenow: [
-    { path: "/hyok/servicenow/v1/keys/{keyId}/wrap", methods: "POST", description: "ServiceNow key wrap endpoint" },
-    { path: "/hyok/servicenow/v1/keys/{keyId}/unwrap", methods: "POST", description: "ServiceNow key unwrap endpoint" },
-  ],
-  alibaba: [
-    { path: "/hyok/alibaba/v1/keys/{keyId}/encrypt", methods: "POST", description: "Alibaba Cloud EKM encrypt endpoint" },
-    { path: "/hyok/alibaba/v1/keys/{keyId}/decrypt", methods: "POST", description: "Alibaba Cloud EKM decrypt endpoint" },
-  ],
-};
-
-const HYOK_SETUP_GUIDES: Record<string, string[]> = {
-  dke: [
-    "1. Create an RSA key (2048+ bits) in Vecta KMS",
-    "2. Enable the DKE protocol endpoint below",
-    "3. Configure auth mode (mTLS recommended for production)",
-    "4. Set authorized tenants, valid issuers, and JWT audiences in metadata",
-    "5. In Microsoft Purview, configure the DKE service URL to point to your Vecta HYOK endpoint",
-    "6. Test the public key endpoint: GET /api/v1/keys/{keyId}",
-  ],
-  salesforce: [
-    "1. Create an AES-256 or RSA key in Vecta KMS",
-    "2. Enable the Salesforce Cache-Only protocol endpoint below",
-    "3. Configure auth mode (mTLS or JWT per Salesforce requirements)",
-    "4. In Salesforce Setup, configure Shield Platform Encryption to use Cache-Only Key Service",
-    "5. Point the Cache-Only Key Service URL to your Vecta HYOK endpoint",
-    "6. Test with the wrap/unwrap operations below",
-  ],
-  google: [
-    "1. Create an AES-256 or RSA key in Vecta KMS",
-    "2. Enable the Google EKM protocol endpoint below",
-    "3. Configure auth mode and optional policy ID",
-    "4. In Google Cloud Console, create an EKM connection pointing to your Vecta HYOK endpoint",
-    "5. Create a Cloud KMS key ring using the external key manager",
-    "6. Test with the wrap/unwrap operations below",
-  ],
-  generic: [
-    "1. Create a key in Vecta KMS (any supported algorithm)",
-    "2. Enable the Generic HYOK protocol endpoint below",
-    "3. Configure auth mode and optional policy/governance requirements",
-    "4. Use the endpoint URLs below to integrate with your application",
-    "5. Test all operations using the Live Test Console",
-  ],
-  servicenow: [
-    "1. Create an AES-256 key in Vecta KMS",
-    "2. Enable the ServiceNow HYOK protocol endpoint below",
-    "3. Configure auth mode (mTLS or JWT per ServiceNow requirements)",
-    "4. In ServiceNow, navigate to System Security > Encryption Keys",
-    "5. Configure Cache-Only Key (HYOK) to point to your Vecta HYOK endpoint",
-    "6. Test with the wrap/unwrap operations below",
-  ],
-  alibaba: [
-    "1. Create an AES-256 key in Vecta KMS",
-    "2. Enable the Alibaba Cloud EKM protocol endpoint below",
-    "3. Configure auth mode and optional policy ID",
-    "4. In Alibaba Cloud Console, navigate to KMS > External Key Management",
-    "5. Create an external key pointing to your Vecta HYOK endpoint",
-    "6. Test with the encrypt/decrypt operations below",
-  ],
-};
-
 export const HYOKTab = ({ session, keyCatalog, onToast }) => {
-  const [modal, setModal] = useState<null | "config" | "urls" | "guide">(null);
+  const [modal, setModal] = useState<null | "config" | "urls" | "guide" | "azure">(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -241,6 +126,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
   }, [session?.token, session?.tenantId]);
 
   const openConfig = (protocol: string) => {
+    if (protocol === "azure") { setModal("azure"); return; }
     const existing = (Array.isArray(endpoints) ? endpoints : []).find((item) => String(item?.protocol || "") === protocol);
     setCfgProtocol(protocol);
     setCfgEnabled(existing ? Boolean(existing.enabled) : true);
@@ -392,7 +278,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 8, marginBottom: 12 }}>
       {[
         { label: "Proxy Status", value: String(health?.status || "unknown").toUpperCase(), color: proxyHealthColor === "green" ? C.green : proxyHealthColor === "red" ? C.red : C.amber },
-        { label: "Endpoints", value: `${enabledCount}/${endpointRows.length || 4}`, sub: "enabled", color: C.accent },
+        { label: "Endpoints", value: `${enabledCount}/${HYOK_PROTOCOLS.length}`, sub: "enabled", color: C.accent },
         { label: "Requests", value: String(requestStats.total), sub: `${requestStats.success} ok, ${requestStats.failed} failed`, color: requestStats.failed > 0 ? C.red : C.green },
         { label: "Pending", value: String(requestStats.pending), sub: "awaiting approval", color: requestStats.pending > 0 ? C.amber : C.dim },
         { label: "Policy Mode", value: Boolean(health?.policy_fail_closed) ? "CLOSED" : "OPEN", sub: "fail mode", color: Boolean(health?.policy_fail_closed) ? C.red : C.green },
@@ -415,7 +301,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
       </div>}
     >
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 10 }}>
-        {["dke", "salesforce", "google", "generic", "servicenow", "alibaba"].map((protocol) => {
+        {HYOK_PROTOCOLS.map((protocol) => {
           const item = endpointRows.find((e) => String(e?.protocol || "") === protocol);
           const statusMeta = endpointStatusMeta(protocol, item);
           const StatusIcon = statusMeta.icon;
@@ -441,6 +327,8 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
               <span style={{ color: Boolean(item?.governance_required) ? C.amberFg : C.dim }}>{Boolean(item?.governance_required) ? "Required" : "No"}</span>
               <span style={{ color: C.muted }}>Operations</span>
               <span style={{ color: C.dim }}>{(HYOK_OPS_BY_PROTOCOL[protocol] || []).join(", ")}</span>
+              {protocol === "azure" && <><span style={{ color: C.muted }}>Managed HSM probe</span>
+              <span style={{ color: C.dim }}>{health?.protocol_statuses?.azure?.last_probe_at ? formatAgo(health.protocol_statuses.azure.last_probe_at) : "not seen on this node"}</span></>}
             </div>
 
             {statusMeta.reason && <div style={{ fontSize: 10, color: C.muted, marginBottom: 6, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={statusMeta.reason}>{statusMeta.reason}</div>}
@@ -527,10 +415,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
       </div>
       <FG label="Protocol">
         <Sel value={cfgProtocol} onChange={(e) => setCfgProtocol(e.target.value)}>
-          <option value="dke">Microsoft DKE</option>
-          <option value="salesforce">Salesforce Cache-Only</option>
-          <option value="google">Google Cloud EKM</option>
-          <option value="generic">Generic HYOK</option>
+          {HYOK_PROTOCOLS.filter((p) => p !== "azure").map((p) => <option key={p} value={p}>{HYOK_PROTOCOL_LABELS[p]}</option>)}
         </Sel>
       </FG>
       <Row2>
@@ -601,16 +486,15 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
     </Modal>
 
     {/* === Endpoint URLs Modal === */}
+    <HYOKAzureConfig open={modal === "azure"} session={session} endpoint={endpoints.find((e) => e?.protocol === "azure" && e?.metadata_json && e.metadata_json !== "{}")} keyChoices={keyChoices.map((k) => ({ id: k.id, name: k.name, algo: k.algo }))}
+      onClose={() => setModal(null)} onSaved={(m) => { onToast?.(m); setModal(null); void refresh(true); }} />
     <Modal open={modal === "urls"} onClose={() => setModal(null)} title={`Endpoint URLs — ${HYOK_PROTOCOL_LABELS[urlsProtocol] || urlsProtocol}`} wide>
       <div style={{ fontSize: 10, color: C.muted, marginBottom: 10, padding: "8px 10px", background: C.bg, borderRadius: 6 }}>
         Configure your cloud service to point to these URLs. Replace <code style={{ color: C.accentFg, fontFamily: "var(--font-mono)" }}>{"{keyId}"}</code> with your actual Vecta key ID.
       </div>
       <FG label="Protocol">
         <Sel value={urlsProtocol} onChange={(e) => setUrlsProtocol(e.target.value)}>
-          <option value="dke">Microsoft DKE</option>
-          <option value="salesforce">Salesforce Cache-Only</option>
-          <option value="google">Google Cloud EKM</option>
-          <option value="generic">Generic HYOK</option>
+          {HYOK_PROTOCOLS.map((p) => <option key={p} value={p}>{HYOK_PROTOCOL_LABELS[p]}</option>)}
         </Sel>
       </FG>
       <div style={{ display: "grid", gap: 8, marginTop: 8 }}>

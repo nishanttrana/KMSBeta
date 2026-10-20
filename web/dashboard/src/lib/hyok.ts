@@ -1,7 +1,9 @@
 import type { AuthSession } from "./auth";
 import { serviceRequest } from "./serviceApi";
 
-export type HYOKProtocol = "dke" | "salesforce" | "google" | "generic";
+export type HYOKProtocol = "dke" | "salesforce" | "google" | "generic" | "servicenow" | "alibaba" | "azure";
+
+const PROTOCOLS: HYOKProtocol[] = ["dke", "salesforce", "google", "generic", "servicenow", "alibaba", "azure"];
 
 export type HYOKEndpoint = {
   tenant_id: string;
@@ -54,6 +56,8 @@ export type HYOKHealth = {
       reason?: string;
       configured?: boolean;
       enabled?: boolean;
+      // Azure EKM: when Managed HSM last reached this node's listener.
+      last_probe_at?: string;
     }
   >;
   checked_at: string;
@@ -100,12 +104,15 @@ function tenantQuery(session: AuthSession): string {
   return `tenant_id=${encodeURIComponent(session.tenantId)}`;
 }
 
+// A protocol the service serves, or an error. Until 13.30.0-beta any other
+// name became "generic", so saving the ServiceNow or Alibaba card replaced
+// the Generic endpoint.
 function normalizeProtocol(v: string): HYOKProtocol {
-  const raw = String(v || "").trim().toLowerCase();
-  if (raw === "dke" || raw === "salesforce" || raw === "google" || raw === "generic") {
+  const raw = String(v || "").trim().toLowerCase() as HYOKProtocol;
+  if (PROTOCOLS.includes(raw)) {
     return raw;
   }
-  return "generic";
+  throw new Error(`unknown HYOK protocol: ${v}`);
 }
 
 export async function listHYOKEndpoints(session: AuthSession): Promise<HYOKEndpoint[]> {
@@ -118,7 +125,8 @@ export async function configureHYOKEndpoint(
   protocol: string,
   input: {
     enabled: boolean;
-    auth_mode: "jwt";
+    // mtls only for azure, whose listener verifies the client certificate.
+    auth_mode: "jwt" | "mtls";
     policy_id?: string;
     governance_required?: boolean;
     metadata_json?: string;

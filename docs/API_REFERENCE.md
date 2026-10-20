@@ -662,12 +662,24 @@ Body: `plaintext` (base64 key material), `aad` (base64, optional), `iv_mode`.
 Response: `ciphertext`, `iv`, `version`, `key_id`, `kcv`. Same checks as
 `encrypt`, metered and policy-evaluated as `key.wrap`.
 
+`wrap_algorithm` (13.30.0-beta, optional) makes `ciphertext` exactly one
+named format with no IV beside it: `A256KW` (RFC 3394) or `A256KWP`
+(RFC 5649) under an AES-256 key, `RSA-OAEP-256` or `RSA-OAEP` (SHA-1) under
+an RSA key. A name that doesn't fit the key is `400`; a key held in an HSM
+is `409 wrap_algorithm_not_supported` (`audit.key.hsm_refused`); in FIPS
+strict mode everything but `RSA-OAEP-256` is `403 fips_mode_violation`.
+
 ---
 
 ### POST /svc/keycore/keys/{id}/unwrap
 
 Body: `ciphertext`, `iv`, `aad` (all base64). Response: `plaintext` (base64),
 `version`, `key_id`. Evaluated as `key.unwrap`.
+
+With `wrap_algorithm` the ciphertext is that format's output. Without a
+`version` the current version is tried first, then older active or
+deactivated ones, newest first; `version` in the response is the one that
+opened it. A failed attempt rolls back and counts nothing.
 
 ---
 
@@ -2194,7 +2206,6 @@ without `compliance.connection.use` (`403 credential_use_not_permitted`):
 |---|---|---|
 | `POST /cloud/accounts` | `connection_id` (was `credentials_json`) | audit `audit.cloud.account_refused` on a refusal |
 | `POST /cloud/accounts/{id}/test` | | `cloud.write`; lists the provider's keys with the account's credential and records the result on it (`audit.cloud.account_test_requested`, `audit.cloud.account_tested`) |
-| `POST /ekm/azure/configs`, `PUT /ekm/azure/configs/{id}` | `connection_id` (was `client_secret`; `azure_tenant_id` and `client_id` are read from the credential) | `audit.ekm.azure_config_refused`; `auth_mode: managed_identity` needs none |
 | `PUT /governance/settings` | `smtp_connection_id` (was `smtp_host`, `smtp_port`, `smtp_username`, `smtp_password`, `smtp_from`, `smtp_starttls`) | `audit.governance.mail_settings_refused`; also `mail_relay_is_a_credential` |
 | `POST /keys`, `POST /keys/form`, `POST /keys/import` | `hsm_connection_id` with `hsm: true` | the HSM credential the key goes on; empty is the tenant's HSM. Form: AES-128/192/256. Import: AES-128/192/256 material, or (9.0.0-beta) an RSA-2048/3072/4096 or ECDSA P-256/P-384 private key (`import_method: pem`); anything else is `400 hsm_import_not_supported` |
 | `POST /certs/ca` | `hsm_connection_id` with `key_backend: "hsm"` | `403 hsm_credential_not_permitted` (`audit.cert.hsm_credential_refused`) |
@@ -2204,8 +2215,8 @@ without `compliance.connection.use` (`403 credential_use_not_permitted`):
 
 Internal lookups, callable only by `kms-compliance` (others:
 `403 caller_not_allowed`): `GET /cloud/credential-usage`,
-`POST /cloud/credentials/{id}/test`, `GET /ekm/credential-usage`,
-`GET /keys/hsm/credential-usage`. The HSM connector takes
+`POST /cloud/credentials/{id}/test`, `GET /keys/hsm/credential-usage`
+(the ekm lookup went with its Azure vaults in 13.30.0-beta). The HSM connector takes
 `?connection_id=` on every route, takes `extractable: true` on
 `POST /hsm/keys` (keycore only: a key for cloud import, still sensitive),
 and adds `POST /hsm/keys/wrap-for-import` (10.0.0-beta, keycore only:
@@ -3110,7 +3121,9 @@ ServiceNow and generic callers. Every route is in the route index below.
 ## Service 18: EKM (`/svc/ekm/`)
 
 External Key Manager for database TDE (Transparent Data Encryption), BitLocker,
-Google CSE (KACLS), Azure EKM and the Java SDK.
+Google CSE (KACLS) and the Java SDK. Azure EKM is a HYOK protocol (Service
+"HYOK" below); the vault and key-mapping routes under `/ekm/azure/` were
+removed in 13.30.0-beta.
 
 - **Google CSE configs** (`/svc/ekm/ekm/google-cse/configs`) carry
   `authentication_client_ids` (1.28.0-beta): required on create, settable with
@@ -4089,6 +4102,28 @@ returns an `EKM-PUBLIC-` value derived from the tenant and key ID
 (6.12.0-beta). A rotation clears the stored copy and refreshes it from
 keycore. `GET /ekm/agents/{id}/status` carries
 `assigned_key_algorithm`, the algorithm of the agent's assigned TDE key.
+**Azure EKM** (13.30.0-beta) is the EKM Proxy API (`0.1-preview`) that
+Azure Managed HSM external key management calls, on the hyok service's own
+mTLS listener (`AZURE_EKM_PORT`, compose `8443`), not the HTTPS edge.
+Under the endpoint's path prefix Managed HSM POSTs `info`, and per key name
+`metadata`, `wrapkey` and `unwrapkey`, each `?api-version=0.1-preview`, JSON bodies
+with `request_context` (`request_id`, `correlation_id`, `pool_name`), and
+`alg` and base64url `value` for wrap and unwrap. Errors are
+`{"code","message"}`: `401 Unauthorized` (no client certificate, wrong CA,
+wrong subject CN, not a client certificate), `404 NotFound` (no enabled
+endpoint has the prefix), `404 KeyNotFound`, `400 UnsupportedApiVersion`,
+`400 UnsupportedAlgorithm`, `400 InvalidRequest` (bad base64url, a value
+that doesn't unwrap), `403 KeyDisabled`, `403 ApprovalRequired`, `429`,
+`500`; each is audited as `audit.hyok.azure_ekm_refused`. The endpoint is
+configured with `PUT /hyok/v1/endpoints/azure`, `metadata_json`
+`{"path_prefix","client_ca_pem","client_subject_cn","keys":{"<key name>":"<key id>"}}`;
+the service sets `auth_mode: mtls`, refuses `governance_required`, a
+malformed prefix or CA, a key that is not AES-256 or RSA 2048/3072/4096,
+and a prefix another tenant uses (`409 path_prefix_taken`), each audited as
+`audit.hyok.endpoint_refused`. `GET /hyok/v1/health` reports
+`protocol_statuses.azure.last_probe_at`, when Managed HSM last reached this
+node.
+
 Endpoint administration (`/hyok/v1/endpoints*`, `/hyok/v1/requests`,
 `/hyok/v1/health`) needs a verified token. A request log entry's
 `request_json` and `response_json` hold sizes (`plaintext_bytes`,
@@ -4521,6 +4556,7 @@ from the code; do not edit by hand.
 - `DELETE /svc/certs/certs/star/subscriptions/{id}`
 - `POST /svc/certs/certs/star/subscriptions/{id}/refresh`
 - `GET /svc/certs/certs/star/summary`
+- `GET /svc/certs/certs/summary`
 - `POST /svc/certs/certs/upload-3p`
 - `DELETE /svc/certs/certs/{id}`
 - `GET /svc/certs/certs/{id}`
@@ -4779,20 +4815,6 @@ from the code; do not edit by hand.
 - `POST /svc/ekm/ekm/agents/{id}/rotate`
 - `GET /svc/ekm/ekm/agents/{id}/status`
 - `POST /svc/ekm/ekm/agents/{id}/validate-deploy`
-- `GET /svc/ekm/ekm/azure/configs`
-- `POST /svc/ekm/ekm/azure/configs`
-- `DELETE /svc/ekm/ekm/azure/configs/{id}`
-- `GET /svc/ekm/ekm/azure/configs/{id}`
-- `PUT /svc/ekm/ekm/azure/configs/{id}`
-- `POST /svc/ekm/ekm/azure/configs/{id}/sync`
-- `POST /svc/ekm/ekm/azure/configs/{id}/test`
-- `GET /svc/ekm/ekm/azure/mappings`
-- `POST /svc/ekm/ekm/azure/mappings`
-- `DELETE /svc/ekm/ekm/azure/mappings/{id}`
-- `POST /svc/ekm/ekm/azure/mappings/{id}/import`
-- `POST /svc/ekm/ekm/azure/mappings/{id}/rotate`
-- `POST /svc/ekm/ekm/azure/mappings/{id}/unwrap`
-- `POST /svc/ekm/ekm/azure/mappings/{id}/wrap`
 - `GET /svc/ekm/ekm/bitlocker/clients`
 - `POST /svc/ekm/ekm/bitlocker/clients/register`
 - `DELETE /svc/ekm/ekm/bitlocker/clients/{id}`
@@ -4812,7 +4834,6 @@ from the code; do not edit by hand.
 - `GET /svc/ekm/ekm/clients/{id}`
 - `POST /svc/ekm/ekm/clients/{id}/check-in`
 - `POST /svc/ekm/ekm/clients/{id}/registration-token`
-- `GET /svc/ekm/ekm/credential-usage`
 - `GET /svc/ekm/ekm/databases`
 - `POST /svc/ekm/ekm/databases`
 - `GET /svc/ekm/ekm/databases/{id}`

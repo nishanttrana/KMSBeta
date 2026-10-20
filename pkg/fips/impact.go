@@ -25,6 +25,7 @@ var strictOnlyUnavailable = []Impact{
 	{"certs", "OCSP requests with SHA-1 CertID", "clients must send SHA-256 CertIDs"},
 	{"cloud", "Alibaba Cloud integration", "API signing requires HMAC-SHA1"},
 	{"keycore", "Cloud BYOK of KMS keys to Azure and Salesforce, and of private keys", "the KMS can't wrap with RSA-OAEP SHA-1 (Azure Key Vault, Salesforce Shield) or AES key wrap with padding (private keys, RSA_AES_KEY_WRAP); keys generated in a PKCS#11 HSM with cloud import allowed are still wrapped inside the HSM, and AES-256 keys still go to AWS, Google Cloud and OCI with RSA-OAEP SHA-256"},
+	{"hyok", "Azure EKM with AES keys or RSA-OAEP (SHA-1)", "wrap_algorithm A256KW, A256KWP and RSA-OAEP are refused (AES key wrap is built outside the module; SHA-1 OAEP is Azure's mandate); Azure EKM with an RSA key and RSA-OAEP-256 still works"},
 }
 
 // TransitionImpact describes a mode change: what stops, what starts, and

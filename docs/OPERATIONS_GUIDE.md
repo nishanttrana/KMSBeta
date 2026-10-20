@@ -377,6 +377,7 @@ Examples:
 - cluster profile should reflect enabled optional services
 - optional services such as `autokey`, `workload`, `confidential`, and `pqc` should appear in health and dashboard state
 - the console reads `infra/deployment/deployment.yaml` itself: compose mounts it read-only into the dashboard container at `/config/deployment.yaml`, and a module whose feature is `false` there (Cluster with `clustering: false`) is not shown. After changing a feature, restart the dashboard with the rest of the stack (`start-kms`). The image carries no copy of the file.
+- with `hyok_proxy` on, the hyok service also listens for Azure Managed HSM on `8443` (`AZURE_EKM_HOST_PORT`, bind `AZURE_EKM_BIND`, default `0.0.0.0`), with the edge certificate from `runtime-certs`. It refuses to start if that certificate never appears. Managed HSM must reach this port; allow it through the firewall only from Azure.
 - auth startup should include SCIM schema readiness before the tenant provisioning UI is treated as healthy
 - `ekm`, `cloud` and `hyok` learn whether key access justifications are deployed from `VECTA_DEPLOYED_PROFILES` (compose sets it from `COMPOSE_PROFILES`). Change `key_access_justifications` in `deployment.yaml` and restart with `start-kms`; don't add the profile only with `docker compose --profile`. Each logs `key access justifications deployed=<bool>` at start.
 

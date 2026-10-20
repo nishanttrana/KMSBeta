@@ -93,22 +93,6 @@ func (h *Handler) routes() *http.ServeMux {
 
 	mux.HandleFunc("POST /ekm/agents/{id}/validate-deploy", h.handleValidateDeployment)
 
-	// Azure EKM
-	mux.HandleFunc("POST /ekm/azure/configs", h.handleCreateAzureConfig)
-	mux.HandleFunc("GET /ekm/azure/configs", h.handleListAzureConfigs)
-	mux.HandleFunc("GET /ekm/azure/configs/{id}", h.handleGetAzureConfig)
-	mux.HandleFunc("PUT /ekm/azure/configs/{id}", h.handleUpdateAzureConfig)
-	mux.HandleFunc("DELETE /ekm/azure/configs/{id}", h.handleDeleteAzureConfig)
-	mux.HandleFunc("POST /ekm/azure/configs/{id}/test", h.handleTestAzureConnection)
-	mux.HandleFunc("POST /ekm/azure/configs/{id}/sync", h.handleSyncAzureKeys)
-	mux.HandleFunc("POST /ekm/azure/mappings", h.handleCreateAzureMapping)
-	mux.HandleFunc("GET /ekm/azure/mappings", h.handleListAzureMappings)
-	mux.HandleFunc("DELETE /ekm/azure/mappings/{id}", h.handleDeleteAzureMapping)
-	mux.HandleFunc("POST /ekm/azure/mappings/{id}/import", h.handleImportKeyToAzure)
-	mux.HandleFunc("POST /ekm/azure/mappings/{id}/rotate", h.handleRotateAzureKey)
-	mux.HandleFunc("POST /ekm/azure/mappings/{id}/wrap", h.handleAzureWrapKey)
-	mux.HandleFunc("POST /ekm/azure/mappings/{id}/unwrap", h.handleAzureUnwrapKey)
-
 	// Google CSE — Management routes (called by Vecta admins)
 	mux.HandleFunc("POST /ekm/google-cse/configs", h.handleCreateGoogleCSEConfig)
 	mux.HandleFunc("GET /ekm/google-cse/configs", h.handleListGoogleCSEConfigs)

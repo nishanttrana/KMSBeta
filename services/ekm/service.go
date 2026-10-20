@@ -12,7 +12,6 @@ import (
 
 	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgkeyaccess "vecta-kms/pkg/keyaccess"
-	"vecta-kms/pkg/credstore"
 	"vecta-kms/pkg/mek"
 )
 
@@ -27,9 +26,6 @@ type Service struct {
 	mek       []byte
 	keyAccess pkgkeyaccess.Gate
 	exposure  *mek.Keyring // exposure register; nil in tests
-	// creds is the credential store (azure_credentials.go); nil when the
-	// deployment has none.
-	creds credstore.Store
 }
 
 // SetKeyring wires the exposure register: recovery keys stored under a public

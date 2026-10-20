@@ -83,7 +83,7 @@ func (h *Handler) checkConnectionUse(c *route.Call) {
 
 // ---- where a credential is used ----
 
-// CredentialUsage names the cloud accounts, Azure EKM vaults and HSM keys
+// CredentialUsage names the cloud accounts and HSM keys
 // that use a credential. An error means usage could not be verified.
 type CredentialUsage func(ctx context.Context, tenantID string, conn Connection) ([]string, error)
 
@@ -150,7 +150,7 @@ func (h *Handler) connectionUsage(c *route.Call) {
 	c.JSON(http.StatusOK, map[string]interface{}{"data": map[string]interface{}{"used_by": users}})
 }
 
-// Credentials names what uses a cloud, Azure EKM or HSM credential, asking
+// Credentials names what uses a cloud or HSM credential, asking
 // the service that owns each: only the services a type can serve are asked.
 func (p platformUsage) Credentials(ctx context.Context, tenantID string, conn Connection) ([]string, error) {
 	ask := func(base, path, noun string) ([]string, error) {
@@ -187,11 +187,6 @@ func (p platformUsage) Credentials(ctx context.Context, tenantID string, conn Co
 			return nil, err
 		}
 	}
-	if usable("azure_ekm", conn.Type) && deployed.Has("ekm_database") {
-		if err := add(p.ekmURL, "/ekm/credential-usage", "Azure EKM vaults"); err != nil {
-			return nil, err
-		}
-	}
 	if conn.Type == "pkcs11_hsm" {
 		if err := add(p.keycoreURL, "/keys/hsm/credential-usage", "HSM keys"); err != nil {
 			return nil, err
@@ -219,8 +214,7 @@ func (h *Handler) recordTest(ctx context.Context, conn Connection, by string, te
 }
 
 // reportConnectionTest records a test the using service ran where the
-// credential is used (a cloud account's inventory read, an Azure EKM token
-// request). Only that service may report it, and only for its own types.
+// credential is used (a cloud account's inventory read). Only that service may report it, and only for its own types.
 func (h *Handler) reportConnectionTest(c *route.Call) {
 	use, ok := connectionCaller(c)
 	if !ok {

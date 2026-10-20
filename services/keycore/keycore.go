@@ -241,7 +241,10 @@ type EncryptRequest struct {
 	IVMode       string `json:"iv_mode"`
 	AADB64       string `json:"aad"`
 	ReferenceID  string `json:"reference_id"`
-	Operation    string `json:"-"`
+	// WrapAlgorithm names the wrap output's algorithm (A256KW, A256KWP,
+	// RSA-OAEP-256, RSA-OAEP; jwa_wrap.go). Wrap only.
+	WrapAlgorithm string `json:"wrap_algorithm,omitempty"`
+	Operation     string `json:"-"`
 }
 
 type DecryptRequest struct {
@@ -251,9 +254,12 @@ type DecryptRequest struct {
 	AADB64        string `json:"aad"`
 	ReferenceID   string `json:"reference_id"`
 	// Version is the key version that produced the ciphertext (encrypt
-	// returns it); 0 means the current version.
-	Version   int    `json:"version"`
-	Operation string `json:"-"`
+	// returns it); 0 means the current version, or with WrapAlgorithm the
+	// newest version that opens it.
+	Version int `json:"version"`
+	// WrapAlgorithm unwraps output of wrap with that algorithm. Unwrap only.
+	WrapAlgorithm string `json:"wrap_algorithm,omitempty"`
+	Operation     string `json:"-"`
 }
 
 type SignRequest struct {
@@ -2971,6 +2977,13 @@ func (s *Service) Encrypt(ctx context.Context, keyID string, req EncryptRequest)
 	if err := ensureKeySupportsOperation(key, operation); err != nil {
 		return CryptoResponse{}, err
 	}
+	wrapAlg := strings.TrimSpace(req.WrapAlgorithm)
+	if wrapAlg != "" {
+		if err := checkWrapAlgorithm(operation, wrapAlg); err != nil {
+			return CryptoResponse{}, err
+		}
+		extra["wrap_algorithm"] = wrapAlg
+	}
 	if err := s.enforceKeyAccess(ctx, key, operation); err != nil {
 		return CryptoResponse{}, err
 	}
@@ -3018,6 +3031,24 @@ func (s *Service) Encrypt(ctx context.Context, keyID string, req EncryptRequest)
 	}
 
 	result, err := s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+		if wrapAlg != "" {
+			if kv.Protection == protectionHSMResident {
+				return CryptoTxResult{}, s.refuseHSMWrapAlgorithm(ctx, req.TenantID, keyID, operation)
+			}
+			if len(aad) > 0 {
+				return CryptoTxResult{}, errors.New("aad does not apply to wrap_algorithm")
+			}
+			raw, err := s.decryptMaterial(kv)
+			if err != nil {
+				return CryptoTxResult{}, err
+			}
+			defer crypto.Zeroize(raw)
+			wrapped, err := jwaWrapMaterial(k, raw, wrapAlg, plain)
+			if err != nil {
+				return CryptoTxResult{}, err
+			}
+			return CryptoTxResult{Payload: wrapped, ReferenceID: req.ReferenceID}, nil
+		}
 		if kv.Protection == protectionHSMResident {
 			if effectiveIVMode != "internal" {
 				return CryptoTxResult{}, s.refuseHSM(ctx, req.TenantID, keyID, operation, http.StatusBadRequest, "iv_mode_not_supported",
@@ -3074,6 +3105,13 @@ func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest)
 	if err := ensureKeySupportsOperation(key, operation); err != nil {
 		return CryptoResponse{}, err
 	}
+	wrapAlg := strings.TrimSpace(req.WrapAlgorithm)
+	if wrapAlg != "" {
+		if err := checkWrapAlgorithm(operation, wrapAlg); err != nil {
+			return CryptoResponse{}, err
+		}
+		extra["wrap_algorithm"] = wrapAlg
+	}
 	if err := s.enforceKeyAccess(ctx, key, operation); err != nil {
 		return CryptoResponse{}, err
 	}
@@ -3105,6 +3143,17 @@ func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest)
 	cipherRaw, err := base64.StdEncoding.DecodeString(req.CiphertextB64)
 	if err != nil {
 		return CryptoResponse{}, errors.New("ciphertext must be base64")
+	}
+	if wrapAlg != "" {
+		result, err := s.unwrapJWA(ctx, key, keyID, req, cipherRaw)
+		if err != nil {
+			return CryptoResponse{}, err
+		}
+		defer crypto.Zeroize(result.Payload)
+		if s.meter != nil {
+			_ = s.meter.IncrementOps()
+		}
+		return CryptoResponse{KeyID: keyID, Version: result.KeyVersion, PlainB64: base64.StdEncoding.EncodeToString(result.Payload)}, nil
 	}
 	iv, err := base64.StdEncoding.DecodeString(req.IVB64)
 	if err != nil {

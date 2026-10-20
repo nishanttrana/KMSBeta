@@ -51,9 +51,9 @@ export const SUB_PANES: Record<string, SubPane[]> = {
   ],
   cloudctl: [
     { id: "byok", label: "BYOK", hint: "Cloud provider key import and sync", icon: Cloud, feature: "cloud_byok" },
-    { id: "hyok", label: "HYOK", hint: "Hold-your-own-key policy and cryptographic controls", icon: ShieldCheck, feature: "hyok_proxy" },
-    { id: "google-cse", label: "Google CSE", hint: "Workspace Client-Side Encryption", icon: Shield, feature: "ekm_database" },
-    { id: "azure", label: "Azure EKM", hint: "Key Vault & Managed HSM integration", icon: Cloud, feature: "ekm_database" }
+    // Azure EKM is a HYOK protocol (13.30.0-beta): its card is on HYOK.
+    { id: "hyok", label: "HYOK", hint: "Hold-your-own-key endpoints: DKE, Google EKM, Azure EKM, Salesforce, ServiceNow, Alibaba", icon: ShieldCheck, feature: "hyok_proxy" },
+    { id: "google-cse", label: "Google CSE", hint: "Workspace Client-Side Encryption", icon: Shield, feature: "ekm_database" }
   ],
   ekm: [
     { id: "db", label: "EKM for DBs", hint: "MSSQL / Oracle TDE agents", icon: Database, feature: "ekm_database" },

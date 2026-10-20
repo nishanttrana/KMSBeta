@@ -19,8 +19,7 @@ import (
 // master key, never returned, opened only by the one service that uses the
 // type (credentialUsers) and audited on every release.
 const (
-	// categoryCloud: cloud provider accounts for BYOK (the cloud service);
-	// an Azure app registration also serves Azure EKM (the ekm service).
+	// categoryCloud: cloud provider accounts for BYOK (the cloud service).
 	categoryCloud = "cloud"
 	// categoryMail: an SMTP relay (governance approval and alert mail).
 	categoryMail = "mail"
@@ -40,7 +39,7 @@ var credentialTypes = []ConnectionSpec{
 	{Type: "aws", Label: "AWS (access key, optional role)", Category: categoryCloud, Use: "Cloud BYOK",
 		Fields: []string{"access_key_id", "secret_access_key"}, Optional: []string{"session_token", "region", "role_arn", "external_id", "endpoint_url", optionsField},
 		URLFields: []string{"endpoint_url"}, DefaultEndpoint: "AWS KMS", Secrets: []string{"secret_access_key", "session_token", optionsField}},
-	{Type: "azure", Label: "Microsoft Entra app registration (Azure Key Vault)", Category: categoryCloud, Use: "Cloud BYOK, Azure EKM",
+	{Type: "azure", Label: "Microsoft Entra app registration (Azure Key Vault)", Category: categoryCloud, Use: "Cloud BYOK",
 		Fields: []string{"tenant_id", "client_id", "client_secret"}, Optional: []string{"vault_url", "vault_name", optionsField},
 		URLFields: []string{"vault_url"}, DefaultEndpoint: "login.microsoftonline.com", Secrets: []string{"client_secret", optionsField}},
 	{Type: "gcp", Label: "Google Cloud service account", Category: categoryCloud, Use: "Cloud BYOK",
@@ -74,7 +73,6 @@ var credentialTypes = []ConnectionSpec{
 // from a use's list is refused with connection_use_unsupported.
 var credentialUseTypes = map[string][]string{
 	"cloud_account": {"aws", "azure", "gcp", "oci", "alibaba", "salesforce", "servicenow"},
-	"azure_ekm":     {"azure"},
 	"hsm_session":   {"pkcs11_hsm"},
 }
 

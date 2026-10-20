@@ -619,3 +619,21 @@ func (h *Handler) refuseUnusedCSEKey(w http.ResponseWriter, r *http.Request, ten
 	h.writeServiceError(w, newServiceError(http.StatusBadRequest, "service_account_key_not_used", msg), reqID, tenantID)
 	return false
 }
+
+// publishAuditEvent records a Google CSE action on the audit stream as
+// audit.ekm.<action> (google_cse.kacls.unwrap -> audit.ekm.google_cse_kacls_unwrap).
+// Until 13.30.0-beta it published to the bare action name, outside
+// audit.>, so no Google CSE operation reached the audit log.
+func (h *Handler) publishAuditEvent(ctx context.Context, tenantID, action, resourceID string) {
+	subject := "audit.ekm." + strings.ReplaceAll(action, ".", "_")
+	if err := h.svc.publishAudit(ctx, subject, tenantID, map[string]interface{}{"resource_id": resourceID, "result": "success"}); err != nil {
+		log.Printf("ekm: audit %s not published: %v", subject, err)
+	}
+}
+
+func coalesceStr(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
+}

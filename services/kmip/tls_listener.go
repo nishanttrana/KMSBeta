@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 	"time"
+
+	"vecta-kms/pkg/tlsreload"
 )
 
 // The KMIP listener's TLS (docs/SECURITY/INTERNAL_TLS.md, "Edge
@@ -46,10 +47,10 @@ func loadKMIPTLSConfig(ctx context.Context, f kmipTLSFiles, logf func(string, ..
 	if f.Cert == "" || f.Key == "" || f.ClientCA == "" {
 		return nil, errors.New("KMIP_TLS_CERT_FILE, KMIP_TLS_KEY_FILE and KMIP_TLS_CLIENT_CA_FILE are required")
 	}
-	reloader := &certReloader{certFile: f.Cert, keyFile: f.Key}
+	reloader := &tlsreload.Reloader{CertFile: f.Cert, KeyFile: f.Key, Name: "KMIP server certificate", Logf: logger.Printf}
 	deadline := time.Now().Add(kmipTLSWait)
 	for {
-		err := reloader.load()
+		err := reloader.Load()
 		if err == nil {
 			break
 		}
@@ -73,7 +74,7 @@ func loadKMIPTLSConfig(ctx context.Context, f kmipTLSFiles, logf func(string, ..
 	}
 	cfg := &tls.Config{
 		MinVersion:     allowedKMIPMinVersion(),
-		GetCertificate: reloader.get,
+		GetCertificate: reloader.GetCertificate,
 		ClientAuth:     tls.RequireAndVerifyClientCert,
 		ClientCAs:      pool,
 		CipherSuites:   fipsApprovedCipherSuites,
@@ -88,69 +89,4 @@ func loadKMIPTLSConfig(ctx context.Context, f kmipTLSFiles, logf func(string, ..
 		cfg.VerifyPeerCertificate = vf
 	}
 	return cfg, nil
-}
-
-// certReloader serves the certificate files, re-reading them when they
-// change (checked at most once a second). A replacement that doesn't load
-// keeps the one in force.
-type certReloader struct {
-	certFile, keyFile string
-
-	mu      sync.Mutex
-	cert    *tls.Certificate
-	stamp   string
-	checked time.Time
-}
-
-func fileStamp(paths ...string) (string, error) {
-	var b strings.Builder
-	for _, p := range paths {
-		st, err := os.Stat(p)
-		if err != nil {
-			return "", err
-		}
-		fmt.Fprintf(&b, "%s:%d:%d;", p, st.Size(), st.ModTime().UnixNano())
-	}
-	return b.String(), nil
-}
-
-func (r *certReloader) load() error {
-	stamp, err := fileStamp(r.certFile, r.keyFile)
-	if err != nil {
-		return err
-	}
-	cert, err := tls.LoadX509KeyPair(r.certFile, r.keyFile)
-	if err != nil {
-		return err
-	}
-	r.mu.Lock()
-	r.cert, r.stamp = &cert, stamp
-	r.mu.Unlock()
-	return nil
-}
-
-func (r *certReloader) get(*tls.ClientHelloInfo) (*tls.Certificate, error) {
-	r.mu.Lock()
-	due := time.Since(r.checked) >= time.Second
-	if due {
-		r.checked = time.Now()
-	}
-	cur, stamp := r.cert, r.stamp
-	r.mu.Unlock()
-	if due {
-		if now, err := fileStamp(r.certFile, r.keyFile); err == nil && now != stamp {
-			if err := r.load(); err != nil {
-				logger.Printf("KMIP server certificate changed but did not load (%v); keeping the current one", err)
-			} else {
-				r.mu.Lock()
-				cur = r.cert
-				r.mu.Unlock()
-				logger.Printf("KMIP server certificate reloaded")
-			}
-		}
-	}
-	if cur == nil {
-		return nil, errors.New("no KMIP server certificate")
-	}
-	return cur, nil
 }

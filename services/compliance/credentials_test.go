@@ -75,7 +75,7 @@ func TestCredentialResolveAdmitsOnlyTheServiceThatUsesTheType(t *testing.T) {
 		"smtp":       hs.conn(t, "smtp", map[string]string{"host": "1.1.1.1", "port": "587", "from": "kms@example.com"}),
 	}
 	allowed := map[string][]string{
-		"kms-cloud": {"aws", "azure"}, "kms-ekm": {"azure"}, "kms-hsm": {"pkcs11_hsm"}, "kms-governance": {"smtp"}, "kms-audit": {}, "kms-discovery": {},
+		"kms-cloud": {"aws", "azure"}, "kms-hsm": {"pkcs11_hsm"}, "kms-governance": {"smtp"}, "kms-audit": {}, "kms-discovery": {},
 	}
 	for client, types := range allowed {
 		for typ, id := range ids {
@@ -92,8 +92,9 @@ func TestCredentialResolveAdmitsOnlyTheServiceThatUsesTheType(t *testing.T) {
 			wantRefused(t, lastEvent(t, hs.rec, "connection_resolved"), reasonConnectionUse)
 		}
 	}
-	// A service that uses no credential, and an administrator, open none.
-	for _, who := range []*pkgauth.Claims{svcClaims("kms-keycore"), pbAdmin} {
+	// A service that uses no credential (ekm since its Azure vaults were
+	// removed, 13.30.0-beta), and an administrator, open none.
+	for _, who := range []*pkgauth.Claims{svcClaims("kms-keycore"), svcClaims("kms-ekm"), pbAdmin} {
 		if w := hs.do(t, http.MethodPost, "/compliance/connections/"+ids["pkcs11_hsm"]+"/resolve?tenant_id=t1", who, map[string]any{}); w.Code != http.StatusForbidden {
 			t.Fatalf("%s%s opened an HSM PIN: %d", who.ClientID, who.UserID, w.Code)
 		}
@@ -482,7 +483,7 @@ func TestEveryCredentialUserHasAServiceIdentity(t *testing.T) {
 	}
 	mains := map[string]string{
 		"kms-audit": "audit", "kms-governance": "governance", "kms-discovery": "discovery",
-		"kms-cloud": "cloud", "kms-ekm": "ekm", "kms-hsm": "hsm-connector",
+		"kms-cloud": "cloud", "kms-hsm": "hsm-connector",
 	}
 	for id := range connectionUsers {
 		if !strings.Contains(string(auth), `"`+id+`"`) {

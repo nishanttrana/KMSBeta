@@ -23,7 +23,6 @@ import (
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	"vecta-kms/pkg/clusterstate"
-	"vecta-kms/pkg/credstore"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgdb "vecta-kms/pkg/db"
@@ -109,11 +108,6 @@ func main() {
 		keyring.Current(),
 	)
 	svc.SetKeyring(keyring)
-	// Azure EKM app registrations are credentials in the platform's store
-	// (Playbooks → Credentials). Client secrets an earlier release stored in
-	// plaintext are moved there by the primary, now and every 15 minutes.
-	svc.SetCredentials(credstore.FromEnv())
-	go svc.migrateAzureSecretsLoop(ctx, clusterstate.RunsPrimaryJobs, 15*time.Minute, logger.Printf)
 	keyAccess := pkgkeyaccess.GateFromEnv(3 * time.Second)
 	svc.SetKeyAccess(keyAccess)
 	logger.Printf("key access justifications deployed=%v (%s)", keyAccess.IsDeployed(), pkgkeyaccess.ProfilesEnv)
@@ -125,7 +119,6 @@ func main() {
 	handler.SetJWTParser(jwtParser)
 	kernel := route.New("ekm", audit, logger)
 	keyring.Routes(kernel, "ekm")
-	handler.azureCredentialRoutes(kernel)
 	handler.clientRoutes(kernel)
 	kernel.MountOn(handler.mux)
 

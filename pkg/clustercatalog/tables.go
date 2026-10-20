@@ -118,8 +118,6 @@ var Replicated = map[string][]string{
 	"ekm": {
 		"ekm_agent_checkins",
 		"ekm_agents",
-		"ekm_azure_configs",
-		"ekm_azure_key_mappings",
 		"ekm_bitlocker_clients",
 		"ekm_bitlocker_jobs",
 		"ekm_bitlocker_recovery_keys",

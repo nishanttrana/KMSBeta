@@ -103,7 +103,11 @@ accepts `X25519MLKEM768` alone.
 Each external listener's certificate comes from the source a root
 administrator chose in Service mTLS (`PUT /certs/edge-tls/certificate`,
 `listener`: `https` for the Envoy edge, `kmip` for the KMIP listener; one
-choice each):
+choice each). The Azure EKM listener in the hyok service (13.30.0-beta)
+serves the `https` edge certificate from the same files Envoy reads
+(`/etc/vecta-certs/envoy`), reloaded on the next handshake after certs
+replaces it (`pkg/tlsreload`, shared with KMIP); it verifies client
+certificates itself, per tenant:
 
 | Source | Certificate | Renewal |
 |---|---|---|

@@ -4,6 +4,48 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.30.0-beta] — 2026-10-21
+
+### Added
+- **Azure EKM, as HYOK.** Azure Managed HSM external key management calls
+  the KMS to wrap and unwrap Azure services' data keys under a key that
+  never leaves it (EKM Proxy API `0.1-preview`: `info`, `metadata`,
+  `wrapkey`, `unwrapkey`). The hyok service serves it on its own TLS 1.3
+  listener (port 8443) with the edge certificate, and accepts only a client
+  certificate from the CA and subject CN set on the tenant's endpoint,
+  found by path prefix. AES-256 keys (`A256KW`, `A256KWP`) and RSA
+  2048/3072/4096 keys (`RSA-OAEP-256`, `RSA-OAEP`); policy, key access
+  justifications, the request log and audit apply. Configure it in
+  **Cloud Key Control → HYOK → Azure EKM**. Tested over real mutual TLS.
+- keycore `wrap` / `unwrap` take `wrap_algorithm` (`A256KW`, `A256KWP`,
+  `RSA-OAEP-256`, `RSA-OAEP`); an unwrap without a version finds the key
+  version that wrapped it, so rotation doesn't strand wrapped keys.
+  AES key wrap (RFC 3394) is new in `pkg/crypto`, checked against the RFC's
+  vectors; FIPS strict mode allows only `RSA-OAEP-256`.
+
+### Removed
+- **The old "Azure EKM" page** (Cloud Key Control → Azure EKM) and its
+  `/ekm/azure/*` routes. Its "Import" asked Azure to generate a key of its
+  own (and sent empty key material to Managed HSM) while reporting an
+  import; the Vecta key in a mapping was never used. Its tables are dropped
+  (`011_drop_azure_ekm.sql`); the Azure credentials it used stay in
+  Playbooks → Credentials for Cloud BYOK. To put key material into Azure,
+  use Cloud BYOK.
+
+### Fixed
+- **Google CSE actions are audited.** They were published as
+  `google_cse.*`, outside the audit stream, so no Workspace key unwrap
+  reached the audit log; they are now `audit.ekm.google_cse_*`.
+- **Microsoft DKE public keys come from keycore's public-key route.** HYOK
+  read `public_key_pem` from `GET /keys/{id}`, which never returns it; the
+  test double invented the field, so tests passed while the real call
+  could not succeed.
+- **Saving the ServiceNow or Alibaba HYOK card no longer overwrites the
+  Generic endpoint**: the console turned any protocol it didn't list into
+  `generic`.
+- A keycore refusal reached through HYOK (bad ciphertext, key access, FIPS,
+  operations limit) keeps its status instead of `502 keycore_failed`.
+
 ## [13.29.0-beta] — 2026-10-20
 
 ### Security

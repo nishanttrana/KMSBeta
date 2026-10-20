@@ -827,12 +827,20 @@ services:
       VECTA_DEPLOYED_PROFILES: ${COMPOSE_PROFILES:-}
       HTTP_PORT: "8120"
       GRPC_PORT: "18120"
+      # Azure Managed HSM external key management: its own mTLS listener,
+      # serving the external edge certificate chosen in the PKI tab
+      # (services/hyok/azure_ekm_listener.go).
+      AZURE_EKM_PORT: "8443"
+      AZURE_EKM_TLS_CERT_FILE: /etc/vecta-certs/envoy/tls.crt
+      AZURE_EKM_TLS_KEY_FILE: /etc/vecta-certs/envoy/tls.key
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8120:8120"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18120:18120"
+      - "${AZURE_EKM_BIND:-0.0.0.0}:${AZURE_EKM_HOST_PORT:-8443}:8443"
     volumes:
       - internal-trust:/run/vecta/trust:ro
       - platform-state:/run/vecta/platform:ro
+      - runtime-certs:/etc/vecta-certs:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18120"]
       interval: 15s
@@ -1051,7 +1059,6 @@ services:
       # The credential store asks these where a credential is used and has
       # them test it; a service the deployment leaves out is not asked.
       CLOUD_URL: https://cloud:8080
-      EKM_URL: https://ekm:8130
       HSM_CONNECTOR_URL: https://hsm-connector:8430
       VECTA_DEPLOYED_PROFILES: ${COMPOSE_PROFILES:-}
       HTTP_PORT: "8110"
