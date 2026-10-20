@@ -83,7 +83,7 @@ func (s *Service) CalculateKeyHealth(ctx context.Context, tenantID, keyID string
 }
 
 func (s *Service) SyncKeyInventory(ctx context.Context, tenantID string) (KeyInventorySummary, error) {
-	keys, err := s.store.ListKeys(ctx, tenantID, 10000, 0)
+	keys, err := s.allKeys(ctx, tenantID)
 	if err != nil {
 		return KeyInventorySummary{}, err
 	}
@@ -154,7 +154,7 @@ func (s *Service) SyncKeyInventory(ctx context.Context, tenantID string) (KeyInv
 }
 
 func (s *Service) DetectDuplicateKeys(ctx context.Context, tenantID string) ([]DuplicateKeyGroup, error) {
-	keys, err := s.store.ListKeys(ctx, tenantID, 10000, 0)
+	keys, err := s.allKeys(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +264,7 @@ func (s *Service) IngestCompromiseAdvisories(ctx context.Context, tenantID strin
 	if len(advisories) > 200 {
 		return CompromiseIngestResult{}, fmt.Errorf("advisory ingest limited to 200 items")
 	}
-	keys, err := s.store.ListKeys(ctx, tenantID, 10000, 0)
+	keys, err := s.allKeys(ctx, tenantID)
 	if err != nil {
 		return CompromiseIngestResult{}, err
 	}
@@ -579,5 +579,21 @@ func enterpriseAuditRoadmap() []AuditRoadmapItem {
 		{ID: 18, Tier: 3, Name: "Fine-Grained Key Sharing", Status: "implemented", Impact: "3/5", Effort: "2-3 weeks", Capabilities: []string{"temporary grants", "justification metadata", "delegation chain records"}},
 		{ID: 19, Tier: 3, Name: "Key Metadata Management", Status: "implemented", Impact: "3/5", Effort: "2 weeks", Capabilities: []string{"classification profiles", "tag enrichment", "inventory metadata"}},
 		{ID: 20, Tier: 4, Name: "Advanced Threat Protection", Status: "implemented", Impact: "4/5", Effort: "4+ weeks", Capabilities: []string{"side-channel signal records", "canary keys", "compromise workflows", "DSPM findings"}},
+	}
+}
+
+// allKeys reads every key of a tenant, a page at a time. The enterprise
+// audit asked for 10000 in one call and got the newest 100 (13.24.0-beta).
+func (s *Service) allKeys(ctx context.Context, tenantID string) ([]Key, error) {
+	var out []Key
+	for offset := 0; ; offset += keyPageMax {
+		keys, err := s.store.ListKeys(ctx, tenantID, keyPageMax, offset)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, keys...)
+		if len(keys) < keyPageMax {
+			return out, nil
+		}
 	}
 }

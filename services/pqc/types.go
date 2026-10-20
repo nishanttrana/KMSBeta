@@ -10,7 +10,7 @@ type EventPublisher interface {
 }
 
 type KeyCoreClient interface {
-	ListKeys(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error)
+	AllKeys(ctx context.Context, tenantID string) ([]map[string]interface{}, error)
 	// RotateKey rotates a key; a non-empty targetAlgorithm moves it to that
 	// algorithm under the same key ID (keycore refuses what it can't serve).
 	RotateKey(ctx context.Context, tenantID string, keyID string, reason string, targetAlgorithm string) error
@@ -23,7 +23,7 @@ type DiscoveryClient interface {
 }
 
 type CertsClient interface {
-	ListCertificates(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error)
+	AllCertificates(ctx context.Context, tenantID string) ([]map[string]interface{}, error)
 	// EdgeMeasurement is what certs measured each external listener to
 	// accept (GET /certs/edge-tls/measurement).
 	EdgeMeasurement(ctx context.Context, tenantID string) ([]ListenerMeasurement, error)

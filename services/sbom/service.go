@@ -978,14 +978,14 @@ func (s *Service) fetchKeyAssets(ctx context.Context, tenantID string) ([]map[st
 	if s.keycore == nil {
 		return []map[string]interface{}{}, nil
 	}
-	return s.keycore.ListKeys(ctx, tenantID, 5000)
+	return s.keycore.AllKeys(ctx, tenantID)
 }
 
 func (s *Service) fetchCertAssets(ctx context.Context, tenantID string) ([]map[string]interface{}, error) {
 	if s.certs == nil {
 		return []map[string]interface{}{}, nil
 	}
-	return s.certs.ListCertificates(ctx, tenantID, 5000)
+	return s.certs.AllCertificates(ctx, tenantID)
 }
 
 func (s *Service) fetchDiscoveryAssets(ctx context.Context, tenantID string) ([]map[string]interface{}, error) {

@@ -505,23 +505,28 @@ async function apiRequest<T>(session: AuthSession, path: string, init?: RequestI
   return parseServiceJSON<T>(await response.text());
 }
 
+// Every key of the tenant, a page of 1000 at a time until keycore says no
+// more follow. One request for 2000 came back with the newest 100, so the
+// Keys page and the Command Center missed every older key (13.24.0-beta).
 export async function listKeys(
   session: AuthSession,
   options?: {
-    limit?: number;
-    offset?: number;
     includeDeleted?: boolean;
   }
 ): Promise<KeyItem[]> {
-  const limit = Math.max(1, Math.min(5000, Math.trunc(Number(options?.limit || 2000))));
-  const offset = Math.max(0, Math.trunc(Number(options?.offset || 0)));
   const includeDeleted = Boolean(options?.includeDeleted);
-  const payload = await apiRequest<APIKeysResponse>(
-    session,
-    `/keys?tenant_id=${encodeURIComponent(session.tenantId)}&limit=${limit}&offset=${offset}&include_deleted=${includeDeleted ? "true" : "false"}`
-  );
-  return payload.items || [];
+  const out: KeyItem[] = [];
+  for (let offset = 0; ; offset += KEY_PAGE_MAX) {
+    const payload = await apiRequest<APIKeysResponse & { has_more?: boolean }>(
+      session,
+      `/keys?tenant_id=${encodeURIComponent(session.tenantId)}&limit=${KEY_PAGE_MAX}&offset=${offset}&include_deleted=${includeDeleted ? "true" : "false"}`
+    );
+    out.push(...(payload.items || []));
+    if (!payload.has_more) return out;
+  }
 }
+
+const KEY_PAGE_MAX = 1000;
 
 export type PaginatedKeysResponse = {
   items: KeyItem[];

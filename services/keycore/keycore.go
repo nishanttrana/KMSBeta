@@ -2055,64 +2055,59 @@ func (s *Service) reconcileLifecycle(ctx context.Context, tenantID string) error
 }
 
 // ListKeys lists the keys in view (all of them, or a restricted caller's).
-func (s *Service) ListKeys(ctx context.Context, tenantID string, view keyView, limit int, offset int, includeDeleted bool) ([]Key, error) {
-	if err := s.reconcileLifecycle(ctx, tenantID); err != nil {
-		return nil, err
-	}
-	var keys []Key
-	var err error
-	if view.all {
-		keys, err = s.store.ListKeys(ctx, tenantID, limit, offset)
-	} else {
-		keys, err = s.store.ListKeysScoped(ctx, tenantID, view.scope, limit, offset, nil, "")
-	}
-	if err != nil {
-		return nil, err
-	}
-	out := make([]Key, 0, len(keys))
-	for _, k := range keys {
-		if normalizeLifecycleStatus(k.Status) == "deleted" {
-			_ = s.cache.Delete(ctx, tenantID, k.ID)
-			if includeDeleted {
-				out = append(out, k)
-			}
-			continue
-		}
-		out = append(out, k)
-		s.exists.AddString(existsToken(tenantID, k.ID))
-		_ = s.cache.Set(ctx, k)
-	}
-	return out, nil
+// KeyPage is one page of a key listing: the keys the caller sees, and
+// whether more may follow, judged on the rows read. Deleted keys left out of
+// Items still count, so a page holding deleted keys no longer ends the
+// listing early (13.24.0-beta).
+type KeyPage struct {
+	Items []Key
+	Last  *Key // the last row read, deleted or not: the next cursor
+	Full  bool // as many rows were read as the page holds
 }
 
-func (s *Service) ListKeysCursor(ctx context.Context, tenantID string, view keyView, limit int, afterCreatedAt *time.Time, afterID string, includeDeleted bool) ([]Key, error) {
+func (s *Service) ListKeys(ctx context.Context, tenantID string, view keyView, limit int, offset int, includeDeleted bool) (KeyPage, error) {
+	return s.listKeysPage(ctx, tenantID, view, limit, offset, nil, "", includeDeleted)
+}
+
+func (s *Service) ListKeysCursor(ctx context.Context, tenantID string, view keyView, limit int, afterCreatedAt *time.Time, afterID string, includeDeleted bool) (KeyPage, error) {
+	return s.listKeysPage(ctx, tenantID, view, limit, 0, afterCreatedAt, afterID, includeDeleted)
+}
+
+func (s *Service) listKeysPage(ctx context.Context, tenantID string, view keyView, limit int, offset int, afterCreatedAt *time.Time, afterID string, includeDeleted bool) (KeyPage, error) {
 	if err := s.reconcileLifecycle(ctx, tenantID); err != nil {
-		return nil, err
+		return KeyPage{}, err
 	}
+	limit = keyPageLimit(limit)
 	var keys []Key
 	var err error
-	if view.all {
+	switch {
+	case !view.all:
+		keys, err = s.store.ListKeysScoped(ctx, tenantID, view.scope, limit, offset, afterCreatedAt, afterID)
+	case afterCreatedAt != nil && afterID != "":
 		keys, err = s.store.ListKeysCursor(ctx, tenantID, limit, afterCreatedAt, afterID)
-	} else {
-		keys, err = s.store.ListKeysScoped(ctx, tenantID, view.scope, limit, 0, afterCreatedAt, afterID)
+	default:
+		keys, err = s.store.ListKeys(ctx, tenantID, limit, offset)
 	}
 	if err != nil {
-		return nil, err
+		return KeyPage{}, err
 	}
-	out := make([]Key, 0, len(keys))
+	page := KeyPage{Items: make([]Key, 0, len(keys)), Full: len(keys) == limit}
+	if len(keys) > 0 {
+		page.Last = &keys[len(keys)-1]
+	}
 	for _, k := range keys {
 		if normalizeLifecycleStatus(k.Status) == "deleted" {
 			_ = s.cache.Delete(ctx, tenantID, k.ID)
 			if includeDeleted {
-				out = append(out, k)
+				page.Items = append(page.Items, k)
 			}
 			continue
 		}
-		out = append(out, k)
+		page.Items = append(page.Items, k)
 		s.exists.AddString(existsToken(tenantID, k.ID))
 		_ = s.cache.Set(ctx, k)
 	}
-	return out, nil
+	return page, nil
 }
 
 func (s *Service) GetKey(ctx context.Context, tenantID string, keyID string) (Key, error) {

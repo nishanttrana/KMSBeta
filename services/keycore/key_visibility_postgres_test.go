@@ -77,7 +77,8 @@ func TestKeyVisibilityPostgres(t *testing.T) {
 	var after *time.Time
 	afterID := ""
 	for pages := 0; pages < 5; pages++ {
-		page, err := svc.ListKeysCursor(ctx, tenant, view, 2, after, afterID, false)
+		listed, err := svc.ListKeysCursor(ctx, tenant, view, 2, after, afterID, false)
+		page := listed.Items
 		if err != nil {
 			t.Fatal(err)
 		}

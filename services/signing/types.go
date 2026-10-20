@@ -19,6 +19,10 @@ type Store interface {
 	CreateRecord(ctx context.Context, item SigningRecord) error
 	GetRecord(ctx context.Context, tenantID string, id string) (SigningRecord, error)
 	ListRecords(ctx context.Context, tenantID string, profileID string, artifactType string, limit int) ([]SigningRecord, error)
+	// RecordCountsSince counts every record since a time, grouped for the
+	// summary. ListRecords returns at most 500 rows, and the summary asked it
+	// for 2000 and counted the 100 it got (13.24.0-beta).
+	RecordCountsSince(ctx context.Context, tenantID string, since time.Time) ([]RecordCount, error)
 	NextTransparencyIndex(ctx context.Context, tenantID string) (int, error)
 }
 
@@ -191,4 +195,14 @@ type KeyCoreVerifyRequest struct {
 
 type KeyCoreVerifyResponse struct {
 	Valid bool `json:"verified"`
+}
+
+// RecordCount is the number of signing records sharing an artifact type,
+// identity mode, transparency-log flag and failed-verification flag.
+type RecordCount struct {
+	ArtifactType string
+	IdentityMode string
+	Logged       bool
+	Failed       bool
+	Count        int
 }

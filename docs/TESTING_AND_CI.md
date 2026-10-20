@@ -62,6 +62,9 @@ the vulnerability scan behind it.
 
 ## Before pushing
 
+- `make conformance` includes `list-cap` (13.24.0-beta): a call that asks a
+  capped list (`if limit > N { limit = ... }`) for more than N rows fails,
+  because the list answers with fewer and no error. Page through instead.
 - Run the checks for what you touched: `make conformance`, `go vet` and
   `go test` for the touched packages, the dashboard steps above for a
   dashboard change, and `scripts/check-docs.sh`.

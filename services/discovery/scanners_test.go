@@ -88,7 +88,7 @@ func TestScansNeverInventAssets(t *testing.T) {
 
 type emptyCerts struct{}
 
-func (emptyCerts) ListCertificates(context.Context, string, int) ([]map[string]interface{}, error) {
+func (emptyCerts) AllCertificates(context.Context, string) ([]map[string]interface{}, error) {
 	return nil, nil
 }
 

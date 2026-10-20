@@ -126,11 +126,13 @@ func TestScopedKeyListPagesFully(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	first, err := svc.ListKeys(context.Background(), "t1", view, 2, 0, false)
+	firstPage, err := svc.ListKeys(context.Background(), "t1", view, 2, 0, false)
+	first := firstPage.Items
 	if err != nil || len(first) != 2 {
 		t.Fatalf("first page: %d keys, %v", len(first), err)
 	}
-	rest, err := svc.ListKeys(context.Background(), "t1", view, 2, 2, false)
+	restPage, err := svc.ListKeys(context.Background(), "t1", view, 2, 2, false)
+	rest := restPage.Items
 	if err != nil || len(rest) != 1 {
 		t.Fatalf("second page: %d keys, %v", len(rest), err)
 	}

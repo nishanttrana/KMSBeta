@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"strings"
+	"time"
 
 	pkgdb "vecta-kms/pkg/db"
 )
@@ -225,4 +226,29 @@ func scanDecision(scanner interface{ Scan(dest ...interface{}) error }) (KeyAcce
 	out.Metadata = parseJSONObjectString(metadataRaw)
 	out.CreatedAt = parseTimeValue(createdRaw)
 	return out, nil
+}
+
+func (s *SQLStore) DecisionCountsSince(ctx context.Context, tenantID string, since time.Time) ([]DecisionCount, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT COALESCE(service_name,''), LOWER(TRIM(decision)), bypass_detected,
+       (LOWER(COALESCE(reason,'')) LIKE '%justification%'
+        OR LOWER(COALESCE(reason,'')) LIKE '%unknown\_code%' ESCAPE '\'
+        OR LOWER(COALESCE(reason,'')) LIKE '%scope\_mismatch%' ESCAPE '\'),
+       COUNT(*)
+FROM key_access_decisions
+WHERE tenant_id = $1 AND created_at >= $2
+GROUP BY 1, 2, 3, 4`, strings.TrimSpace(tenantID), since.UTC())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := []DecisionCount{}
+	for rows.Next() {
+		var c DecisionCount
+		if err := rows.Scan(&c.Service, &c.Decision, &c.Bypass, &c.Unjustified, &c.Count); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
 }

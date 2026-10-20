@@ -194,14 +194,14 @@ func (s *Service) GetInventory(ctx context.Context, tenantID string) (PQCInvento
 	if tenantID == "" {
 		return PQCInventory{}, newServiceError(400, "bad_request", "tenant_id is required")
 	}
-	keys, err := s.keycore.ListKeys(ctx, tenantID, 5000)
+	keys, err := s.keycore.AllKeys(ctx, tenantID)
 	if err != nil && s.keycore != nil {
 		return PQCInventory{}, err
 	}
 
 	certs := []map[string]interface{}{}
 	if s.certs != nil {
-		if certItems, certErr := s.certs.ListCertificates(ctx, tenantID, 5000); certErr == nil {
+		if certItems, certErr := s.certs.AllCertificates(ctx, tenantID); certErr == nil {
 			certs = certItems
 		} else if len(keys) == 0 {
 			return PQCInventory{}, certErr
@@ -830,7 +830,7 @@ func (s *Service) collectAssets(ctx context.Context, tenantID string) ([]discove
 	}
 
 	if s.keycore != nil {
-		items, err := s.keycore.ListKeys(ctx, tenantID, 5000)
+		items, err := s.keycore.AllKeys(ctx, tenantID)
 		if err != nil {
 			if len(assets) == 0 {
 				return nil, err
@@ -859,7 +859,7 @@ func (s *Service) collectAssets(ctx context.Context, tenantID string) ([]discove
 	}
 
 	if s.certs != nil {
-		items, err := s.certs.ListCertificates(ctx, tenantID, 5000)
+		items, err := s.certs.AllCertificates(ctx, tenantID)
 		if err == nil {
 			for _, item := range items {
 				alg := normalizeAlgorithm(firstString(item["algorithm"], item["signature_algorithm"], item["cert_class"]))

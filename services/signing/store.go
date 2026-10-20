@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"time"
 
 	pkgdb "vecta-kms/pkg/db"
 )
@@ -288,4 +289,26 @@ func boolValue(value interface{}) bool {
 	default:
 		return false
 	}
+}
+
+func (s *SQLStore) RecordCountsSince(ctx context.Context, tenantID string, since time.Time) ([]RecordCount, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT artifact_type, COALESCE(identity_mode,''), COALESCE(transparency_entry_id,'') <> '',
+       LOWER(COALESCE(verification_status,'')) = 'failed', COUNT(*)
+FROM signing_records
+WHERE tenant_id=$1 AND created_at >= $2
+GROUP BY 1, 2, 3, 4`, strings.TrimSpace(tenantID), since.UTC())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := []RecordCount{}
+	for rows.Next() {
+		var c RecordCount
+		if err := rows.Scan(&c.ArtifactType, &c.IdentityMode, &c.Logged, &c.Failed, &c.Count); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
 }

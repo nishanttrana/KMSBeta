@@ -376,10 +376,25 @@ type KeyScope struct {
 	KeyIDs    []string
 }
 
-func (s *SQLStore) listKeys(ctx context.Context, tenantID string, scope *KeyScope, limit int, offset int, afterCreatedAt *time.Time, afterID string) ([]Key, error) {
-	if limit <= 0 || limit > 1000 {
-		limit = 100
+// keyPageMax is the most keys one list call returns.
+const keyPageMax = 1000
+
+// keyPageLimit is the page size a list call uses: 100 by default, never
+// more than keyPageMax. A larger request used to come back as 100 keys, so
+// the dashboard (asking 2000) and the enterprise audit (10000) saw only the
+// newest 100 (13.24.0-beta).
+func keyPageLimit(limit int) int {
+	if limit <= 0 {
+		return 100
 	}
+	if limit > keyPageMax {
+		return keyPageMax
+	}
+	return limit
+}
+
+func (s *SQLStore) listKeys(ctx context.Context, tenantID string, scope *KeyScope, limit int, offset int, afterCreatedAt *time.Time, afterID string) ([]Key, error) {
+	limit = keyPageLimit(limit)
 	args := []any{tenantID}
 	arg := func(v any) string {
 		args = append(args, v)

@@ -340,7 +340,7 @@ func (s *Service) scanCertificates(ctx context.Context, tenantID string, scanID 
 	if s.certs == nil {
 		return nil, fmt.Errorf("%w: no certs service client", errScanNotConfigured)
 	}
-	items, err := s.certs.ListCertificates(ctx, tenantID, 2000)
+	items, err := s.certs.AllCertificates(ctx, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("list certificates: %w", err)
 	}

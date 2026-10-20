@@ -4,7 +4,43 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
-## [13.23.0-beta] — 2026-10-18
+## [13.24.0-beta] — 2026-10-20
+
+### Fixed
+- **No list silently returns fewer rows than asked.** Most lists shrink a
+  request above their maximum to a default (often 100) without an error.
+  Seventeen calls in nine services asked for more and took what came back
+  for the whole set. Each now pages through every row, or counts in the
+  database:
+  - keycore: the enterprise key audit (inventory sync, duplicate keys) and
+    **compromise-advisory ingest**, which matched (and could suspend) only
+    the newest 100 keys.
+  - CBOM (sbom), crypto discovery, compliance and PQC inventory read only
+    the newest 100 certificates and, from keycore, 100 keys; compliance's
+    key-risk endpoints scored only the newest 500 keys, and its assessment
+    read 100 policies.
+  - The signing and key-access 24-hour summaries counted the newest 100
+    records; both now `COUNT(*)` the window in the database.
+  - Compliance's connector-failure comparison now reads every event of its
+    window (`from`, request logs excluded) instead of the newest 1000.
+  - The dashboard's key list (Keys page, Command Center, Operations) asked
+    for 2000 or 5000 keys and got 100; it now pages until keycore says no
+    more follow.
+- **`GET /keys` says whether more follow on every page.** `has_more` and
+  `next_cursor` are on the first page too, and are judged on the rows read,
+  so a page holding deleted keys no longer ends a listing early. A `limit`
+  above 1000 is held to 1000, not cut to 100.
+
+### Added
+- Conformance `list-cap` (`scripts/check-list-caps.py`): fails on a call
+  asking a capped list for more than its maximum.
+
+### Not changed
+- Compliance's correlation, anomaly and posture reads still look at the
+  newest 500-1000 audit events by design of those views; they are within
+  the endpoint's maximum and are not counts of the whole set.
+
+ — 2026-10-18
 
 The second of three steps to make the console simpler without removing
 anything: fewer places to look.

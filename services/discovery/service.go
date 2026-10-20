@@ -721,7 +721,7 @@ func (s *Service) Sources(ctx context.Context, tenantID string) ([]SourceStatus,
 			certs.Error = "no certs service client"
 			return
 		}
-		items, err := s.certs.ListCertificates(cctx, tenantID, 2000)
+		items, err := s.certs.AllCertificates(cctx, tenantID)
 		if err != nil {
 			certs.Error = "certs service: " + err.Error()
 			return

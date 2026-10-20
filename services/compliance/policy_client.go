@@ -12,7 +12,7 @@ import (
 )
 
 type PolicyClient interface {
-	ListPolicies(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error)
+	AllPolicies(ctx context.Context, tenantID string) ([]map[string]interface{}, error)
 }
 
 type HTTPPolicyClient struct {
@@ -30,33 +30,36 @@ func NewHTTPPolicyClient(baseURL string, timeout time.Duration) *HTTPPolicyClien
 	}
 }
 
-func (c *HTTPPolicyClient) ListPolicies(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error) {
+// policyPageMax is the most rows one GET /policies answers.
+const policyPageMax = 1000
+
+// AllPolicies reads every policy of the tenant, a page at a time. One
+// request for 2000 came back with 100 rows and no error, so the assessment
+// saw only the newest 100 policies (13.24.0-beta).
+func (c *HTTPPolicyClient) AllPolicies(ctx context.Context, tenantID string) ([]map[string]interface{}, error) {
 	if strings.TrimSpace(c.baseURL) == "" {
 		return nil, errors.New("policy base url is empty")
 	}
-	if limit <= 0 || limit > 5000 {
-		limit = 1000
-	}
-	q := url.Values{}
-	q.Set("tenant_id", strings.TrimSpace(tenantID))
-	q.Set("limit", strconvItoa(limit))
-	out, err := c.doJSON(ctx, http.MethodGet, "/policies?"+q.Encode())
-	if err != nil {
-		return nil, err
-	}
-	rawItems, ok := out["items"].([]interface{})
-	if !ok {
-		return []map[string]interface{}{}, nil
-	}
-	items := make([]map[string]interface{}, 0, len(rawItems))
-	for _, it := range rawItems {
-		m, ok := it.(map[string]interface{})
-		if !ok {
-			continue
+	items := make([]map[string]interface{}, 0)
+	for offset := 0; ; offset += policyPageMax {
+		q := url.Values{}
+		q.Set("tenant_id", strings.TrimSpace(tenantID))
+		q.Set("limit", strconvItoa(policyPageMax))
+		q.Set("offset", strconvItoa(offset))
+		out, err := c.doJSON(ctx, http.MethodGet, "/policies?"+q.Encode())
+		if err != nil {
+			return nil, err
 		}
-		items = append(items, m)
+		rawItems, _ := out["items"].([]interface{})
+		for _, it := range rawItems {
+			if m, ok := it.(map[string]interface{}); ok {
+				items = append(items, m)
+			}
+		}
+		if len(rawItems) < policyPageMax {
+			return items, nil
+		}
 	}
-	return items, nil
 }
 
 func (c *HTTPPolicyClient) doJSON(ctx context.Context, method string, path string) (map[string]interface{}, error) {

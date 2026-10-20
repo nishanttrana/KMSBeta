@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	pkgdb "vecta-kms/pkg/db"
 )
@@ -36,7 +37,7 @@ type fakeComplianceKeyCore struct {
 	keys map[string][]map[string]interface{}
 }
 
-func (f *fakeComplianceKeyCore) ListKeys(_ context.Context, tenantID string, _ int) ([]map[string]interface{}, error) {
+func (f *fakeComplianceKeyCore) AllKeys(_ context.Context, tenantID string) ([]map[string]interface{}, error) {
 	if f.keys == nil {
 		return []map[string]interface{}{}, nil
 	}
@@ -59,7 +60,7 @@ type fakeCompliancePolicy struct {
 	policies map[string][]map[string]interface{}
 }
 
-func (f *fakeCompliancePolicy) ListPolicies(_ context.Context, tenantID string, _ int) ([]map[string]interface{}, error) {
+func (f *fakeCompliancePolicy) AllPolicies(_ context.Context, tenantID string) ([]map[string]interface{}, error) {
 	if f.policies == nil {
 		return []map[string]interface{}{}, nil
 	}
@@ -74,7 +75,7 @@ type fakeComplianceCerts struct {
 	certs map[string][]map[string]interface{}
 }
 
-func (f *fakeComplianceCerts) ListCertificates(_ context.Context, tenantID string, _ int) ([]map[string]interface{}, error) {
+func (f *fakeComplianceCerts) AllCertificates(_ context.Context, tenantID string) ([]map[string]interface{}, error) {
 	if f.certs == nil {
 		return []map[string]interface{}{}, nil
 	}
@@ -101,6 +102,10 @@ type fakeComplianceAudit struct {
 	events map[string][]map[string]interface{}
 	stats  map[string]map[string]interface{}
 	err    error
+}
+
+func (f *fakeComplianceAudit) EventsSince(ctx context.Context, tenantID string, _ time.Time) ([]map[string]interface{}, error) {
+	return f.ListEvents(ctx, tenantID, 0)
 }
 
 func (f *fakeComplianceAudit) ListEvents(_ context.Context, tenantID string, _ int) ([]map[string]interface{}, error) {
@@ -255,7 +260,7 @@ func createComplianceSchemaForTest(conn *pkgdb.DB) error {
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, id)
-		);`,		// migrations 004 + 005
+		);`, // migrations 004 + 005
 		`CREATE TABLE compliance_playbooks (
 			id TEXT NOT NULL,
 			tenant_id TEXT NOT NULL,

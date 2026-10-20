@@ -10,11 +10,11 @@ type EventPublisher interface {
 }
 
 type KeyCoreClient interface {
-	ListKeys(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error)
+	AllKeys(ctx context.Context, tenantID string) ([]map[string]interface{}, error)
 }
 
 type CertsClient interface {
-	ListCertificates(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error)
+	AllCertificates(ctx context.Context, tenantID string) ([]map[string]interface{}, error)
 }
 
 type DiscoveryClient interface {

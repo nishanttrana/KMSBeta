@@ -554,30 +554,35 @@ func (h *Handler) handleListKeys(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusBadRequest, "bad_request", "invalid after_created_at (use RFC3339)", reqID, tenantID)
 			return
 		}
-		keys, err := h.svc.ListKeysCursor(r.Context(), tenantID, view, limit, &t, afterID, includeDeleted)
+		page, err := h.svc.ListKeysCursor(r.Context(), tenantID, view, limit, &t, afterID, includeDeleted)
 		if err != nil {
 			writeErr(w, http.StatusInternalServerError, "list_failed", "failed to list keys", reqID, tenantID)
 			return
 		}
-		resp := map[string]any{"items": renderKeys(keys), "request_id": reqID}
-		if len(keys) > 0 {
-			last := keys[len(keys)-1]
-			resp["next_cursor"] = map[string]string{
-				"after_created_at": last.CreatedAt.UTC().Format(time.RFC3339Nano),
-				"after_id":         last.ID,
-			}
-		}
-		resp["has_more"] = len(keys) == limit || (limit <= 0 && len(keys) == 100)
-		writeJSON(w, http.StatusOK, resp)
+		writeJSON(w, http.StatusOK, keyPageResponse(page, reqID))
 		return
 	}
 
-	keys, err := h.svc.ListKeys(r.Context(), tenantID, view, limit, offset, includeDeleted)
+	page, err := h.svc.ListKeys(r.Context(), tenantID, view, limit, offset, includeDeleted)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "list_failed", "failed to list keys", reqID, tenantID)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"items": renderKeys(keys), "request_id": reqID})
+	writeJSON(w, http.StatusOK, keyPageResponse(page, reqID))
+}
+
+// keyPageResponse answers every key listing, the first page included, with
+// has_more and the cursor of the last row read (13.24.0-beta: only cursor
+// pages said whether more followed, so a client could not start paging).
+func keyPageResponse(page KeyPage, reqID string) map[string]any {
+	resp := map[string]any{"items": renderKeys(page.Items), "has_more": page.Full, "request_id": reqID}
+	if page.Full && page.Last != nil {
+		resp["next_cursor"] = map[string]string{
+			"after_created_at": page.Last.CreatedAt.UTC().Format(time.RFC3339Nano),
+			"after_id":         page.Last.ID,
+		}
+	}
+	return resp
 }
 
 func (h *Handler) handleGetKey(w http.ResponseWriter, r *http.Request) {

@@ -49,7 +49,7 @@ func (f *fakeDiscoveryKeyCore) ListKeys(_ context.Context, _ string, _ int) ([]m
 
 type fakeDiscoveryCerts struct{}
 
-func (f *fakeDiscoveryCerts) ListCertificates(_ context.Context, _ string, _ int) ([]map[string]interface{}, error) {
+func (f *fakeDiscoveryCerts) AllCertificates(_ context.Context, _ string) ([]map[string]interface{}, error) {
 	return []map[string]interface{}{
 		{"id": "c1", "subject_cn": "api.vecta.local", "algorithm": "RSA-3072", "status": "active"},
 		{"id": "c2", "subject_cn": "pqc.vecta.local", "algorithm": "ML-DSA-65", "status": "active", "cert_class": "pqc"},

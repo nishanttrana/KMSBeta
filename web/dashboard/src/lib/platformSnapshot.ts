@@ -33,7 +33,7 @@ async function opt<T>(p: Promise<T>): Promise<T | undefined> {
 export async function loadPlatformSnapshot(session: AuthSession, fipsEnabled?: boolean, clustered = true): Promise<PlatformSnapshot> {
   const [keys, keyAlgorithms, certs, certSummary, rotationPolicies, backups, keyAccess, governancePolicies, pqc, postureFindings, postureRisk, cluster, users] =
     await Promise.all([
-      opt(listKeys(session, { limit: 5000 })),
+      opt(listKeys(session)),
       opt(getAgilityPosture(session).then((p) => p.algorithms as KeyAlgorithmFacts[])),
       opt(listCertificates(session, { limit: 500 })),
       opt(getCertSummary(session)),

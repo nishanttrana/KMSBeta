@@ -60,7 +60,7 @@ func (f *fakePQCKeyCore) DeactivateKey(_ context.Context, _ string, keyID string
 	return nil
 }
 
-func (f *fakePQCKeyCore) ListKeys(_ context.Context, _ string, _ int) ([]map[string]interface{}, error) {
+func (f *fakePQCKeyCore) AllKeys(_ context.Context, _ string) ([]map[string]interface{}, error) {
 	return []map[string]interface{}{
 		{"id": "k1", "name": "legacy-rsa", "algorithm": "RSA-2048", "status": "active"},
 		{"id": "k2", "name": "hybrid-kem", "algorithm": "ML-KEM-768-HYBRID", "status": "active"},
@@ -100,7 +100,7 @@ func (f *fakePQCCerts) EdgeMeasurement(_ context.Context, _ string) ([]ListenerM
 	return f.listeners, f.edgeErr
 }
 
-func (f *fakePQCCerts) ListCertificates(_ context.Context, _ string, _ int) ([]map[string]interface{}, error) {
+func (f *fakePQCCerts) AllCertificates(_ context.Context, _ string) ([]map[string]interface{}, error) {
 	return []map[string]interface{}{
 		{"id": "c1", "subject_cn": "api.vecta.local", "algorithm": "RSA-3072", "cert_class": "classical", "status": "active"},
 		{"id": "c2", "subject_cn": "hybrid.vecta.local", "algorithm": "ECDSA-P384 + ML-DSA-65", "cert_class": "hybrid", "status": "active"},

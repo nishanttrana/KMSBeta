@@ -177,32 +177,32 @@ func (s *Service) GetSummary(ctx context.Context, tenantID string) (SigningSumma
 		return SigningSummary{}, err
 	}
 	profiles, _ := s.store.ListProfiles(ctx, tenantID)
-	records, _ := s.store.ListRecords(ctx, tenantID, "", "", 2000)
+	// Counted by the database over every record in the window.
+	grouped, err := s.store.RecordCountsSince(ctx, tenantID, s.now().Add(-24*time.Hour))
+	if err != nil {
+		return SigningSummary{}, err
+	}
 	summary := SigningSummary{
 		TenantID:       tenantID,
 		Enabled:        settings.Enabled,
 		ProfileCount:   len(profiles),
 		ArtifactCounts: []SigningArtifactCount{},
 	}
-	cutoff := s.now().Add(-24 * time.Hour)
 	counts := map[string]int{}
-	for _, item := range records {
-		if !item.CreatedAt.IsZero() && item.CreatedAt.Before(cutoff) {
-			continue
+	for _, c := range grouped {
+		summary.RecordCount24h += c.Count
+		counts[c.ArtifactType] += c.Count
+		if c.Logged {
+			summary.TransparencyLogged24h += c.Count
 		}
-		summary.RecordCount24h++
-		counts[item.ArtifactType]++
-		if item.TransparencyEntryID != "" {
-			summary.TransparencyLogged24h++
-		}
-		switch item.IdentityMode {
+		switch c.IdentityMode {
 		case "workload":
-			summary.WorkloadSigned24h++
+			summary.WorkloadSigned24h += c.Count
 		default:
-			summary.OIDCSigned24h++
+			summary.OIDCSigned24h += c.Count
 		}
-		if strings.EqualFold(item.VerificationStatus, "failed") {
-			summary.VerificationFailures24h++
+		if c.Failed {
+			summary.VerificationFailures24h += c.Count
 		}
 	}
 	for artifactType, count := range counts {

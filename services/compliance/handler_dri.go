@@ -206,7 +206,7 @@ func (h *Handler) handleGetKeyRiskRanking(w http.ResponseWriter, r *http.Request
 		limit = 200
 	}
 
-	keys, err := h.svc.keycore.ListKeys(r.Context(), tenantID, 500)
+	keys, err := h.svc.keycore.AllKeys(r.Context(), tenantID)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
@@ -248,7 +248,7 @@ func (h *Handler) handleGetDataRiskSummary(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	keys, err := h.svc.keycore.ListKeys(r.Context(), tenantID, 500)
+	keys, err := h.svc.keycore.AllKeys(r.Context(), tenantID)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
@@ -326,7 +326,7 @@ func (h *Handler) handleGetRiskRemediation(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	keys, err := h.svc.keycore.ListKeys(r.Context(), tenantID, 500)
+	keys, err := h.svc.keycore.AllKeys(r.Context(), tenantID)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return

@@ -51,7 +51,7 @@ type fakeSBOMKeyCore struct {
 	keys map[string][]map[string]interface{}
 }
 
-func (f *fakeSBOMKeyCore) ListKeys(_ context.Context, tenantID string, _ int) ([]map[string]interface{}, error) {
+func (f *fakeSBOMKeyCore) AllKeys(_ context.Context, tenantID string) ([]map[string]interface{}, error) {
 	items := f.keys[tenantID]
 	if items == nil {
 		return []map[string]interface{}{}, nil
@@ -63,7 +63,7 @@ type fakeSBOMCerts struct {
 	items map[string][]map[string]interface{}
 }
 
-func (f *fakeSBOMCerts) ListCertificates(_ context.Context, tenantID string, _ int) ([]map[string]interface{}, error) {
+func (f *fakeSBOMCerts) AllCertificates(_ context.Context, tenantID string) ([]map[string]interface{}, error) {
 	items := f.items[tenantID]
 	if items == nil {
 		return []map[string]interface{}{}, nil

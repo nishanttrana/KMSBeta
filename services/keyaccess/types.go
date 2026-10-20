@@ -21,6 +21,20 @@ type Store interface {
 	DeleteRule(ctx context.Context, tenantID string, id string) error
 	CreateDecision(ctx context.Context, item KeyAccessDecision) error
 	ListDecisions(ctx context.Context, tenantID string, service string, action string, limit int) ([]KeyAccessDecision, error)
+	// DecisionCountsSince counts every decision since a time, grouped for the
+	// summary. ListDecisions returns at most 500 rows, and the summary asked
+	// it for 1000 and counted the 100 it got (13.24.0-beta).
+	DecisionCountsSince(ctx context.Context, tenantID string, since time.Time) ([]DecisionCount, error)
+}
+
+// DecisionCount is the number of decisions sharing a service, decision,
+// bypass flag and unjustified flag.
+type DecisionCount struct {
+	Service     string
+	Decision    string
+	Bypass      bool
+	Unjustified bool
+	Count       int
 }
 
 type KeyAccessSettings struct {

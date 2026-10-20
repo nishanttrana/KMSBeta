@@ -98,7 +98,11 @@ func (s *Service) GetSummary(ctx context.Context, tenantID string) (KeyAccessSum
 		return KeyAccessSummary{}, err
 	}
 	rules, _ := s.store.ListRules(ctx, tenantID)
-	decisions, _ := s.store.ListDecisions(ctx, tenantID, "", "", 1000)
+	// Counted by the database over every decision in the window.
+	counts, err := s.store.DecisionCountsSince(ctx, tenantID, s.now().Add(-24*time.Hour))
+	if err != nil {
+		return KeyAccessSummary{}, err
+	}
 	summary := KeyAccessSummary{
 		TenantID:      tenantID,
 		Enabled:       settings.Enabled,
@@ -107,47 +111,34 @@ func (s *Service) GetSummary(ctx context.Context, tenantID string) (KeyAccessSum
 		RuleCount:     len(rules),
 		Services:      []KeyAccessServiceSummary{},
 	}
-	cutoff := s.now().Add(-24 * time.Hour)
 	serviceMap := map[string]*KeyAccessServiceSummary{}
-	for _, item := range decisions {
-		if !item.CreatedAt.IsZero() && item.CreatedAt.Before(cutoff) {
-			continue
-		}
-		summary.TotalRequests24h++
-		switch strings.ToLower(strings.TrimSpace(item.Decision)) {
-		case "allow":
-			summary.AllowCount24h++
-		case "approval":
-			summary.ApprovalCount24h++
-		default:
-			summary.DenyCount24h++
-		}
-		if item.BypassDetected {
-			summary.BypassCount24h++
-		}
-		if strings.Contains(strings.ToLower(item.Reason), "justification") || strings.Contains(strings.ToLower(item.Reason), "unknown_code") || strings.Contains(strings.ToLower(item.Reason), "scope_mismatch") {
-			summary.UnjustifiedCount24h++
-		}
-		key := firstNonEmpty(item.Service, "unknown")
+	for _, c := range counts {
+		key := firstNonEmpty(c.Service, "unknown")
 		entry := serviceMap[key]
 		if entry == nil {
 			entry = &KeyAccessServiceSummary{Service: key}
 			serviceMap[key] = entry
 		}
-		entry.Requests24h++
-		switch strings.ToLower(strings.TrimSpace(item.Decision)) {
+		summary.TotalRequests24h += c.Count
+		entry.Requests24h += c.Count
+		switch c.Decision {
 		case "allow":
-			entry.AllowCount24h++
+			summary.AllowCount24h += c.Count
+			entry.AllowCount24h += c.Count
 		case "approval":
-			entry.ApprovalCount24h++
+			summary.ApprovalCount24h += c.Count
+			entry.ApprovalCount24h += c.Count
 		default:
-			entry.DenyCount24h++
+			summary.DenyCount24h += c.Count
+			entry.DenyCount24h += c.Count
 		}
-		if item.BypassDetected {
-			entry.BypassCount24h++
+		if c.Bypass {
+			summary.BypassCount24h += c.Count
+			entry.BypassCount24h += c.Count
 		}
-		if strings.Contains(strings.ToLower(item.Reason), "justification") || strings.Contains(strings.ToLower(item.Reason), "unknown_code") || strings.Contains(strings.ToLower(item.Reason), "scope_mismatch") {
-			entry.UnjustifiedCount24h++
+		if c.Unjustified {
+			summary.UnjustifiedCount24h += c.Count
+			entry.UnjustifiedCount24h += c.Count
 		}
 	}
 	for _, item := range serviceMap {

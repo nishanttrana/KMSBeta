@@ -3,6 +3,29 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-10-20
+
+### A bug fixed in one place, and sixteen more copies (13.24.0-beta)
+- 13.21.0-beta found the certificate store answering 5000-row requests with
+  100 and fixed certs. Planning a key search showed keycore did the same,
+  and a scan for the pattern found seventeen calls in nine services,
+  including compromise-advisory ingest. The first fix added a test for one
+  package; the class was in every store copied from the same template.
+  **Rule (CLAUDE.md): a fault found once is searched for everywhere, and
+  the check that finds it runs in conformance (`list-cap`).**
+- The first version of the check matched same-named functions and took the
+  largest maximum, so HTTP clients with their own generous clamp hid the
+  store's 500 and the check passed on broken code. It was run against the
+  unfixed tree before trusting it: a check is proven by failing on the bug
+  it targets.
+- Counting a 24-hour window by listing rows and counting in Go caps the
+  count at the list's size. Counts are a `GROUP BY ... COUNT(*)` in the
+  database, tested on Postgres with more rows than one page.
+- I ran `git stash` in a worktree by mistake (CLAUDE.md forbids it). The
+  stash list is shared with the main checkout, which held an older stash;
+  mine was popped by its index after checking which entry it was. Compare
+  trees with a throwaway `git worktree` instead.
+
 ## 2026-10-18
 
 ### A simpler sidebar breaks every test that clicks by name (13.23.0-beta)

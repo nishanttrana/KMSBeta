@@ -483,11 +483,16 @@ Response `201`:
 
 ### GET /svc/keycore/keys
 
-Query: `tenant_id` (required), `limit`, `offset`, `include_deleted`.
-For cursor paging pass `after_created_at` (RFC 3339) and `after_id` from
-the previous page's `next_cursor`; the response then also carries
-`has_more`. Response: `{"items": [Key, ...], "request_id": "..."}`. Only
-keys the caller may see are listed ([KEY_ACCESS_MODEL.md](SECURITY/KEY_ACCESS_MODEL.md)).
+Query: `tenant_id` (required), `limit` (default 100, at most 1000),
+`offset`, `include_deleted`. For cursor paging pass `after_created_at`
+(RFC 3339) and `after_id` from the previous page's `next_cursor`.
+Response: `{"items": [Key, ...], "has_more": bool, "next_cursor": {...},
+"request_id": "..."}`. Every page, the first included, carries `has_more`
+and, when it is true, `next_cursor`; both are judged on the rows read, so a
+page whose deleted keys were left out of `items` still says more follow.
+Read until `has_more` is false. Before 13.24.0-beta a `limit` above 1000
+returned 100 keys and only cursor pages carried `has_more`. Only keys the
+caller may see are listed ([KEY_ACCESS_MODEL.md](SECURITY/KEY_ACCESS_MODEL.md)).
 
 ---
 

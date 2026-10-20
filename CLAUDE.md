@@ -374,7 +374,10 @@ an approach, record it here or in the matching doc below.
   showed 49, 500 and 723 expiring certificates for one tenant). A page
   never counts over a list it fetched: lists are paged and capped. A store
   call that is asked for more rows than it returns is a fault: callers page
-  through (certs `allCertificates`, `TestNoCertificateListPastTheStoreCap`).
+  through (certs `allCertificates`, keycore `allKeys`, the `All*` HTTP
+  clients). Conformance `list-cap` (`scripts/check-list-caps.py`) fails on
+  any call asking a capped list for more than its maximum (13.24.0-beta, after
+  it found seventeen such calls in nine services).
   Two pages showing the same quantity read the same endpoint.
 
 - **The console shows a module only to someone who can read its data**

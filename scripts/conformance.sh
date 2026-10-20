@@ -416,6 +416,11 @@ else
   echo "PASS [route-kernel] ($(printf '%s\n' "$listed" | grep -c . | tr -d ' ') legacy file(s) left to migrate)"
 fi
 
+# No caller asks a list for more rows than it returns: the store shrinks
+# such a request to a default without an error, and services took 100 rows
+# for the whole set (13.21.0-beta, 13.24.0-beta). Page through instead.
+if python3 scripts/check-list-caps.py; then :; else FAIL=1; fi
+
 # Docs name only routes that exist (CLAUDE.md rule 8: no invented APIs).
 if python3 scripts/check-doc-routes.py; then :; else FAIL=1; fi
 

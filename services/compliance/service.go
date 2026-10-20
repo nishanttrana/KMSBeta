@@ -498,7 +498,7 @@ func (s *Service) diffConnectorFailures(ctx context.Context, tenantID string, pr
 	windowSize := windowEnd.Sub(windowStart)
 	prevWindowEnd := windowStart
 	prevWindowStart := prevWindowEnd.Add(-windowSize)
-	events, err := s.audit.ListEvents(ctx, tenantID, 2000)
+	events, err := s.audit.EventsSince(ctx, tenantID, prevWindowStart)
 	if err != nil {
 		return nil, fmt.Errorf("audit events unavailable: %w", err)
 	}
@@ -1262,7 +1262,7 @@ func (s *Service) fetchKeys(ctx context.Context, tenantID string) ([]map[string]
 	if s.keycore == nil {
 		return []map[string]interface{}{}, nil
 	}
-	items, err := s.keycore.ListKeys(ctx, tenantID, 2000)
+	items, err := s.keycore.AllKeys(ctx, tenantID)
 	if err != nil {
 		return []map[string]interface{}{}, nil
 	}
@@ -1273,7 +1273,7 @@ func (s *Service) fetchCerts(ctx context.Context, tenantID string) ([]map[string
 	if s.certs == nil {
 		return []map[string]interface{}{}, nil
 	}
-	items, err := s.certs.ListCertificates(ctx, tenantID, 5000)
+	items, err := s.certs.AllCertificates(ctx, tenantID)
 	if err != nil {
 		return []map[string]interface{}{}, nil
 	}
@@ -1295,7 +1295,7 @@ func (s *Service) fetchPolicies(ctx context.Context, tenantID string) ([]map[str
 	if s.policy == nil {
 		return []map[string]interface{}{}, nil
 	}
-	items, err := s.policy.ListPolicies(ctx, tenantID, 2000)
+	items, err := s.policy.AllPolicies(ctx, tenantID)
 	if err != nil {
 		return []map[string]interface{}{}, nil
 	}

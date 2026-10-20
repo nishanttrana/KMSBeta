@@ -14,7 +14,7 @@ import (
 )
 
 type KeyCoreClient interface {
-	ListKeys(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error)
+	AllKeys(ctx context.Context, tenantID string) ([]map[string]interface{}, error)
 }
 
 type HTTPKeyCoreClient struct {
@@ -32,34 +32,37 @@ func NewHTTPKeyCoreClient(baseURL string, timeout time.Duration) *HTTPKeyCoreCli
 	}
 }
 
-func (c *HTTPKeyCoreClient) ListKeys(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error) {
+// keyPageMax is the most rows one GET /keys answers.
+const keyPageMax = 1000
+
+// AllKeys reads every key of the tenant, a page at a time, until keycore
+// says no more follow. A single request for more than 1000 came back with
+// 100 rows and no error, so this service saw only the newest 100 keys
+// (13.24.0-beta).
+func (c *HTTPKeyCoreClient) AllKeys(ctx context.Context, tenantID string) ([]map[string]interface{}, error) {
 	if strings.TrimSpace(c.baseURL) == "" {
 		return nil, errors.New("keycore base url is empty")
 	}
-	if limit <= 0 || limit > 5000 {
-		limit = 1000
-	}
-	q := url.Values{}
-	q.Set("tenant_id", strings.TrimSpace(tenantID))
-	q.Set("limit", strconvItoa(limit))
-	path := "/keys?" + q.Encode()
-	out, err := c.doJSON(ctx, http.MethodGet, path, nil)
-	if err != nil {
-		return nil, err
-	}
-	rawItems, ok := out["items"].([]interface{})
-	if !ok {
-		return []map[string]interface{}{}, nil
-	}
-	items := make([]map[string]interface{}, 0, len(rawItems))
-	for _, it := range rawItems {
-		m, ok := it.(map[string]interface{})
-		if !ok {
-			continue
+	items := make([]map[string]interface{}, 0)
+	for offset := 0; ; offset += keyPageMax {
+		q := url.Values{}
+		q.Set("tenant_id", strings.TrimSpace(tenantID))
+		q.Set("limit", strconvItoa(keyPageMax))
+		q.Set("offset", strconvItoa(offset))
+		out, err := c.doJSON(ctx, http.MethodGet, "/keys?"+q.Encode(), nil)
+		if err != nil {
+			return nil, err
 		}
-		items = append(items, m)
+		rawItems, _ := out["items"].([]interface{})
+		for _, it := range rawItems {
+			if m, ok := it.(map[string]interface{}); ok {
+				items = append(items, m)
+			}
+		}
+		if more, _ := out["has_more"].(bool); !more {
+			return items, nil
+		}
 	}
-	return items, nil
 }
 
 func (c *HTTPKeyCoreClient) doJSON(ctx context.Context, method string, path string, payload interface{}) (map[string]interface{}, error) {

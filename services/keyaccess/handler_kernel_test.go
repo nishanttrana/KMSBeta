@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/route"
@@ -45,6 +46,18 @@ func (m *memStore) CreateDecision(_ context.Context, d KeyAccessDecision) error 
 }
 func (m *memStore) ListDecisions(context.Context, string, string, string, int) ([]KeyAccessDecision, error) {
 	return m.decisions, nil
+}
+func (m *memStore) DecisionCountsSince(_ context.Context, _ string, since time.Time) ([]DecisionCount, error) {
+	out := []DecisionCount{}
+	for _, d := range m.decisions {
+		if d.CreatedAt.Before(since) {
+			continue
+		}
+		reason := strings.ToLower(d.Reason)
+		out = append(out, DecisionCount{Service: d.Service, Decision: strings.ToLower(d.Decision), Bypass: d.BypassDetected,
+			Unjustified: strings.Contains(reason, "justification") || strings.Contains(reason, "unknown_code") || strings.Contains(reason, "scope_mismatch"), Count: 1})
+	}
+	return out, nil
 }
 
 func kernelHandler() (*Handler, *memStore, *routetest.Recorder) {
