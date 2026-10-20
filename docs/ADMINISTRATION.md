@@ -1610,8 +1610,13 @@ preview). Encrypted backups were a section of System Administration until
 then.
 
 **Approvals** sub-options (13.26.0-beta): Requests, Policies and Settings.
-Policies is the one place approval policies are created, edited, paused and
-enabled; it lists paused policies too. Administration had a second copy
+Policies is the one place approval policies are created, edited, made
+inactive and enabled; it lists inactive policies too. Trigger actions are
+picked from the actions services really submit for approval, or typed as
+patterns (13.27.0-beta; the list and when each applies are in
+[GOVERNANCE_AND_COMPLIANCE.md §2.2](GOVERNANCE_AND_COMPLIANCE.md)). An
+inactive policy is skipped when matching triggers, but an operation that
+names it, such as a key bound to it, still waits for it. Administration had a second copy
 until then.
 
 **Addresses.** The browser address names the module and sub-option, for

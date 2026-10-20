@@ -358,7 +358,10 @@ an approach, record it here or in the matching doc below.
   Settings follow the same rule (owner, 2026-10-20: "under approvals under
   backups"): approval policies live only in Approvals → Policies, and
   encrypted backups only in Backup & Restore → Encrypted Backups; nothing in
-  Administration repeats them.
+  Administration repeats them. A choice list in a form offers only values the
+  server acts on: approval triggers come from `lib/approvalActions.ts`, each
+  proven against the Go code that submits it; a new approval-guarded
+  operation adds its action there (13.27.0-beta).
 - **Every chart drills into its entries** (owner directive, 2026-09-30:
   "clicking on graphs / bar should show related entries"). Every bar, slice,
   point and legend row with a count is clickable and lists exactly the

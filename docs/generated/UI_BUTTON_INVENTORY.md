@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-20T09:17:20Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-20T09:45:03Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -44,11 +44,11 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 310 | alerts | Btn | setActiveFilter(tab.id)} style={{ background:activeFilter===tab.id?(palette[`... |  |
 | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 339 | alerts | Btn | setPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev |  |
 | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 341 | alerts | Btn | setPageIndex((prev)=>Math.min(totalPages-1,prev+1))} disabled= >Next |  |
-| web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx | 107 | - | Btn | openPolicyModal()}>Create Policy |  |
-| web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx | 126 | - | Btn | openPolicyModal(p)}>Edit |  |
-| web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx | 127 | - | Btn | { const next = p.status === "active" ? "inactive" : "active"; // The server r... |  |
-| web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx | 208 | - | Btn | setPolicyModal(false)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx | 209 | - | Btn | (icon or dynamic label) | savePolicy} disabled={policySaving \|\| !policyName.trim() |
+| web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx | 108 | - | Btn | openPolicyModal()}>Create Policy |  |
+| web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx | 127 | - | Btn | openPolicyModal(p)}>Edit |  |
+| web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx | 128 | - | Btn | { const next = p.status === "active" ? "inactive" : "active"; // The server r... |  |
+| web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx | 212 | - | Btn | setPolicyModal(false)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx | 213 | - | Btn | (icon or dynamic label) | savePolicy} disabled={policySaving \|\| !policyName.trim() |
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 236 | - | Btn | void load(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 237 | - | Btn | void saveSettings()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 263 | - | Btn | void submitSign()} disabled= > |  |

@@ -477,141 +477,99 @@ Vecta KMS implements a **multi-quorum governance model** that enforces four-eyes
 - **SOC 2 CC6.3:** Access to sensitive operations is restricted and reviewed.
 - **DORA Art. 9:** ICT risk management controls for critical operations.
 
-**Architecture:**
+**How an operation comes to wait for approval** (13.27.0-beta; checked
+against `services/governance` `CreateApprovalRequest` and
+`FindPolicyForAction`). Nothing intercepts requests at the edge: a service
+that guards an operation asks governance for an approval itself, naming an
+action and, when it has one, a policy.
 
 ```
-Requester submits operation
+Service guards an operation (keycore, autokey, posture, playbooks, key access)
         │
         ▼
-API Gateway → Governance Middleware
+POST /governance/requests  {action, policy_id?}
         │
-        ├─ Is this action in a policy's trigger_actions? ─── No → Execute immediately
+        ├─ policy_id given → that policy is used (its status is not checked)
         │
-        └─ Yes → Create GovernanceRequest (status: pending)
-                        │
-                        ├─ Notify approvers (dashboard, email, Slack, Teams)
-                        │
-                        ▼
-                 Approvers vote (approve / deny + comment)
-                        │
-                        ├─ Quorum reached (approved) → Auto-execute operation → Audit event with approval_id
-                        │
-                        ├─ Quorum reached (denied) → Block operation → Notify requester
-                        │
-                        └─ Timeout → Auto-deny → Notify requester + escalation contact
+        └─ no policy_id → the first ACTIVE policy whose trigger_actions match
+                          the action; for posture.escalate-remediation and
+                          playbook.* a built-in policy if none matches;
+                          otherwise refused ("no active approval policy covers …")
+        │
+        ▼
+Request pending → approvers notified → votes → approved / denied / expired
+        │
+        └─ The service retries the operation; it proceeds only once approved
 ```
-
----
 
 ### 2.2 Policy Configuration
 
-A governance policy defines the rules that gate a set of operations.
+A policy says who approves and how many must. Its trigger actions matter
+only when the guarded operation names no policy.
 
 #### Policy Fields
 
 | Field | Type | Description |
 |---|---|---|
-| `id` | UUID | Auto-assigned policy identifier. |
-| `name` | string | Human-readable policy name (e.g. "Key Destruction Quorum"). |
-| `scope` | enum | What the policy applies to: `global` (all resources), `tenant` (tenant-level operations), `key` (key operations), `cert` (certificate operations), `user` (user management operations). |
-| `trigger_actions` | string[] | List of audit action strings that trigger this policy (e.g. `["key.destroy", "key.deactivate"]`). |
-| `quorum_mode` | enum | How votes are counted: `any` (N approvers from the pool), `all` (every approver in the pool must vote yes), `weighted` (each approver has a vote weight; threshold = sum of weights). |
-| `required_approvals` | int | Number of affirmative votes needed to reach quorum (for `any` mode). |
-| `total_approvers` | int | Total size of the approver pool (for display and validation). |
-| `approver_roles` | string[] | All users with these roles are eligible approvers. |
-| `approver_users` | UUID[] | Specific user UUIDs who are eligible approvers. |
-| `timeout_hours` | int | Hours before a pending request auto-expires and is denied. |
-| `escalation_hours` | int | Hours before an unresolved request triggers an escalation notification. Must be less than `timeout_hours`. |
-| `escalation_to` | string | Email address (or webhook URL) for escalation notifications. |
-| `notification_channels` | string[] | Channels to notify approvers: `dashboard`, `email`, `slack`, `teams`, `webhook`. |
-| `retention_days` | int | How long completed governance requests are retained before archival. |
+| `id` | string | Assigned policy identifier. |
+| `name` | string | Required. |
+| `description` | string | Optional. |
+| `scope` | string | Required label for the area the policy covers (the console offers keys, secrets, certificates, users, system, all). Not used for matching. |
+| `trigger_actions` | string[] | Required. Action patterns: an exact action, a prefix ending in `.*`, or `*`. Case and `_`/`-` are ignored. |
+| `quorum_mode` | string | `threshold` (M of N, the default), `and` (every approver), `or` (any one). `all` and `any` are accepted as `and` and `or`. |
+| `required_approvals` | int | M. At least 1 and at most `total_approvers`. |
+| `total_approvers` | int | N. |
+| `approver_roles` | string[] | Every active user holding one of these roles becomes an approver when a request opens; the requester never votes on their own request. |
+| `approver_users` | string[] | Approver email addresses. |
+| `timeout_hours` | int | Hours before a pending request expires. |
+| `escalation_hours`, `escalation_to` | int, string[] | When and to whom an unresolved request is escalated. |
+| `retention_days` | int | How long finished requests are kept. |
+| `notification_channels` | string[] | `dashboard`, `email`, `slack`, `teams`. |
+| `status` | string | `active` or `inactive`. An inactive policy is skipped when matching trigger actions; an operation that names it still waits for it. |
 
-#### Quorum Modes Explained
+#### Actions services submit for approval
 
-**`any` mode (N-of-M):** The most common mode. Any N approvers from the pool of M eligible approvers must vote affirmatively. If M=3 and required_approvals=2, then any 2 of the 3 can approve.
+These are the only actions a trigger can match today. Approvals → Policies
+offers them as checkboxes (`web/dashboard/src/lib/approvalActions.ts`;
+`tests/unit/approvalActions.test.ts` fails if a listed action stops being
+sent). Patterns for other names are accepted but match nothing.
 
-**`all` mode:** Every eligible approver must vote yes. Used for the highest-sensitivity operations (e.g. annual root CA key ceremony).
+| Action | Sent by | When a trigger decides |
+|---|---|---|
+| `key.encrypt`, `key.decrypt`, `key.wrap`, `key.unwrap`, `key.sign`, `key.verify`, `key.derive`, `key.kem-encapsulate`, `key.kem-decapsulate` | keycore | the key requires approval and names no approval policy |
+| `key.destroy` | keycore | Posture forces quorum on destructive operations |
+| `key.update-access-policy` | keycore | grant changes need approval |
+| `autokey.provision` | autokey | the policy, template and settings name no approval policy |
+| `posture.<action type>` (e.g. `posture.escalate-remediation`) | posture | a remediation that needs approval |
+| `playbook.<action>` (always for `deactivate-key`, `byok-revoke`, `revoke-certificate`, `disable-user`, `revoke-api-key`, `revoke-client`) | compliance playbooks | a playbook step that pauses for approval |
 
-**`weighted` mode:** Each approver has an assigned weight. The sum of weights of yes votes must reach the threshold. Example: CISO has weight 3, Security Officers each have weight 1; threshold=5. CISO + any 2 officers can approve, or any 5 officers.
+Key access (`external_key_access`) always names its policy, so no trigger
+applies to it.
 
-#### Common Policy Scenarios
+#### Example
 
 ```bash
-# Scenario 1: 2-of-3 admin approvals required for any key destruction or deactivation
+# 2 of 3 approvers before a key bound to no policy is destroyed or unwrapped
 curl -X POST "https://localhost/svc/governance/governance/policies?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{
-    "name": "Key Destruction Quorum",
-    "scope": "key",
-    "trigger_actions": ["key.destroy", "key.deactivate"],
-    "quorum_mode": "any",
+    "name": "Destroy and unwrap need 2 of 3",
+    "scope": "keys",
+    "trigger_actions": ["key.destroy", "key.unwrap"],
+    "quorum_mode": "threshold",
     "required_approvals": 2,
     "total_approvers": 3,
-    "approver_roles": ["admin"],
+    "approver_roles": ["security-officer"],
     "timeout_hours": 24,
-    "escalation_hours": 8,
-    "escalation_to": "security-team@acme.com",
-    "notification_channels": ["dashboard", "email", "slack"],
-    "retention_days": 2555
-  }'
-
-# Scenario 2: Any 1 senior operator required before key export
-curl -X POST "https://localhost/svc/governance/governance/policies?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "name": "Key Export Authorization",
-    "scope": "key",
-    "trigger_actions": ["key.export"],
-    "quorum_mode": "any",
-    "required_approvals": 1,
-    "total_approvers": 5,
-    "approver_roles": ["senior_operator", "admin"],
-    "timeout_hours": 4,
-    "escalation_hours": 2,
-    "notification_channels": ["dashboard", "email"]
-  }'
-
-# Scenario 3: All 3 key custodians required for root CA rotation
-curl -X POST "https://localhost/svc/governance/governance/policies?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "name": "Root CA Rotation — All Custodians",
-    "scope": "cert",
-    "trigger_actions": ["ca.created", "cert.revoked"],
-    "quorum_mode": "all",
-    "approver_users": [
-      "custodian-1-uuid",
-      "custodian-2-uuid",
-      "custodian-3-uuid"
-    ],
-    "timeout_hours": 72,
-    "escalation_hours": 24,
-    "escalation_to": "pki-manager@acme.com",
-    "notification_channels": ["dashboard", "email", "teams"]
-  }'
-
-# Scenario 4: Disable FIPS mode requires CISO + 2 security officers (weighted)
-curl -X POST "https://localhost/svc/governance/governance/policies?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "name": "FIPS Mode Change",
-    "scope": "global",
-    "trigger_actions": ["governance.fips.disabled"],
-    "quorum_mode": "weighted",
-    "required_approvals": 5,
-    "approver_weights": {
-      "ciso-user-uuid": 3,
-      "sec-officer-1-uuid": 1,
-      "sec-officer-2-uuid": 1,
-      "sec-officer-3-uuid": 1
-    },
-    "timeout_hours": 12,
-    "notification_channels": ["dashboard", "email"]
+    "notification_channels": ["dashboard", "email"],
+    "status": "active"
   }'
 ```
 
----
+Before 13.27.0-beta this section described quorum modes (`any`, `all`,
+`weighted`), approver weights and an edge middleware that do not exist, and
+examples whose trigger actions (`key.deactivate`, `ca.created`,
+`governance.fips.disabled`, ...) no service sends.
 
 ### 2.3 Request Lifecycle
 

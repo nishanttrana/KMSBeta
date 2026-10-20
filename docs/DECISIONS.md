@@ -20,7 +20,9 @@ preview while the real backups sat in Administration.
 home each. Not carried over: Administration's "Enforce Hold State" box,
 which was never sent to the server, and its trigger checklist, most of whose
 names (`user.create`, `system.backup`, `secret.create`, ...) no service
-submits for approval. Triggers stay free-text patterns.
+submits for approval. 13.27.0-beta replaced it with a checklist of the
+actions services do submit, each proven against the code that sends it
+(`tests/unit/approvalActions.test.ts`); typed patterns remain.
 **Enforced:** `tests/one-home.spec.ts`; the smoke test "old links open the
 view's new home"; CLAUDE.md "One home per view".
 

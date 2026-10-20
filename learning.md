@@ -5,6 +5,19 @@ Newest entries on top.
 
 ## 2026-10-20
 
+### A choice list is a claim (13.27.0-beta)
+- Administration's trigger checklist named twelve-odd actions; a scan of
+  the Go code found almost none sent for approval. The replacement list was
+  built by tracing every `CreateApprovalRequest` / `ensureApproval` caller,
+  and a test reads the Go source for each entry. **A list of options in a
+  form is proven against the code that acts on it, or it is a free-text
+  field.**
+- Tracing showed the matching is narrower than the guide said: triggers
+  decide only when the caller names no policy, and a named policy is used
+  even when inactive. The guide had also invented quorum modes and weights.
+  Area documents are checked against the code when a feature they describe
+  is touched.
+
 ### Two editors for one record drift apart (13.26.0-beta)
 - Approval policies had an editor in Approvals and one in Administration.
   Merging them showed each had bugs the other did not: Approvals forced

@@ -4,7 +4,29 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
-## [13.26.0-beta] — 2026-10-20
+## [13.27.0-beta] — 2026-10-20
+
+### Added
+- **Trigger actions can be picked again, from the real list.** The policy
+  editor in Approvals → Policies offers, as checkboxes, every action a
+  service submits for approval: key operations (encrypt, decrypt, wrap,
+  unwrap, sign, verify, derive, KEM, destroy, access-grant changes),
+  `autokey.provision`, posture remediations and the playbook actions that
+  pause for approval, each with the condition under which a trigger decides.
+  Ticking adds the action to the pattern list and unticking removes it;
+  typed patterns stay. `tests/unit/approvalActions.test.ts` fails if any
+  listed action stops being sent.
+
+### Fixed
+- The policy Status option no longer says an inactive policy is "paused":
+  governance skips it only when matching triggers, and an operation that
+  names it (a key bound to it) still waits for it.
+- docs/GOVERNANCE_AND_COMPLIANCE.md §2.1–2.2 described quorum modes
+  (`any`, `all`, `weighted`), approver weights and an edge middleware that
+  do not exist, with example triggers no service sends; rewritten from the
+  code.
+
+ — 2026-10-20
 
 ### Changed
 - **One home each for backups and approval policies** (owner decision).

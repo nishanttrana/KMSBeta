@@ -5,6 +5,7 @@ import { createGovernancePolicy, listGovernancePolicies, updateGovernancePolicy 
 import { B, Btn, Card, Chk, FG, Inp, Modal, Row2, Section, Sel } from "../legacyPrimitives";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
+import { ApprovalTriggerPicker } from "./ApprovalTriggerPicker";
 
 // Approval policies: their one home is Approvals → Policies (owner,
 // 2026-10-20; 13.26.0-beta). Lists every policy, paused ones included, so a
@@ -161,8 +162,9 @@ export function ApprovalPoliciesPanel({ session, onToast }: { session: AuthSessi
       <FG label="Description">
         <Inp value={policyDesc} onChange={(e) => setPolicyDesc(e.target.value)} placeholder="What this policy governs" />
       </FG>
-      <FG label="Trigger Actions" hint="Comma-separated action patterns, e.g. key.delete, secret.*, user.disable">
-        <Inp value={policyTriggers} onChange={(e) => setPolicyTriggers(e.target.value)} placeholder="key.delete, key.export" />
+      <FG label="Trigger Actions" hint="Used when the operation names no policy. Pick below, or type patterns (a trailing .* matches a prefix).">
+        <Inp value={policyTriggers} onChange={(e) => setPolicyTriggers(e.target.value)} placeholder="key.destroy, playbook.*" />
+        <ApprovalTriggerPicker value={policyTriggers} onChange={setPolicyTriggers} />
       </FG>
       <Row2>
         <FG label="Quorum Mode">
@@ -178,8 +180,10 @@ export function ApprovalPoliciesPanel({ session, onToast }: { session: AuthSessi
       </Row2>
       <FG label="Status">
         <Sel value={policyStatus} onChange={(e) => setPolicyStatus(e.target.value)}>
-          <option value="active">Active: holds matching operations</option>
-          <option value="inactive">Inactive: paused</option>
+          {/* Governance skips an inactive policy only when matching triggers;
+              an operation that names it (a key bound to it) still waits. */}
+          <option value="active">Active</option>
+          <option value="inactive">Inactive: not matched by trigger; operations that name it still wait</option>
         </Sel>
       </FG>
       <Row2>

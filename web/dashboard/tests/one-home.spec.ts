@@ -57,7 +57,7 @@ test("a policy without triggers or approvers is not saved", async ({ page }) => 
   await dialog.getByRole("textbox").first().fill("Export needs approval");
   await dialog.getByRole("button", { name: "Create Policy", exact: true }).click();
   await expect(page.getByText("Name at least one trigger action.")).toBeVisible();
-  await dialog.getByPlaceholder("key.delete, key.export").fill("key.export");
+  await dialog.getByPlaceholder("key.destroy, playbook.*").fill("key.export");
   await dialog.getByRole("button", { name: "Create Policy", exact: true }).click();
   await expect(page.getByText("Name at least one approver or approver role.")).toBeVisible();
   expect(writes).toHaveLength(0);
@@ -69,4 +69,25 @@ test("Encrypted Backups is offered to platform administrators only", async ({ pa
   const sub = page.getByTestId("subnav-backup");
   await expect(sub.getByRole("button", { name: "Schedules", exact: true })).toBeVisible();
   await expect(sub.getByRole("button", { name: "Encrypted Backups", exact: true })).toHaveCount(0);
+});
+
+// The trigger choices are actions services really submit for approval; a
+// tick adds one, an untick removes it, and typed patterns stay (13.27.0-beta).
+test("trigger checkboxes edit the pattern list without losing typed patterns", async ({ page }) => {
+  const writes = await stub(page, ["*"]);
+  await page.goto("/#approvals/policies");
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  const box = dialog.getByPlaceholder("key.destroy, playbook.*");
+  await box.fill("key.destroy, custom.*");
+  const picker = dialog.getByTestId("approval-trigger-picker");
+  const tick = (label: string) => picker.locator("label", { hasText: label }).locator("div").first().click();
+  await tick("Revoke certificate");
+  await expect(box).toHaveValue("key.destroy, custom.*, playbook.revoke-certificate");
+  await tick("Destroy (when Posture forces quorum on destructive operations)");
+  await expect(box).toHaveValue("custom.*, playbook.revoke-certificate");
+  await expect(picker.getByText("User create")).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Update Policy", exact: true }).click();
+  await expect.poll(() => writes.length).toBe(1);
+  expect(writes[0]!.postDataJSON().trigger_actions).toEqual(["custom.*", "playbook.revoke-certificate"]);
 });

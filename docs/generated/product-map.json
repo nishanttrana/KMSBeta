@@ -19796,7 +19796,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx",
       "handler": "",
       "label": "openPolicyModal()}>Create Policy",
-      "line": 107,
+      "line": 108,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19804,14 +19804,6 @@
       "file": "web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx",
       "handler": "",
       "label": "openPolicyModal(p)}>Edit",
-      "line": 126,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx",
-      "handler": "",
-      "label": "{ const next = p.status === \"active\" ? \"inactive\" : \"active\"; // The server r...",
       "line": 127,
       "tabs": [],
       "tag": "Btn"
@@ -19819,8 +19811,16 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx",
       "handler": "",
+      "label": "{ const next = p.status === \"active\" ? \"inactive\" : \"active\"; // The server r...",
+      "line": 128,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx",
+      "handler": "",
       "label": "setPolicyModal(false)}>Cancel",
-      "line": 208,
+      "line": 212,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19828,7 +19828,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx",
       "handler": "savePolicy} disabled={policySaving || !policyName.trim()",
       "label": "(icon or dynamic label)",
-      "line": 209,
+      "line": 213,
       "tabs": [],
       "tag": "Btn"
     },
@@ -33440,7 +33440,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-20T09:17:20Z",
+  "generated_at": "2026-10-20T09:45:03Z",
   "navigation": [
     {
       "group": "Home",
@@ -123576,7 +123576,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-20T09:17:20Z",
+    "generatedAt": "2026-10-20T09:45:03Z",
     "methods": [
       "DELETE",
       "GET",
