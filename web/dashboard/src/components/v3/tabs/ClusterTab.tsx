@@ -13,7 +13,7 @@ import {
   type ClusterLogEntry,
   type ClusterSyncCheckpoint
 } from "../../../lib/cluster";
-import { usePromptDialog } from "../legacyPrimitives";
+import { Btn, Card, usePromptDialog } from "../legacyPrimitives";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 import { ClusterTabView } from "./ClusterTabView";
@@ -115,6 +115,9 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
   const promptDialog = usePromptDialog();
   const [loading, setLoading] = useState(false);
   const [overview, setOverview] = useState<any>(null);
+  // The last load's failure, shown on the page rather than toasted on every
+  // poll. Envoy answers 503 when no cluster-manager is running.
+  const [loadError, setLoadError] = useState("");
 
   // Profile form state
   const [profileName, setProfileName] = useState("");
@@ -156,6 +159,7 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
     if (!silent) setLoading(true);
     try {
       const out = await getClusterOverview(session);
+      setLoadError("");
       setOverview(out || { nodes: [], profiles: [] });
       const profiles = Array.isArray(out?.profiles) ? out.profiles : [];
       setDirectNodeForm((prev: any) => {
@@ -172,11 +176,11 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
         return { ...prev, profile_id: String(nextProfile?.id || ""), components: mergedComponents.length ? mergedComponents : allowedComponents };
       });
     } catch (error) {
-      onToast?.(`Cluster load failed: ${errMsg(error)}`);
+      setLoadError(errMsg(error));
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [onToast, session]);
+  }, [session]);
 
   // Refresh sync events
   const refreshSyncEvents = useCallback(async () => {
@@ -367,6 +371,19 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
     if (n === "down") return { label: "Down", color: C.red, bg: C.redDim, dotClass: "sync-dot sync-dot--down" };
     return { label: "Unknown", color: C.blue, bg: C.blueDim, dotClass: "sync-dot sync-dot--unknown" };
   };
+
+  if (loadError && !overview) {
+    const notRunning = /\b503\b|no healthy upstream/i.test(loadError);
+    return <Card style={{ padding: 16 }}>
+      <div data-testid="cluster-unavailable" style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>
+        {notRunning ? "Cluster service not running" : "Cluster unavailable"}
+      </div>
+      <div style={{ fontSize: 12, color: C.dim, marginBottom: 12 }} title={loadError}>
+        {notRunning ? <>Set <code>clustering: true</code> in <code>infra/deployment/deployment.yaml</code> and redeploy.</> : loadError}
+      </div>
+      <Btn small onClick={() => void refresh(false)} disabled={loading}>Retry</Btn>
+    </Card>;
+  }
 
   return <>
     <ClusterTabView

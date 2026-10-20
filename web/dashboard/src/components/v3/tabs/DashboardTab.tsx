@@ -28,11 +28,9 @@ type DashboardTabProps = {
   pinnedTabs?: string[];
   onTogglePin?: (tabId: string) => void;
   onNavigate?: (tabId: string) => void;
-  // Key inventory and Operation metrics need the key_analytics feature.
-  keyAnalyticsEnabled?: boolean;
 };
 const VIEWS=["Status","Key inventory","Operation metrics"];
-export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNavigate,keyAnalyticsEnabled=true}: DashboardTabProps)=>{
+export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNavigate}: DashboardTabProps)=>{
   const [view,setView]=useState("Status");
   const [modal,setModal]=useState<string|null>(null);
   const [homeLoading,setHomeLoading]=useState(false);
@@ -445,14 +443,14 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     ? homeSummary.systemState
     : {};
 
-  if(keyAnalyticsEnabled&&view!=="Status"){
+  if(view!=="Status"){
     return <div>
       <Tabs tabs={VIEWS} active={view} onChange={setView}/>
       {view==="Key inventory"?<KeyInventoryPanel session={session}/>:<OpsMetricsPanel session={session}/>}
     </div>;
   }
   return <div>
-    {keyAnalyticsEnabled&&<Tabs tabs={VIEWS} active={view} onChange={setView}/>}
+    <Tabs tabs={VIEWS} active={view} onChange={setView}/>
     <DashboardTabView
     homeSummary={homeSummary}
     homeLoading={homeLoading}

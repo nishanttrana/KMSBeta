@@ -410,6 +410,9 @@ services:
     volumes:
       - internal-trust:/run/vecta/trust:ro
       - dashboard-tls:/run/vecta/dashboard-tls:ro
+      # The one deployment file: the console shows a module only where its
+      # feature is deployed (web/dashboard/src/lib/deployment.ts).
+      - ./infra/deployment/deployment.yaml:/usr/share/nginx/html/config/deployment.yaml:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 5173"]
       interval: 15s

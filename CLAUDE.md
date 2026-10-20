@@ -786,6 +786,12 @@ Security rules are explained in
   the tick.
 
 **Dashboard**
+- The console's feature set is the stack's own deployment file, mounted
+  into the dashboard container; the image carries no copy, and an
+  unreadable file is "unknown", never every feature on (13.28.0-beta,
+  `deploymentSource.test.ts`). No role or allow rule shows a module the
+  deployment leaves out. A load failure is page state shown once
+  with a retry, never a toast on every poll.
 - Every call goes through `serviceRequest` (`/svc/<name>`); one concept has
   one screen. A timer reads its callback through a ref. Undefined names are
   checked even in `@ts-nocheck` files (`check-nocheck-names.mjs`). A

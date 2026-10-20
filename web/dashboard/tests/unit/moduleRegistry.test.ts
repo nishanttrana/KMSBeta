@@ -28,7 +28,17 @@ describe("moduleRegistry", () => {
     expect(canAccessModule("byok", features as any, {})).toBe(true);
     expect(canAccessModule("hyok", features as any, {})).toBe(false);
     expect(canAccessModule("byok", features as any, { permissions: ["ui.module.deny:byok"] })).toBe(false);
-    expect(canAccessModule("hyok", features as any, { permissions: ["ui.module.allow:hyok"] })).toBe(true);
+    // An allow rule opens a deployed module; it can't show one whose service
+    // isn't deployed (13.28.0-beta).
+    expect(canAccessModule("hyok", features as any, { permissions: ["ui.module.allow:hyok"] })).toBe(false);
+    expect(canAccessModule("hyok", new Set(["hyok_proxy"]) as any, { permissions: ["ui.module.allow:hyok"] })).toBe(true);
+  });
+
+  it("shows a platform administrator only the modules the deployment runs", () => {
+    const root = { tenantId: "root", role: "admin", permissions: ["*"] };
+    expect(canAccessModule("cluster", new Set(["secrets"]) as any, root)).toBe(false);
+    expect(canAccessModule("cluster", new Set(["clustering"]) as any, root)).toBe(true);
+    expect(canAccessModule("admin", new Set(["secrets"]) as any, root)).toBe(true);
   });
 
   it("derives deployment feature set from config", () => {

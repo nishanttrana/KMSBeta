@@ -14,67 +14,33 @@ export type DeploymentConfig = {
   };
 };
 
-const defaultDeployment: DeploymentConfig = {
-  apiVersion: "kms.vecta.com/v1",
-  kind: "DeploymentConfig",
-  spec: {
-    hsm_mode: "auto",
-    features: {
-      secrets: true,
-      certs: true,
-      governance: true,
-      cloud_byok: true,
-      hyok_proxy: true,
-      kmip_server: true,
-      qkd_interface: true,
-      ekm_database: true,
-      autokey_provisioning: true,
-      artifact_signing: true,
-      key_access_justifications: true,
-      workload_identity: true,
-      confidential_compute: true,
-      compliance_dashboard: true,
-      sbom_cbom: true,
-      reporting_alerting: true,
-      pqc_migration: true,
-      crypto_discovery: true,
-      mpc_engine: true,
-      data_protection: true,
-      clustering: true,
-      posture_management: true,
-      qrng_generator: true
-    }
-  }
-};
-
-const candidateUrls = [
-  "/config/deployment.yaml",
-  "/deployment.yaml",
-  "/infra/deployment/deployment.yaml"
-];
+// The one deployment file (infra/deployment/deployment.yaml) is mounted into
+// the dashboard container at /config/deployment.yaml; the image carries no
+// copy of its own. A copy baked with every feature on showed the Cluster
+// module where cluster-manager was never started (13.28.0-beta). Where the
+// file can't be read the feature set is empty, which the shell treats as
+// unknown.
+const DEPLOYMENT_URL = "/config/deployment.yaml";
 
 export async function loadDeploymentConfig(): Promise<DeploymentConfig> {
-  for (const url of candidateUrls) {
-    try {
-      const response = await trackedFetch(url, { cache: "no-store" });
-      if (!response.ok) {
-        continue;
-      }
-      const body = await response.text();
-      const parsed = YAML.parse(body) as DeploymentConfig;
-      if (parsed?.spec) {
-        return parsed;
-      }
-    } catch {
-      // continue with next source
+  try {
+    const response = await trackedFetch(DEPLOYMENT_URL, { cache: "no-store" });
+    if (!response.ok) {
+      return {};
     }
+    const parsed = YAML.parse(await response.text()) as DeploymentConfig;
+    return parsed?.spec ? parsed : {};
+  } catch {
+    return {};
   }
-  return defaultDeployment;
 }
 
 export function enabledFeatures(config: DeploymentConfig): Set<FeatureKey> {
   const active = new Set<FeatureKey>();
-  const features = config.spec?.features ?? {};
+  if (!config.spec) {
+    return active;
+  }
+  const features = config.spec.features ?? {};
   (Object.keys(features) as FeatureKey[]).forEach((name) => {
     if (features[name]) {
       active.add(name);

@@ -40,8 +40,6 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   sbom: "sbom_cbom",
   // Crypto discovery
   discovery: "crypto_discovery",
-  // Not a tab: gates Key inventory and Operation metrics in Overview > Operations
-  key_analytics: "key_analytics",
 };
 
 function normalizePermissionTokens(session: unknown): Set<string> {
@@ -127,7 +125,14 @@ export function canAccessModule(tabID: string, features: Set<FeatureKey>, sessio
     return false;
   }
 
-  // Root/system-admin sees full platform module set.
+  // A module whose feature the deployment leaves out is shown to no one,
+  // platform administrators included: its service isn't running, so every
+  // call answers 503 (13.28.0-beta, Cluster with clustering off).
+  if (!matchesFeatureNeed(TAB_FEATURES[normalizedTab], features)) {
+    return false;
+  }
+
+  // Root/system-admin sees every deployed module.
   if (isSystemAdminSession(session)) {
     return true;
   }
@@ -150,5 +155,5 @@ export function canAccessModule(tabID: string, features: Set<FeatureKey>, sessio
     return hasPermission(session, "auth.user.read");
   }
 
-  return matchesFeatureNeed(TAB_FEATURES[normalizedTab], features);
+  return true;
 }

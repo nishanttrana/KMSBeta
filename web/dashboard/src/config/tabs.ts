@@ -50,19 +50,7 @@ export type FeatureKey =
   | "hsm_hardware"
   | "hsm_software"
   | "qrng_generator"
-  | "posture_management"
-  | "compromise_detection"
-  | "key_analytics"
-  | "key_health_scoring"
-  | "ml_anomaly_detection"
-  | "key_scheduling"
-  | "kdf"
-  | "key_verification"
-  | "regulatory_compliance"
-  | "cost_optimization"
-  | "advanced_encryption"
-  | "key_binding"
-  | "key_metadata";
+  | "posture_management";
 
 export type TabId =
   | "dashboard"

@@ -5,6 +5,23 @@ Newest entries on top.
 
 ## 2026-10-20
 
+### A second copy of the deployment showed a module that wasn't there (13.28.0-beta)
+- The Cluster page answered 503 on every load. cluster-manager wasn't
+  running because `infra/deployment/deployment.yaml` says `clustering:
+  false`, but the console read its own `public/config/deployment.yaml`,
+  baked into the image with every feature on, and fell back to a hard-coded
+  all-on list when even that failed. The baked copy also invented a
+  `key_analytics` feature no deployment file had. **The console's feature
+  set is the stack's deployment file, mounted into the container; an
+  unreadable file is unknown, never "everything on".** The test reads the
+  compose mount and the absence of a copy.
+- Fixing the file wasn't enough: the smoke test written for it still showed
+  Cluster, because `canAccessModule` let a platform administrator skip the
+  feature check ("sees full platform module set"). A permission decides who
+  sees a deployed module; it never makes an undeployed service appear.
+- The page toasted its load error on every ten-second poll. A load failure
+  is page state shown once with a retry, not a toast per poll.
+
 ### A choice list is a claim (13.27.0-beta)
 - Administration's trigger checklist named twelve-odd actions; a scan of
   the Go code found almost none sent for approval. The replacement list was

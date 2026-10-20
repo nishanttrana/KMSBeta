@@ -21093,6 +21093,16 @@
       "tag": "Btn"
     },
     {
+      "file": "web/dashboard/src/components/v3/tabs/ClusterTab.tsx",
+      "handler": "",
+      "label": "void refresh(false)} disabled= >Retry",
+      "line": 384,
+      "tabs": [
+        "cluster"
+      ],
+      "tag": "Btn"
+    },
+    {
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "void refresh(false)}>Refresh",
@@ -33440,7 +33450,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-20T09:45:03Z",
+  "generated_at": "2026-10-20T11:39:47Z",
   "navigation": [
     {
       "group": "Home",
@@ -91284,7 +91294,7 @@
   "summary": {
     "backend_routes": 911,
     "backend_services": 28,
-    "button_inventory": 767,
+    "button_inventory": 768,
     "frontend_call_sites": 547,
     "matched_frontend_call_sites": 520,
     "nav_items": 25,
@@ -123576,7 +123586,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-20T09:45:03Z",
+    "generatedAt": "2026-10-20T11:39:47Z",
     "methods": [
       "DELETE",
       "GET",

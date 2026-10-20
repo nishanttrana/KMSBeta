@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-20T09:45:03Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-20T11:39:47Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -182,6 +182,7 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/ClusterJoinPanel.tsx | 54 | - | Btn | setMode("join")}>On a new node: join a cluster |  |
 | web/dashboard/src/components/v3/tabs/ClusterJoinPanel.tsx | 65 | - | Btn | void issue()}> |  |
 | web/dashboard/src/components/v3/tabs/ClusterJoinPanel.tsx | 79 | - | Btn | void join()}> |  |
+| web/dashboard/src/components/v3/tabs/ClusterTab.tsx | 384 | cluster | Btn | void refresh(false)} disabled= >Retry |  |
 | web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 121 | - | Btn | void refresh(false)}>Refresh |  |
 | web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 271 | - | Btn | setAddNodeModalOpen(true)}>Add Instance |  |
 | web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 272 | - | Btn | void refresh(false)}>Refresh |  |

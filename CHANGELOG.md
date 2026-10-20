@@ -4,6 +4,29 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.28.0-beta] — 2026-10-20
+
+### Fixed
+- **The Cluster module no longer shows where clustering isn't deployed.**
+  The console read a `deployment.yaml` baked into its own image with every
+  feature on, so it offered Cluster while the stack ran from
+  `infra/deployment/deployment.yaml` with `clustering: false`; every load
+  answered 503 and a "Cluster load failed" toast repeated every ten
+  seconds. Compose now mounts the stack's deployment file into the
+  dashboard container, the image carries no copy, and the all-on fallback
+  in `lib/deployment.ts` is gone: an unreadable file is "unknown".
+  `tests/unit/deploymentSource.test.ts` fails if a copy returns.
+- Platform administrators were shown every module whatever the deployment
+  ran, and a `ui.module.allow:` rule could show an undeployed one. The
+  deployment check now comes first for everyone; RBAC rules only narrow
+  what is deployed (`moduleRegistry.test.ts`, `tests/cluster.spec.ts`).
+- Where the cluster service doesn't answer, the Cluster page says so once
+  ("Cluster service not running", with the setting that deploys it, or the
+  error) with a Retry button, instead of a toast on every poll.
+- Overview → Operations (Key inventory, Operation metrics) was gated on a
+  `key_analytics` feature that only the baked copy defined; the gate is
+  removed, as are eleven feature names nothing read.
+
 ## [13.27.0-beta] — 2026-10-20
 
 ### Added
@@ -26,7 +49,7 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
   do not exist, with example triggers no service sends; rewritten from the
   code.
 
- — 2026-10-20
+## [13.26.0-beta] — 2026-10-20
 
 ### Changed
 - **One home each for backups and approval policies** (owner decision).

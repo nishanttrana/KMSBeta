@@ -943,7 +943,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                   onToast={setToast}
                   onLogout={onLogout}
                   fipsMode={fipsMode}
-                  keyAnalyticsEnabled={canSeeTab("key_analytics", enabledFeatures || new Set<FeatureKey>(), session)} clustered={!enabledFeatures?.size || enabledFeatures.has("clustering")}
+                  clustered={!enabledFeatures?.size || enabledFeatures.has("clustering")}
                   onFipsModeChange={setFipsMode}
                   onUnreadSync={setReportedUnread}
                   subView={activeSubPaneSelection}
