@@ -28,6 +28,7 @@ import {
 } from "../../../lib/recommendations";
 import { isFipsModeEnabled } from "../runtimeUtils";
 import { C } from "../theme";
+import { SetupChecklist, setupSteps } from "./SetupChecklist";
 
 type Props = {
   session: AuthSession | null;
@@ -324,6 +325,8 @@ export const CommandCenterTab = ({ session, fipsMode, clustered, onNavigate }: P
         <Kpi icon={Atom} label="PQC or hybrid assets" value={pqcScan ? `${pqcScan.pqc_ready_assets + pqcScan.hybrid_assets} / ${pqcScan.total_assets}` : "—"} sub={pqcScan ? `${pqcScan.classical_assets} classical, latest scan` : "no scan on record"} />
         <Kpi icon={LifeBuoy} label="Last good backup" value={lastBackup ? `${Math.max(0, Math.floor((now - lastBackup) / 86_400_000))}d` : "—"} sub={lastBackup ? new Date(lastBackup).toLocaleDateString() : snapshot?.backups ? "none completed" : "not assessed"} tone={!lastBackup && snapshot?.backups ? C.redFg : undefined} />
       </div>
+
+      {snapshot && <SetupChecklist steps={setupSteps(snapshot, checks)} onNavigate={onNavigate} />}
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(280px, 1fr)", gap: 16, alignItems: "start" }} className="vk-cc-main">
         <div style={{ ...card, overflow: "hidden" }}>

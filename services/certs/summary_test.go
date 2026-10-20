@@ -138,3 +138,22 @@ func TestCertSummaryRouteAudited(t *testing.T) {
 		t.Fatalf("summary read must be audited with its counts: %+v", last)
 	}
 }
+
+// Search covers every certificate, past one page, by subject, SAN, ID and
+// serial, case-insensitively (13.25.0-beta).
+func TestSearchCertificatesCoversTheWholeSet(t *testing.T) {
+	svc, store := newCertsService(t)
+	now := time.Now().UTC()
+	for i := 0; i < 520; i++ {
+		seedCert(t, store, "t1", fmt.Sprintf("bulk-%03d", i), "ca1", CertStatusActive, now.Add(time.Hour), now.Add(-time.Duration(i)*time.Minute))
+	}
+	// The oldest certificate, beyond the first 500-row page.
+	seedCert(t, store, "t1", "Billing-API", "ca1", CertStatusActive, now.Add(time.Hour), now.Add(-48*time.Hour))
+	got, err := svc.SearchCertificates(context.Background(), "t1", "billing", 10)
+	if err != nil || len(got) != 1 || got[0].ID != "Billing-API" {
+		t.Fatalf("search past the first page: %+v %v", got, err)
+	}
+	if got, _ := svc.SearchCertificates(context.Background(), "t1", "bulk-", 5); len(got) != 5 {
+		t.Fatalf("limit: %d", len(got))
+	}
+}

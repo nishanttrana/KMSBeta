@@ -2073,6 +2073,28 @@ func (s *Service) ListKeysCursor(ctx context.Context, tenantID string, view keyV
 	return s.listKeysPage(ctx, tenantID, view, limit, 0, afterCreatedAt, afterID, includeDeleted)
 }
 
+// SearchKeys finds keys by name or ID within the caller's view: the same
+// scope a listing uses, so a search shows nothing the caller could not list
+// (13.25.0-beta). Deleted keys are left out.
+func (s *Service) SearchKeys(ctx context.Context, tenantID string, view keyView, q string, limit int) ([]Key, error) {
+	var scope *KeyScope
+	if !view.all {
+		sc := view.scope
+		scope = &sc
+	}
+	keys, err := s.store.SearchKeys(ctx, tenantID, scope, q, keyPageLimit(limit))
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Key, 0, len(keys))
+	for _, k := range keys {
+		if normalizeLifecycleStatus(k.Status) != "deleted" {
+			out = append(out, k)
+		}
+	}
+	return out, nil
+}
+
 func (s *Service) listKeysPage(ctx context.Context, tenantID string, view keyView, limit int, offset int, afterCreatedAt *time.Time, afterID string, includeDeleted bool) (KeyPage, error) {
 	if err := s.reconcileLifecycle(ctx, tenantID); err != nil {
 		return KeyPage{}, err

@@ -72,7 +72,7 @@ function formatDestroyAt(value: string): string {
   }
   return dt.toLocaleString();
 }
-export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
+export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate,searchQuery})=>{
   const [modal,setModal]=useState(null);
   const [loading,setLoading]=useState(false);
   const [submitting,setSubmitting]=useState(false);
@@ -155,6 +155,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate})=>{
   const [caStatusView,setCAStatusView]=useState("all");
   const [certStatusView,setCertStatusView]=useState("all");
   const [certSearch,setCertSearch]=useState("");
+  useEffect(()=>{ if(searchQuery?.text) setCertSearch(searchQuery.text); },[searchQuery?.n,searchQuery?.text]); // a sidebar search result
   const [certPageSize,setCertPageSize]=useState(10);
   const [certPageIndex,setCertPageIndex]=useState(0);
   const [openCertActionMenuId,setOpenCertActionMenuId]=useState("");

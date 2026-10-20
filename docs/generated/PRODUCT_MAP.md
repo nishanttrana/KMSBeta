@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-20T07:15:13Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-20T07:32:23Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -11,10 +11,10 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Sub-pane groups: `10`
 - Backend HTTP routes discovered: `911` across `28` services
 - Backend routes on the `pkg/route` kernel: `524` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `544`
-- Frontend call sites with exact backend route match: `517`
+- Frontend API call sites discovered: `547`
+- Frontend call sites with exact backend route match: `520`
 - Frontend call sites needing review or dynamic/runtime confirmation: `27`
-- Clickable controls with static `onClick` handlers: `772`
+- Clickable controls with static `onClick` handlers: `775`
 - Backend request flows with handler/service/package summaries: `911`
 
 ## How To Use This For Launch
@@ -167,14 +167,14 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Group | UI item | Tab id | Component | Service dependencies | Static call sites |
 | --- | --- | --- | --- | --- | --- |
 | Home | Command Center | home | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
-| Home | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 205 |
+| Home | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 208 |
 | Home | Workbench | workbench | web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx | - | 0 |
-| Keys & certificates | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 97 |
-| Keys & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 103 |
+| Keys & certificates | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 98 |
+| Keys & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 105 |
 | Keys & certificates | Rotation & Scheduling | rotation | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | - | 0 |
 | Keys & certificates | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 12 |
 | Keys & certificates | Crypto Discovery | discovery | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | compliance, discovery | 23 |
-| Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, keycore, secrets | 75 |
+| Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, keycore, secrets | 77 |
 | Data & integrations | Data Protection | dataprotection | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | Data & integrations | Cloud Key Control | cloudctl | web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | - | 0 |
 | Data & integrations | Enterprise KM | ekm | web/dashboard/src/components/v3/tabs/EKMTab.tsx | ekm, tfe | 40 |
@@ -192,11 +192,11 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Platform | Backup & Restore | backup | web/dashboard/src/components/v3/tabs/BackupTab.tsx | backup | 10 |
 | Platform | Administration | admin | web/dashboard/src/components/v3/tabs/AdminTab.tsx | - | 0 |
 | UNLISTED | byok | byok | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | cloud | 8 |
-| UNLISTED | crypto | crypto | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | keycore | 50 |
+| UNLISTED | crypto | crypto | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | keycore | 51 |
 | UNLISTED | dataenc | dataenc | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | UNLISTED | hyok | hyok | web/dashboard/src/components/v3/tabs/HYOKTab.tsx | hyok | 7 |
 | UNLISTED | pkcs11 | pkcs11 | web/dashboard/src/components/v3/tabs/ClientSDKTab.tsx | ekm, tfe | 40 |
-| UNLISTED | restapi | restapi | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | auth, auth-edge, certs, secrets | 125 |
+| UNLISTED | restapi | restapi | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | auth, auth-edge, certs, secrets | 127 |
 | UNLISTED | tokenize | tokenize | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 
 ## Backend Route Counts
@@ -207,7 +207,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | auth | 90 | 47 |
 | autokey | 15 | 11 |
 | backup | 11 | 10 |
-| certs | 70 | 53 |
+| certs | 70 | 54 |
 | cloud | 28 | 15 |
 | cluster-manager | 21 | 11 |
 | compliance | 61 | 30 |
@@ -219,7 +219,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | hsm-connector | 14 | 0 |
 | hyok | 21 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 178 | 93 |
+| keycore | 178 | 94 |
 | kmip | 12 | 11 |
 | policy | 12 | 0 |
 | posture | 13 | 10 |
@@ -227,7 +227,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | reconciler | 1 | 1 |
 | reporting | 34 | 24 |
 | sbom | 14 | 12 |
-| secrets | 40 | 21 |
+| secrets | 40 | 22 |
 | signing | 11 | 9 |
 | watchdog | 2 | 2 |
 | workload | 20 | 13 |
@@ -263,8 +263,8 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | reporting | PUT | /alerts/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/reporting.ts | 311 |
 | reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 350 |
 | keycore | GET | /rotation/runs{param} | serviceRequest | web/dashboard/src/lib/rotationScheduler.ts | 88 |
-| secrets | GET | /{param}&format={param}{param}` : ""} | serviceRequest | web/dashboard/src/lib/secrets.ts | 170 |
-| secrets | DELETE | /secretURL(session, secretId, `/versions/{param}`) | serviceRequest | web/dashboard/src/lib/secrets.ts | 199 |
+| secrets | GET | /{param}&format={param}{param}` : ""} | serviceRequest | web/dashboard/src/lib/secrets.ts | 178 |
+| secrets | DELETE | /secretURL(session, secretId, `/versions/{param}`) | serviceRequest | web/dashboard/src/lib/secrets.ts | 207 |
 
 Showing `27` of `27`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
 

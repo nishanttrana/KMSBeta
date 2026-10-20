@@ -4,7 +4,35 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
-## [13.24.0-beta] — 2026-10-20
+## [13.25.0-beta] — 2026-10-20
+
+The third of three steps to make the console simpler without removing
+anything: add what was missing.
+
+### Added
+- **Search for keys, certificates and secrets from the sidebar.** With two
+  or more characters, **Filter modules** also lists the keys, certificates
+  and secrets whose name or ID matches; a result opens its page with that
+  name in the page's search box. Each service searches its whole set within
+  what the caller may see: `q` on `GET /keys` (keycore, the listing's own
+  access scope, `%` and `_` literal), `GET /certs` (subject, SANs, ID,
+  serial) and `GET /secrets` (inside the visibility check; audited as a
+  search without its text). A failed source shows "unavailable". The ⌘K
+  palette removed in 11.5.0-beta stays removed: it only jumped between
+  modules.
+- **First steps on Command Center.** Five setup steps, each done, to do or
+  not assessed, with a button to where it is done. States come from the
+  snapshot and the control checks the page already evaluates. The card
+  disappears once every step is done.
+- **Key Management names its next step.** An empty key list offers "Create
+  your first key".
+
+### Fixed
+- The Keys page loaded only the first 100 keys at sign-in, and if the tag
+  or FIPS-state call failed it said "No keys yet". It loads every key, and a
+  failed key list reads "Keys unavailable" with the error.
+
+ — 2026-10-20
 
 ### Fixed
 - **No list silently returns fewer rows than asked.** Most lists shrink a

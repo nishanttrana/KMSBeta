@@ -450,6 +450,14 @@ export async function deleteCA(session: AuthSession, caId: string, force = false
   );
 }
 
+// Certificates whose subject, SANs, ID or serial contain q, searched by the
+// certs service over every certificate (13.25.0-beta).
+export async function searchCertificates(session: AuthSession, q: string, limit = 5): Promise<CertificateItem[]> {
+  const params = new URLSearchParams({ tenant_id: session.tenantId, q, limit: String(limit) });
+  const out = await serviceRequest<CertsResponse>(session, "certs", `/certs?${params.toString()}`);
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
 export async function listCertificates(
   session: AuthSession,
   options?: { status?: string; cert_class?: string; limit?: number; offset?: number }

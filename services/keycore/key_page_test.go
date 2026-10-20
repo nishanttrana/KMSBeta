@@ -56,3 +56,52 @@ func TestKeyListSaysWhetherMoreFollow(t *testing.T) {
 		t.Fatalf("a 5000-row request is held to %d, want %d", got, keyPageMax)
 	}
 }
+
+// q searches names and IDs inside the caller's scope: a restricted user
+// finds only keys they could list, LIKE wildcards are literal, and deleted
+// keys are left out (13.25.0-beta).
+func TestKeySearchStaysInScope(t *testing.T) {
+	h, svc, _ := newActorTestHandler(t)
+	for _, k := range []struct{ name, by string }{{"payments_db", "alice"}, {"paymentsXdb", "alice"}, {"payments_api", "bob"}, {"payroll", "alice"}} {
+		if _, err := svc.CreateKey(context.Background(), CreateKeyRequest{TenantID: "t1", Name: k.name, Algorithm: "AES-256",
+			KeyType: "symmetric", Purpose: "encrypt", Owner: "ops", CreatedBy: k.by}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	search := func(claims *pkgauth.Claims, q string) []string {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodGet, "/keys?tenant_id=t1&q="+q, nil)
+		req = req.WithContext(pkgauth.ContextWithClaims(req.Context(), claims))
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		var out struct {
+			Items []struct {
+				Name string `json:"name"`
+			} `json:"items"`
+		}
+		if w.Code != http.StatusOK || json.Unmarshal(w.Body.Bytes(), &out) != nil {
+			t.Fatalf("search %q: %d %s", q, w.Code, w.Body)
+		}
+		names := []string{}
+		for _, it := range out.Items {
+			names = append(names, it.Name)
+		}
+		return names
+	}
+	if got := search(visAdmin, "PAYMENTS"); len(got) != 3 {
+		t.Fatalf("admin search: %v", got)
+	}
+	if got := search(visAlice, "payments"); len(got) != 2 {
+		t.Fatalf("alice sees only her own keys: %v", got)
+	}
+	if got := search(visAdmin, "payments_"); len(got) != 2 {
+		t.Fatalf("_ is literal, so paymentsXdb does not match: %v", got)
+	}
+	all, _ := svc.store.SearchKeys(context.Background(), "t1", nil, "payroll", 10)
+	if err := svc.store.SetKeyStatus(context.Background(), "t1", all[0].ID, "deleted"); err != nil {
+		t.Fatal(err)
+	}
+	if got := search(visAdmin, "payroll"); len(got) != 0 {
+		t.Fatalf("a deleted key is not found: %v", got)
+	}
+}

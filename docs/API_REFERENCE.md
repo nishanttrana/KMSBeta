@@ -490,7 +490,10 @@ Response: `{"items": [Key, ...], "has_more": bool, "next_cursor": {...},
 "request_id": "..."}`. Every page, the first included, carries `has_more`
 and, when it is true, `next_cursor`; both are judged on the rows read, so a
 page whose deleted keys were left out of `items` still says more follow.
-Read until `has_more` is false. Before 13.24.0-beta a `limit` above 1000
+Read until `has_more` is false. `q` (13.25.0-beta) searches names and IDs
+(case-insensitive, `%` and `_` literal, at most 128 characters) within the
+same view as the listing and answers one page without deleted keys.
+Before 13.24.0-beta a `limit` above 1000
 returned 100 keys and only cursor pages carried `has_more`. Only keys the
 caller may see are listed ([KEY_ACCESS_MODEL.md](SECURITY/KEY_ACCESS_MODEL.md)).
 
@@ -1488,6 +1491,14 @@ these fields, never from its name (docs/RECOMMENDATIONS.md). Test:
 ```json
 "algorithm_facts": {"assessed": true, "security_bits": 128, "weak": false, "quantum_vulnerable": true, "post_quantum": false, "note": "strength is half the bit length of the curve order"}
 ```
+
+### GET /svc/certs/certs?q= (13.25.0-beta)
+
+With `q`, `GET /certs` searches every certificate of the tenant for `q`
+in the subject, SANs, ID or serial (case-insensitive, at most 128
+characters) and answers up to `limit` (default 20, at most 500) matches,
+newest first, with `algorithm_facts`. Test:
+`TestSearchCertificatesCoversTheWholeSet`.
 
 ### GET /svc/certs/certs/summary (13.21.0-beta)
 
@@ -3558,7 +3569,7 @@ Secret object: `id`, `tenant_id`, `name`, `secret_type`, `description`,
 
 | Route | Body / query | Response |
 |---|---|---|
-| `GET /svc/secrets/secrets` | `secret_type`, `limit`, `offset`, `deleted=true` (the deleted ones instead) | `items[]` (no values), only secrets the caller may `read` |
+| `GET /svc/secrets/secrets` | `secret_type`, `limit`, `offset`, `deleted=true` (the deleted ones instead), `q` (13.25.0-beta: name or ID contains, case-insensitive, at most 128 characters; over every secret the caller may see; the `listed` event records `search: true`, not the text; over 128 is refused `invalid_query`) | `items[]` (no values), only secrets the caller may `read` |
 | `POST /svc/secrets/secrets` | `name`, `secret_type`, `value`, `description`, `labels`, `metadata`, `lease_ttl_seconds` | `201` `secret` |
 | `GET /svc/secrets/secrets/{id}` | | `secret` |
 | `GET /svc/secrets/secrets/{id}/value` | `format`, `version` (both optional; default the current version) | `value`, `version`, `format`, `content_type`; `410 secret_expired` / `secret_deleted`, `404 version_not_found` |

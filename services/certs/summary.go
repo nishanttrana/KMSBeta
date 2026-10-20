@@ -126,3 +126,32 @@ func (h *Handler) handleSummary(c *route.Call) {
 	c.Detail("expiring", sum.Expiring)
 	c.JSON(http.StatusOK, map[string]interface{}{"summary": sum})
 }
+
+// SearchCertificates finds certificates whose subject, SANs, ID or serial
+// contain q (case-insensitive), over every certificate of the tenant
+// (13.25.0-beta). At most limit results, newest first.
+func (s *Service) SearchCertificates(ctx context.Context, tenantID, q string, limit int) ([]Certificate, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return nil, errors.New("tenant_id is required")
+	}
+	if limit <= 0 || limit > certPageSize {
+		limit = 20
+	}
+	needle := strings.ToLower(strings.TrimSpace(q))
+	all, err := s.allCertificates(ctx, tenantID, "", "")
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Certificate, 0, limit)
+	for _, c := range all {
+		if len(out) == limit {
+			break
+		}
+		hay := strings.ToLower(strings.Join(append([]string{c.SubjectCN, c.ID, c.SerialNumber}, c.SANs...), "\n"))
+		if strings.Contains(hay, needle) {
+			out = append(out, withAlgorithmFacts(c))
+		}
+	}
+	return out, nil
+}

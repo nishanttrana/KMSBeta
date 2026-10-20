@@ -21,13 +21,14 @@ import { canAccessModule, isSystemAdminSession } from "../config/moduleRegistry"
 import type { FeatureKey } from "../config/tabs";
 import { getAuthCLIStatus } from "../lib/authAdmin";
 import { getGovernanceSystemState } from "../lib/governance";
-import { listKeysPaginated, listTags } from "../lib/keycore";
+import { listKeys, listTags } from "../lib/keycore";
 import { getUnreadAlertCounts } from "../lib/reporting";
 import { usePopover } from "./v3/usePopover";
 import { B, Btn } from "./v3/legacyPrimitives";
 import { isFipsModeEnabled, normalizeFipsModeValue, TabErrorBoundary } from "./v3/runtimeUtils";
 import { SidebarSubNav, SUB_PANES, type SubPane } from "./v3/SidebarSubNav";
 import { NAV, parseNavHash } from "./v3/shellNav";
+import { SidebarSearch } from "./v3/SidebarSearch";
 import { C } from "./v3/theme";
 import { ThemeToggle } from "./ThemeToggle";
 import { BrandMark, Wordmark } from "./BrandMark";
@@ -243,6 +244,7 @@ export default function VectaDashboardV3Shell(props: Props) {
   const [toast, setToast] = useState("");
   const [keyCatalog, setKeyCatalog] = useState<any[]>([]);
   const [tagCatalog, setTagCatalog] = useState<any[]>([]);
+  const [keyCatalogError, setKeyCatalogError] = useState("");
   const [fipsMode, setFipsMode] = useState<"enabled" | "disabled">("disabled");
   const [reportedUnread, setReportedUnread] = useState(Number(unreadAlerts || 0));
   const [cliEnabled, setCliEnabled] = useState(false);
@@ -283,13 +285,16 @@ export default function VectaDashboardV3Shell(props: Props) {
     let stop = false;
     (async () => {
       try {
-        const [keysPage, tags, state] = await Promise.all([
-          listKeysPaginated(session, { limit: 100, includeDeleted: true }),
+        // Every key, with its own failure: the first 100 were loaded, and any
+        // failed call left the page saying "No keys yet" (13.25.0-beta).
+        listKeys(session, { includeDeleted: true }).then(
+          (items) => { if (!stop) { setKeyCatalog(items.map(toViewKey)); setKeyCatalogError(""); } },
+          (e) => { if (!stop) setKeyCatalogError(e instanceof Error ? e.message : String(e)); });
+        const [tags, state] = await Promise.all([
           listTags(session),
           getGovernanceSystemState(session)
         ]);
         if (stop) return;
-        setKeyCatalog((Array.isArray(keysPage.items) ? keysPage.items : []).map(toViewKey));
         setTagCatalog(Array.isArray(tags) ? tags : []);
         setFipsMode(normalizeFipsModeValue(String((state as any)?.state?.fips_mode || "disabled")));
       } catch {
@@ -366,6 +371,8 @@ export default function VectaDashboardV3Shell(props: Props) {
   };
 
   const [navFilter, setNavFilter] = useState("");
+  // A search result opens its page with that page's search filled in.
+  const [pageSearch, setPageSearch] = useState({ tab: "", text: "", n: 0 });
   const navGroups = useMemo(
     () =>
       NAV.map((group) => ({
@@ -684,6 +691,8 @@ export default function VectaDashboardV3Shell(props: Props) {
             </div>
             );
           })}
+          {!collapsed && <SidebarSearch session={session} query={navFilter} visibleTabs={visibleTabIDs}
+            onOpen={(target, text) => { setPageSearch((p) => ({ tab: target.split("/")[0]!, text, n: p.n + 1 })); selectTab(target); }} />}
         </div>
 
         {/* User footer */}
@@ -925,6 +934,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                 <Tab
                   session={session}
                   keyCatalog={keyCatalog}
+                  keyCatalogError={keyCatalogError}
                   setKeyCatalog={setKeyCatalog}
                   tagCatalog={tagCatalog}
                   setTagCatalog={setTagCatalog}
@@ -940,6 +950,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                   pinnedTabs={pinnedTabs}
                   onTogglePin={togglePin}
                   onNavigate={(tabId: string) => selectTab(tabId)}
+                  searchQuery={pageSearch.tab === tab ? pageSearch : undefined}
                 />
               </Suspense>
             </TabErrorBoundary>

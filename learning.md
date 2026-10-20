@@ -5,6 +5,17 @@ Newest entries on top.
 
 ## 2026-10-20
 
+### A search is a list with a filter, so it inherits the list's faults (13.25.0-beta)
+- Planning search over keys found the Keys page itself loaded the first
+  100 keys at sign-in (a separate call from 13.24.0-beta's), and a failure
+  of an unrelated call in the same `Promise.all` left it saying "No keys
+  yet". **A page's main list has its own error, never shared with
+  side calls in one `Promise.all`.**
+- Search was put on the services, not on lists the browser holds, so it
+  covers the whole set and the same access scope as the list it filters.
+  Each search is tested with a restricted user and with `%` / `_` in the
+  text, on Postgres for the SQL one.
+
 ### A bug fixed in one place, and sixteen more copies (13.24.0-beta)
 - 13.21.0-beta found the certificate store answering 5000-row requests with
   100 and fixed certs. Planning a key search showed keycore did the same,

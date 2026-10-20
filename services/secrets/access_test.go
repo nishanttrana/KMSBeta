@@ -1412,3 +1412,38 @@ func TestWatchSubjectsNATS(t *testing.T) {
 		t.Fatalf("raised %d times, want once within seconds of the event", raised())
 	}
 }
+
+// q finds secrets by name inside the visibility check: a hidden secret is
+// never found, and the search is audited without its text (13.25.0-beta).
+func TestListSearchStaysVisible(t *testing.T) {
+	h, _, _, rec := newRecordedHandler(t)
+	alice := user("t1", "alice", "finance", "*")
+	bob := user("t1", "bob", "ops", "*")
+	mustCreate(t, h, alice, "payroll-db", "/finance")
+	mustCreate(t, h, alice, "payroll-api", "")
+	mustCreate(t, h, alice, "orders-db", "")
+	call(t, h, alice, "POST", "/secrets/access/rules", `{"path":"/finance/*","subject_type":"user","subject_id":"alice","capabilities":["read"]}`)
+	names := func(c *pkgauth.Claims, q string) []string {
+		t.Helper()
+		_, out := call(t, h, c, "GET", "/secrets?q="+q, "")
+		got := []string{}
+		for _, it := range out["items"].([]interface{}) {
+			got = append(got, it.(map[string]interface{})["name"].(string))
+		}
+		return got
+	}
+	if got := names(alice, "PAYROLL"); len(got) != 2 {
+		t.Fatalf("alice finds both payroll secrets: %v", got)
+	}
+	if got := names(bob, "payroll"); len(got) != 1 || got[0] != "payroll-api" {
+		t.Fatalf("bob finds only what he may see: %v", got)
+	}
+	last := rec.Last(t)
+	if last.Action != "listed" || last.Event.Details["search"] != true || strings.Contains(fmt.Sprint(last.Event.Details), "payroll") {
+		t.Fatalf("a search is audited as a search, without its text: %+v", last.Event.Details)
+	}
+	if code, _ := call(t, h, alice, "GET", "/secrets?q="+strings.Repeat("x", 129), ""); code != http.StatusBadRequest {
+		t.Fatalf("an over-long query: %d", code)
+	}
+	refused(t, rec, "listed", "invalid_query")
+}

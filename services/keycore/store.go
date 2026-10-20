@@ -27,6 +27,7 @@ type Store interface {
 	ListKeys(ctx context.Context, tenantID string, limit int, offset int) ([]Key, error)
 	ListKeysCursor(ctx context.Context, tenantID string, limit int, afterCreatedAt *time.Time, afterID string) ([]Key, error)
 	ListKeysScoped(ctx context.Context, tenantID string, scope KeyScope, limit int, offset int, afterCreatedAt *time.Time, afterID string) ([]Key, error)
+	SearchKeys(ctx context.Context, tenantID string, scope *KeyScope, q string, limit int) ([]Key, error)
 	// ListGrantedKeyIDs returns, per key, the grants held by any of the user
 	// subjects (matched case-insensitively) or groups.
 	ListGrantedKeyIDs(ctx context.Context, tenantID string, users []string, groups []string) (map[string][]KeyAccessGrant, error)
@@ -356,17 +357,30 @@ INSERT INTO key_versions (
 }
 
 func (s *SQLStore) ListKeys(ctx context.Context, tenantID string, limit int, offset int) ([]Key, error) {
-	return s.listKeys(ctx, tenantID, nil, limit, offset, nil, "")
+	return s.listKeys(ctx, tenantID, nil, limit, offset, nil, "", "")
 }
 
 func (s *SQLStore) ListKeysCursor(ctx context.Context, tenantID string, limit int, afterCreatedAt *time.Time, afterID string) ([]Key, error) {
-	return s.listKeys(ctx, tenantID, nil, limit, 0, afterCreatedAt, afterID)
+	return s.listKeys(ctx, tenantID, nil, limit, 0, afterCreatedAt, afterID, "")
 }
 
 // ListKeysScoped lists only the keys in scope, in the database, so a caller
 // who sees few keys still gets full pages (KEY_ACCESS_MODEL.md section 8).
 func (s *SQLStore) ListKeysScoped(ctx context.Context, tenantID string, scope KeyScope, limit int, offset int, afterCreatedAt *time.Time, afterID string) ([]Key, error) {
-	return s.listKeys(ctx, tenantID, &scope, limit, offset, afterCreatedAt, afterID)
+	return s.listKeys(ctx, tenantID, &scope, limit, offset, afterCreatedAt, afterID, "")
+}
+
+// SearchKeys lists the keys whose name or ID contains q (case-insensitive),
+// in scope when scope is set: a search never shows a key the caller could
+// not list (13.25.0-beta).
+func (s *SQLStore) SearchKeys(ctx context.Context, tenantID string, scope *KeyScope, q string, limit int) ([]Key, error) {
+	return s.listKeys(ctx, tenantID, scope, limit, 0, nil, "", q)
+}
+
+// likePattern matches s anywhere, with LIKE's wildcards taken literally.
+func likePattern(s string) string {
+	r := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	return "%" + r.Replace(strings.ToLower(strings.TrimSpace(s))) + "%"
 }
 
 // KeyScope is a restricted caller's view: keys they created, and keys named
@@ -393,7 +407,7 @@ func keyPageLimit(limit int) int {
 	return limit
 }
 
-func (s *SQLStore) listKeys(ctx context.Context, tenantID string, scope *KeyScope, limit int, offset int, afterCreatedAt *time.Time, afterID string) ([]Key, error) {
+func (s *SQLStore) listKeys(ctx context.Context, tenantID string, scope *KeyScope, limit int, offset int, afterCreatedAt *time.Time, afterID string, q string) ([]Key, error) {
 	limit = keyPageLimit(limit)
 	args := []any{tenantID}
 	arg := func(v any) string {
@@ -420,6 +434,10 @@ func (s *SQLStore) listKeys(ctx context.Context, tenantID string, scope *KeyScop
 			return nil, nil
 		}
 		where += " AND (" + strings.Join(either, " OR ") + ")"
+	}
+	if strings.TrimSpace(q) != "" {
+		p := arg(likePattern(q))
+		where += " AND (LOWER(name) LIKE " + p + " ESCAPE '\\' OR LOWER(id) LIKE " + p + " ESCAPE '\\')"
 	}
 	page := " LIMIT " + arg(limit)
 	if afterCreatedAt != nil && afterID != "" {

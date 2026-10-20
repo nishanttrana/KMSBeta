@@ -42,7 +42,7 @@ function expiryStatus(s, now) {
 }
 
 /* ── MAIN COMPONENT ── */
-export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSession | null; onToast?: (m: string) => void; onNavigate?: (tab: string) => void }) => {
+export const VaultTab = ({ session, onToast, onNavigate, searchQuery }: { session: AuthSession | null; onToast?: (m: string) => void; onNavigate?: (tab: string) => void; searchQuery?: { text: string; n: number } | undefined }) => {
   const [modal, setModal] = useState(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -64,6 +64,8 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
   const [asOf, setAsOf] = useState(() => Date.now());
   const [drill, setDrill] = useState(null);
   const [search, setSearch] = useState("");
+  // A sidebar search result opens this page with its name filled in.
+  useEffect(() => { if (searchQuery?.text) setSearch(searchQuery.text); }, [searchQuery?.n, searchQuery?.text]);
   const [category, setCategory] = useState("all");
   const [sortBy, setSortBy] = useState("updated");
   const [currentPath, setCurrentPath] = useState("/");

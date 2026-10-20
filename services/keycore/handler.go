@@ -545,6 +545,21 @@ func (h *Handler) handleListKeys(w http.ResponseWriter, r *http.Request) {
 	rawIncludeDeleted := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("include_deleted")))
 	includeDeleted := rawIncludeDeleted == "1" || rawIncludeDeleted == "true" || rawIncludeDeleted == "yes" || rawIncludeDeleted == "on"
 
+	// q searches names and IDs (13.25.0-beta); it answers one page, no cursor.
+	if q := strings.TrimSpace(r.URL.Query().Get("q")); q != "" {
+		if len(q) > 128 {
+			writeErr(w, http.StatusBadRequest, "bad_request", "q is at most 128 characters", reqID, tenantID)
+			return
+		}
+		keys, err := h.svc.SearchKeys(r.Context(), tenantID, view, q, limit)
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, "list_failed", "failed to search keys", reqID, tenantID)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"items": renderKeys(keys), "has_more": false, "request_id": reqID})
+		return
+	}
+
 	// Cursor-based pagination: use after_created_at + after_id if provided
 	afterCreatedAtStr := strings.TrimSpace(r.URL.Query().Get("after_created_at"))
 	afterID := strings.TrimSpace(r.URL.Query().Get("after_id"))

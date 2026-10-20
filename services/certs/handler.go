@@ -215,6 +215,20 @@ func (h *Handler) handleListCerts(w http.ResponseWriter, r *http.Request) {
 	}
 	limit, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("limit")))
 	offset, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("offset")))
+	// q searches subject, SANs, ID and serial over every certificate.
+	if q := strings.TrimSpace(r.URL.Query().Get("q")); q != "" {
+		if len(q) > 128 {
+			writeErr(w, http.StatusBadRequest, "bad_request", "q is at most 128 characters", reqID, tenantID)
+			return
+		}
+		items, err := h.svc.SearchCertificates(r.Context(), tenantID, q, limit)
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, "list_failed", err.Error(), reqID, tenantID)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+		return
+	}
 	status := strings.TrimSpace(r.URL.Query().Get("status"))
 	certClass := strings.TrimSpace(r.URL.Query().Get("cert_class"))
 	items, err := h.svc.ListCertificates(r.Context(), tenantID, status, certClass, limit, offset)

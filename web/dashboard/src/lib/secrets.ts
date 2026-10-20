@@ -93,6 +93,14 @@ export async function listSecrets(
   return Array.isArray(res?.items) ? res.items : [];
 }
 
+// Secrets whose name or ID contains q, among those the caller may see; the
+// secrets service searches every secret (13.25.0-beta).
+export async function searchSecrets(session: AuthSession, q: string, limit = 5): Promise<SecretItem[]> {
+  const params = new URLSearchParams({ tenant_id: session.tenantId, q, limit: String(limit) });
+  const res = await serviceRequest<ListSecretsResponse>(session, "secrets", `/secrets?${params.toString()}`);
+  return Array.isArray(res?.items) ? res.items : [];
+}
+
 // Every secret of the tenant the caller may see (active, or deleted and not
 // yet destroyed), paged in full: the vault's charts count this list, so it
 // is never a sample.

@@ -429,7 +429,7 @@ function renderKeyOptions(keyChoices: any[]): any[] {
   ));
 }
 
-export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast,onNavigate})=>{
+export const KeysTab=({session,keyCatalog,keyCatalogError,setKeyCatalog,tagCatalog,setTagCatalog,onToast,onNavigate,searchQuery})=>{
 
   const [modal,setModal]=useState(null);
   const [selectedKey,setSelectedKey]=useState(null);
@@ -523,6 +523,8 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
   const [importExpectedKcv,setImportExpectedKcv]=useState("");
   const [importing,setImporting]=useState(false);
   const [search,setSearch]=useState("");
+  // A sidebar search result opens this page with its name filled in.
+  useEffect(()=>{ if(searchQuery?.text) setSearch(searchQuery.text); },[searchQuery?.n,searchQuery?.text]);
   const [statusFilter,setStatusFilter]=useState("all");
   const [algoFilter,setAlgoFilter]=useState("all");
   const [tagFilter,setTagFilter]=useState("all");
@@ -2009,7 +2011,9 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
               <td style={{padding:"8px 10px",width:48}} />
             </tr>;
           })}
-          {!keys.length&&<tr><td colSpan={visibleColumns.length+1} style={{padding:"10px",fontSize:10,color:C.muted}}>No keys yet. Create a key with your customer-defined name.</td></tr>}
+          {!keys.length&&<tr><td colSpan={visibleColumns.length+1} style={{padding:"14px 10px",fontSize:12,color:keyCatalogError?C.redFg:C.muted}}>
+            {keyCatalogError?`Keys unavailable: ${keyCatalogError}`:<span style={{display:"inline-flex",alignItems:"center",gap:10}}>No keys yet.<Btn small primary onClick={()=>{setInHSM(hsmKeysEnabled&&hsmSupportsAlgorithm(algo));setModal("create");}}>Create your first key</Btn></span>}
+          </td></tr>}
           {keys.length>0&&!filteredKeys.length&&<tr><td colSpan={visibleColumns.length+1} style={{padding:"12px 10px",fontSize:10,color:C.muted}}>No keys found for current filters.</td></tr>}
         </tbody></table>
       </div>

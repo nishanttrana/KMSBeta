@@ -528,6 +528,16 @@ export async function listKeys(
 
 const KEY_PAGE_MAX = 1000;
 
+// Keys whose name or ID contains q, among those the caller may list
+// (keycore searches the whole set; 13.25.0-beta).
+export async function searchKeys(session: AuthSession, q: string, limit = 5): Promise<KeyItem[]> {
+  const payload = await apiRequest<APIKeysResponse>(
+    session,
+    `/keys?tenant_id=${encodeURIComponent(session.tenantId)}&q=${encodeURIComponent(q)}&limit=${limit}`
+  );
+  return payload.items || [];
+}
+
 export type PaginatedKeysResponse = {
   items: KeyItem[];
   next_cursor?: { after_created_at: string; after_id: string };

@@ -387,7 +387,10 @@ an approach, record it here or in the matching doc below.
   route). "System Admin" in the console is the server's platform
   administrator (root tenant and `auth.tenant.read`/`write`), never the
   tenant alone. Every view has an address (`#module/sub-option`) with real
-  history; the shell writes it, and nothing else does.
+  history; the shell writes it, and nothing else does. Searching objects
+  (`components/v3/SidebarSearch.tsx`) is a `q` on the service's own list,
+  inside that list's access scope, over the whole set (13.25.0-beta); a
+  failed source reads "unavailable", never "no match".
 
 - **Sub-options live in the sidebar** (owner directive, 2026-10-11: "not
   have sub tab", "the options should be as a sub option on the left when I

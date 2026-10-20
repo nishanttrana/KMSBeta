@@ -301,8 +301,18 @@ func (h *Handler) listSecrets(c *route.Call) {
 	if !ok {
 		return
 	}
+	// search matches name and ID, inside the visibility check, over every
+	// secret the caller may see (13.25.0-beta).
+	search := strings.ToLower(strings.TrimSpace(q.Get("q")))
+	if len(search) > 128 {
+		c.Refuse(http.StatusBadRequest, "invalid_query", "q is at most 128 characters")
+		return
+	}
 	marked := map[string]bool{}
 	items, err := h.svc.ListVisible(c.R.Context(), c.Tenant, secretType, status, atoi(q.Get("limit")), atoi(q.Get("offset")), func(s Secret) bool {
+		if search != "" && !strings.Contains(strings.ToLower(s.Name+"\n"+s.ID), search) {
+			return false
+		}
 		ok := see(&s)
 		marked[s.ID] = s.Restricted
 		return ok
@@ -317,6 +327,7 @@ func (h *Handler) listSecrets(c *route.Call) {
 	c.Detail("count", len(items))
 	c.Detail("secret_type", secretType)
 	c.Detail("status", status)
+	c.Detail("search", search != "")
 	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
