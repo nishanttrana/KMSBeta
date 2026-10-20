@@ -22,7 +22,7 @@ async function open(page: Page, verify: unknown): Promise<void> {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
   await page.getByText("Audit Log", { exact: true }).first().click();
-  await expect(page.getByText("CHAIN: UNVERIFIED")).toBeVisible();
+  await expect(page.getByText("CHAIN: NOT CHECKED")).toBeVisible();
   await page.getByRole("button", { name: "Verify Chain" }).click();
 }
 

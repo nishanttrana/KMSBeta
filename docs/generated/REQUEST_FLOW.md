@@ -1,6 +1,6 @@
 # Generated Request Flow Map
 
-Generated at `2026-10-20T19:12:23Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-20T19:42:20Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
@@ -147,15 +147,15 @@ This file connects frontend requests to backend Go processing. It is static anal
 | certs\|POST\|/scep/pkiclient.exe | POST /scep/pkiclient.exe | handleSCEPPKIOperation (services/certs/handler.go:983) | loadCASigner, SCEPPKIOperation | GetCA |  |  | web/dashboard/src/lib/certs.ts:941 |
 | certs\|POST\|/cmpv2 | POST /cmpv2 | handleCMPv2 (services/certs/handler.go:1115) | CMPv2Request | GetCertificate |  |  | web/dashboard/src/lib/certs.ts:962 |
 | certs\|POST\|/cmpv2/confirm | POST /cmpv2/confirm | handleCMPv2Confirm (services/certs/handler.go:1176) | CMPv2Confirm, CMPv2Error | GetCertificate |  |  | web/dashboard/src/lib/certs.ts:1056 |
-| certs\|GET\|/certs/internal-mtls | GET /certs/internal-mtls | handleMTLSInventory (services/certs/internal_mtls_routes.go:78) |  |  |  |  | web/dashboard/src/lib/certs.ts:1125 |
-| certs\|PUT\|/certs/internal-mtls/{param}/policy | PUT /certs/internal-mtls/{identity}/policy | handleMTLSPolicy (services/certs/internal_mtls_routes.go:107) |  |  |  |  | web/dashboard/src/lib/certs.ts:1133 |
-| certs\|POST\|/certs/internal-mtls/{param}/rotate | POST /certs/internal-mtls/{identity}/rotate | handleMTLSRotate (services/certs/internal_mtls_routes.go:135) |  |  |  |  | web/dashboard/src/lib/certs.ts:1140 |
-| certs\|POST\|/certs/internal-mtls/rotate-all | POST /certs/internal-mtls/rotate-all | handleMTLSRotateAll (services/certs/internal_mtls_routes.go:164) |  |  |  |  | web/dashboard/src/lib/certs.ts:1152 |
-| certs\|GET\|/certs/edge-tls | GET /certs/edge-tls | handleEdgeRead (services/certs/internal_mtls_routes.go:208) |  |  |  |  | web/dashboard/src/lib/certs.ts:1187 |
-| certs\|PUT\|/certs/edge-tls | PUT /certs/edge-tls | handleEdgePolicy (services/certs/internal_mtls_routes.go:222) |  |  |  | pkg/svctls.EnvoyCurves | web/dashboard/src/lib/certs.ts:1192 |
-| certs\|PUT\|/certs/edge-tls/certificate | PUT /certs/edge-tls/certificate | handleEdgeCertSource (services/certs/internal_mtls_routes.go:248) |  |  |  |  | web/dashboard/src/lib/certs.ts:1204 |
-| certs\|POST\|/certs/edge-tls/csr | POST /certs/edge-tls/csr | handleEdgeCSR (services/certs/internal_mtls_routes.go:287) |  |  |  |  | web/dashboard/src/lib/certs.ts:1214 |
-| certs\|POST\|/certs/edge-tls/certificate/install | POST /certs/edge-tls/certificate/install | handleEdgeInstall (services/certs/internal_mtls_routes.go:314) |  |  |  |  | web/dashboard/src/lib/certs.ts:1222 |
+| certs\|GET\|/certs/internal-mtls | GET /certs/internal-mtls | handleMTLSInventory (services/certs/internal_mtls_routes.go:78) |  |  |  |  | web/dashboard/src/lib/certs.ts:1127 |
+| certs\|PUT\|/certs/internal-mtls/{param}/policy | PUT /certs/internal-mtls/{identity}/policy | handleMTLSPolicy (services/certs/internal_mtls_routes.go:107) |  |  |  |  | web/dashboard/src/lib/certs.ts:1139 |
+| certs\|POST\|/certs/internal-mtls/{param}/rotate | POST /certs/internal-mtls/{identity}/rotate | handleMTLSRotate (services/certs/internal_mtls_routes.go:135) |  |  |  |  | web/dashboard/src/lib/certs.ts:1146 |
+| certs\|POST\|/certs/internal-mtls/rotate-all | POST /certs/internal-mtls/rotate-all | handleMTLSRotateAll (services/certs/internal_mtls_routes.go:164) |  |  |  |  | web/dashboard/src/lib/certs.ts:1158 |
+| certs\|GET\|/certs/edge-tls | GET /certs/edge-tls | handleEdgeRead (services/certs/internal_mtls_routes.go:208) |  |  |  |  | web/dashboard/src/lib/certs.ts:1193 |
+| certs\|PUT\|/certs/edge-tls | PUT /certs/edge-tls | handleEdgePolicy (services/certs/internal_mtls_routes.go:222) |  |  |  | pkg/svctls.EnvoyCurves | web/dashboard/src/lib/certs.ts:1201 |
+| certs\|PUT\|/certs/edge-tls/certificate | PUT /certs/edge-tls/certificate | handleEdgeCertSource (services/certs/internal_mtls_routes.go:248) |  |  |  |  | web/dashboard/src/lib/certs.ts:1213 |
+| certs\|POST\|/certs/edge-tls/csr | POST /certs/edge-tls/csr | handleEdgeCSR (services/certs/internal_mtls_routes.go:287) |  |  |  |  | web/dashboard/src/lib/certs.ts:1223 |
+| certs\|POST\|/certs/edge-tls/certificate/install | POST /certs/edge-tls/certificate/install | handleEdgeInstall (services/certs/internal_mtls_routes.go:314) |  |  |  |  | web/dashboard/src/lib/certs.ts:1231 |
 | certs\|GET\|/certs/summary | GET /certs/summary | handleSummary (services/certs/summary.go:119) | CertSummary |  |  |  | web/dashboard/src/lib/certs.ts:650 |
 | cloud\|GET\|/cloud/byok/providers | GET /cloud/byok/providers | <inline func> (:) |  |  |  |  | web/dashboard/src/lib/byok.ts:121 |
 | cloud\|GET\|/cloud/byok/keys | GET /cloud/byok/keys | listBYOK (services/cloud/byok_routes.go:66) | ListBYOK | ListBindings | s.byokStore.ListBYOKKeys |  | web/dashboard/src/lib/byok.ts:126 |
@@ -261,9 +261,9 @@ This file connects frontend requests to backend Go processing. It is static anal
 | discovery\|GET\|/discovery/schedule | GET /discovery/schedule | getSchedule (services/discovery/handler.go:474) | GetSchedule | GetSchedule |  |  | web/dashboard/src/lib/discovery.ts:347 |
 | discovery\|PUT\|/discovery/schedule | PUT /discovery/schedule | putSchedule (services/discovery/handler.go:486) | SaveSchedule | GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:362 |
 | ekm\|GET\|/ekm/clients | GET /ekm/clients | listClients (services/ekm/clients.go:280) |  | ListClients |  |  | web/dashboard/src/lib/ekmClients.ts:56 |
-| ekm\|POST\|/ekm/clients | POST /ekm/clients | createClient (services/ekm/clients.go:344) | createTDEKey | ListClients, CreatePendingClient, PurgeAgent, GetClient, CreateTDEKey, GetTDEKey, BumpAgentConfigVersion, RecordKeyAccess, +7 more | s.keycore.CreateAsymmetricKey, s.keycore.GetKey, s.keycore.PublicKey, s.keycore.Wrap, s.keycore.Unwrap, s.keycore.RotateKey, s.keycore.DestroyKeyImmediately | pkg/crypto.Zeroize | web/dashboard/src/lib/ekmClients.ts:66 |
-| ekm\|GET\|/ekm/clients/{param} | GET /ekm/clients/{id} | getClient (services/ekm/clients.go:295) |  | GetClient, ListClientCheckIns, GetTDEKey, ListKeyAccessByAgent, ListDatabases |  |  | web/dashboard/src/lib/ekmClients.ts:61 |
-| ekm\|POST\|/ekm/clients/{param}/registration-token | POST /ekm/clients/{id}/registration-token | issueClientToken (services/ekm/clients.go:414) |  | GetClient, SetClientToken |  |  | web/dashboard/src/lib/ekmClients.ts:75 |
+| ekm\|POST\|/ekm/clients | POST /ekm/clients | createClient (services/ekm/clients.go:344) | createTDEKey | ListClients, CreatePendingClient, PurgeAgent, GetClient, CreateTDEKey, GetTDEKey, BumpAgentConfigVersion, RecordKeyAccess, +7 more | s.keycore.CreateAsymmetricKey, s.keycore.GetKey, s.keycore.PublicKey, s.keycore.Wrap, s.keycore.Unwrap, s.keycore.RotateKey, s.keycore.DestroyKeyImmediately | pkg/crypto.Zeroize | web/dashboard/src/lib/ekmClients.ts:71 |
+| ekm\|GET\|/ekm/clients/{param} | GET /ekm/clients/{id} | getClient (services/ekm/clients.go:295) |  | GetClient, ListClientCheckIns, GetTDEKey, ListKeyAccessByAgent, ListDatabases |  |  | web/dashboard/src/lib/ekmClients.ts:66 |
+| ekm\|POST\|/ekm/clients/{param}/registration-token | POST /ekm/clients/{id}/registration-token | issueClientToken (services/ekm/clients.go:414) |  | GetClient, SetClientToken |  |  | web/dashboard/src/lib/ekmClients.ts:80 |
 | ekm\|GET\|/ekm/agents | GET /ekm/agents | handleListAgents (services/ekm/handler.go:166) | ListAgents | ListAgents |  |  | web/dashboard/src/lib/ekm.ts:241 |
 | ekm\|GET\|/ekm/agents/{param}/logs | GET /ekm/agents/{id}/logs | handleAgentLogs (services/ekm/handler.go:211) | ListAgentLogs | GetAgent, ListKeyAccessByAgent |  |  | web/dashboard/src/lib/ekm.ts:246 |
 | ekm\|POST\|/ekm/agents/{param}/rotate | POST /ekm/agents/{id}/rotate | handleRotateAgent (services/ekm/handler.go:232) | RotateAgentAssignedKey | GetAgent, ListDatabases, BumpAgentConfigVersion |  | pkg/tenantcheck.Requester | web/dashboard/src/lib/ekm.ts:255 |
@@ -738,15 +738,15 @@ This file connects frontend requests to backend Go processing. It is static anal
 | certs\|POST\|/scep/pkiclient.exe | POST /scep/pkiclient.exe | handleSCEPPKIOperation (services/certs/handler.go:983) | loadCASigner, SCEPPKIOperation | GetCA |  |  | web/dashboard/src/lib/certs.ts:941 |
 | certs\|POST\|/cmpv2 | POST /cmpv2 | handleCMPv2 (services/certs/handler.go:1115) | CMPv2Request | GetCertificate |  |  | web/dashboard/src/lib/certs.ts:962 |
 | certs\|POST\|/cmpv2/confirm | POST /cmpv2/confirm | handleCMPv2Confirm (services/certs/handler.go:1176) | CMPv2Confirm, CMPv2Error | GetCertificate |  |  | web/dashboard/src/lib/certs.ts:1056 |
-| certs\|GET\|/certs/internal-mtls | GET /certs/internal-mtls | handleMTLSInventory (services/certs/internal_mtls_routes.go:78) |  |  |  |  | web/dashboard/src/lib/certs.ts:1125 |
-| certs\|PUT\|/certs/internal-mtls/{param}/policy | PUT /certs/internal-mtls/{identity}/policy | handleMTLSPolicy (services/certs/internal_mtls_routes.go:107) |  |  |  |  | web/dashboard/src/lib/certs.ts:1133 |
-| certs\|POST\|/certs/internal-mtls/{param}/rotate | POST /certs/internal-mtls/{identity}/rotate | handleMTLSRotate (services/certs/internal_mtls_routes.go:135) |  |  |  |  | web/dashboard/src/lib/certs.ts:1140 |
-| certs\|POST\|/certs/internal-mtls/rotate-all | POST /certs/internal-mtls/rotate-all | handleMTLSRotateAll (services/certs/internal_mtls_routes.go:164) |  |  |  |  | web/dashboard/src/lib/certs.ts:1152 |
-| certs\|GET\|/certs/edge-tls | GET /certs/edge-tls | handleEdgeRead (services/certs/internal_mtls_routes.go:208) |  |  |  |  | web/dashboard/src/lib/certs.ts:1187 |
-| certs\|PUT\|/certs/edge-tls | PUT /certs/edge-tls | handleEdgePolicy (services/certs/internal_mtls_routes.go:222) |  |  |  | pkg/svctls.EnvoyCurves | web/dashboard/src/lib/certs.ts:1192 |
-| certs\|PUT\|/certs/edge-tls/certificate | PUT /certs/edge-tls/certificate | handleEdgeCertSource (services/certs/internal_mtls_routes.go:248) |  |  |  |  | web/dashboard/src/lib/certs.ts:1204 |
-| certs\|POST\|/certs/edge-tls/csr | POST /certs/edge-tls/csr | handleEdgeCSR (services/certs/internal_mtls_routes.go:287) |  |  |  |  | web/dashboard/src/lib/certs.ts:1214 |
-| certs\|POST\|/certs/edge-tls/certificate/install | POST /certs/edge-tls/certificate/install | handleEdgeInstall (services/certs/internal_mtls_routes.go:314) |  |  |  |  | web/dashboard/src/lib/certs.ts:1222 |
+| certs\|GET\|/certs/internal-mtls | GET /certs/internal-mtls | handleMTLSInventory (services/certs/internal_mtls_routes.go:78) |  |  |  |  | web/dashboard/src/lib/certs.ts:1127 |
+| certs\|PUT\|/certs/internal-mtls/{param}/policy | PUT /certs/internal-mtls/{identity}/policy | handleMTLSPolicy (services/certs/internal_mtls_routes.go:107) |  |  |  |  | web/dashboard/src/lib/certs.ts:1139 |
+| certs\|POST\|/certs/internal-mtls/{param}/rotate | POST /certs/internal-mtls/{identity}/rotate | handleMTLSRotate (services/certs/internal_mtls_routes.go:135) |  |  |  |  | web/dashboard/src/lib/certs.ts:1146 |
+| certs\|POST\|/certs/internal-mtls/rotate-all | POST /certs/internal-mtls/rotate-all | handleMTLSRotateAll (services/certs/internal_mtls_routes.go:164) |  |  |  |  | web/dashboard/src/lib/certs.ts:1158 |
+| certs\|GET\|/certs/edge-tls | GET /certs/edge-tls | handleEdgeRead (services/certs/internal_mtls_routes.go:208) |  |  |  |  | web/dashboard/src/lib/certs.ts:1193 |
+| certs\|PUT\|/certs/edge-tls | PUT /certs/edge-tls | handleEdgePolicy (services/certs/internal_mtls_routes.go:222) |  |  |  | pkg/svctls.EnvoyCurves | web/dashboard/src/lib/certs.ts:1201 |
+| certs\|PUT\|/certs/edge-tls/certificate | PUT /certs/edge-tls/certificate | handleEdgeCertSource (services/certs/internal_mtls_routes.go:248) |  |  |  |  | web/dashboard/src/lib/certs.ts:1213 |
+| certs\|POST\|/certs/edge-tls/csr | POST /certs/edge-tls/csr | handleEdgeCSR (services/certs/internal_mtls_routes.go:287) |  |  |  |  | web/dashboard/src/lib/certs.ts:1223 |
+| certs\|POST\|/certs/edge-tls/certificate/install | POST /certs/edge-tls/certificate/install | handleEdgeInstall (services/certs/internal_mtls_routes.go:314) |  |  |  |  | web/dashboard/src/lib/certs.ts:1231 |
 | certs\|GET\|/certs/edge-tls/measurement | GET /certs/edge-tls/measurement | handleEdgeMeasurement (services/certs/internal_mtls_routes.go:351) |  |  |  |  |  |
 | certs\|POST\|/v1/enroll | POST /v1/enroll | <inline func> (:) |  |  |  |  |  |
 | certs\|GET\|/certs/summary | GET /certs/summary | handleSummary (services/certs/summary.go:119) | CertSummary |  |  |  | web/dashboard/src/lib/certs.ts:650 |
@@ -935,9 +935,9 @@ This file connects frontend requests to backend Go processing. It is static anal
 | discovery\|GET\|/discovery/schedule | GET /discovery/schedule | getSchedule (services/discovery/handler.go:474) | GetSchedule | GetSchedule |  |  | web/dashboard/src/lib/discovery.ts:347 |
 | discovery\|PUT\|/discovery/schedule | PUT /discovery/schedule | putSchedule (services/discovery/handler.go:486) | SaveSchedule | GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:362 |
 | ekm\|GET\|/ekm/clients | GET /ekm/clients | listClients (services/ekm/clients.go:280) |  | ListClients |  |  | web/dashboard/src/lib/ekmClients.ts:56 |
-| ekm\|POST\|/ekm/clients | POST /ekm/clients | createClient (services/ekm/clients.go:344) | createTDEKey | ListClients, CreatePendingClient, PurgeAgent, GetClient, CreateTDEKey, GetTDEKey, BumpAgentConfigVersion, RecordKeyAccess, +7 more | s.keycore.CreateAsymmetricKey, s.keycore.GetKey, s.keycore.PublicKey, s.keycore.Wrap, s.keycore.Unwrap, s.keycore.RotateKey, s.keycore.DestroyKeyImmediately | pkg/crypto.Zeroize | web/dashboard/src/lib/ekmClients.ts:66 |
-| ekm\|GET\|/ekm/clients/{param} | GET /ekm/clients/{id} | getClient (services/ekm/clients.go:295) |  | GetClient, ListClientCheckIns, GetTDEKey, ListKeyAccessByAgent, ListDatabases |  |  | web/dashboard/src/lib/ekmClients.ts:61 |
-| ekm\|POST\|/ekm/clients/{param}/registration-token | POST /ekm/clients/{id}/registration-token | issueClientToken (services/ekm/clients.go:414) |  | GetClient, SetClientToken |  |  | web/dashboard/src/lib/ekmClients.ts:75 |
+| ekm\|POST\|/ekm/clients | POST /ekm/clients | createClient (services/ekm/clients.go:344) | createTDEKey | ListClients, CreatePendingClient, PurgeAgent, GetClient, CreateTDEKey, GetTDEKey, BumpAgentConfigVersion, RecordKeyAccess, +7 more | s.keycore.CreateAsymmetricKey, s.keycore.GetKey, s.keycore.PublicKey, s.keycore.Wrap, s.keycore.Unwrap, s.keycore.RotateKey, s.keycore.DestroyKeyImmediately | pkg/crypto.Zeroize | web/dashboard/src/lib/ekmClients.ts:71 |
+| ekm\|GET\|/ekm/clients/{param} | GET /ekm/clients/{id} | getClient (services/ekm/clients.go:295) |  | GetClient, ListClientCheckIns, GetTDEKey, ListKeyAccessByAgent, ListDatabases |  |  | web/dashboard/src/lib/ekmClients.ts:66 |
+| ekm\|POST\|/ekm/clients/{param}/registration-token | POST /ekm/clients/{id}/registration-token | issueClientToken (services/ekm/clients.go:414) |  | GetClient, SetClientToken |  |  | web/dashboard/src/lib/ekmClients.ts:80 |
 | ekm\|POST\|/ekm/clients/enroll | POST /ekm/clients/enroll | enrollClient (services/ekm/clients.go:448) |  | GetClient, ConsumeClientToken, RecordClientCheckIn |  | pkg/clientip.From |  |
 | ekm\|POST\|/ekm/clients/{param}/check-in | POST /ekm/clients/{id}/check-in | clientCheckIn (services/ekm/clients.go:519) |  | GetClient, UpdateAgentHeartbeat, RecordClientCheckIn |  | pkg/clientip.From |  |
 | ekm\|POST\|/ekm/agents/register | POST /ekm/agents/register | handleRegisterAgent (services/ekm/handler.go:141) | RegisterAgent | GetAgent, UpsertAgent |  |  |  |

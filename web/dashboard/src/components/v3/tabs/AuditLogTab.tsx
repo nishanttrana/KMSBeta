@@ -392,12 +392,12 @@ export const AuditLogTab = ({ session, onToast }: any) => {
   const IntegrityBar = () => (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 14, padding: "8px 12px", borderRadius: 4, background: C.card, border: `1px solid ${C.border}` }}>
       <ChainStatus result={chainResult} />
-      <B c="accent">{filteredEvents.length} events loaded</B>
-      <B c={config?.fail_closed ? "green" : "amber"}>
+      <B c="neutral">{filteredEvents.length} events loaded</B>
+      <B c={config?.fail_closed ? "neutral" : "amber"}>
         Fail-closed: {config?.fail_closed ? "ACTIVE" : "INACTIVE"}
       </B>
-      <B c="purple">SHA-256 hash chain</B>
-      <B c="accent">Immutable storage</B>
+      <B c="neutral">SHA-256 hash chain</B>
+      <B c="neutral">Immutable storage</B>
       {chainResult && !chainResult.ok && (
         <B c="red">{chainResult.breaks.length} break(s) detected</B>
       )}
@@ -413,8 +413,9 @@ export const AuditLogTab = ({ session, onToast }: any) => {
 
     return <>
       {/* filter bar */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
-        <Inp placeholder="Search actions, actors, targets..." w={240} value={searchQuery}
+      <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
+       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", flex: "1 1 100%", minWidth: 0 }}>
+        <Inp placeholder="Search actions, actors, targets..." value={searchQuery} style={{ flex: "1 1 200px", width: "auto", minWidth: 180 }}
           onChange={(e: any) => setSearchQuery(e.target.value)} />
         <Sel w={140} value={serviceFilter} onChange={(e: any) => { setServiceFilter(e.target.value); setOffset(0); }}>
           <option value="">All Services</option>
@@ -437,14 +438,15 @@ export const AuditLogTab = ({ session, onToast }: any) => {
           <option value="30d">Last 30d</option>
           <option value="all">All Time</option>
         </Sel>
-        <Inp style={{width:160,height:28,fontSize:10}} value={signingKeyId} onChange={(e:any)=>setSigningKeyId(e.target.value)} placeholder="Signing Key ID (optional)"/>
+       </div><div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end", flex: "1 1 100%" }}>
+        <Inp style={{ width: 170 }} value={signingKeyId} onChange={(e:any)=>setSigningKeyId(e.target.value)} placeholder="Signing key ID (optional)" title="Sign exported files with this key"/>
         <Btn small onClick={() => void exportEventsAsCSV(filteredEvents, signingKeyId ? session : undefined, signingKeyId || undefined)}>{signingKeyId ? "Export Signed CSV" : "Export CSV"}</Btn>
         <Btn small onClick={() => void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, signingKeyId || undefined)}>{signingKeyId ? "Export Signed CEF" : "Export CEF"}</Btn>
         <Btn small primary onClick={verifyChain} disabled={chainVerifying}>
           {chainVerifying ? "Verifying..." : "Verify Chain"}
         </Btn>
         <Btn small onClick={() => load()} disabled={loading}>Refresh</Btn>
-      </div>
+      </div></div>
 
       {/* chain breaks display */}
       {chainBreaks.length > 0 && (

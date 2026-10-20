@@ -19660,7 +19660,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si...",
-      "line": 442,
+      "line": 444,
       "tabs": [
         "audit"
       ],
@@ -19670,7 +19670,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "verifyChain} disabled={chainVerifying",
       "label": "(icon or dynamic label)",
-      "line": 443,
+      "line": 445,
       "tabs": [
         "audit"
       ],
@@ -19680,7 +19680,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "load()} disabled= >Refresh",
-      "line": 446,
+      "line": 448,
       "tabs": [
         "audit"
       ],
@@ -19690,7 +19690,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "setOffset(Math.max(0, offset - PAGE_SIZE))}>Previous",
-      "line": 537,
+      "line": 539,
       "tabs": [
         "audit"
       ],
@@ -19700,7 +19700,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "setOffset(offset + PAGE_SIZE)}>Next",
-      "line": 538,
+      "line": 540,
       "tabs": [
         "audit"
       ],
@@ -19710,7 +19710,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "loadForensic} disabled={forensicLoading",
       "label": "(icon or dynamic label)",
-      "line": 564,
+      "line": 566,
       "tabs": [
         "audit"
       ],
@@ -19720,7 +19720,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "}> View Timeline ( )",
-      "line": 672,
+      "line": 674,
       "tabs": [
         "audit"
       ],
@@ -19730,7 +19730,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "}> View Session ( )",
-      "line": 677,
+      "line": 679,
       "tabs": [
         "audit"
       ],
@@ -19740,7 +19740,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "}> View Correlation ( )",
-      "line": 682,
+      "line": 684,
       "tabs": [
         "audit"
       ],
@@ -21540,7 +21540,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setBitLockerView(bitLockerView===\"cards\"?\"list\":\"cards\")} style={ }>{bitLocke...",
-      "line": 502,
+      "line": 500,
       "tabs": [
         "ekm"
       ],
@@ -21550,7 +21550,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "openBitLockerDeploy",
       "label": "Register Client",
-      "line": 503,
+      "line": 501,
       "tabs": [
         "ekm"
       ],
@@ -21560,7 +21560,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "openBitLockerScan",
       "label": "Network Scan",
-      "line": 504,
+      "line": 502,
       "tabs": [
         "ekm"
       ],
@@ -21570,7 +21570,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "refresh(false)} disabled= >",
-      "line": 505,
+      "line": 503,
       "tabs": [
         "ekm"
       ],
@@ -21580,6 +21580,26 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "runBitLockerOperation(client,op)} disabled={bitLockerOpClientID===`$ :$ `} st...",
+      "line": 527,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "openBitLockerActivity(client)} style={ }>Activity",
+      "line": 528,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "openBitLockerDelete(client)} style={ }>Delete",
       "line": 529,
       "tabs": [
         "ekm"
@@ -21590,27 +21610,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "openBitLockerActivity(client)} style={ }>Activity",
-      "line": 530,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "openBitLockerDelete(client)} style={ }>Delete",
-      "line": 531,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "openBitLockerActivity(client)} style={ }>Activity",
-      "line": 552,
+      "line": 550,
       "tabs": [
         "ekm"
       ],
@@ -21620,7 +21620,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "openBitLockerOptions(client)} style={ }>Ops",
-      "line": 553,
+      "line": 551,
       "tabs": [
         "ekm"
       ],
@@ -21630,7 +21630,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "openBitLockerDelete(client)} style={ }>Del",
-      "line": 554,
+      "line": 552,
       "tabs": [
         "ekm"
       ],
@@ -21640,7 +21640,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setGoogleCSELoading(true); try{ const domains=googleCSEConfigForm.allowed_d...",
-      "line": 591,
+      "line": 584,
       "tabs": [
         "ekm"
       ],
@@ -21650,7 +21650,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ const v=await promptDialog.prompt( ); if(v===null) return; try{await update...",
-      "line": 623,
+      "line": 616,
       "tabs": [
         "ekm"
       ],
@@ -21660,7 +21660,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ if(!confirm(\"Delete this Google CSE config?\")) return; try catch(e){onToast...",
-      "line": 628,
+      "line": 621,
       "tabs": [
         "ekm"
       ],
@@ -21670,7 +21670,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setGoogleCSELoading(true); try{ await createGoogleCSEKey(session, ); onToas...",
-      "line": 657,
+      "line": 650,
       "tabs": [
         "ekm"
       ],
@@ -21680,7 +21680,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ if(!confirm(\"Delete this CSE key?\")) return; try catch(e){onToast?.(`Delete...",
-      "line": 685,
+      "line": 678,
       "tabs": [
         "ekm"
       ],
@@ -21690,7 +21690,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setGuideEngine(eng)} style={ }>",
-      "line": 719,
+      "line": 712,
       "tabs": [
         "ekm"
       ],
@@ -21700,7 +21700,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "submitDbRegister} disabled={dbRegistering",
       "label": "(icon or dynamic label)",
-      "line": 762,
+      "line": 755,
       "tabs": [
         "ekm"
       ],
@@ -21710,7 +21710,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 763,
+      "line": 756,
       "tabs": [
         "ekm"
       ],
@@ -21720,7 +21720,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "submitBitLockerDeploy} disabled={bitLockerDeploying",
       "label": "(icon or dynamic label)",
-      "line": 780,
+      "line": 773,
       "tabs": [
         "ekm"
       ],
@@ -21730,7 +21730,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 781,
+      "line": 774,
       "tabs": [
         "ekm"
       ],
@@ -21740,7 +21740,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "downloadText(file.path,file.content)} style={ }>Download",
-      "line": 788,
+      "line": 781,
       "tabs": [
         "ekm"
       ],
@@ -21750,7 +21750,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "submitBitLockerDelete} disabled={bitLockerDeleteSubmitting||!bitLockerDeleteConfirmBackup",
       "label": "(icon or dynamic label)",
-      "line": 806,
+      "line": 799,
       "tabs": [
         "ekm"
       ],
@@ -21760,7 +21760,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 807,
+      "line": 800,
       "tabs": [
         "ekm"
       ],
@@ -21770,7 +21770,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "runBitLockerScan} disabled={bitLockerScanRunning",
       "label": "(icon or dynamic label)",
-      "line": 824,
+      "line": 817,
       "tabs": [
         "ekm"
       ],
@@ -21780,7 +21780,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "onboardScannedBitLocker} disabled={bitLockerOnboarding",
       "label": "(icon or dynamic label)",
-      "line": 840,
+      "line": 833,
       "tabs": [
         "ekm"
       ],
@@ -21790,7 +21790,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{const all= ;bitLockerScanCandidates.forEach(r=> );setBitLockerScanSelected(a...",
-      "line": 841,
+      "line": 834,
       "tabs": [
         "ekm"
       ],
@@ -21800,7 +21800,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "} disabled={bitLockerOpClientID===`$ :$ `} style={ }>",
-      "line": 883,
+      "line": 876,
       "tabs": [
         "ekm"
       ],
@@ -22036,7 +22036,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "void refresh(false)} disabled= > Refresh",
-      "line": 298,
+      "line": 290,
       "tabs": [
         "hyok"
       ],
@@ -22046,7 +22046,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "}> Endpoint URLs",
-      "line": 299,
+      "line": 291,
       "tabs": [
         "hyok"
       ],
@@ -22056,7 +22056,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "}> Setup Guide",
-      "line": 300,
+      "line": 292,
       "tabs": [
         "hyok"
       ],
@@ -22066,7 +22066,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "openConfig(protocol)}>Configure",
-      "line": 339,
+      "line": 331,
       "tabs": [
         "hyok"
       ],
@@ -22076,7 +22076,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "}>URLs",
-      "line": 340,
+      "line": 332,
       "tabs": [
         "hyok"
       ],
@@ -22086,7 +22086,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "}>Guide",
-      "line": 341,
+      "line": 333,
       "tabs": [
         "hyok"
       ],
@@ -22096,7 +22096,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "void runDelete(protocol)}>Reset",
-      "line": 342,
+      "line": 334,
       "tabs": [
         "hyok"
       ],
@@ -22106,7 +22106,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 483,
+      "line": 475,
       "tabs": [
         "hyok"
       ],
@@ -22116,7 +22116,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "void submitConfig()} disabled= >",
-      "line": 484,
+      "line": 476,
       "tabs": [
         "hyok"
       ],
@@ -22126,7 +22126,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "copyToClipboard(url.path)} style={ } title=\"Copy URL path\">",
-      "line": 508,
+      "line": 500,
       "tabs": [
         "hyok"
       ],
@@ -22136,7 +22136,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Close",
-      "line": 515,
+      "line": 507,
       "tabs": [
         "hyok"
       ],
@@ -22146,7 +22146,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Close",
-      "line": 557,
+      "line": 549,
       "tabs": [
         "hyok"
       ],
@@ -22986,7 +22986,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "disabled ? undefined : onClick} style={{ ...base, ...styles[variant]",
       "label": "(icon or dynamic label)",
-      "line": 75,
+      "line": 76,
       "tabs": [
         "playbooks"
       ],
@@ -22996,7 +22996,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "onChange(filters.filter((_: any, idx: number) => idx !== i))} style={ }>",
-      "line": 186,
+      "line": 177,
       "tabs": [
         "playbooks"
       ],
@@ -23006,7 +23006,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "onChange([...filters, ])}> Add filter",
-      "line": 190,
+      "line": 181,
       "tabs": [
         "playbooks"
       ],
@@ -23016,7 +23016,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "setOpenRun(open ? \"\" : r.id)} style={ }>{open ? : }",
-      "line": 383,
+      "line": 374,
       "tabs": [
         "playbooks"
       ],
@@ -23026,7 +23026,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "handleCancel(r)}> Cancel",
-      "line": 393,
+      "line": 384,
       "tabs": [
         "playbooks"
       ],
@@ -23036,7 +23036,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "handleRetry(r)}> Retry",
-      "line": 394,
+      "line": 385,
       "tabs": [
         "playbooks"
       ],
@@ -23046,7 +23046,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "openEditor()}> New",
-      "line": 431,
+      "line": 422,
       "tabs": [
         "playbooks"
       ],
@@ -23056,7 +23056,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "}>",
-      "line": 432,
+      "line": 423,
       "tabs": [
         "playbooks"
       ],
@@ -23066,7 +23066,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "setDryRun(null)} style={ }>",
-      "line": 485,
+      "line": 476,
       "tabs": [
         "playbooks"
       ],
@@ -23076,7 +23076,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "handleToggle(pb)} style={ }>{pb.enabled ? : }",
-      "line": 516,
+      "line": 507,
       "tabs": [
         "playbooks"
       ],
@@ -23086,7 +23086,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "openEditor(pb)}>",
-      "line": 522,
+      "line": 513,
       "tabs": [
         "playbooks"
       ],
@@ -23096,7 +23096,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "handleDryRun(pb)}> Dry run",
-      "line": 523,
+      "line": 514,
       "tabs": [
         "playbooks"
       ],
@@ -23106,7 +23106,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "handleRun(pb)}> Run",
-      "line": 524,
+      "line": 515,
       "tabs": [
         "playbooks"
       ],
@@ -23116,7 +23116,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "handleDelete(pb)}>",
-      "line": 525,
+      "line": 516,
       "tabs": [
         "playbooks"
       ],
@@ -23126,7 +23126,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "{ setRunFilter( ); setView(\"runs\"); }} style={ }>",
-      "line": 567,
+      "line": 558,
       "tabs": [
         "playbooks"
       ],
@@ -23136,7 +23136,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "setForm((p: any) => ( ))} style={ }>",
-      "line": 628,
+      "line": 619,
       "tabs": [
         "playbooks"
       ],
@@ -23146,7 +23146,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "setForm((p: any) => ({ ...p, actions: [...p.actions, ] }))}> Add action",
-      "line": 660,
+      "line": 651,
       "tabs": [
         "playbooks"
       ],
@@ -23156,7 +23156,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "handleSave} disabled={saving || !form.name",
       "label": "(icon or dynamic label)",
-      "line": 662,
+      "line": 653,
       "tabs": [
         "playbooks"
       ],
@@ -23166,7 +23166,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx",
       "handler": "",
       "label": "}>Cancel",
-      "line": 663,
+      "line": 654,
       "tabs": [
         "playbooks"
       ],
@@ -24086,7 +24086,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WebhooksTab.tsx",
       "handler": "onClose} style={{ background: \"none\", border: \"none\", color: C.dim, cursor: \"pointer\", padding: 4",
       "label": "(icon or dynamic label)",
-      "line": 130,
+      "line": 132,
       "tabs": [],
       "tag": "button"
     },
@@ -24094,7 +24094,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WebhooksTab.tsx",
       "handler": "addCustom} disabled={!custom.trim()",
       "label": "Add",
-      "line": 164,
+      "line": 166,
       "tabs": [],
       "tag": "button"
     },
@@ -24102,7 +24102,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WebhooksTab.tsx",
       "handler": "",
       "label": "toggleEvent(e)} style={ }>",
-      "line": 169,
+      "line": 171,
       "tabs": [],
       "tag": "button"
     },
@@ -24110,7 +24110,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WebhooksTab.tsx",
       "handler": "onClose} style={{ background: \"transparent\", border: `1px solid ${C.border",
       "label": "Cancel",
-      "line": 178,
+      "line": 180,
       "tabs": [],
       "tag": "button"
     },
@@ -24118,7 +24118,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WebhooksTab.tsx",
       "handler": "handleSave",
       "label": "(icon or dynamic label)",
-      "line": 179,
+      "line": 181,
       "tabs": [],
       "tag": "button"
     },
@@ -24126,7 +24126,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WebhooksTab.tsx",
       "handler": "onClose} style={{ background: \"none\", border: \"none\", color: C.dim, cursor: \"pointer\"",
       "label": "(icon or dynamic label)",
-      "line": 213,
+      "line": 215,
       "tabs": [],
       "tag": "button"
     },
@@ -24134,7 +24134,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WebhooksTab.tsx",
       "handler": "onToggle} title={wh.enabled ? \"Disable\" : \"Enable\"",
       "label": "{wh.enabled ? : }",
-      "line": 305,
+      "line": 307,
       "tabs": [],
       "tag": "button"
     },
@@ -24142,7 +24142,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WebhooksTab.tsx",
       "handler": "handleTest} disabled={testing",
       "label": "Test",
-      "line": 308,
+      "line": 310,
       "tabs": [],
       "tag": "button"
     },
@@ -24150,7 +24150,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WebhooksTab.tsx",
       "handler": "onEdit} title=\"Edit\" style={{ background: \"none\", border: `1px solid ${C.border",
       "label": "Edit",
-      "line": 311,
+      "line": 313,
       "tabs": [],
       "tag": "button"
     },
@@ -24158,7 +24158,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WebhooksTab.tsx",
       "handler": "onDelete} title=\"Delete\" style={{ background: \"none\", border: `1px solid ${C.border",
       "label": "Delete",
-      "line": 312,
+      "line": 314,
       "tabs": [],
       "tag": "button"
     },
@@ -24166,7 +24166,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WebhooksTab.tsx",
       "handler": "onViewLog} title=\"View log\" style={{ background: \"none\", border: `1px solid ${C.border",
       "label": "{logOpen ? : }",
-      "line": 313,
+      "line": 315,
       "tabs": [],
       "tag": "button"
     },
@@ -24174,7 +24174,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WebhooksTab.tsx",
       "handler": "",
       "label": "load(true)} disabled= style={{ background: C.card, border: `1px solid $ `, bo...",
-      "line": 404,
+      "line": 406,
       "tabs": [],
       "tag": "button"
     },
@@ -24182,7 +24182,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WebhooksTab.tsx",
       "handler": "",
       "label": "} style={ } > New stream",
-      "line": 411,
+      "line": 413,
       "tabs": [],
       "tag": "button"
     },
@@ -27840,7 +27840,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/internal-mtls?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1125,
+      "line": 1127,
       "match_key": "certs|GET|/certs/internal-mtls",
       "method": "GET",
       "normalized_path": "/certs/internal-mtls",
@@ -27853,7 +27853,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/policy?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1133,
+      "line": 1139,
       "match_key": "certs|PUT|/certs/internal-mtls/{param}/policy",
       "method": "PUT",
       "normalized_path": "/certs/internal-mtls/{param}/policy",
@@ -27866,7 +27866,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/rotate?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1140,
+      "line": 1146,
       "match_key": "certs|POST|/certs/internal-mtls/{param}/rotate",
       "method": "POST",
       "normalized_path": "/certs/internal-mtls/{param}/rotate",
@@ -27879,7 +27879,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/rotate-all?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1152,
+      "line": 1158,
       "match_key": "certs|POST|/certs/internal-mtls/rotate-all",
       "method": "POST",
       "normalized_path": "/certs/internal-mtls/rotate-all",
@@ -27892,7 +27892,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1187,
+      "line": 1193,
       "match_key": "certs|GET|/certs/edge-tls",
       "method": "GET",
       "normalized_path": "/certs/edge-tls",
@@ -27905,7 +27905,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1192,
+      "line": 1201,
       "match_key": "certs|PUT|/certs/edge-tls",
       "method": "PUT",
       "normalized_path": "/certs/edge-tls",
@@ -27918,7 +27918,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1204,
+      "line": 1213,
       "match_key": "certs|PUT|/certs/edge-tls/certificate",
       "method": "PUT",
       "normalized_path": "/certs/edge-tls/certificate",
@@ -27931,7 +27931,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/edge-tls/csr?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1214,
+      "line": 1223,
       "match_key": "certs|POST|/certs/edge-tls/csr",
       "method": "POST",
       "normalized_path": "/certs/edge-tls/csr",
@@ -27944,7 +27944,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate/install?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1222,
+      "line": 1231,
       "match_key": "certs|POST|/certs/edge-tls/certificate/install",
       "method": "POST",
       "normalized_path": "/certs/edge-tls/certificate/install",
@@ -29764,7 +29764,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/clients/${encodeURIComponent(id)}?${tenant(session)}`)",
       "file": "web/dashboard/src/lib/ekmClients.ts",
-      "line": 61,
+      "line": 66,
       "match_key": "ekm|GET|/ekm/clients/{param}",
       "method": "GET",
       "normalized_path": "/ekm/clients/{param}",
@@ -29777,7 +29777,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"ekm\", \"/ekm/clients\")",
       "file": "web/dashboard/src/lib/ekmClients.ts",
-      "line": 66,
+      "line": 71,
       "match_key": "ekm|POST|/ekm/clients",
       "method": "POST",
       "normalized_path": "/ekm/clients",
@@ -29790,7 +29790,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/clients/${encodeURIComponent(id)}/registration-token?${tenant(session)}`)",
       "file": "web/dashboard/src/lib/ekmClients.ts",
-      "line": 75,
+      "line": 80,
       "match_key": "ekm|POST|/ekm/clients/{param}/registration-token",
       "method": "POST",
       "normalized_path": "/ekm/clients/{param}/registration-token",
@@ -32868,7 +32868,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-20T19:12:23Z",
+  "generated_at": "2026-10-20T19:42:20Z",
   "navigation": [
     {
       "group": "Home",
@@ -45327,7 +45327,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/internal-mtls?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1125,
+          "line": 1127,
           "source": "serviceRequest"
         }
       ],
@@ -45363,7 +45363,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/policy?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1133,
+          "line": 1139,
           "source": "serviceRequest"
         }
       ],
@@ -45402,7 +45402,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/rotate?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1140,
+          "line": 1146,
           "source": "serviceRequest"
         }
       ],
@@ -45441,7 +45441,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/rotate-all?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1152,
+          "line": 1158,
           "source": "serviceRequest"
         }
       ],
@@ -45479,7 +45479,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1187,
+          "line": 1193,
           "source": "serviceRequest"
         }
       ],
@@ -45515,7 +45515,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1192,
+          "line": 1201,
           "source": "serviceRequest"
         }
       ],
@@ -45555,7 +45555,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1204,
+          "line": 1213,
           "source": "serviceRequest"
         }
       ],
@@ -45595,7 +45595,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/edge-tls/csr?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1214,
+          "line": 1223,
           "source": "serviceRequest"
         }
       ],
@@ -45635,7 +45635,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate/install?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1222,
+          "line": 1231,
           "source": "serviceRequest"
         }
       ],
@@ -58048,7 +58048,7 @@
         {
           "expression": "serviceRequest(\"ekm\", \"/ekm/clients\")",
           "file": "web/dashboard/src/lib/ekmClients.ts",
-          "line": 66,
+          "line": 71,
           "source": "serviceRequest"
         }
       ],
@@ -58273,7 +58273,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/clients/${encodeURIComponent(id)}?${tenant(session)}`)",
           "file": "web/dashboard/src/lib/ekmClients.ts",
-          "line": 61,
+          "line": 66,
           "source": "serviceRequest"
         }
       ],
@@ -58325,7 +58325,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/clients/${encodeURIComponent(id)}/registration-token?${tenant(session)}`)",
           "file": "web/dashboard/src/lib/ekmClients.ts",
-          "line": 75,
+          "line": 80,
           "source": "serviceRequest"
         }
       ],
@@ -97987,7 +97987,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/internal-mtls?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1125,
+            "line": 1127,
             "source": "serviceRequest"
           }
         ],
@@ -98021,7 +98021,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/policy?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1133,
+            "line": 1139,
             "source": "serviceRequest"
           }
         ],
@@ -98055,7 +98055,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/rotate?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1140,
+            "line": 1146,
             "source": "serviceRequest"
           }
         ],
@@ -98089,7 +98089,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/rotate-all?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1152,
+            "line": 1158,
             "source": "serviceRequest"
           }
         ],
@@ -98121,7 +98121,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1187,
+            "line": 1193,
             "source": "serviceRequest"
           }
         ],
@@ -98155,7 +98155,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1192,
+            "line": 1201,
             "source": "serviceRequest"
           }
         ],
@@ -98191,7 +98191,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1204,
+            "line": 1213,
             "source": "serviceRequest"
           }
         ],
@@ -98225,7 +98225,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/edge-tls/csr?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1214,
+            "line": 1223,
             "source": "serviceRequest"
           }
         ],
@@ -98257,7 +98257,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate/install?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1222,
+            "line": 1231,
             "source": "serviceRequest"
           }
         ],
@@ -104679,7 +104679,7 @@
           {
             "expression": "serviceRequest(\"ekm\", \"/ekm/clients\")",
             "file": "web/dashboard/src/lib/ekmClients.ts",
-            "line": 66,
+            "line": 71,
             "source": "serviceRequest"
           }
         ],
@@ -104739,7 +104739,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/clients/${encodeURIComponent(id)}?${tenant(session)}`)",
             "file": "web/dashboard/src/lib/ekmClients.ts",
-            "line": 61,
+            "line": 66,
             "source": "serviceRequest"
           }
         ],
@@ -104778,7 +104778,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/clients/${encodeURIComponent(id)}/registration-token?${tenant(session)}`)",
             "file": "web/dashboard/src/lib/ekmClients.ts",
-            "line": 75,
+            "line": 80,
             "source": "serviceRequest"
           }
         ],
@@ -121667,7 +121667,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-20T19:12:23Z",
+    "generatedAt": "2026-10-20T19:42:20Z",
     "methods": [
       "DELETE",
       "GET",

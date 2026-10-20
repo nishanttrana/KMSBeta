@@ -68,9 +68,11 @@ function relTime(iso: string) {
 /* ─── Stat Card ──────────────────────────────────────────── */
 interface StatCardProps { icon: ReactNode; label: string; value: string | number; color?: string; bg?: string }
 function StatCard({ icon, label, value, color = C.accent, bg = C.accentTint }: StatCardProps) {
+  // Only an attention colour (amber, red) tints the icon; a count is neutral.
+  const attention = color === C.amber || color === C.red;
   return (
-    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 150 }}>
-      <div style={{ background: bg, border: `1px solid ${color}22`, borderRadius: 4, padding: 8, color, flexShrink: 0 }}>{icon}</div>
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: "var(--radius-md)", padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 150, boxShadow: "var(--shadow-sm)" }}>
+      <div style={{ background: attention ? bg : C.surface, border: `1px solid ${attention ? `${color}22` : C.border}`, borderRadius: 4, padding: 8, color: attention ? color : C.dim, flexShrink: 0 }}>{icon}</div>
       <div>
         <div style={{ fontSize: 22, fontWeight: 700, color: C.text }}>{value}</div>
         <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>{label}</div>

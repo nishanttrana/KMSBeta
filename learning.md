@@ -5,6 +5,20 @@ Newest entries on top.
 
 ## 2026-10-21
 
+### Rendering every view found what per-page tests missed (13.31.0-beta)
+- Two pages crashed and one threw when a service answered with an empty
+  object or a 503. Each page had smoke tests, all of them with well-formed
+  stubs. A loader that returns a response without its list hands the page
+  `undefined`. **A client function checks the shape it returns and fails
+  like a network error; every view is opened against empty and failing
+  services** (`tests/no-crash.spec.ts`, which reads the view list from the
+  navigation, so a new view is covered without being listed).
+- The rule "hue marks only attention" was written down, but the shared
+  tile coloured its icon by whatever `c` a caller passed (30 blue, 18
+  green, 5 purple), and six pages had their own coloured tiles. A rule that
+  depends on every caller choosing the right argument isn't enforced; the
+  primitive now decides.
+
 ### A feature named for a protocol it didn't speak (13.30.0-beta)
 - "Azure EKM" created keys in Azure and called it an import; the Vecta key
   in each mapping was never read, and the Managed HSM path sent empty key

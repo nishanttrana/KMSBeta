@@ -791,7 +791,8 @@ export const KeysTab=({session,keyCatalog,keyCatalogError,setKeyCatalog,tagCatal
     if(!session){
       return;
     }
-    void refreshTagCatalog();
+    // A failed tag list is said, not thrown unhandled (13.31.0-beta).
+    refreshTagCatalog().catch((error)=>onToast?.(`Tags unavailable: ${errMsg(error)}`));
   // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   },[session?.tenantId]);
 
@@ -1702,27 +1703,26 @@ export const KeysTab=({session,keyCatalog,keyCatalogError,setKeyCatalog,tagCatal
 
   return <div>
     <div style={{display:"flex",gap:12,marginBottom:14}}>
-      <Stat l="Total Keys" v={String(keys.length)} s="customer key catalog" c="accent"/>
-      <Stat l="Active" v={String(keys.filter((k)=>String(k.state||"").toLowerCase()==="active").length)} s="live form entries" c="green"/>
-      <Stat l="PQC Keys" v={String(keys.filter(k=>String(k.algo).toLowerCase().includes("ml-")||String(k.algo).toLowerCase().includes("slh")).length)} s="from customer keys" c="purple"/>
-      <Stat l="Ops Today" v={String(keys.reduce((sum,k)=>sum+Number(k.ops||0),0))} s="based on current key set" c="blue"/>
+      <Stat l="Total Keys" v={String(keys.length)}/>
+      <Stat l="Active" v={String(keys.filter((k)=>String(k.state||"").toLowerCase()==="active").length)}/>
+      <Stat l="PQC Keys" v={String(keys.filter(k=>String(k.algo).toLowerCase().includes("ml-")||String(k.algo).toLowerCase().includes("slh")).length)} s="ML-DSA, ML-KEM, SLH-DSA"/>
+      <Stat l="Ops Today" v={String(keys.reduce((sum,k)=>sum+Number(k.ops||0),0))} s="across the listed keys"/>
     </div>
 
     <Section title="Key Inventory">
       <div style={{display:"flex",justifyContent:"space-between",gap:10,marginBottom:10,flexWrap:"wrap",alignItems:"center",position:"relative",zIndex:10}}>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",flex:"1 1 680px"}}>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",flex:"1 1 560px",minWidth:0}}>
         <Inp
           placeholder="Search keys by name, ID, algorithm, KCV, tag..."
-          w={360}
           value={search}
           onChange={(e)=>setSearch(e.target.value)}
-          style={{height:40,borderRadius:4,fontSize:12}}
+          style={{height:40,borderRadius:4,fontSize:12,flex:"1 1 220px",width:"auto",minWidth:200}}
         />
-        <Sel w={170} value={algoFilter} onChange={(e)=>setAlgoFilter(e.target.value)} style={{height:40,borderRadius:4,fontSize:12}}>
+        <Sel w={150} value={algoFilter} onChange={(e)=>setAlgoFilter(e.target.value)} style={{height:40,borderRadius:4,fontSize:12}}>
           <option value="all">All Algorithms</option>
           {algorithms.map((name)=><option key={name} value={name}>{name}</option>)}
         </Sel>
-        <Sel w={170} value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)} style={{height:40,borderRadius:4,fontSize:12}}>
+        <Sel w={150} value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)} style={{height:40,borderRadius:4,fontSize:12}}>
           <option value="all">All Status</option>
           <option value="pre-active">Pre-active</option>
           <option value="active">Active</option>
@@ -1731,7 +1731,7 @@ export const KeysTab=({session,keyCatalog,keyCatalogError,setKeyCatalog,tagCatal
           <option value="destroy-pending">Delete Pending</option>
           <option value="deleted">Deleted</option>
         </Sel>
-        <Sel w={170} value={tagFilter} onChange={(e)=>setTagFilter(e.target.value)} style={{height:40,borderRadius:4,fontSize:12}}>
+        <Sel w={150} value={tagFilter} onChange={(e)=>setTagFilter(e.target.value)} style={{height:40,borderRadius:4,fontSize:12}}>
           <option value="all">All Tags</option>
           {availableTags.map((name)=><option key={name} value={name}>{name}</option>)}
         </Sel>

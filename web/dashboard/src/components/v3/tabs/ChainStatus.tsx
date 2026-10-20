@@ -5,7 +5,8 @@ import { B } from "../legacyPrimitives";
 // newest signed checkpoint, so it says so, and says when the hourly full
 // walk last passed (docs/SECURITY/AUDIT_INTEGRITY.md).
 export function ChainStatus({ result }: { result: ChainVerifyResult | null }) {
-  if (!result) return <B c="green">CHAIN: UNVERIFIED</B>;
+  // Not checked yet is not a pass: no green until a verification passes.
+  if (!result) return <B c="neutral">CHAIN: NOT CHECKED</B>;
   const since = Object.values(result.from_sequence || {});
   const label = !result.ok ? "CHAIN: BROKEN"
     : result.scope === "since_checkpoint" && since.length ? `CHAIN: INTACT since #${Math.min(...since)}` : "CHAIN: INTACT";

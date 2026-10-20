@@ -10,6 +10,7 @@ import { C } from "../../v3/theme";
 import { takePlaybooksView } from "../../../lib/credentials";
 import { Credentials } from "./playbooks/Credentials";
 import { EventStreams } from "./WebhooksTab";
+import { StatCard } from "./PlaybookStatCard";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -98,16 +99,6 @@ const Chk = ({ label, checked, onChange }: any) => (
       {checked && <CheckCircle2 size={10} color={C.bg} />}
     </div>
     <span style={{ fontSize: 12, color: C.text }}>{label}</span>
-  </div>
-);
-const StatCard = ({ icon, label, value, color = C.accent, sublabel }: any) => (
-  <div style={{ flex: 1, minWidth: 150, background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 6 }}>
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      <span style={{ color }}>{icon}</span>
-      <span style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, fontWeight: 600 }}>{label}</span>
-    </div>
-    <div style={{ fontSize: 22, fontWeight: 700, color, letterSpacing: -0.5 }}>{value}</div>
-    {sublabel && <div style={{ fontSize: 10, color: C.muted }}>{sublabel}</div>}
   </div>
 );
 
@@ -423,7 +414,7 @@ export function PlaybooksTab({ session, onNavigate, subView, onSubViewChange, su
 
 
   return (
-    <div style={{ padding: "24px 28px", maxWidth: 1240, margin: "0 auto" }}>
+    <div>
       {toast && <div style={{ position: "fixed", bottom: 24, right: 24, background: C.card, border: `1px solid ${C.borderHi}`, borderRadius: 4, padding: "10px 16px", color: C.text, fontSize: 12, zIndex: 999, maxWidth: 440 }}>{toast}</div>}
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 12 }}>

@@ -1,7 +1,7 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useEffect, useMemo, useState } from "react";
-import { LayoutGrid, List, RefreshCcw } from "lucide-react";
-import { B, Btn, Card, Chk, FG, Inp, Modal, Row2, Sel, usePromptDialog } from "../legacyPrimitives";
+import { Cpu, LayoutGrid, List, Monitor, PauseCircle, RefreshCcw, ShieldCheck, WifiOff } from "lucide-react";
+import { B, Btn, Card, Chk, FG, Inp, Modal, Row2, Sel, Stat, usePromptDialog } from "../legacyPrimitives";
 import { C } from "../theme";
 import { errMsg } from "../runtimeUtils";
 import {
@@ -486,14 +486,12 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
     {/* ═══════════════════════ BITLOCKER SUBTAB ═══════════════════════ */}
     {subView==="bitlocker"&&(<div>
       {/* ── Summary stats bar ── */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:16}}>
-        {[
-          {label:"Total Clients",value:blStats.total},
-          {label:"Protected",value:blStats.protected,color:C.green},
-          {label:"Suspended",value:blStats.suspended,color:C.amber},
-          {label:"Down",value:blStats.down,color:C.red},
-          {label:"TPM Ready",value:blStats.tpmReady,color:C.blue}
-        ].map((s,i)=>(<Card key={i}><div style={{textAlign:"center"}}><div style={{fontSize:22,fontWeight:700,color:s.color||C.text}}>{s.value}</div><div style={{fontSize:11,color:C.dim}}>{s.label}</div></div></Card>))}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:10,marginBottom:16}}>
+        <Stat l="Clients" v={blStats.total} i={Monitor}/>
+        <Stat l="Protected" v={blStats.protected} i={ShieldCheck}/>
+        <Stat l="Suspended" v={blStats.suspended} c={blStats.suspended>0?"amber":"accent"} i={PauseCircle}/>
+        <Stat l="Down" v={blStats.down} c={blStats.down>0?"red":"accent"} i={WifiOff}/>
+        <Stat l="TPM ready" v={blStats.tpmReady} i={Cpu}/>
       </div>
 
       {/* ── Toolbar ── */}
@@ -563,17 +561,12 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
     {/* ═══════════════════════ GOOGLE CSE SUBTAB ═══════════════════════ */}
     {subView==="google-cse"&&(<div>
       {/* ── Summary stats bar ── */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:16}}>
-        {[
-          {label:"CSE Configs",value:googleCSEConfigs.length,color:C.accent},
-          {label:"CSE Keys",value:googleCSEKeys.length,color:C.blue||C.accent},
-          {label:"Active Keys",value:googleCSEKeys.filter(k=>k.status==="active").length,color:C.green||"#4ade80"},
-          {label:"Total Wraps",value:googleCSEKeys.reduce((s,k)=>s+(k.wrap_count||0),0),color:C.purple||C.accent},
-          {label:"Total Unwraps",value:googleCSEKeys.reduce((s,k)=>s+(k.unwrap_count||0),0),color:C.orange||C.accent}
-        ].map(s=>(<Card key={s.label} style={{padding:"10px 14px",textAlign:"center"}}>
-          <div style={{fontSize:20,fontWeight:700,color:s.color}}>{s.value}</div>
-          <div style={{fontSize:10,color:C.muted,marginTop:2}}>{s.label}</div>
-        </Card>))}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:10,marginBottom:16}}>
+        <Stat l="CSE configs" v={googleCSEConfigs.length}/>
+        <Stat l="CSE keys" v={googleCSEKeys.length}/>
+        <Stat l="Active keys" v={googleCSEKeys.filter(k=>k.status==="active").length}/>
+        <Stat l="Wraps" v={googleCSEKeys.reduce((s,k)=>s+(k.wrap_count||0),0)}/>
+        <Stat l="Unwraps" v={googleCSEKeys.reduce((s,k)=>s+(k.unwrap_count||0),0)}/>
       </div>
 
       {/* ── Add CSE Config ── */}

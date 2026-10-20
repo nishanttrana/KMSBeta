@@ -7,6 +7,23 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-21 — Count tiles are neutral by construction; destructive buttons are outlined
+**Decision:** the shared `Stat` tile tints its icon only for the attention
+tones (red, amber, orange) and shows a word value as text; pages with their
+own tiles follow the same rule. `Btn danger` is outlined in red, not
+filled. Badges take a `neutral` tone for states that need nothing.
+**Why:** the owner asked for a whole-console aesthetics pass. Rendered in
+both themes, the console showed one tile coloured from the next (blue,
+green, purple counts), and a solid red Reset on every HYOK card drew the
+eye to the least common action.
+**Rejected:** a per-page palette clean-up only (it would drift again);
+removing colour from attention states (a red Down count must still stand
+out).
+**Enforced:** the primitives; `tests/no-crash.spec.ts` for the views;
+CLAUDE.md "One palette".
+
+---
+
 ## 2026-10-21 — Azure EKM is a HYOK protocol on its own mTLS listener
 **Decision:** Azure EKM is Azure Managed HSM external key management: the
 hyok service implements the EKM Proxy API (`0.1-preview`) and Managed HSM

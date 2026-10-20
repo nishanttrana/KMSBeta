@@ -1121,8 +1121,14 @@ export type MTLSInventory = {
   };
 };
 
+// An answer without its inventory is a failed source, shown as unavailable;
+// the page crashed on it before 13.31.0-beta.
 export async function getInternalMTLS(session: AuthSession): Promise<MTLSInventory> {
-  return serviceRequest<MTLSInventory>(session, "certs", `/certs/internal-mtls?${tenantQuery(session)}`);
+  const out = await serviceRequest<MTLSInventory>(session, "certs", `/certs/internal-mtls?${tenantQuery(session)}`);
+  if (!Array.isArray(out?.items)) {
+    throw new Error("certs returned no service certificate inventory");
+  }
+  return out;
 }
 
 export async function setInternalMTLSPolicy(
@@ -1185,6 +1191,9 @@ export type EdgeTLS = {
 
 export async function getEdgeTLS(session: AuthSession): Promise<EdgeTLS> {
   const out = await serviceRequest<{ edge: EdgeTLS }>(session, "certs", `/certs/edge-tls?${tenantQuery(session)}`);
+  if (!out?.edge) {
+    throw new Error("certs returned no edge TLS state");
+  }
   return out.edge;
 }
 

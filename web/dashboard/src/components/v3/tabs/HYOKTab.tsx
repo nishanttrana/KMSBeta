@@ -10,7 +10,7 @@ import {
 } from "../../../lib/hyok";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
-import { B, Btn, Card, Chk, FG, Inp, Modal, Row2, Section, Sel, Txt, usePromptDialog } from "../legacyPrimitives";
+import { B, Btn, Card, Chk, FG, Inp, Modal, Row2, Section, Sel, Stat, Txt, usePromptDialog } from "../legacyPrimitives";
 import { HYOKAzureConfig } from "./HYOKAzureConfig";
 import { HYOK_OPS_BY_PROTOCOL, HYOK_PROTOCOLS, HYOK_PROTOCOL_DETAILS, HYOK_PROTOCOL_KEY_HINTS, HYOK_PROTOCOL_LABELS, HYOK_PROTOCOL_URLS, HYOK_SETUP_GUIDES } from "./hyokProtocols";
 
@@ -270,25 +270,17 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
     if (status === "degraded" || status === "unreachable") return { label: "Degraded", color: "red", icon: AlertTriangle, reason };
     return Boolean(item?.enabled)
       ? { label: "Enabled", color: "blue", icon: Info, reason }
-      : { label: "Disabled", color: "red", icon: XCircle, reason };
+      : { label: "Disabled", color: "neutral", icon: XCircle, reason };
   };
 
   return <div>
     {/* === Summary Stats === */}
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 8, marginBottom: 12 }}>
-      {[
-        { label: "Proxy Status", value: String(health?.status || "unknown").toUpperCase(), color: proxyHealthColor === "green" ? C.green : proxyHealthColor === "red" ? C.red : C.amber },
-        { label: "Endpoints", value: `${enabledCount}/${HYOK_PROTOCOLS.length}`, sub: "enabled", color: C.accent },
-        { label: "Requests", value: String(requestStats.total), sub: `${requestStats.success} ok, ${requestStats.failed} failed`, color: requestStats.failed > 0 ? C.red : C.green },
-        { label: "Pending", value: String(requestStats.pending), sub: "awaiting approval", color: requestStats.pending > 0 ? C.amber : C.dim },
-        { label: "Policy Mode", value: Boolean(health?.policy_fail_closed) ? "CLOSED" : "OPEN", sub: "fail mode", color: Boolean(health?.policy_fail_closed) ? C.red : C.green },
-      ].map((stat) => (
-        <Card key={stat.label} style={{ padding: "10px 12px" }}>
-          <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{stat.label}</div>
-          <div style={{ fontSize: 16, color: stat.color, fontWeight: 700, fontFamily: "var(--font-mono)" }}>{stat.value}</div>
-          {stat.sub && <div style={{ fontSize: 10, color: C.dim }}>{stat.sub}</div>}
-        </Card>
-      ))}
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 10, marginBottom: 16 }}>
+      <Stat l="Proxy" v={health ? String(health.status || "unknown").replace(/_/g, " ") : "unavailable"} c={!health ? "amber" : proxyHealthColor === "red" ? "red" : "accent"} i={Shield} />
+      <Stat l="Endpoints enabled" v={`${enabledCount}/${HYOK_PROTOCOLS.length}`} i={Shield} />
+      <Stat l="Requests" v={requestStats.total} s={`${requestStats.success} ok · ${requestStats.failed} failed`} c={requestStats.failed > 0 ? "red" : "accent"} i={ExternalLink} />
+      <Stat l="Awaiting approval" v={requestStats.pending} c={requestStats.pending > 0 ? "amber" : "accent"} i={Info} />
+      <Stat l="Policy failure" v={!health ? "unavailable" : health.policy_fail_closed ? "closed" : "open"} c={health && !health.policy_fail_closed ? "amber" : "accent"} i={CheckCircle2} />
     </div>
 
     {/* === Protocol Endpoints === */}
@@ -305,11 +297,11 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
           const item = endpointRows.find((e) => String(e?.protocol || "") === protocol);
           const statusMeta = endpointStatusMeta(protocol, item);
           const StatusIcon = statusMeta.icon;
-          return <Card key={protocol}>
+          return <Card key={protocol} style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
               <div>
                 <div style={{ fontSize: 12, color: C.text, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
-                  <Shield size={13} strokeWidth={2} style={{ color: statusMeta.color === "green" ? C.greenFg : statusMeta.color === "red" ? C.redFg : C.amberFg }} />
+                  <Shield size={13} strokeWidth={2} style={{ color: statusMeta.color === "green" ? C.greenFg : statusMeta.color === "red" ? C.redFg : statusMeta.color === "neutral" ? C.dim : C.amberFg }} />
                   {HYOK_PROTOCOL_LABELS[protocol]}
                 </div>
                 <div style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>{HYOK_PROTOCOL_DETAILS[protocol]}</div>
@@ -335,11 +327,11 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
 
             <div style={{ fontSize: 10, color: C.dim, marginBottom: 8, fontStyle: "italic" }}>{HYOK_PROTOCOL_KEY_HINTS[protocol]}</div>
 
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: "auto" }}>
               <Btn small primary onClick={() => openConfig(protocol)}>Configure</Btn>
               <Btn small onClick={() => { setUrlsProtocol(protocol); setModal("urls"); }}>URLs</Btn>
               <Btn small onClick={() => { setGuideProtocol(protocol); setModal("guide"); }}>Guide</Btn>
-              <Btn small danger onClick={() => void runDelete(protocol)}>Reset</Btn>
+              <Btn small danger style={{ marginLeft: "auto" }} onClick={() => void runDelete(protocol)}>Reset</Btn>
             </div>
           </Card>;
         })}

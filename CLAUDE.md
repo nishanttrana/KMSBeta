@@ -723,6 +723,11 @@ Security rules are explained in
   outbound address is checked where it is dialled (`pkg/ssrfguard`), not by
   hostname. A URL that carries a credential is a secret, and errors name
   only its host.
+- Every view renders when its services answer `{}` or 503
+  (`tests/no-crash.spec.ts`); a client function that gets a response
+  without the shape it returns throws, so the page shows "unavailable".
+  A count tile's colour is decided by the shared tile (attention tones
+  only), not by each caller (13.31.0-beta).
 - An audit event's subject starts with `audit.`; anything else never
   reaches the AUDIT stream (Google CSE until 13.30.0-beta). A client never
   maps an unknown name to a default value; it refuses (the HYOK console

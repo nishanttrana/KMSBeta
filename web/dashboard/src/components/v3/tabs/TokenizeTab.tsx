@@ -2432,7 +2432,7 @@ export const DataProtectionTab=({session,keyCatalog,onToast,subView,onSubViewCha
       {activeStatItems.map((s,i)=>{
         const Icon=s.icon;
         return <Card key={i} style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
-          <Icon size={18} style={{color:s.color,flexShrink:0}}/>
+          <Icon size={18} style={{color:C.dim,flexShrink:0}}/>
           <div>
             <div style={{fontSize:20,fontWeight:800,color:C.text,fontFamily:"inherit",lineHeight:1}}>{s.v??"-"}</div>
             <div style={{fontSize: 10,color:C.muted,letterSpacing:0.5,textTransform:"uppercase"}}>{s.l}</div>

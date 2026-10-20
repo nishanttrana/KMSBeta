@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-20T19:12:23Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-20T19:42:20Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -57,15 +57,15 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 343 | - | Btn | void removeProfile(item)}>Delete |  |
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 366 | - | Btn | void verifyRecord(item)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/AuditAnalyticsPanel.tsx | 72 | - | Btn | void load()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 442 | audit | Btn | void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si... |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 443 | audit | Btn | (icon or dynamic label) | verifyChain} disabled={chainVerifying |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 446 | audit | Btn | load()} disabled= >Refresh |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 537 | audit | Btn | setOffset(Math.max(0, offset - PAGE_SIZE))}>Previous |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 538 | audit | Btn | setOffset(offset + PAGE_SIZE)}>Next |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 564 | audit | Btn | (icon or dynamic label) | loadForensic} disabled={forensicLoading |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 672 | audit | Btn | }> View Timeline ( ) |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 677 | audit | Btn | }> View Session ( ) |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 682 | audit | Btn | }> View Correlation ( ) |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 444 | audit | Btn | void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si... |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 445 | audit | Btn | (icon or dynamic label) | verifyChain} disabled={chainVerifying |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 448 | audit | Btn | load()} disabled= >Refresh |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 539 | audit | Btn | setOffset(Math.max(0, offset - PAGE_SIZE))}>Previous |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 540 | audit | Btn | setOffset(offset + PAGE_SIZE)}>Next |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 566 | audit | Btn | (icon or dynamic label) | loadForensic} disabled={forensicLoading |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 674 | audit | Btn | }> View Timeline ( ) |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 679 | audit | Btn | }> View Session ( ) |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 684 | audit | Btn | }> View Correlation ( ) |  |
 | web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 371 | - | Btn | refresh(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 372 | - | Btn | Save Settings | saveSettings} disabled={busy \|\| loading |
 | web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 476 | - | Btn | Save Settings | saveSettings} disabled={busy |
@@ -254,33 +254,33 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 448 | ekm | Btn | setModal("setup-guide")}>Setup Guide |  |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 468 | ekm | Btn | setExpandedTdeGuide(prev=>( ))} style={ }>Guide |  |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 469 | ekm | Btn | runRevokeTDE(db)} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 502 | ekm | Btn | setBitLockerView(bitLockerView==="cards"?"list":"cards")} style={ }>{bitLocke... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 503 | ekm | Btn | Register Client | openBitLockerDeploy |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 504 | ekm | Btn | Network Scan | openBitLockerScan |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 505 | ekm | Btn | refresh(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 529 | ekm | Btn | runBitLockerOperation(client,op)} disabled={bitLockerOpClientID===`$ :$ `} st... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 530 | ekm | Btn | openBitLockerActivity(client)} style={ }>Activity |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 531 | ekm | Btn | openBitLockerDelete(client)} style={ }>Delete |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 552 | ekm | Btn | openBitLockerActivity(client)} style={ }>Activity |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 553 | ekm | Btn | openBitLockerOptions(client)} style={ }>Ops |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 554 | ekm | Btn | openBitLockerDelete(client)} style={ }>Del |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 591 | ekm | Btn | { setGoogleCSELoading(true); try{ const domains=googleCSEConfigForm.allowed_d... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 623 | ekm | Btn | { const v=await promptDialog.prompt( ); if(v===null) return; try{await update... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 628 | ekm | Btn | { if(!confirm("Delete this Google CSE config?")) return; try catch(e){onToast... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 657 | ekm | Btn | { setGoogleCSELoading(true); try{ await createGoogleCSEKey(session, ); onToas... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 685 | ekm | Btn | { if(!confirm("Delete this CSE key?")) return; try catch(e){onToast?.(`Delete... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 719 | ekm | Btn | setGuideEngine(eng)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 762 | ekm | Btn | (icon or dynamic label) | submitDbRegister} disabled={dbRegistering |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 763 | ekm | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 780 | ekm | Btn | (icon or dynamic label) | submitBitLockerDeploy} disabled={bitLockerDeploying |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 781 | ekm | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 788 | ekm | Btn | downloadText(file.path,file.content)} style={ }>Download |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 806 | ekm | Btn | (icon or dynamic label) | submitBitLockerDelete} disabled={bitLockerDeleteSubmitting\|\|!bitLockerDeleteConfirmBackup |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 807 | ekm | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 824 | ekm | Btn | (icon or dynamic label) | runBitLockerScan} disabled={bitLockerScanRunning |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 840 | ekm | Btn | (icon or dynamic label) | onboardScannedBitLocker} disabled={bitLockerOnboarding |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 841 | ekm | Btn | {const all= ;bitLockerScanCandidates.forEach(r=> );setBitLockerScanSelected(a... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 883 | ekm | Btn | } disabled={bitLockerOpClientID===`$ :$ `} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 500 | ekm | Btn | setBitLockerView(bitLockerView==="cards"?"list":"cards")} style={ }>{bitLocke... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 501 | ekm | Btn | Register Client | openBitLockerDeploy |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 502 | ekm | Btn | Network Scan | openBitLockerScan |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 503 | ekm | Btn | refresh(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 527 | ekm | Btn | runBitLockerOperation(client,op)} disabled={bitLockerOpClientID===`$ :$ `} st... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 528 | ekm | Btn | openBitLockerActivity(client)} style={ }>Activity |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 529 | ekm | Btn | openBitLockerDelete(client)} style={ }>Delete |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 550 | ekm | Btn | openBitLockerActivity(client)} style={ }>Activity |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 551 | ekm | Btn | openBitLockerOptions(client)} style={ }>Ops |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 552 | ekm | Btn | openBitLockerDelete(client)} style={ }>Del |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 584 | ekm | Btn | { setGoogleCSELoading(true); try{ const domains=googleCSEConfigForm.allowed_d... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 616 | ekm | Btn | { const v=await promptDialog.prompt( ); if(v===null) return; try{await update... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 621 | ekm | Btn | { if(!confirm("Delete this Google CSE config?")) return; try catch(e){onToast... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 650 | ekm | Btn | { setGoogleCSELoading(true); try{ await createGoogleCSEKey(session, ); onToas... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 678 | ekm | Btn | { if(!confirm("Delete this CSE key?")) return; try catch(e){onToast?.(`Delete... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 712 | ekm | Btn | setGuideEngine(eng)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 755 | ekm | Btn | (icon or dynamic label) | submitDbRegister} disabled={dbRegistering |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 756 | ekm | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 773 | ekm | Btn | (icon or dynamic label) | submitBitLockerDeploy} disabled={bitLockerDeploying |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 774 | ekm | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 781 | ekm | Btn | downloadText(file.path,file.content)} style={ }>Download |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 799 | ekm | Btn | (icon or dynamic label) | submitBitLockerDelete} disabled={bitLockerDeleteSubmitting\|\|!bitLockerDeleteConfirmBackup |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 800 | ekm | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 817 | ekm | Btn | (icon or dynamic label) | runBitLockerScan} disabled={bitLockerScanRunning |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 833 | ekm | Btn | (icon or dynamic label) | onboardScannedBitLocker} disabled={bitLockerOnboarding |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 834 | ekm | Btn | {const all= ;bitLockerScanCandidates.forEach(r=> );setBitLockerScanSelected(a... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 876 | ekm | Btn | } disabled={bitLockerOpClientID===`$ :$ `} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 254 | approvals | Btn | Configure | openSettingsModal |
 | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 255 | approvals | Btn | void refresh()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 320 | approvals | Btn | void doVote(r, "approved")}> {voteBusy === `$ :approved` ? "..." : "Approve"} |  |
@@ -305,18 +305,18 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/HYOKAzureConfig.tsx | 140 | - | Btn | void save()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/HYOKLiveTestPane.tsx | 166 | - | Btn | void executeTest()} disabled= style={ }> {executing ? "Executing..." : `Execu... |  |
 | web/dashboard/src/components/v3/tabs/HYOKLiveTestPane.tsx | 173 | - | button | copyToClipboard(testOutput)} style={ } title="Copy output"> |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 298 | hyok | Btn | void refresh(false)} disabled= > Refresh |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 299 | hyok | Btn | }> Endpoint URLs |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 300 | hyok | Btn | }> Setup Guide |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 339 | hyok | Btn | openConfig(protocol)}>Configure |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 340 | hyok | Btn | }>URLs |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 341 | hyok | Btn | }>Guide |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 342 | hyok | Btn | void runDelete(protocol)}>Reset |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 483 | hyok | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 484 | hyok | Btn | void submitConfig()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 508 | hyok | button | copyToClipboard(url.path)} style={ } title="Copy URL path"> |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 515 | hyok | Btn | setModal(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 557 | hyok | Btn | setModal(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 290 | hyok | Btn | void refresh(false)} disabled= > Refresh |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 291 | hyok | Btn | }> Endpoint URLs |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 292 | hyok | Btn | }> Setup Guide |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 331 | hyok | Btn | openConfig(protocol)}>Configure |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 332 | hyok | Btn | }>URLs |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 333 | hyok | Btn | }>Guide |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 334 | hyok | Btn | void runDelete(protocol)}>Reset |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 475 | hyok | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 476 | hyok | Btn | void submitConfig()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 500 | hyok | button | copyToClipboard(url.path)} style={ } title="Copy URL path"> |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 507 | hyok | Btn | setModal(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 549 | hyok | Btn | setModal(null)}>Close |  |
 | web/dashboard/src/components/v3/tabs/KMIPTab.tsx | 558 | - | Btn | setCapsExpanded(p=>!p)}> |  |
 | web/dashboard/src/components/v3/tabs/KMIPTab.tsx | 636 | - | Btn | downloadText(`$ .crt.pem`,issuedBundle.cert)}>Download Cert |  |
 | web/dashboard/src/components/v3/tabs/KMIPTab.tsx | 637 | - | Btn | downloadText(`$ .key.pem`,issuedBundle.key)}>Download Key |  |
@@ -409,25 +409,25 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 97 | - | button | setTimeWindow(w)} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 104 | - | button | Refresh | load} style={{ background: "transparent", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 144 | - | button | setSection(s.id as any)} style={{ padding: "8px 16px", border: "none", backgr... |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 75 | playbooks | button | (icon or dynamic label) | disabled ? undefined : onClick} style={{ ...base, ...styles[variant] |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 186 | playbooks | button | onChange(filters.filter((_: any, idx: number) => idx !== i))} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 190 | playbooks | Btn | onChange([...filters, ])}> Add filter |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 383 | playbooks | button | setOpenRun(open ? "" : r.id)} style={ }>{open ? : } |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 393 | playbooks | Btn | handleCancel(r)}> Cancel |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 394 | playbooks | Btn | handleRetry(r)}> Retry |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 431 | playbooks | Btn | openEditor()}> New |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 432 | playbooks | Btn | }> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 485 | playbooks | button | setDryRun(null)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 516 | playbooks | button | handleToggle(pb)} style={ }>{pb.enabled ? : } |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 522 | playbooks | Btn | openEditor(pb)}> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 523 | playbooks | Btn | handleDryRun(pb)}> Dry run |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 524 | playbooks | Btn | handleRun(pb)}> Run |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 525 | playbooks | Btn | handleDelete(pb)}> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 567 | playbooks | button | { setRunFilter( ); setView("runs"); }} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 628 | playbooks | button | setForm((p: any) => ( ))} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 660 | playbooks | Btn | setForm((p: any) => ({ ...p, actions: [...p.actions, ] }))}> Add action |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 662 | playbooks | Btn | (icon or dynamic label) | handleSave} disabled={saving \|\| !form.name |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 663 | playbooks | Btn | }>Cancel |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 76 | playbooks | button | (icon or dynamic label) | disabled ? undefined : onClick} style={{ ...base, ...styles[variant] |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 177 | playbooks | button | onChange(filters.filter((_: any, idx: number) => idx !== i))} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 181 | playbooks | Btn | onChange([...filters, ])}> Add filter |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 374 | playbooks | button | setOpenRun(open ? "" : r.id)} style={ }>{open ? : } |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 384 | playbooks | Btn | handleCancel(r)}> Cancel |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 385 | playbooks | Btn | handleRetry(r)}> Retry |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 422 | playbooks | Btn | openEditor()}> New |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 423 | playbooks | Btn | }> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 476 | playbooks | button | setDryRun(null)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 507 | playbooks | button | handleToggle(pb)} style={ }>{pb.enabled ? : } |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 513 | playbooks | Btn | openEditor(pb)}> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 514 | playbooks | Btn | handleDryRun(pb)}> Dry run |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 515 | playbooks | Btn | handleRun(pb)}> Run |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 516 | playbooks | Btn | handleDelete(pb)}> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 558 | playbooks | button | { setRunFilter( ); setView("runs"); }} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 619 | playbooks | button | setForm((p: any) => ( ))} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 651 | playbooks | Btn | setForm((p: any) => ({ ...p, actions: [...p.actions, ] }))}> Add action |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 653 | playbooks | Btn | (icon or dynamic label) | handleSave} disabled={saving \|\| !form.name |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 654 | playbooks | Btn | }>Cancel |  |
 | web/dashboard/src/components/v3/tabs/PostureHeaderParts.tsx | 25 | - | button | onChange(m)} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 546 | posture | Btn | load(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 547 | posture | Btn | (icon or dynamic label) | runScan} disabled={running |
@@ -530,19 +530,19 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/VaultTab.tsx | 412 | vault | Btn | void submitGenerate()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/VaultTab.tsx | 426 | vault | Btn | setModal(null)} disabled= >Cancel |  |
 | web/dashboard/src/components/v3/tabs/VaultTab.tsx | 427 | vault | Btn | void submitRotate()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 130 | - | button | (icon or dynamic label) | onClose} style={{ background: "none", border: "none", color: C.dim, cursor: "pointer", padding: 4 |
-| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 164 | - | button | Add | addCustom} disabled={!custom.trim() |
-| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 169 | - | button | toggleEvent(e)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 178 | - | button | Cancel | onClose} style={{ background: "transparent", border: `1px solid ${C.border |
-| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 179 | - | button | (icon or dynamic label) | handleSave |
-| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 213 | - | button | (icon or dynamic label) | onClose} style={{ background: "none", border: "none", color: C.dim, cursor: "pointer" |
-| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 305 | - | button | {wh.enabled ? : } | onToggle} title={wh.enabled ? "Disable" : "Enable" |
-| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 308 | - | button | Test | handleTest} disabled={testing |
-| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 311 | - | button | Edit | onEdit} title="Edit" style={{ background: "none", border: `1px solid ${C.border |
-| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 312 | - | button | Delete | onDelete} title="Delete" style={{ background: "none", border: `1px solid ${C.border |
-| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 313 | - | button | {logOpen ? : } | onViewLog} title="View log" style={{ background: "none", border: `1px solid ${C.border |
-| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 404 | - | button | load(true)} disabled= style={{ background: C.card, border: `1px solid $ `, bo... |  |
-| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 411 | - | button | } style={ } > New stream |  |
+| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 132 | - | button | (icon or dynamic label) | onClose} style={{ background: "none", border: "none", color: C.dim, cursor: "pointer", padding: 4 |
+| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 166 | - | button | Add | addCustom} disabled={!custom.trim() |
+| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 171 | - | button | toggleEvent(e)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 180 | - | button | Cancel | onClose} style={{ background: "transparent", border: `1px solid ${C.border |
+| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 181 | - | button | (icon or dynamic label) | handleSave |
+| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 215 | - | button | (icon or dynamic label) | onClose} style={{ background: "none", border: "none", color: C.dim, cursor: "pointer" |
+| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 307 | - | button | {wh.enabled ? : } | onToggle} title={wh.enabled ? "Disable" : "Enable" |
+| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 310 | - | button | Test | handleTest} disabled={testing |
+| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 313 | - | button | Edit | onEdit} title="Edit" style={{ background: "none", border: `1px solid ${C.border |
+| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 314 | - | button | Delete | onDelete} title="Delete" style={{ background: "none", border: `1px solid ${C.border |
+| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 315 | - | button | {logOpen ? : } | onViewLog} title="View log" style={{ background: "none", border: `1px solid ${C.border |
+| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 406 | - | button | load(true)} disabled= style={{ background: C.card, border: `1px solid $ `, bo... |  |
+| web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 413 | - | button | } style={ } > New stream |  |
 | web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 304 | workload | Btn | load(false)}> |  |
 | web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 343 | workload | Btn | Rotate Signing Keys | rotateSigningKeys} disabled={busy |
 | web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 344 | workload | Btn | (icon or dynamic label) | saveSettings} disabled={busy |

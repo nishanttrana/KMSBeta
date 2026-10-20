@@ -54,7 +54,12 @@ const tenant = (session: AuthSession) => `tenant_id=${encodeURIComponent(String(
 // Polls don't raise the global loading bar.
 export async function listEKMClients(session: AuthSession, quiet = false): Promise<EKMClientList> {
   const out = await serviceRequest<EKMClientList>(session, "ekm", `/ekm/clients?${tenant(session)}`, { skipGlobalLoading: quiet });
-  return { ...out, items: Array.isArray(out?.items) ? out.items : [] };
+  // An answer without the list or its health thresholds is a failed source
+  // (the page crashed on it before 13.31.0-beta), never an empty list.
+  if (!Array.isArray(out?.items) || !out?.thresholds) {
+    throw new Error("ekm returned no client list");
+  }
+  return out;
 }
 
 export async function getEKMClient(session: AuthSession, id: string, quiet = false): Promise<EKMClientDetail> {

@@ -647,7 +647,7 @@ type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 export const Btn = ({ children, primary = false, danger = false, small = false, onClick, disabled = false, full = false, style, ...p }: BtnProps) => (
-  <button onClick={onClick} disabled={disabled} {...p} style={{ background: danger ? C.redFg : primary ? C.accentFg : "transparent", color: danger || primary ? "var(--c-bg)" : C.text, border: `1px solid ${danger ? C.redFg : primary ? C.accentFg : C.borderHi}`, borderRadius: "var(--radius-md)", padding: small ? "5px 10px" : "7px 14px", fontSize: small ? 11.5 : 12.5, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, width: full ? "100%" : "auto", letterSpacing: 0, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, boxShadow: "none", transition: "opacity 0.15s, background 0.15s, border-color 0.15s", ...(style || {}) }}>{children}</button>
+  <button onClick={onClick} disabled={disabled} {...p} style={{ background: primary && !danger ? C.accentFg : "transparent", color: danger ? C.redFg : primary ? "var(--c-bg)" : C.text, border: `1px solid ${danger ? C.redFg : primary ? C.accentFg : C.borderHi}`, borderRadius: "var(--radius-md)", padding: small ? "5px 10px" : "7px 14px", fontSize: small ? 11.5 : 12.5, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, width: full ? "100%" : "auto", letterSpacing: 0, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, boxShadow: "none", transition: "opacity 0.15s, background 0.15s, border-color 0.15s", ...(style || {}) }}>{children}</button>
 );
 
 type BadgeProps = {
@@ -658,9 +658,9 @@ type BadgeProps = {
 
 export const B = ({ children, c = "accent", pulse = false }: BadgeProps) => {
   const palette = C as Record<string, string>;
-  // Use *Fg for text (theme-reactive), *Dim for background, border from Dim
-  const textColor = palette[`${c}Fg`] || palette[c] || C.accentFg;
-  const bgColor = palette[`${c}Dim`] || C.accentDim;
+  const neutral = c === "neutral"; // a state needing nothing: disabled, not configured
+  const textColor = neutral ? C.dim : palette[`${c}Fg`] || palette[c] || C.accentFg;
+  const bgColor = neutral ? C.border : palette[`${c}Dim`] || C.accentDim;
   return (
     <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 10.5, fontWeight: 600, color: textColor, background: bgColor, letterSpacing: 0.1, whiteSpace: "nowrap", border: `1px solid ${bgColor}`, animation: pulse ? "pulse 2s infinite" : "none" }}>{children}</span>
   );
@@ -696,6 +696,7 @@ function statIconForLabel(label: string) {
   return ShieldCheck;
 }
 
+export const ATTENTION_TONES = new Set(["red", "amber", "orange"]); // tones a count may carry
 type StatProps = {
   l: ReactNode;
   v: ReactNode;
@@ -707,16 +708,15 @@ type StatProps = {
 export const Stat = ({ l, v, s, c = "accent", i }: StatProps) => {
   const Icon = i && typeof i !== "string" ? i : statIconForLabel(String(l ?? "")); // icons are forwardRef objects: a typeof "function" test dropped every one passed
   const palette = C as Record<string, string>;
-  // Use *Fg for theme-reactive text/icon colors
-  const accentColor = palette[`${c}Fg`] || palette[c] || C.accentFg;
-  const dimColor = palette[`${c}Dim`] || C.accentDim;
+  const attention = ATTENTION_TONES.has(c); // hue marks attention, never one tile from another
+  const [accentColor, dimColor] = attention ? [palette[`${c}Fg`] || palette[c] || C.accentFg, palette[`${c}Dim`] || C.accentDim] : [C.dim, "var(--c-surface)"];
   return (
-    <div className="vecta-stat-card" style={{ flex: 1, background: C.card, borderRadius: "var(--radius-md)", border: `1px solid ${C.border}`, padding: "14px 16px", boxShadow: "var(--shadow-sm)", position: "relative", overflow: "hidden" }}>
+    <div className="vecta-stat-card" data-tone={attention ? c : "neutral"} style={{ flex: 1, background: C.card, borderRadius: "var(--radius-md)", border: `1px solid ${C.border}`, padding: "14px 16px", boxShadow: "var(--shadow-sm)", position: "relative", overflow: "hidden" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{ fontSize: 10.5, fontWeight: 500, color: C.muted, letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "var(--font-mono)" }}>{l}</span>
         <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 4, background: dimColor, color: accentColor }}><Icon size={13} strokeWidth={2.2} /></span>
       </div>
-      <div className="vk-num" style={{ fontSize: 26, fontWeight: 600, color: C.text, marginTop: 6, letterSpacing: -0.6 }}>{v}</div>
+      <div className="vk-num" style={typeof v === "string" && /[a-z]{5}/i.test(v) ? { fontSize: 13, color: C.muted, marginTop: 12 } : { fontSize: 26, fontWeight: 600, color: C.text, marginTop: 6, letterSpacing: -0.6 }}>{v}</div>
       {s && <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{s}</div>}
     </div>
   );

@@ -4,6 +4,36 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.31.0-beta] — 2026-10-21
+
+### Fixed
+- **Pages that crashed.** Certificates → Service mTLS and Enterprise KM →
+  EKM for DBs fell into "This tab failed to render" when certs or ekm
+  answered without the list they expect; they now read "unavailable" with
+  the reason. Key Management threw an uncaught error when the tag list
+  failed; it now says "Tags unavailable".
+- The Audit Log no longer shows a green "CHAIN: UNVERIFIED" before a check
+  has run: it reads "CHAIN: NOT CHECKED", neutral, until a verification
+  passes.
+
+### Changed
+- **One palette, applied.** Count tiles no longer take a colour per tile:
+  the shared tile's icon is neutral unless the count is a state that needs
+  attention (red, amber, orange), as are the BitLocker, Google CSE, HYOK,
+  Tokenize, Playbooks and event-streaming tiles, which had their own
+  coloured versions. A tile whose value is a word ("unavailable",
+  "closed") shows it as text, not a large number.
+- Destructive buttons are outlined in red rather than filled, so they are
+  no longer the loudest control on a page (HYOK showed a solid red "Reset"
+  on every card).
+- Key Management's filters fit on one row with its actions; the Audit
+  Log's filters take one row and its export and verify actions the next.
+  HYOK cards keep their actions on one row, aligned across cards; a
+  disabled endpoint's badge is neutral, not red. Informational audit
+  chips are neutral. Playbooks uses the console's page width.
+- New smoke test: every view renders with services answering `{}` and
+  503 (`tests/no-crash.spec.ts`).
+
 ## [13.30.0-beta] — 2026-10-21
 
 ### Added
