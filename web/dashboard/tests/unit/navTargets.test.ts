@@ -54,7 +54,7 @@ describe("navigation targets", () => {
   it("every recommendation opens a tab and section the shell has", () => {
     const engine = readFileSync(join(SRC, "lib", "recommendations.ts"), "utf8");
     const tabs = [...engine.matchAll(/action: \{ tab: "([^"]+)"/g)].map((m) => m[1]!);
-    expect(tabs).toContain("admin/backup");
+    expect(tabs).toContain("backup/encrypted");
     expect(tabs.filter((t) => !known(t))).toEqual([]);
   });
 });

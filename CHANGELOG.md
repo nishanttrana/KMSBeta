@@ -4,7 +4,39 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
-## [13.25.0-beta] — 2026-10-20
+## [13.26.0-beta] — 2026-10-20
+
+### Changed
+- **One home each for backups and approval policies** (owner decision).
+  Encrypted backups (create, verify, restore, download, delete) moved from
+  System Administration to **Backup & Restore → Encrypted Backups**, shown
+  to platform administrators; the scheduler preview is **Backup & Restore →
+  Schedules**. Approval policies are managed only in **Approvals →
+  Policies**; Approvals' Requests / Policies / Settings are sidebar
+  sub-options instead of a tab strip. `#admin/backup` and `#admin/approvals`
+  open the new homes; recommendations and First steps link there.
+
+### Fixed
+- Approvals re-enabled a paused policy on every save (it always sent
+  `status: active`); the editor now has a Status field, and each policy an
+  Enable / Disable button that sends the whole policy (the server replaces
+  it, so the old status-only toggle in Administration would have blanked
+  it).
+- Approvals listed only active policies, so a paused policy could not be
+  found or enabled; it lists every policy, and a failed load reads
+  "Policies unavailable" instead of "No policies configured".
+- The notification channel checkboxes in Approvals could only add a channel
+  (and added it again on each click), never remove one.
+- Saving a policy without a name, a trigger, or an approver or approver role
+  is refused in the form, as Administration's editor did.
+
+### Removed
+- Administration's "Enforce Hold State" checkbox, which was never sent to
+  the server, and its trigger checklist, whose names mostly match nothing a
+  service submits for approval; triggers are free-text patterns, as in
+  Approvals.
+
+ — 2026-10-20
 
 The third of three steps to make the console simpler without removing
 anything: add what was missing.

@@ -84,7 +84,7 @@ flowchart LR
   tab_cluster --> svc_cluster_manager
   tab_backup["Backup & Restore"]
   UI --> tab_backup
-  tab_backup --> svc_backup
+  tab_backup --> svc_auth_edge
   tab_byok["byok"]
   UI --> tab_byok
   tab_byok --> svc_cloud
@@ -108,7 +108,6 @@ flowchart LR
   svc_auth["auth (90 routes)"]
   svc_auth_edge["auth-edge"]
   svc_autokey["autokey (15 routes)"]
-  svc_backup["backup (11 routes)"]
   svc_certs["certs (70 routes)"]
   svc_cloud["cloud (28 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]

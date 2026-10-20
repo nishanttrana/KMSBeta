@@ -1,16 +1,15 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useEffect, useMemo, useState } from "react";
 import { Shield, CheckCircle2, XCircle, Clock, Settings, Bell, Users, ChevronDown, ChevronRight, Send } from "lucide-react";
-import { Btn, Card, Inp, Sel, Stat, Section, Tabs, Modal, FG, Row2, B, Chk, usePromptDialog } from "../legacyPrimitives";
+import { Btn, Card, Inp, Sel, Stat, Section, Modal, FG, B, Chk, usePromptDialog } from "../legacyPrimitives";
 import { C } from "../theme";
 import { CredentialPicker } from "../CredentialPicker";
 import { errMsg } from "../runtimeUtils";
+import { ApprovalPoliciesPanel } from "./ApprovalPoliciesPanel";
 import {
   getGovernanceSettings,
   updateGovernanceSettings,
   listGovernancePolicies,
-  createGovernancePolicy,
-  updateGovernancePolicy,
   listGovernanceRequests,
   getGovernanceRequest,
   voteGovernanceRequest,
@@ -62,8 +61,10 @@ function expiresIn(iso: string) {
 
 /* ────── Main Component ────── */
 
-export const GovernanceTab = ({ session, onToast, onNavigate }: any) => {
-  const [tab, setTab] = useState("requests");
+export const GovernanceTab = ({ session, onToast, onNavigate, subView }: any) => {
+  // Requests, Policies and Settings are sidebar sub-options (13.26.0-beta);
+  // approval policies have one home here.
+  const tab = ["requests", "policies", "settings"].includes(subView) ? subView : "requests";
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState("pending");
   const [policies, setPolicies] = useState<any[]>([]);
@@ -76,21 +77,6 @@ export const GovernanceTab = ({ session, onToast, onNavigate }: any) => {
   const [reqDetail, setReqDetail] = useState<any>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  // Policy modal
-  const [policyModal, setPolicyModal] = useState(false);
-  const [editPolicy, setEditPolicy] = useState<any>(null);
-  const [policyName, setPolicyName] = useState("");
-  const [policyDesc, setPolicyDesc] = useState("");
-  const [policyScope, setPolicyScope] = useState("keys");
-  const [policyTriggers, setPolicyTriggers] = useState("");
-  const [policyQuorum, setPolicyQuorum] = useState("threshold");
-  const [policyRequired, setPolicyRequired] = useState("2");
-  const [policyTotal, setPolicyTotal] = useState("3");
-  const [policyApprovers, setPolicyApprovers] = useState("");
-  const [policyRoles, setPolicyRoles] = useState("");
-  const [policyTimeout, setPolicyTimeout] = useState("48");
-  const [policyChannels, setPolicyChannels] = useState<string[]>(["dashboard"]);
-  const [policySaving, setPolicySaving] = useState(false);
 
   // Settings modal
   const [settingsModal, setSettingsModal] = useState(false);
@@ -205,53 +191,6 @@ export const GovernanceTab = ({ session, onToast, onNavigate }: any) => {
     finally { setDetailLoading(false); }
   };
 
-  // Save policy
-  const savePolicy = async () => {
-    setPolicySaving(true);
-    try {
-      const payload = {
-        name: policyName.trim(),
-        description: policyDesc.trim(),
-        scope: policyScope,
-        trigger_actions: policyTriggers.split(",").map((s) => s.trim()).filter(Boolean),
-        quorum_mode: policyQuorum,
-        required_approvals: Number(policyRequired) || 2,
-        total_approvers: Number(policyTotal) || 3,
-        approver_users: policyApprovers.split(",").map((s) => s.trim()).filter(Boolean),
-        approver_roles: policyRoles.split(",").map((s) => s.trim()).filter(Boolean),
-        timeout_hours: Number(policyTimeout) || 48,
-        notification_channels: policyChannels,
-        status: "active",
-      };
-      if (editPolicy?.id) {
-        await updateGovernancePolicy(session, editPolicy.id, payload);
-        onToast?.(`Policy "${policyName}" updated.`);
-      } else {
-        await createGovernancePolicy(session, payload);
-        onToast?.(`Policy "${policyName}" created.`);
-      }
-      setPolicyModal(false);
-      await refresh();
-    } catch (e: any) { onToast?.(`Policy save failed: ${errMsg(e)}`); }
-    finally { setPolicySaving(false); }
-  };
-
-  const openPolicyModal = (p?: any) => {
-    setEditPolicy(p || null);
-    setPolicyName(p?.name || "");
-    setPolicyDesc(p?.description || "");
-    setPolicyScope(p?.scope || "keys");
-    setPolicyTriggers((p?.trigger_actions || []).join(", "));
-    setPolicyQuorum(p?.quorum_mode || "threshold");
-    setPolicyRequired(String(p?.required_approvals || 2));
-    setPolicyTotal(String(p?.total_approvers || 3));
-    setPolicyApprovers((p?.approver_users || []).join(", "));
-    setPolicyRoles((p?.approver_roles || []).join(", "));
-    setPolicyTimeout(String(p?.timeout_hours || 48));
-    setPolicyChannels(p?.notification_channels || ["dashboard"]);
-    setPolicyModal(true);
-  };
-
   // Save settings
   const saveSettings = async () => {
     setSettingsSaving(true);
@@ -300,7 +239,7 @@ export const GovernanceTab = ({ session, onToast, onNavigate }: any) => {
 
     {/* ── Tabs ── */}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-      <Tabs tabs={["Requests", "Policies", "Settings"]} active={tab === "requests" ? "Requests" : tab === "policies" ? "Policies" : "Settings"} onChange={(t) => setTab(t === "Requests" ? "requests" : t === "Policies" ? "policies" : "settings")} />
+      <div />
       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
         {tab === "requests" && <>
           <Sel value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ width: 120 }}>
@@ -312,7 +251,6 @@ export const GovernanceTab = ({ session, onToast, onNavigate }: any) => {
           </Sel>
           <Inp value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search..." style={{ width: 180 }} />
         </>}
-        {tab === "policies" && <Btn small primary onClick={() => openPolicyModal()}>Create Policy</Btn>}
         {tab === "settings" && <Btn small onClick={openSettingsModal}><Settings size={11} /> Configure</Btn>}
         <Btn small onClick={() => void refresh()} disabled={loading}>{loading ? "..." : "Refresh"}</Btn>
       </div>
@@ -429,34 +367,7 @@ export const GovernanceTab = ({ session, onToast, onNavigate }: any) => {
     </>}
 
     {/* ════════════ POLICIES TAB ════════════ */}
-    {tab === "policies" && <Section title="Approval Policies" actions={<Btn small primary onClick={() => openPolicyModal()}>Create Policy</Btn>}>
-      <Card style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.6fr 0.6fr 0.5fr 0.5fr 0.6fr 0.4fr auto", padding: "10px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, background: C.surface }}>
-          <div>Policy</div><div>Scope</div><div>Quorum</div><div>Req</div><div>Total</div><div>Timeout</div><div>Status</div><div></div>
-        </div>
-        <div style={{ maxHeight: 400, overflowY: "auto" }}>
-          {policies.map((p: any) => (
-            <div key={p.id} style={{ display: "grid", gridTemplateColumns: "1.2fr 0.6fr 0.6fr 0.5fr 0.5fr 0.6fr 0.4fr auto", padding: "10px 14px", borderBottom: `1px solid ${C.border}`, alignItems: "center", fontSize: 11 }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ color: C.text, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
-                <div style={{ fontSize: 10, color: C.dim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{(p.trigger_actions || []).join(", ") || "—"}</div>
-              </div>
-              <div style={{ color: C.accentFg }}>{p.scope}</div>
-              <div style={{ color: C.text }}>{p.quorum_mode || "threshold"}</div>
-              <div style={{ color: C.text, fontWeight: 700 }}>{p.required_approvals}</div>
-              <div style={{ color: C.dim }}>{p.total_approvers}</div>
-              <div style={{ color: C.dim }}>{p.timeout_hours || 48}h</div>
-              <div><B c={badge(p.status)}>{p.status}</B></div>
-              <div><Btn small onClick={() => openPolicyModal(p)}>Edit</Btn></div>
-            </div>
-          ))}
-          {!policies.length && <div style={{ padding: 24, textAlign: "center", fontSize: 12, color: C.dim }}>
-            <Shield size={20} color={C.muted} style={{ margin: "0 auto 8px" }} />
-            No policies configured. Create one to enable approval workflows.
-          </div>}
-        </div>
-      </Card>
-    </Section>}
+    {tab === "policies" && <ApprovalPoliciesPanel session={session} onToast={onToast} />}
 
     {/* ════════════ SETTINGS TAB ════════════ */}
     {tab === "settings" && <Section title="Governance Settings" actions={<Btn small primary onClick={openSettingsModal}>Configure</Btn>}>
@@ -483,69 +394,6 @@ export const GovernanceTab = ({ session, onToast, onNavigate }: any) => {
     </Section>}
 
     {/* ════════════ CREATE/EDIT POLICY MODAL ════════════ */}
-    <Modal open={policyModal} onClose={() => setPolicyModal(false)} title={editPolicy ? "Edit Approval Policy" : "Create Approval Policy"} wide>
-      <Row2>
-        <FG label="Policy Name" required>
-          <Inp value={policyName} onChange={(e) => setPolicyName(e.target.value)} placeholder="e.g. Key Deletion Approval" />
-        </FG>
-        <FG label="Scope">
-          <Sel value={policyScope} onChange={(e) => setPolicyScope(e.target.value)}>
-            <option value="keys">Keys</option>
-            <option value="secrets">Secrets</option>
-            <option value="certs">Certificates</option>
-            <option value="users">Users</option>
-            <option value="system">System</option>
-            <option value="all">All</option>
-          </Sel>
-        </FG>
-      </Row2>
-      <FG label="Description">
-        <Inp value={policyDesc} onChange={(e) => setPolicyDesc(e.target.value)} placeholder="What this policy governs" />
-      </FG>
-      <FG label="Trigger Actions" hint="Comma-separated action patterns, e.g. key.delete, secret.*, user.disable">
-        <Inp value={policyTriggers} onChange={(e) => setPolicyTriggers(e.target.value)} placeholder="key.delete, key.export" />
-      </FG>
-      <Row2>
-        <FG label="Quorum Mode">
-          <Sel value={policyQuorum} onChange={(e) => setPolicyQuorum(e.target.value)}>
-            <option value="threshold">Threshold (M-of-N)</option>
-            <option value="and">Unanimous (All must approve)</option>
-            <option value="or">Any (Single approver)</option>
-          </Sel>
-        </FG>
-        <FG label="Timeout (hours)">
-          <Inp type="number" value={policyTimeout} onChange={(e) => setPolicyTimeout(e.target.value)} placeholder="48" />
-        </FG>
-      </Row2>
-      <Row2>
-        <FG label="Required Approvals (M)">
-          <Inp type="number" value={policyRequired} onChange={(e) => setPolicyRequired(e.target.value)} placeholder="2" />
-        </FG>
-        <FG label="Total Approvers (N)">
-          <Inp type="number" value={policyTotal} onChange={(e) => setPolicyTotal(e.target.value)} placeholder="3" />
-        </FG>
-      </Row2>
-      <FG label="Approver Emails" hint="Comma-separated email addresses">
-        <Inp value={policyApprovers} onChange={(e) => setPolicyApprovers(e.target.value)} placeholder="alice@corp.com, bob@corp.com, carol@corp.com" />
-      </FG>
-      <FG label="Approver Roles" hint="Comma-separated roles. Every active user holding one, directly or through a group, becomes an approver when a request opens; the requester never votes on their own request.">
-        <Inp value={policyRoles} onChange={(e) => setPolicyRoles(e.target.value)} placeholder="security-officer, admin" />
-      </FG>
-      <FG label="Notification Channels">
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <Chk label="Dashboard" checked={policyChannels.includes("dashboard")} onChange={(v) => setPolicyChannels((prev) => v ? [...prev, "dashboard"] : prev.filter((c) => c !== "dashboard"))} />
-          <Chk label="Email" checked={policyChannels.includes("email")} onChange={(v) => setPolicyChannels((prev) => v ? [...prev, "email"] : prev.filter((c) => c !== "email"))} />
-          <Chk label="Slack" checked={policyChannels.includes("slack")} onChange={(v) => setPolicyChannels((prev) => v ? [...prev, "slack"] : prev.filter((c) => c !== "slack"))} />
-          <Chk label="Teams" checked={policyChannels.includes("teams")} onChange={(v) => setPolicyChannels((prev) => v ? [...prev, "teams"] : prev.filter((c) => c !== "teams"))} />
-        </div>
-      </FG>
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
-        <Btn small onClick={() => setPolicyModal(false)}>Cancel</Btn>
-        <Btn small primary onClick={savePolicy} disabled={policySaving || !policyName.trim()}>
-          {policySaving ? "Saving..." : editPolicy ? "Update Policy" : "Create Policy"}
-        </Btn>
-      </div>
-    </Modal>
 
     {/* ════════════ SETTINGS MODAL ════════════ */}
     <Modal open={settingsModal} onClose={() => setSettingsModal(false)} title="Governance Settings" wide>

@@ -7,6 +7,25 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-20 — Approval policies live in Approvals, backups in Backup & Restore
+**Decision:** approval policies are managed only in Approvals → Policies, and
+encrypted backups only in Backup & Restore → Encrypted Backups (owner:
+"under approvals under backups"). The copies in System Administration are
+gone; their old addresses open the new homes.
+**Why:** each had two homes. The two policy editors disagreed (one could
+pause a policy, the other re-enabled a paused one on every save and could
+not untick a channel), and the module named Backup & Restore held only a
+preview while the real backups sat in Administration.
+**Rejected:** keeping both and linking between them; the owner chose one
+home each. Not carried over: Administration's "Enforce Hold State" box,
+which was never sent to the server, and its trigger checklist, most of whose
+names (`user.create`, `system.backup`, `secret.create`, ...) no service
+submits for approval. Triggers stay free-text patterns.
+**Enforced:** `tests/one-home.spec.ts`; the smoke test "old links open the
+view's new home"; CLAUDE.md "One home per view".
+
+---
+
 ## 2026-10-18 — The certificate lifetime limit is the tenant's own
 **Decision:** the certs lifetime policy applies only the tenant's mode and
 limit. No industry schedule shortens it on dates the product chose, and a

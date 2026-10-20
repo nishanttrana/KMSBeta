@@ -5,6 +5,19 @@ Newest entries on top.
 
 ## 2026-10-20
 
+### Two editors for one record drift apart (13.26.0-beta)
+- Approval policies had an editor in Approvals and one in Administration.
+  Merging them showed each had bugs the other did not: Approvals forced
+  `status: active` on every save, listed only active policies, and its
+  channel checkboxes could only add; Administration's enable toggle sent
+  only `status` to an endpoint that replaces the whole policy, offered a
+  "hold" box nothing read, and a trigger list mostly unknown to any service.
+  `// @ts-nocheck` on the Approvals file hid the checkbox bug: the handler
+  read a click event as a boolean. **Moving code out of a `@ts-nocheck`
+  file into a typed one is a review: read every error it raises.**
+- An update endpoint that replaces the record (PUT) is never sent a partial
+  body; a toggle sends the whole record with one field changed.
+
 ### A search is a list with a filter, so it inherits the list's faults (13.25.0-beta)
 - Planning search over keys found the Keys page itself loaded the first
   100 keys at sign-in (a separate call from 13.24.0-beta's), and a failure

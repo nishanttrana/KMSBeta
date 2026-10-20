@@ -375,7 +375,7 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
         why: "Key destruction and export are irreversible; M-of-N approval prevents a single compromised admin from causing data loss.",
         fix: "Create a governance policy requiring 2-of-N approvers for key destroy, export and policy changes.",
         affected: 0, evidence: [],
-        action: { tab: "approvals", label: "Create quorum policy" },
+        action: { tab: "approvals/policies", label: "Create quorum policy" },
       });
     }
   } else check("quorum", "Quorum approval protects destructive operations", "Access control", false, false);
@@ -469,9 +469,9 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
         category: "Resilience",
         title: lastOk ? `Last encrypted backup was ${Math.floor((now - lastOk) / DAY)} days ago` : "No encrypted backup has been taken",
         why: "Losing the key store means losing every piece of data it protects — crypto-shredding by accident.",
-        fix: "Administration > Backup: create a backup, keep the artifact and the key package in separate places, and test a restore.",
+        fix: "Backup & Restore > Encrypted Backups: create a backup, keep the artifact and the key package in separate places, and test a restore.",
         affected: 0, evidence: [],
-        action: { tab: "admin/backup", label: "Open Backup" },
+        action: { tab: "backup/encrypted", label: "Open Backup & Restore" },
       });
     }
   } else check("backup", "An encrypted backup was completed in the last 7 days", "Resilience", false, false);

@@ -61,7 +61,7 @@ const PostureTab = lazy(() => import("./v3/tabs/PostureTab").then(m => ({ defaul
 const AuditLogTab = lazy(() => import("./v3/tabs/AuditLogTab").then(m => ({ default: m.AuditLogTab })));
 const RotationSchedulingTab = lazy(() => import("./v3/tabs/RotationSchedulingTab").then(m => ({ default: m.RotationSchedulingTab })));
 const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
-const BackupTab = lazy(() => import("./v3/tabs/BackupTab").then(m => ({ default: m.BackupTab })));
+const BackupTab = lazy(() => import("../modules/backup/BackupModule").then(m => ({ default: m.BackupModule })));
 const WorkloadIdentityTab = lazy(() => import("./v3/tabs/WorkloadIdentityTab").then(m => ({ default: m.WorkloadIdentityTab })));
 const ConfidentialComputeTab = lazy(() => import("./v3/tabs/ConfidentialComputeTab").then(m => ({ default: m.ConfidentialComputeTab })));
 const DiscoveryTab = lazy(() => import("./v3/tabs/DiscoveryTab").then(m => ({ default: m.DiscoveryTab })));
@@ -263,6 +263,8 @@ export default function VectaDashboardV3Shell(props: Props) {
       cluster: "topology",
       playbooks: "overview",
       admin: "health",
+      backup: "encrypted",
+      approvals: "requests",
     home: "overview",
       ...(linked.tab && linked.sub ? { [linked.tab]: linked.sub } : {})
     };

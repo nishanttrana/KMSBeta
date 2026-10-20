@@ -294,7 +294,7 @@ test("a module's sub-options expand under its name in the sidebar", async ({ pag
   for (const [label, id, options] of [
     ["Cloud Key Control", "cloudctl", ["BYOK", "HYOK", "Google CSE", "Azure EKM"]],
     ["Certificates / PKI", "certs", ["Certificate Operations", "Enrollment Protocols", "Service mTLS"]],
-    ["Administration", "admin", ["Health", "Runtime Crypto", "SNMP", "Tags", "Password Policy", "Login Security", "Key Access Hardening", "CLI / HSM", "Governance", "Backup", "Alert Rules", "Approval Policies", "Tenant Administration", "User Management"]],
+    ["Administration", "admin", ["Health", "Runtime Crypto", "SNMP", "Tags", "Password Policy", "Login Security", "Key Access Hardening", "CLI / HSM", "Governance", "Alert Rules", "Tenant Administration", "User Management"]],
   ] as const) {
     await module(label).click();
     const sub = page.getByTestId(`subnav-${id}`);
@@ -339,11 +339,16 @@ test("old links open the view's new home", async ({ page }) => {
   await expect(crumb).toContainText("Recommendations");
   await expect(page).toHaveURL(/#home\/recommendations$/);
   await expect(page.getByTestId("subnav-home").getByRole("button", { name: "Recommendations", exact: true })).toHaveAttribute("aria-current", "page");
+  // Backups and approval policies have one home each (13.26.0-beta); the
+  // Administration addresses they had open those homes.
   await page.goto("/#admin/backup");
-  await expect(crumb).toContainText("Backup");
-  await expect(page.getByText("Encrypted Backups")).toBeVisible();
-  // No tab strip inside System Administration any more.
-  await expect(page.getByRole("button", { name: "Approval Policies", exact: true })).toHaveCount(1);
+  await expect(page).toHaveURL(/#backup\/encrypted$/);
+  await expect(crumb).toContainText("Encrypted Backups");
+  await expect(page.getByText("Encrypted Backups", { exact: true }).first()).toBeVisible();
+  await page.goto("/#admin/approvals");
+  await expect(page).toHaveURL(/#approvals\/policies$/);
+  await expect(page.getByRole("button", { name: "Create Policy" }).first()).toBeVisible();
+  await expect(page.getByTestId("subnav-admin").getByRole("button", { name: "Backup", exact: true })).toHaveCount(0);
   await page.goto("/#admin/system");
   await expect(crumb).toContainText("Health");
   await assertNoRenderBoundary(page);

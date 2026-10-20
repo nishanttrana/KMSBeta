@@ -355,6 +355,10 @@ an approach, record it here or in the matching doc below.
   Audit Log, and Compliance shows only assessed compliance. Don't copy a view
   into another tab; link to its home. A failed or missing source shows
   "unavailable" or "not assessed", never 0 or 100 (docs/DECISIONS.md).
+  Settings follow the same rule (owner, 2026-10-20: "under approvals under
+  backups"): approval policies live only in Approvals → Policies, and
+  encrypted backups only in Backup & Restore → Encrypted Backups; nothing in
+  Administration repeats them.
 - **Every chart drills into its entries** (owner directive, 2026-09-30:
   "clicking on graphs / bar should show related entries"). Every bar, slice,
   point and legend row with a count is clickable and lists exactly the

@@ -1598,15 +1598,28 @@ Modules whose data you may not read are not listed (13.21.0-beta).
 | **Platform** | Cluster, Backup & Restore, Administration |
 
 **Administration** sub-options: Health, Runtime Crypto, SNMP, Tags, Password
-Policy, Login Security, Key Access Hardening, CLI / HSM, Governance, Backup,
-Alert Rules, Approval Policies and Tenant Administration (platform
-administrators only), and User Management. They were a twelve-tab strip
-inside System Administration until 13.23.0-beta.
+Policy, Login Security, Key Access Hardening, CLI / HSM, Governance, Alert
+Rules and Tenant Administration (platform administrators only), and User
+Management. They were a twelve-tab strip inside System Administration until
+13.23.0-beta.
+
+**Backup & Restore** sub-options (13.26.0-beta): Encrypted Backups (create,
+verify, restore, download and delete encrypted backups; platform
+administrators only) and Schedules (the backup scheduler, a labelled
+preview). Encrypted backups were a section of System Administration until
+then.
+
+**Approvals** sub-options (13.26.0-beta): Requests, Policies and Settings.
+Policies is the one place approval policies are created, edited, paused and
+enabled; it lists paused policies too. Administration had a second copy
+until then.
 
 **Addresses.** The browser address names the module and sub-option, for
-example `#admin/backup` or `#home/recommendations`. Old addresses still
+example `#backup/encrypted` or `#home/recommendations`. Old addresses still
 open their view: `#recommendations` opens Command Center → Recommendations,
-`#admin/system` opens Administration → Health.
+`#admin/system` opens Administration → Health, `#admin/backup` opens Backup &
+Restore → Encrypted Backups, and `#admin/approvals` opens Approvals →
+Policies.
 
 ## 13. Day 0 Checklist
 

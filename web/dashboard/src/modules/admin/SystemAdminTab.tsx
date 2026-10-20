@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useRef, useState } from "react";
 import {
   getAuthCLIHSMConfig,
   getAuthCLIStatus,
@@ -27,29 +27,15 @@ import {
   type ServiceState
 } from "../../lib/health";
 import {
-  createGovernanceBackup,
-  deleteGovernanceBackup,
-  downloadGovernanceBackupArtifact,
-  downloadGovernanceBackupKey,
-  governanceBackupKeyRetained,
   getGovernanceSystemState,
   getGovernanceSettings,
-  listGovernanceBackups,
   patchGovernanceSystemState,
-  restoreGovernanceBackup,
-  verifyGovernanceBackup,
   testGovernanceSystemSNMP,
   testGovernanceSMTP,
   testGovernanceWebhook,
   listNotifyConnections,
   type NotifyConnection,
   updateGovernanceSettings,
-  listGovernancePolicies,
-  createGovernancePolicy,
-  updateGovernancePolicy,
-  type GovernanceBackupJob,
-  type GovernanceBackupKeyFile,
-  type GovernanceVerifyBackupResult,
   type GovernanceSettings
 } from "../../lib/governance";
 import {
@@ -74,8 +60,6 @@ import {
   Row3,
   Section,
   Sel,
-  Stat,
-  Txt,
   usePromptDialog
 } from "../../components/v3/legacyPrimitives";
 import {
@@ -125,17 +109,6 @@ function HealthListBody<T>({list,empty,children}:{list:HealthList<T>;empty:strin
 
 const INTERNAL_TLS_POLICY="TLS 1.3 · internal mTLS · key exchange per service (hybrid ML-KEM by default)";
 
-const dl=(name:string,b64:string,type:string)=>{
-  const raw=atob(String(b64||""));
-  const bytes=new Uint8Array(raw.length);
-  for(let i=0;i<raw.length;i+=1){bytes[i]=raw.charCodeAt(i);}  
-  const blob=new Blob([bytes],{type:type||"application/octet-stream"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url; a.download=String(name||"download.bin");
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
-};
 
 const GOV_DEFAULT={
   approval_expiry_minutes:60,
@@ -168,131 +141,6 @@ const HSM_DEFAULT:Partial<HSMProviderConfig>={
   enabled:false
 };
 
-const BACKUP_ARTIFACT_EXTENSION = ".vbk";
-const BACKUP_KEY_EXTENSION = ".key.json";
-
-const fileToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("failed to read file"));
-    reader.onload = () => {
-      const raw = String(reader.result || "");
-      const idx = raw.indexOf(",");
-      resolve(idx >= 0 ? raw.slice(idx + 1) : raw);
-    };
-    reader.readAsDataURL(file);
-  });
-
-const formatBackupFileSize = (bytes: number): string => {
-  const size = Math.max(0, Number(bytes || 0));
-  if (size >= 1024 * 1024) {
-    return `${(size / (1024 * 1024)).toFixed(1).replace(/\.0$/, "")} MB`;
-  }
-  if (size >= 1024) {
-    return `${Math.max(1, Math.round(size / 1024))} KB`;
-  }
-  return `${size} B`;
-};
-
-const BackupRestoreFilePicker = ({
-  accept,
-  file,
-  onFileChange,
-  emptyLabel,
-  hint
-}: {
-  accept: string;
-  file: File | null;
-  onFileChange: (file: File | null) => void;
-  emptyLabel: string;
-  hint: string;
-}) => {
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const hasFile = Boolean(file);
-
-  return (
-    <div style={{ display: "grid", gap: 8 }}>
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        onChange={(e) => onFileChange((e.target.files && e.target.files[0]) ? e.target.files[0] : null)}
-        style={{ display: "none" }}
-      />
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          minHeight: 72,
-          padding: "12px 14px",
-          borderRadius: 6,
-          border: `1px solid ${hasFile ? C.accent : C.borderHi}`,
-          background: hasFile ? C.accentDim : C.surface,
-          boxShadow: hasFile
-            ? `0 0 0 1px ${C.glow} inset, 0 12px 28px rgba(2,8,23,.35)`
-            : `0 10px 22px rgba(2,8,23,.22)`,
-          boxSizing: "border-box"
-        }}
-      >
-        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-          <Btn
-            type="button"
-            small
-            primary
-            onClick={() => inputRef.current?.click()}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 4,
-              boxShadow: `0 0 18px ${C.glowStrong}`
-            }}
-          >
-            {hasFile ? "Replace" : "Upload"}
-          </Btn>
-          {hasFile ? (
-            <Btn
-              type="button"
-              small
-              onClick={() => {
-                onFileChange(null);
-                if (inputRef.current) {
-                  inputRef.current.value = "";
-                }
-              }}
-              style={{
-                borderColor: C.borderHi,
-                color: C.dim,
-                background: "rgba(15,21,33,.72)",
-                borderRadius: 4,
-                padding: "8px 12px"
-              }}
-            >
-              Clear
-            </Btn>
-          ) : null}
-        </div>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div
-            style={{
-              fontSize: 11,
-              color: hasFile ? C.text : C.dim,
-              fontWeight: hasFile ? 700 : 500,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap"
-            }}
-          >
-            {hasFile ? file?.name : emptyLabel}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-            <B c={hasFile ? "accent" : "blue"}>{hasFile ? formatBackupFileSize(file?.size || 0) : accept}</B>
-            <span style={{ fontSize: 10, color: C.muted }}>{hint}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const SYSTEM_STATE_DEFAULT = {
   fips_mode: "disabled",
@@ -332,9 +180,7 @@ type SystemAdminPanel =
   | "platform"
   | "cli"
   | "governance"
-  | "backup"
-  | "alertrules"
-  | "approvals";
+  | "alertrules";
 const SYSTEM_ADMIN_TABS: Array<{label:string;panel:SystemAdminPanel}> = [
   { label:"Health", panel:"health" },
   { label:"Runtime Crypto", panel:"runtime" },
@@ -345,9 +191,7 @@ const SYSTEM_ADMIN_TABS: Array<{label:string;panel:SystemAdminPanel}> = [
   { label:"Key Access Hardening", panel:"keyaccess" },
   { label:"CLI / HSM", panel:"cli" },
   { label:"Governance", panel:"governance" },
-  { label:"Backup", panel:"backup" },
-  { label:"Alert Rules", panel:"alertrules" },
-  { label:"Approval Policies", panel:"approvals" }
+  { label:"Alert Rules", panel:"alertrules" }
 ];
 
 const parseSNMPTargetToState = (rawTarget:string): Record<string, any> => {
@@ -440,25 +284,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const [systemStateSaving,setSystemStateSaving]=useState(false);
   const [snmpTesting,setSnmpTesting]=useState(false);
 
-  const [jobs,setJobs]=useState<GovernanceBackupJob[]>([]);
-  const [jobsLoading,setJobsLoading]=useState(false);
-  const [backupCreating,setBackupCreating]=useState(false);
-  const [backupDeleting,setBackupDeleting]=useState("");
-  const [backupDownloading,setBackupDownloading]=useState("");
-  const [backupScope,setBackupScope]=useState<"system"|"tenant">("system");
-  const [backupTenant,setBackupTenant]=useState("");
-  const [backupBindToHsm,setBackupBindToHsm]=useState(true);
-  const [backupRestoreArtifactFile,setBackupRestoreArtifactFile]=useState<File|null>(null);
-  const [backupRestoreKeyFile,setBackupRestoreKeyFile]=useState<File|null>(null);
-  const [backupRestoreShareFiles,setBackupRestoreShareFiles]=useState<File[]>([]);
-  const backupShareInputRef=useRef<HTMLInputElement|null>(null);
-  const [backupSplit,setBackupSplit]=useState(false);
-  const [backupGuardians,setBackupGuardians]=useState("");
-  const [backupThreshold,setBackupThreshold]=useState(3);
-  const [backupCreatedShares,setBackupCreatedShares]=useState<GovernanceBackupKeyFile[]>([]);
-  const [backupRestoring,setBackupRestoring]=useState(false);
-  const [backupVerifying,setBackupVerifying]=useState(false);
-  const [backupVerifyResult,setBackupVerifyResult]=useState<GovernanceVerifyBackupResult|null>(null);
 
   const [cliStatus,setCliStatus]=useState<CLIStatus|null>(null);
   const [cliLoading,setCliLoading]=useState(false);
@@ -493,80 +318,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
 
   // ── Disk Encryption state ──
 
-  // ── Approval Policies state ──
-  const ADMIN_OPS=["user.create","user.delete","user.role_change","tenant.create","tenant.disable","tenant.delete","system.backup","system.restore","system.config_change","hsm.config_change","governance.policy_change","license.update"];
-  const KEY_OPS=["key.create","key.delete","key.rotate","key.export","key.import","key.bulk_delete","key.bulk_rotate","key.state_change","key.metadata_change","secret.create","secret.delete","secret.rotate","cert.create","cert.revoke","cert.ca_create","cert.enrollment"];
-  const ALL_GOV_SCOPES=[{v:"keys",l:"Key Operations"},{v:"secrets",l:"Secret Operations"},{v:"certs",l:"Certificate Operations"},{v:"users",l:"User Management"},{v:"system",l:"System Administration"},{v:"all",l:"All Operations"}];
-  const [govPolicies,setGovPolicies]=useState<any[]>([]);
-  const [govPoliciesLoading,setGovPoliciesLoading]=useState(false);
-  const [govPolicyModal,setGovPolicyModal]=useState(false);
-  const [govEditPolicy,setGovEditPolicy]=useState<any>(null);
-  const [gpName,setGpName]=useState("");
-  const [gpDesc,setGpDesc]=useState("");
-  const [gpScope,setGpScope]=useState("keys");
-  const [gpTriggers,setGpTriggers]=useState<string[]>([]);
-  const [gpQuorum,setGpQuorum]=useState("threshold");
-  const [gpRequired,setGpRequired]=useState(2);
-  const [gpTotal,setGpTotal]=useState(3);
-  const [gpApprovers,setGpApprovers]=useState("");
-  const [gpTimeout,setGpTimeout]=useState(48);
-  const [gpRetry,setGpRetry]=useState(3);
-  const [gpChannels,setGpChannels]=useState<string[]>(["dashboard"]);
-  const [gpEnforceHold,setGpEnforceHold]=useState(true);
-  const [gpStatus,setGpStatus]=useState("active");
-  const [gpSaving,setGpSaving]=useState(false);
-
-
-  const loadGovPolicies=useCallback(async()=>{
-    if(!session?.token) return;
-    setGovPoliciesLoading(true);
-    try{const items=await listGovernancePolicies(session,{}); setGovPolicies(Array.isArray(items)?items:[]);}
-    catch(error){onToast(`Policy load failed: ${errMsg(error)}`);}
-    finally{setGovPoliciesLoading(false);}
-  },[session,onToast]);
-
-  const openGovPolicyModal=(policy?:any)=>{
-    if(policy){
-      setGovEditPolicy(policy);
-      setGpName(policy.name||"");setGpDesc(policy.description||"");setGpScope(policy.scope||"keys");
-      setGpTriggers(Array.isArray(policy.trigger_actions)?policy.trigger_actions:[]);
-      setGpQuorum(policy.quorum_mode||"threshold");setGpRequired(policy.required_approvals||2);setGpTotal(policy.total_approvers||3);
-      setGpApprovers((Array.isArray(policy.approver_users)?policy.approver_users:[]).join(", "));
-      setGpTimeout(policy.timeout_hours||48);setGpChannels(Array.isArray(policy.notification_channels)?policy.notification_channels:["dashboard"]);
-      setGpStatus(policy.status||"active");setGpEnforceHold(true);
-    }else{
-      setGovEditPolicy(null);setGpName("");setGpDesc("");setGpScope("keys");setGpTriggers([]);
-      setGpQuorum("threshold");setGpRequired(2);setGpTotal(3);setGpApprovers("");setGpTimeout(48);
-      setGpChannels(["dashboard"]);setGpStatus("active");setGpEnforceHold(true);
-    }
-    setGovPolicyModal(true);
-  };
-
-  const saveGovPolicy=async()=>{
-    if(!session?.token) return;
-    if(!gpName.trim()){onToast("Policy name is required.");return;}
-    if(!gpTriggers.length){onToast("Select at least one trigger action.");return;}
-    const approverList=String(gpApprovers||"").split(",").map((a)=>a.trim()).filter(Boolean);
-    if(!approverList.length){onToast("At least one approver is required.");return;}
-    setGpSaving(true);
-    const payload={
-      name:gpName.trim(),description:gpDesc.trim(),scope:gpScope,
-      trigger_actions:gpTriggers,quorum_mode:gpQuorum,
-      required_approvals:Math.max(1,gpRequired),total_approvers:Math.max(gpRequired,gpTotal),
-      approver_users:approverList,timeout_hours:Math.max(1,gpTimeout),
-      notification_channels:gpChannels,status:gpStatus
-    };
-    try{
-      if(govEditPolicy){await updateGovernancePolicy(session,govEditPolicy.id,payload); onToast("Policy updated.");}
-      else{await createGovernancePolicy(session,payload); onToast("Policy created.");}
-      setGovPolicyModal(false);
-      await loadGovPolicies();
-    }catch(error){if(!sessionGuard(error)) onToast(`Policy save failed: ${errMsg(error)}`);}
-    finally{setGpSaving(false);}
-  };
-
-  const toggleGpTrigger=(op:string)=>{setGpTriggers((prev)=>prev.includes(op)?prev.filter((t)=>t!==op):[...prev,op]);};
-  const toggleGpChannel=(ch:string)=>{setGpChannels((prev)=>prev.includes(ch)?prev.filter((c)=>c!==ch):[...prev,ch]);};
 
   const [newTagName,setNewTagName]=useState("");
   const [newTagColor,setNewTagColor]=useState(C.teal);
@@ -928,78 +679,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     }
   },[onToast,session,sessionGuard,systemState]);
 
-  const loadJobs=useCallback(async()=>{
-    if(!session?.token){setJobs([]);return;}
-    setJobsLoading(true);
-    try{setJobs(await listGovernanceBackups(session,{limit:100}));}
-    catch(error){if(!sessionGuard(error)) onToast(`Backup list load failed: ${errMsg(error)}`);} 
-    finally{setJobsLoading(false);} 
-  },[onToast,session,sessionGuard]);
-
-  // Reads the selected artifact and key file (or guardian shares) into the
-  // body restore and verify share; toasts and returns null if incomplete.
-  const readBackupFiles=useCallback(async()=>{
-    const useShares=backupRestoreShareFiles.length>0;
-    if(!backupRestoreArtifactFile||(!useShares&&!backupRestoreKeyFile)){
-      onToast("Select the backup artifact and its key package, or the guardian share files.");
-      return null;
-    }
-    const artifactName=String(backupRestoreArtifactFile.name||"").trim();
-    const keyFiles=useShares?backupRestoreShareFiles:[backupRestoreKeyFile as File];
-    if(!artifactName.toLowerCase().endsWith(BACKUP_ARTIFACT_EXTENSION)){
-      onToast(`Artifact must use ${BACKUP_ARTIFACT_EXTENSION} extension.`);
-      return null;
-    }
-    if(keyFiles.some((f)=>!String(f.name||"").toLowerCase().endsWith(BACKUP_KEY_EXTENSION))){
-      onToast(`Key files must use ${BACKUP_KEY_EXTENSION} extension.`);
-      return null;
-    }
-    const [artifactB64,...keyB64s]=await Promise.all([fileToBase64(backupRestoreArtifactFile),...keyFiles.map(fileToBase64)]);
-    return {
-      artifact_file_name:artifactName,
-      artifact_content_base64:artifactB64,
-      ...(useShares
-        ?{key_shares:keyFiles.map((f,i)=>({file_name:String(f.name||"").trim(),content_base64:String(keyB64s[i]||"")}))}
-        :{key_file_name:String(keyFiles[0]?.name||"").trim(),key_content_base64:String(keyB64s[0]||"")})
-    };
-  },[backupRestoreArtifactFile,backupRestoreKeyFile,backupRestoreShareFiles,onToast]);
-
-  const restoreBackup=useCallback(async()=>{
-    if(!session?.token){return;}
-    setBackupRestoring(true);
-    try{
-      const files=await readBackupFiles();
-      if(!files) return;
-      const out=await restoreGovernanceBackup(session,files);
-      setBackupRestoreArtifactFile(null);
-      setBackupRestoreKeyFile(null);
-      setBackupRestoreShareFiles([]);
-      setBackupVerifyResult(null);
-      onToast(`Backup restored. Rows: ${Number(out.rows_restored||0)} | Tables: ${Number(out.tables_processed||0)}.`);
-      await Promise.all([loadJobs(),loadSystemState()]);
-    }catch(error){
-      if(!sessionGuard(error)) onToast(`Backup restore failed: ${errMsg(error)}`);
-    }finally{
-      setBackupRestoring(false);
-    }
-  },[loadJobs,loadSystemState,onToast,readBackupFiles,session,sessionGuard]);
-
-  const verifyBackup=useCallback(async()=>{
-    if(!session?.token){return;}
-    setBackupVerifying(true);
-    setBackupVerifyResult(null);
-    try{
-      const files=await readBackupFiles();
-      if(!files) return;
-      const out=await verifyGovernanceBackup(session,files);
-      setBackupVerifyResult(out);
-      onToast("Backup verified: it opens with the key given. Nothing was restored.");
-    }catch(error){
-      if(!sessionGuard(error)) onToast(`Backup verification failed: ${errMsg(error)}`);
-    }finally{
-      setBackupVerifying(false);
-    }
-  },[onToast,readBackupFiles,session,sessionGuard]);
 
   const saveSnmpSettings = useCallback(async()=>{
     if(!session?.token){return;}
@@ -1091,7 +770,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     void loadHealth();
     void loadSystemState();
     void loadGov();
-    void loadJobs();
     void loadCli();
     void loadHsm();
     void loadCertSecurity();
@@ -1107,7 +785,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     loadGov,
     loadHealth,
     loadHsm,
-    loadJobs,
     loadPasswordPolicy,
     loadSecurityPolicy,
     loadSystemState,
@@ -1116,8 +793,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
 
   useEffect(()=>{
     if(panel==="alertrules"&&session?.token) void refreshAlertRules();
-    if(panel==="approvals"&&session?.token) void loadGovPolicies();
-  },[loadGovPolicies,panel,refreshAlertRules,session?.token]);
+  },[panel,refreshAlertRules,session?.token]);
 
   useEffect(()=>{
     setSystemState((prev)=>({
@@ -1135,7 +811,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     }
   },[onFipsModeChange,saveSystemState,systemState?.fips_mode]);
 
-  const sortedJobs=useMemo(()=>[...jobs].sort((a,b)=>new Date(String(b.created_at||0)).getTime()-new Date(String(a.created_at||0)).getTime()),[jobs]);
   const totalServices=Number(health.summary?.total||health.services?.length||0);
   const runtimeModeLabel=String(systemState?.fips_mode_policy||"standard")==="strict"?"Strict":"Standard";
   // Values the service did not report show as "not reported", never a guess.
@@ -1708,101 +1383,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     </Section>
     </>}
 
-    {panel==="backup"&&<>
-    <Section title="Encrypted Backups" actions={<div style={{display:"flex",gap:6}}><Btn small onClick={()=>void loadJobs()}>{jobsLoading?"Refreshing...":"Refresh Jobs"}</Btn></div>}>
-      <Card style={{padding:10,borderRadius:4,marginBottom:8}}>
-        <div style={{fontSize:10,color:C.muted,marginBottom:8}}>Create Backup</div>
-        <Row2><FG label="Scope"><Sel value={backupScope} onChange={(e)=>setBackupScope(String(e.target.value||"system") as "system"|"tenant")}><option value="system">System</option><option value="tenant">Tenant</option></Sel></FG><FG label="Target Tenant ID (tenant scope)"><Inp value={backupTenant} onChange={(e)=>setBackupTenant(e.target.value)} placeholder="tenant-id"/></FG></Row2>
-        <Chk label="Bind backup key package to HSM (when configured)" checked={backupBindToHsm&&!backupSplit} onChange={()=>setBackupBindToHsm((v)=>!v)} disabled={backupSplit}/>
-        <Chk label="Split the key among guardians (M-of-N shares)" checked={backupSplit} onChange={()=>setBackupSplit((v)=>!v)}/>
-        {backupSplit&&<Row2>
-          <FG label="Guardians (one per line)"><Txt rows={4} value={backupGuardians} onChange={(e)=>setBackupGuardians(e.target.value)} placeholder={"CISO\nHead of Legal\nCTO\nOps lead\nExternal notary"}/></FG>
-          <FG label="Shares needed to restore"><Inp type="number" min={2} value={String(backupThreshold)} onChange={(e)=>setBackupThreshold(Math.max(2,Math.trunc(Number(e.target.value||2))))}/></FG>
-        </Row2>}
-        <div style={{fontSize:10,color:C.dim,marginTop:4}}>{backupSplit
-          ?"Each guardian gets one share file. Any of them up to the number above restore the backup; fewer can't, and no one holds the whole key. The platform keeps no copy of the key or the shares. A split key is never HSM-bound."
-          :"The key file downloads when the backup is created. Without an HSM binding the platform keeps no copy of the key: store the file safely, apart from the artifact."}</div>
-        <div style={{display:"flex",justifyContent:"flex-end",alignItems:"center",marginTop:10}}><Btn small primary onClick={async()=>{
-          if(!session?.token) return;
-          if(backupScope==="tenant"&&!String(backupTenant||"").trim()){onToast("Provide target tenant ID for tenant scope backup."); return;}
-          const guardians=backupGuardians.split(/\n|,/).map((g)=>g.trim()).filter(Boolean);
-          if(backupSplit&&(guardians.length<2||backupThreshold<2||backupThreshold>guardians.length)){onToast("Name at least 2 guardians, and set shares needed between 2 and the number of guardians."); return;}
-          setBackupCreating(true);
-          try{
-            const created=await createGovernanceBackup(session,{scope:backupScope,target_tenant_id:backupScope==="tenant"?String(backupTenant||"").trim():"",bind_to_hsm:backupBindToHsm,created_by:session.username,...(backupSplit?{key_split:{threshold:backupThreshold,guardians}}:{})});
-            if(created.key_shares?.length){
-              setBackupCreatedShares(created.key_shares);
-              onToast(`Backup job created. Hand each guardian their share now: they are shown once, and any ${backupThreshold} of ${created.key_shares.length} restore the backup.`);
-            }else if(created.key_file){
-              dl(created.key_file.file_name,created.key_file.content_base64,created.key_file.content_type);
-              onToast(governanceBackupKeyRetained(created.job)?"Backup job created. Its key file was saved.":"Backup job created. Its key file was saved: keep it safe, the platform does not keep a copy.");
-            }
-            await loadJobs();
-          }catch(error){if(!sessionGuard(error)) onToast(`Backup create failed: ${errMsg(error)}`);} finally{setBackupCreating(false);}
-        }} disabled={backupCreating}>{backupCreating?"Creating...":"Create Backup"}</Btn></div>
-        {backupCreatedShares.length>0&&<div role="region" aria-label="Guardian key shares" style={{marginTop:10,padding:10,borderRadius:4,border:`1px solid ${C.amber}`,background:C.amberDim}}>
-          <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:4}}>Guardian key shares: shown once</div>
-          <div data-keep="" style={{fontSize:10,color:C.dim,marginBottom:8}}>Give each file to its guardian only. Close this panel once every share is handed out; the platform can't produce them again.</div>
-          {backupCreatedShares.map((sh)=>(
-            <div key={sh.file_name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,padding:"4px 0",borderTop:`1px solid ${C.border}`}}>
-              <span style={{fontSize:11,color:C.text}}>{`Share ${sh.share_index} · ${sh.guardian}`}</span>
-              <Btn small onClick={()=>dl(sh.file_name,sh.content_base64,sh.content_type)}>Download</Btn>
-            </div>
-          ))}
-          <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}><Btn small onClick={()=>setBackupCreatedShares([])}>All shares handed out: close</Btn></div>
-        </div>}
-      </Card>
-      <Card style={{padding:10,borderRadius:4,marginBottom:8}}>
-        <div style={{fontSize:10,color:C.muted,marginBottom:8}}>Restore Backup</div>
-        <Row2>
-          <FG label={`Artifact (${BACKUP_ARTIFACT_EXTENSION})`}>
-            <BackupRestoreFilePicker
-              accept={BACKUP_ARTIFACT_EXTENSION}
-              file={backupRestoreArtifactFile}
-              onFileChange={setBackupRestoreArtifactFile}
-              emptyLabel="Upload encrypted backup artifact"
-              hint="Encrypted Vecta backup bundle"
-            />
-          </FG>
-          <FG label={`Key Package (${BACKUP_KEY_EXTENSION})`}>
-            <BackupRestoreFilePicker
-              accept=".json,.key.json"
-              file={backupRestoreKeyFile}
-              onFileChange={setBackupRestoreKeyFile}
-              emptyLabel="Upload companion key package"
-              hint="JSON key material envelope"
-            />
-          </FG>
-        </Row2>
-        <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8,fontSize:10,color:C.dim}}>
-          <input ref={backupShareInputRef} type="file" accept=".json,.key.json" multiple style={{display:"none"}} onChange={(e)=>setBackupRestoreShareFiles(Array.from(e.target.files||[]))}/>
-          <span>Split key? Upload the guardians' share files instead of a key package.</span>
-          <Btn small type="button" onClick={()=>backupShareInputRef.current?.click()}>{backupRestoreShareFiles.length?"Replace share files":"Upload share files"}</Btn>
-          {backupRestoreShareFiles.length>0&&<Btn small type="button" onClick={()=>{setBackupRestoreShareFiles([]); if(backupShareInputRef.current) backupShareInputRef.current.value="";}}>Clear</Btn>}
-        </div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,gap:10}}>
-          <div style={{fontSize:10,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{`${backupRestoreArtifactFile?.name||"artifact not selected"} | ${backupRestoreShareFiles.length?`${backupRestoreShareFiles.length} guardian share file(s)`:backupRestoreKeyFile?.name||"key package not selected"}`}</div>
-          <div style={{display:"flex",gap:6,flexShrink:0}}>
-            <Btn small onClick={()=>void verifyBackup()} disabled={backupVerifying||backupRestoring}>{backupVerifying?"Verifying...":"Verify Backup"}</Btn>
-            <Btn small primary onClick={()=>void restoreBackup()} disabled={backupRestoring||backupVerifying}>{backupRestoring?"Restoring...":"Restore Backup"}</Btn>
-          </div>
-        </div>
-        <div className="vk-fold" tabIndex={0} style={{fontSize:10,color:C.dim,marginTop:6}}>Verify opens the backup with the key file or guardian shares and reports what it holds, without changing any data. Use it to prove your backups and keys still work.</div>
-        {backupVerifyResult&&<div role="status" style={{marginTop:8,padding:10,borderRadius:4,border:`1px solid ${C.green}`,background:C.greenDim,fontSize:11,color:C.text}}>
-          <div style={{fontWeight:700,marginBottom:4}}>Backup opens: verified</div>
-          <div>{`Scope ${backupVerifyResult.scope}${backupVerifyResult.target_tenant_id?` (${backupVerifyResult.target_tenant_id})`:""} · captured ${backupVerifyResult.backup_captured_at||"unknown"}`}</div>
-          <div>{`${backupVerifyResult.table_count} tables · ${backupVerifyResult.row_count_total} rows · opened in ${backupVerifyResult.elapsed_ms} ms`}</div>
-          <div>{backupVerifyResult.key_source==="guardian_shares"?`Key rebuilt from shares of: ${(backupVerifyResult.share_guardians||[]).join(", ")}`:"Key: key file"}</div>
-          <div data-keep="" style={{color:C.dim,marginTop:4}}>No data was changed. A restore also needs each service to re-wrap rows under retired master keys; it checks that before applying anything.</div>
-        </div>}
-      </Card>
-      <Card style={{marginTop:8,padding:10,borderRadius:4}}>
-        <div style={{display:"grid",gridTemplateColumns:"1.2fr 0.8fr 0.8fr 0.8fr 1fr",gap:8,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>{["Backup","Scope","Status","Rows","Actions"].map((h)=><div key={h} style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>{h}</div>)}</div>
-        {sortedJobs.map((job)=>{const id=String(job.id||""); const st=String(job.status||"unknown"); return <div key={id} style={{display:"grid",gridTemplateColumns:"1.2fr 0.8fr 0.8fr 0.8fr 1fr",gap:8,alignItems:"center",borderBottom:`1px solid ${C.border}`,padding:"9px 0"}}><div style={{minWidth:0}}><div style={{fontSize:12,color:C.text,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{id}</div><div style={{fontSize:10,color:C.dim}}>{String(job.created_at||"-")}</div></div><div style={{fontSize:11,color:C.text}}>{String(job.scope||"-")}</div><div style={{fontSize:11,color:C[tone(st)]}}>{st}</div><div style={{fontSize:11,color:C.text}}>{Number(job.row_count_total||0)}</div><div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}><Btn small onClick={async()=>{if(!session?.token||!id) return; setBackupDownloading(`${id}:artifact`); try{const p=await downloadGovernanceBackupArtifact(session,id); dl(p.file_name,p.content_base64,p.content_type); onToast("Backup artifact downloaded.");}catch(error){if(!sessionGuard(error)) onToast(`Backup download failed: ${errMsg(error)}`);} finally{setBackupDownloading("");}}} disabled={backupDownloading===`${id}:artifact`}>Artifact</Btn>{governanceBackupKeyRetained(job)&&<Btn small onClick={async()=>{if(!session?.token||!id) return; setBackupDownloading(`${id}:key`); try{const p=await downloadGovernanceBackupKey(session,id); dl(p.file_name,p.content_base64,p.content_type); onToast("Backup key package downloaded.");}catch(error){if(!sessionGuard(error)) onToast(`Backup download failed: ${errMsg(error)}`);} finally{setBackupDownloading("");}}} disabled={backupDownloading===`${id}:key`}>Key</Btn>}<Btn small danger onClick={async()=>{if(!session?.token||!id) return; setBackupDeleting(id); try{await deleteGovernanceBackup(session,id,session.username); onToast("Backup deleted."); await loadJobs();}catch(error){if(!sessionGuard(error)) onToast(`Backup delete failed: ${errMsg(error)}`);} finally{setBackupDeleting("");}}} disabled={backupDeleting===id}>Delete</Btn></div></div>;})}
-        {!sortedJobs.length?<div style={{fontSize:10,color:C.muted,paddingTop:10}}>No backups found.</div>:null}
-      </Card>
-    </Section>
-    </>}
     {panel==="alertrules"&&<>
     <Section title={<>{`Alert Rules`}<span style={{fontWeight:400,fontSize:11,color:C.muted,marginLeft:8}}>{alertRulesLoading?"loading...": `${alertRules.length} rule${alertRules.length!==1?"s":""}`}</span></>} actions={<div style={{display:"flex",gap:6}}><Btn small onClick={()=>void refreshAlertRules()} disabled={alertRulesLoading}>{alertRulesLoading?"Refreshing...":"Refresh"}</Btn><Btn small primary onClick={()=>openRuleModal()}>Create Rule</Btn></div>}>
       {alertRules.map((rule)=>{const id=String(rule.id||""); const cond=String(rule.condition||"threshold"); return <Card key={id} style={{padding:10,borderRadius:4,marginBottom:8}}>
@@ -1899,169 +1479,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     </Modal>
     </>}
 
-    {panel==="approvals"&&<>
-    <Section title="Approval Policies" actions={<div style={{display:"flex",gap:6}}>
-      <Btn small onClick={()=>void loadGovPolicies()} disabled={govPoliciesLoading}>{govPoliciesLoading?"Refreshing...":"Refresh"}</Btn>
-      <Btn small primary onClick={()=>openGovPolicyModal()}>+ Create Policy</Btn>
-    </div>}>
-      <div className="vk-fold" tabIndex={0} style={{fontSize:11,color:C.dim,marginBottom:14}}>
-        Define quorum-based approval policies for every administrative and key operation in the KMS. Operations matching a policy will be held until the required approvals are granted via dashboard, email, Slack, or Teams within the configured timeout window.
-      </div>
-
-      {/* Stats */}
-      <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
-        <Stat l="Total Policies" v={govPolicies.length} c="accent"/>
-        <Stat l="Active" v={govPolicies.filter((p)=>p.status==="active").length} c="green"/>
-        <Stat l="Key Ops" v={govPolicies.filter((p)=>p.scope==="keys").length} c="blue"/>
-        <Stat l="Admin Ops" v={govPolicies.filter((p)=>p.scope==="system"||p.scope==="users").length} c="purple"/>
-        <Stat l="All Scopes" v={govPolicies.filter((p)=>p.scope==="all").length} c="amber"/>
-      </div>
-
-      {/* Policy List */}
-      <div style={{display:"grid",gap:8}}>
-        {govPolicies.map((policy)=>{
-          const qMode=String(policy.quorum_mode||"threshold");
-          const qLabel=qMode==="and"?"Unanimous (AND)":qMode==="or"?"Any Single (OR)":`${policy.required_approvals}-of-${policy.total_approvers} (Threshold)`;
-          const scopeLabel=ALL_GOV_SCOPES.find((s)=>s.v===policy.scope)?.l||policy.scope;
-          const triggers=Array.isArray(policy.trigger_actions)?policy.trigger_actions:[];
-          const channels=Array.isArray(policy.notification_channels)?policy.notification_channels:[];
-          const approvers=Array.isArray(policy.approver_users)?policy.approver_users:[];
-          return(
-            <Card key={policy.id} style={{borderLeft:`3px solid ${policy.status==="active"?C.green:C.dim}`,padding:"12px 14px"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                <div>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <span style={{fontSize:13,fontWeight:700,color:C.text}}>{policy.name}</span>
-                    <B c={policy.status==="active"?"green":"orange"}>{policy.status}</B>
-                    <B c="blue">{scopeLabel}</B>
-                  </div>
-                  {policy.description&&<div style={{fontSize:10,color:C.muted,marginTop:2}}>{policy.description}</div>}
-                </div>
-                <div style={{display:"flex",gap:6}}>
-                  <button onClick={()=>openGovPolicyModal(policy)} style={{fontSize:10,padding:"3px 8px",borderRadius:3,border:`1px solid ${C.border}`,background:C.surface,color:C.text,cursor:"pointer"}}>Edit</button>
-                  <button onClick={async()=>{if(!session?.token) return; try{await updateGovernancePolicy(session,policy.id,{status:policy.status==="active"?"inactive":"active"}); onToast(policy.status==="active"?"Policy disabled.":"Policy activated."); await loadGovPolicies();}catch(e){onToast(`Toggle failed: ${errMsg(e)}`);}}} style={{fontSize:10,padding:"3px 8px",borderRadius:3,border:`1px solid ${policy.status==="active"?C.amber:C.green}44`,background:policy.status==="active"?`${C.amber}11`:`${C.green}11`,color:policy.status==="active"?C.amberFg:C.greenFg,cursor:"pointer"}}>{policy.status==="active"?"Disable":"Enable"}</button>
-                </div>
-              </div>
-
-              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:8}}>
-                <div><div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Quorum Mode</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{qLabel}</div></div>
-                <div><div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Timeout</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{policy.timeout_hours||48}h</div></div>
-                <div><div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Channels</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{channels.join(", ")||"dashboard"}</div></div>
-                <div><div style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Hold State</div><div style={{fontSize:10,color:C.greenFg,fontWeight:600,marginTop:2}}>Enforced</div></div>
-              </div>
-
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {triggers.slice(0,8).map((t:string)=><span key={t} style={{fontSize: 10,padding:"2px 6px",background:`${C.blue}18`,border:`1px solid ${C.blue}33`,borderRadius:4,color:C.blueFg}}>{t}</span>)}
-                {triggers.length>8&&<span style={{fontSize: 10,color:C.muted}}>+{triggers.length-8} more</span>}
-              </div>
-              {approvers.length>0&&<div style={{marginTop:6,fontSize: 10,color:C.dim}}>Approvers: {approvers.join(", ")}</div>}
-            </Card>
-          );
-        })}
-        {!govPolicies.length&&!govPoliciesLoading&&<div className="vk-fold" tabIndex={0} style={{textAlign:"center",padding:24,color:C.muted,fontSize:11,background:C.surface,borderRadius:4,border:`1px solid ${C.border}`}}>
-          No approval policies configured. Create a policy to enforce quorum-based approvals for key operations, user management, or system administration tasks.
-        </div>}
-      </div>
-    </Section>
-
-    {/* Create/Edit Approval Policy Modal */}
-    {govPolicyModal&&<Modal open={govPolicyModal} title={govEditPolicy?"Edit Approval Policy":"Create Approval Policy"} onClose={()=>setGovPolicyModal(false)} wide>
-      <div style={{display:"grid",gap:12}}>
-        <Row2>
-          <FG label="Policy Name"><Inp value={gpName} onChange={(e)=>setGpName(e.target.value)} placeholder="e.g. Key Deletion Requires 2-of-3"/></FG>
-          <FG label="Description"><Inp value={gpDesc} onChange={(e)=>setGpDesc(e.target.value)} placeholder="Approval required before sensitive key operations"/></FG>
-        </Row2>
-
-        <Row2>
-          <FG label="Scope">
-            <Sel value={gpScope} onChange={(e)=>setGpScope(e.target.value)}>
-              {ALL_GOV_SCOPES.map((s)=><option key={s.v} value={s.v}>{s.l}</option>)}
-            </Sel>
-          </FG>
-          <FG label="Quorum Mode">
-            <Sel value={gpQuorum} onChange={(e)=>setGpQuorum(e.target.value)}>
-              <option value="threshold">Threshold (M-of-N)</option>
-              <option value="and">Unanimous (AND) — All must approve</option>
-              <option value="or">Any Single (OR) — One approval suffices</option>
-            </Sel>
-          </FG>
-        </Row2>
-
-        {gpQuorum==="threshold"&&<Row2>
-          <FG label="Required Approvals (M)"><Inp type="number" value={String(gpRequired)} onChange={(e)=>setGpRequired(Math.max(1,Number(e.target.value||2)))}/></FG>
-          <FG label="Total Approvers in Group (N)"><Inp type="number" value={String(gpTotal)} onChange={(e)=>setGpTotal(Math.max(gpRequired,Number(e.target.value||3)))}/></FG>
-        </Row2>}
-
-        <FG label="Approver Emails (comma-separated — group members, any member can approve per quorum)">
-          <Inp value={gpApprovers} onChange={(e)=>setGpApprovers(e.target.value)} placeholder="admin@vecta.local, security-lead@corp.com, ops@corp.com"/>
-        </FG>
-
-        {/* Trigger Actions */}
-        <div>
-          <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:8}}>Trigger Actions — Operations requiring approval</div>
-          {(gpScope==="keys"||gpScope==="secrets"||gpScope==="certs"||gpScope==="all")&&<>
-            <div style={{fontSize: 10,color:C.muted,marginBottom:4,textTransform:"uppercase",letterSpacing:0.6}}>Key / Secret / Certificate Operations</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:10}}>
-              {KEY_OPS.map((op)=><Chk key={op} label={op.replace("key.","").replace("secret.","").replace("cert.","")} checked={gpTriggers.includes(op)} onChange={()=>toggleGpTrigger(op)}/>)}
-            </div>
-          </>}
-          {(gpScope==="system"||gpScope==="users"||gpScope==="all")&&<>
-            <div style={{fontSize: 10,color:C.muted,marginBottom:4,textTransform:"uppercase",letterSpacing:0.6}}>Administrative Operations</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:10}}>
-              {ADMIN_OPS.map((op)=><Chk key={op} label={op.replace("user.","").replace("tenant.","").replace("system.","").replace("governance.","").replace("hsm.","").replace("license.","")} checked={gpTriggers.includes(op)} onChange={()=>toggleGpTrigger(op)}/>)}
-            </div>
-          </>}
-          <div style={{display:"flex",gap:8}}>
-            <Btn small onClick={()=>{const ops=gpScope==="keys"||gpScope==="secrets"||gpScope==="certs"?KEY_OPS:gpScope==="system"||gpScope==="users"?ADMIN_OPS:[...KEY_OPS,...ADMIN_OPS]; setGpTriggers(ops);}}>Select All</Btn>
-            <Btn small onClick={()=>setGpTriggers([])}>Clear All</Btn>
-          </div>
-        </div>
-
-        <Row2>
-          <FG label="Timeout Window (hours) — approval must be given within this time">
-            <Inp type="number" value={String(gpTimeout)} onChange={(e)=>setGpTimeout(Math.max(1,Number(e.target.value||48)))}/>
-          </FG>
-          <FG label="Status">
-            <Sel value={gpStatus} onChange={(e)=>setGpStatus(e.target.value)}>
-              <option value="active">Active — Enforcing</option>
-              <option value="inactive">Inactive — Paused</option>
-            </Sel>
-          </FG>
-        </Row2>
-
-        {/* Notification Channels */}
-        <div>
-          <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:8}}>Notification Channels — How approvers receive approval requests</div>
-          <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-            <Chk label="Dashboard (on-screen)" checked={gpChannels.includes("dashboard")} onChange={()=>toggleGpChannel("dashboard")}/>
-            <Chk label="Email (SMTP)" checked={gpChannels.includes("email")} onChange={()=>toggleGpChannel("email")}/>
-            <Chk label="Slack (Webhook)" checked={gpChannels.includes("slack")} onChange={()=>toggleGpChannel("slack")}/>
-            <Chk label="Teams (Webhook)" checked={gpChannels.includes("teams")} onChange={()=>toggleGpChannel("teams")}/>
-          </div>
-        </div>
-
-        {/* Hold State Enforcement */}
-        <div style={{padding:"10px 14px",background:`${C.green}12`,border:`1px solid ${C.green}33`,borderRadius:4}}>
-          <Chk label="Enforce Hold State — Operations are held (queued) until approval is granted or timeout expires. Denied or timed-out operations are rejected." checked={gpEnforceHold} onChange={()=>setGpEnforceHold((v)=>!v)}/>
-          <div className="vk-fold" tabIndex={0} style={{fontSize: 10,color:C.dim,marginTop:4,marginLeft:24}}>
-            When enabled: the KMS suspends the operation, notifies all approvers via configured channels, and waits for quorum. The operation proceeds only after sufficient approvals. If the timeout expires without quorum, the operation is automatically denied.
-          </div>
-        </div>
-
-        {/* Quorum explanation */}
-        <div style={{padding:"8px 12px",borderRadius:4,background:`${C.blue}12`,border:`1px solid ${C.blue}33`,fontSize:10,color:C.dim}}>
-          {gpQuorum==="threshold"&&`Threshold (M-of-N): ${gpRequired} out of ${gpTotal} designated approvers must approve. Any group member can cast their vote. ${gpTotal-gpRequired+1} denials will reject the operation.`}
-          {gpQuorum==="and"&&"Unanimous (AND): ALL designated approvers must vote to approve. A single denial from any approver immediately rejects the operation."}
-          {gpQuorum==="or"&&"Any Single (OR): ONE approval from any designated approver is sufficient to proceed. All approvers must deny to reject."}
-        </div>
-
-        <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8}}>
-          <Btn small onClick={()=>setGovPolicyModal(false)}>Cancel</Btn>
-          <Btn small primary onClick={()=>void saveGovPolicy()} disabled={gpSaving}>{gpSaving?"Saving...":(govEditPolicy?"Update Policy":"Create Policy")}</Btn>
-        </div>
-      </div>
-    </Modal>}
-    </>}
 
     {promptDialog.ui}
   </div>;

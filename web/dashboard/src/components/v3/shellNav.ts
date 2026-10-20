@@ -80,8 +80,18 @@ export const RETIRED_TABS: Record<string, string> = { health: "admin/health", op
 // Each move adds a history entry, so Back returns to the previous view, and
 // a pasted or edited address opens its view (13.21.0-beta); the address was
 // only read at load and overwritten in place.
+// Sub-options that moved to another module (13.26.0-beta: backups and
+// approval policies each have one home).
+export const RETIRED_SUBS: Record<string, string> = { "admin/backup": "backup/encrypted", "admin/approvals": "approvals/policies" };
+
 export function parseNavHash(hash: string): { tab: string; sub: string } {
   const [rawTab = "", rawSub = ""] = decodeURIComponent(String(hash || "").replace(/^#/, "")).split("/");
   const [tab = "", retiredSub = ""] = (RETIRED_TABS[rawTab] ?? rawTab).split("/");
-  return { tab, sub: rawSub || retiredSub };
+  const sub = rawSub || retiredSub;
+  const moved = RETIRED_SUBS[`${tab}/${sub}`];
+  if (moved) {
+    const [movedTab = "", movedSub = ""] = moved.split("/");
+    return { tab: movedTab, sub: movedSub };
+  }
+  return { tab, sub };
 }

@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-20T07:32:23Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-20T09:17:20Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -8,13 +8,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 
 - Dashboard navigation items: `25`
 - Tab/component mappings: `32`
-- Sub-pane groups: `10`
+- Sub-pane groups: `12`
 - Backend HTTP routes discovered: `911` across `28` services
 - Backend routes on the `pkg/route` kernel: `524` (permission and audit action in `backend-routes.csv`)
 - Frontend API call sites discovered: `547`
 - Frontend call sites with exact backend route match: `520`
 - Frontend call sites needing review or dynamic/runtime confirmation: `27`
-- Clickable controls with static `onClick` handlers: `775`
+- Clickable controls with static `onClick` handlers: `767`
 - Backend request flows with handler/service/package summaries: `911`
 
 ## How To Use This For Launch
@@ -114,7 +114,7 @@ flowchart LR
   tab_cluster --> svc_cluster_manager
   tab_backup["Backup & Restore"]
   UI --> tab_backup
-  tab_backup --> svc_backup
+  tab_backup --> svc_auth_edge
   tab_byok["byok"]
   UI --> tab_byok
   tab_byok --> svc_cloud
@@ -138,7 +138,6 @@ flowchart LR
   svc_auth["auth (90 routes)"]
   svc_auth_edge["auth-edge"]
   svc_autokey["autokey (15 routes)"]
-  svc_backup["backup (11 routes)"]
   svc_certs["certs (70 routes)"]
   svc_cloud["cloud (28 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
@@ -189,7 +188,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Respond | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | compliance, governance | 24 |
 | Respond | Playbooks | playbooks | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | compliance, keycore | 6 |
 | Platform | Cluster | cluster | web/dashboard/src/components/v3/tabs/ClusterTab.tsx | auth-edge, cluster-manager | 15 |
-| Platform | Backup & Restore | backup | web/dashboard/src/components/v3/tabs/BackupTab.tsx | backup | 10 |
+| Platform | Backup & Restore | backup | web/dashboard/src/modules/backup/BackupModule.tsx | auth-edge | 4 |
 | Platform | Administration | admin | web/dashboard/src/components/v3/tabs/AdminTab.tsx | - | 0 |
 | UNLISTED | byok | byok | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | cloud | 8 |
 | UNLISTED | crypto | crypto | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | keycore | 51 |

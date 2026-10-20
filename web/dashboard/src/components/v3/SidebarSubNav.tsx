@@ -18,6 +18,7 @@ import {
   Radio,
   RefreshCw,
   Server,
+  Settings,
   Shield,
   Stamp,
   ShieldCheck,
@@ -87,6 +88,17 @@ export const SUB_PANES: Record<string, SubPane[]> = {
     { id: "connections", label: "Credentials", hint: "The one store for every external credential", icon: Link },
     { id: "streams", label: "Event streaming", hint: "Audit events to a SIEM or webhook", icon: Radio }
   ],
+  // Approval policies have one home, Approvals (owner, 2026-10-20).
+  approvals: [
+    { id: "requests", label: "Requests", hint: "Approval requests and votes", icon: Stamp },
+    { id: "policies", label: "Policies", hint: "Quorum policies that hold an operation for approval", icon: ListChecks },
+    { id: "settings", label: "Settings", hint: "Approval delivery and expiry", icon: Settings }
+  ],
+  // Backups have one home, Backup & Restore (owner, 2026-10-20).
+  backup: [
+    { id: "encrypted", label: "Encrypted Backups", hint: "Create, verify, restore and download encrypted backups", icon: DatabaseBackup, platformOnly: true },
+    { id: "schedules", label: "Schedules", hint: "Backup scheduler (preview)", icon: RefreshCw }
+  ],
   home: [
     { id: "overview", label: "Overview", hint: "Posture score, KPIs, top recommended actions and control coverage", icon: Activity },
     { id: "recommendations", label: "Recommendations", hint: "Every open recommendation, filterable", icon: ListChecks }
@@ -103,9 +115,7 @@ export const SUB_PANES: Record<string, SubPane[]> = {
     { id: "keyaccess", label: "Key Access Hardening", hint: "Default grants, replay window, interface binding", icon: KeyRound, platformOnly: true },
     { id: "cli", label: "CLI / HSM", hint: "CLI/SSH access and HSM connector", icon: Cpu, platformOnly: true },
     { id: "governance", label: "Governance", hint: "Approval notifications and delivery", icon: Stamp, platformOnly: true },
-    { id: "backup", label: "Backup", hint: "Encrypted backups and restore", icon: DatabaseBackup, platformOnly: true },
     { id: "alertrules", label: "Alert Rules", hint: "Rules that raise alerts from audit events", icon: AlertTriangle, platformOnly: true },
-    { id: "approvals", label: "Approval Policies", hint: "Quorum policies for administrative and key operations", icon: ListChecks, platformOnly: true },
     { id: "tenant", label: "Tenant Administration", hint: "Tenants, their policies, backups and lifecycle", icon: Building2, platformOnly: true },
     { id: "users", label: "User Management", hint: "User and group administration with role assignments", icon: Users }
   ]
