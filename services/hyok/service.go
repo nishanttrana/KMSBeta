@@ -296,7 +296,7 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 		RequesterID:       firstNonEmpty(req.RequesterID, identity.UserID, identity.Subject),
 		RequesterEmail:    strings.TrimSpace(req.RequesterEmail),
 		Status:            "started",
-		RequestJSON:       mustJSON(req),
+		RequestJSON:       logRequestJSON(req),
 		ResponseJSON:      "{}",
 		GovernanceReq:     cfg.GovernanceRequired,
 		ApprovalRequestID: strings.TrimSpace(req.ApprovalRequestID),
@@ -397,7 +397,7 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 			Operation:         operation,
 			ApprovalRequestID: keyAccessResult.ApprovalRequestID,
 		}
-		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "pending_approval", mustJSON(resp), "", keyAccessResult.ApprovalRequestID, policyDecision)
+		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "pending_approval", logResponseJSON(resp), "", keyAccessResult.ApprovalRequestID, policyDecision)
 		_ = s.publishAudit(ctx, protocolEventSubject(protocol, operation), tenantID, map[string]interface{}{
 			"request_id":          logEntry.ID,
 			"protocol":            protocol,
@@ -436,7 +436,7 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 			Operation:         operation,
 			ApprovalRequestID: approvalID,
 		}
-		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "pending_approval", mustJSON(resp), "", approvalID, policyDecision)
+		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "pending_approval", logResponseJSON(resp), "", approvalID, policyDecision)
 		_ = s.publishAudit(ctx, protocolEventSubject(protocol, operation), tenantID, map[string]interface{}{
 			"request_id":          logEntry.ID,
 			"protocol":            protocol,
@@ -463,7 +463,7 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 		PlaintextB64:  strings.TrimSpace(firstString(raw["plaintext"])),
 		IVB64:         strings.TrimSpace(firstString(raw["iv"])),
 	}
-	_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "success", mustJSON(resp), "", approvedBy, policyDecision)
+	_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "success", logResponseJSON(resp), "", approvedBy, policyDecision)
 	_ = s.publishAudit(ctx, protocolEventSubject(protocol, operation), tenantID, map[string]interface{}{
 		"request_id":          logEntry.ID,
 		"protocol":            protocol,

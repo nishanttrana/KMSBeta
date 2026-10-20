@@ -4,6 +4,20 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.29.0-beta] — 2026-10-20
+
+### Security
+- **The HYOK request log no longer stores keys.** Every HYOK call was
+  logged with its request and response whole, so a data key a cloud sent
+  to be wrapped, and the data key unwrapped for it, were kept in clear in
+  `hyok_requests`, its backups, and the console's request log (all
+  protocols). The log now holds sizes (`plaintext_bytes`,
+  `ciphertext_bytes`, `iv_bytes`); migration
+  `002_request_log_without_key_bytes.sql` strips the fields from older
+  rows. Where HYOK was used, rotate the HYOK keys so clouds re-wrap
+  (docs/SECURITY/SECRET_HANDLING.md, Incidents).
+  `TestRequestLogHoldsNoKeyBytes`.
+
 ## [13.28.0-beta] — 2026-10-20
 
 ### Fixed

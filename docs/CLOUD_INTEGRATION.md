@@ -676,7 +676,11 @@ There is no separate HYOK policy object. A protocol endpoint
 (`PUT /svc/hyok/hyok/v1/endpoints/{protocol}`) links a `policy_id` evaluated
 by the policy service, can require governance approval
 (`governance_required`), and for DKE carries the identity rules above. Every
-request is logged (`GET /svc/hyok/hyok/v1/requests`) and audited.
+request is logged (`GET /svc/hyok/hyok/v1/requests`) and audited. The log
+keeps the sizes of what was sent and returned (`plaintext_bytes`,
+`ciphertext_bytes`, `iv_bytes`), never the bytes: before 13.29.0-beta it
+stored each request and response whole, keys included, and migration
+`002_request_log_without_key_bytes.sql` removes them from older rows.
 
 ## 3. EKM (External Key Manager)
 

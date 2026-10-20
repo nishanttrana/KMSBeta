@@ -60,3 +60,13 @@ development secrets as much as production ones.
   never put it on a command line, and deleted the file and the token after
   the test. Changing the password was recommended to the owner. Cause: the
   question allowed a free-text answer. See `learning.md` (2026-10-01).
+- **Found 2026-10-20, HYOK request log (every release before
+  13.29.0-beta):** the HYOK service stored each request and response
+  whole in `hyok_requests`, so keys a cloud sent to be wrapped and keys
+  unwrapped for it (Google EKM, Salesforce, ServiceNow, Alibaba, DKE,
+  generic) were in Postgres in clear, in backups of it, and shown in the
+  console's request log. The owner's local stack had no rows. The log now
+  keeps sizes only and a migration strips older rows; a deployment that
+  used HYOK should treat data keys unwrapped through it as exposed to
+  anyone who could read that table or its backups, and rotate the HYOK key
+  so the cloud re-wraps its data keys. `TestRequestLogHoldsNoKeyBytes`.

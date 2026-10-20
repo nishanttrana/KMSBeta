@@ -33450,7 +33450,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-20T11:39:47Z",
+  "generated_at": "2026-10-20T11:47:48Z",
   "navigation": [
     {
       "group": "Home",
@@ -67776,16 +67776,16 @@
         "endpointForProtocol",
         "checkAuthMode",
         "newID",
-        "mustJSON",
+        "logRequestJSON",
         "CreateRequestLog",
         "redeemApproval",
         "CompleteRequestLog",
         "evaluatePolicy",
         "Evaluate",
+        "logResponseJSON",
         "protocolEventSubject",
         "CreateKeyApproval",
-        "approvalPayloadHash",
-        "keycoreDispatch"
+        "approvalPayloadHash"
       ],
       "service_internal_package_calls": [
         "pkg/crypto.ParseRSAPublicKeyAny",
@@ -67835,12 +67835,13 @@
             "endpointForProtocol",
             "checkAuthMode",
             "newID",
-            "mustJSON",
+            "logRequestJSON",
             "CreateRequestLog",
             "redeemApproval",
             "CompleteRequestLog",
             "evaluatePolicy",
             "Evaluate",
+            "logResponseJSON",
             "protocolEventSubject",
             "CreateKeyApproval",
             "approvalPayloadHash",
@@ -67852,6 +67853,7 @@
             "ApprovalRedeemed",
             "GetDKEPublicKey",
             "GetKey",
+            "mustJSON",
             "GetMicrosoftDKEKey",
             "parseDKEEndpointMetadata",
             "validateDKEIdentity",
@@ -123586,7 +123588,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-20T11:39:47Z",
+    "generatedAt": "2026-10-20T11:47:48Z",
     "methods": [
       "DELETE",
       "GET",

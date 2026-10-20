@@ -5,6 +5,15 @@ Newest entries on top.
 
 ## 2026-10-20
 
+### A request log is a copy of the request (13.29.0-beta)
+- HYOK logged `mustJSON(req)` and `mustJSON(resp)` for every call. For a
+  key-wrapping proxy the request *is* a key and the unwrap response *is*
+  the key, so the log was a second, unsealed key store, shown in the
+  console. Found while reading the path for Azure EKM, not by a check.
+  **A log or history of a crypto call names its sizes and outcome, never
+  the bytes in or out;** `TestRequestLogHoldsNoKeyBytes` reads the stored
+  rows after a wrap and unwrap.
+
 ### A second copy of the deployment showed a module that wasn't there (13.28.0-beta)
 - The Cluster page answered 503 on every load. cluster-manager wasn't
   running because `infra/deployment/deployment.yaml` says `clustering:

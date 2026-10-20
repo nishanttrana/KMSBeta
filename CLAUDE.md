@@ -723,6 +723,9 @@ Security rules are explained in
   outbound address is checked where it is dialled (`pkg/ssrfguard`), not by
   hostname. A URL that carries a credential is a secret, and errors name
   only its host.
+- A log, history or request record of a crypto call keeps sizes and the
+  outcome, never the bytes sent or returned: the HYOK request log was an
+  unsealed copy of every key it wrapped (13.29.0-beta).
 - A secret in a new table is sealed in the store, never a `TEXT` column; a
   backup is a copy too. A secret that ever shipped is banned by value
   (`no-retired-public-secret`); secrets seeded into volumes are secrets.

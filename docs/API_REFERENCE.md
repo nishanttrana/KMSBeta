@@ -4090,7 +4090,9 @@ returns an `EKM-PUBLIC-` value derived from the tenant and key ID
 keycore. `GET /ekm/agents/{id}/status` carries
 `assigned_key_algorithm`, the algorithm of the agent's assigned TDE key.
 Endpoint administration (`/hyok/v1/endpoints*`, `/hyok/v1/requests`,
-`/hyok/v1/health`) needs a verified token; changes need a tenant
+`/hyok/v1/health`) needs a verified token. A request log entry's
+`request_json` and `response_json` hold sizes (`plaintext_bytes`,
+`ciphertext_bytes`, `iv_bytes`), never key bytes (13.29.0-beta); changes need a tenant
 administrator (`audit.hyok.admin_refused`).
 
 **Signing.** `POST /signing/blob|git` and `/signing/verify` enforce the body
