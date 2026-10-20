@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-20T19:42:20Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-20T20:33:26Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -174,9 +174,9 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2609 | certs | Btn | setModal(null)}>Cancel |  |
 | web/dashboard/src/components/v3/tabs/CertsTab.tsx | 2610 | certs | Btn | { const msgType=cmpMsgType as "ir"\|"cr"\|"kur"\|"rr",cn=String((document.getEle... |  |
 | web/dashboard/src/components/v3/tabs/ClientSDKTab.tsx | 53 | pkcs11 | Btn | void download()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | 30 | cloudctl | Btn | selectSubtab("byok")}>BYOK |  |
-| web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | 31 | cloudctl | Btn | selectSubtab("hyok")}>HYOK |  |
-| web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | 32 | cloudctl | Btn | selectSubtab("google-cse")}>Google CSE |  |
+| web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | 31 | cloudctl | Btn | selectSubtab("byok")}>BYOK |  |
+| web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | 32 | cloudctl | Btn | selectSubtab("hyok")}>HYOK |  |
+| web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | 33 | cloudctl | Btn | selectSubtab("google-cse")}>Google CSE |  |
 | web/dashboard/src/components/v3/tabs/ClusterJoinPanel.tsx | 53 | - | Btn | setMode("issue")}>On this primary: add a node |  |
 | web/dashboard/src/components/v3/tabs/ClusterJoinPanel.tsx | 54 | - | Btn | setMode("join")}>On a new node: join a cluster |  |
 | web/dashboard/src/components/v3/tabs/ClusterJoinPanel.tsx | 65 | - | Btn | void issue()}> |  |
@@ -305,18 +305,23 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/HYOKAzureConfig.tsx | 140 | - | Btn | void save()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/HYOKLiveTestPane.tsx | 166 | - | Btn | void executeTest()} disabled= style={ }> {executing ? "Executing..." : `Execu... |  |
 | web/dashboard/src/components/v3/tabs/HYOKLiveTestPane.tsx | 173 | - | button | copyToClipboard(testOutput)} style={ } title="Copy output"> |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 290 | hyok | Btn | void refresh(false)} disabled= > Refresh |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 291 | hyok | Btn | }> Endpoint URLs |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 292 | hyok | Btn | }> Setup Guide |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 331 | hyok | Btn | openConfig(protocol)}>Configure |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 332 | hyok | Btn | }>URLs |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 333 | hyok | Btn | }>Guide |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 334 | hyok | Btn | void runDelete(protocol)}>Reset |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 475 | hyok | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 476 | hyok | Btn | void submitConfig()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 500 | hyok | button | copyToClipboard(url.path)} style={ } title="Copy URL path"> |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 507 | hyok | Btn | setModal(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 549 | hyok | Btn | setModal(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 291 | hyok | Btn | void refresh(false)} disabled= > Refresh |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 292 | hyok | Btn | }> Endpoint URLs |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 293 | hyok | Btn | }> Setup Guide |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 332 | hyok | Btn | openConfig(protocol)}>Configure |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 333 | hyok | Btn | }>URLs |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 334 | hyok | Btn | }>Guide |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 335 | hyok | Btn | void runDelete(protocol)}>Reset |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 476 | hyok | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 477 | hyok | Btn | void submitConfig()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 503 | hyok | button | copyToClipboard(url.path)} style={ } title="Copy URL path"> |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 510 | hyok | Btn | setModal(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 552 | hyok | Btn | setModal(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/HYOKXKSConfig.tsx | 116 | - | button | setRows((cur) => cur.filter((_, j) => j !== i))} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/HYOKXKSConfig.tsx | 119 | - | Btn | setRows((cur) => [...cur, ])}> Add key |  |
+| web/dashboard/src/components/v3/tabs/HYOKXKSConfig.tsx | 134 | - | button | { try catch }} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/HYOKXKSConfig.tsx | 139 | - | Btn | Cancel | onClose |
+| web/dashboard/src/components/v3/tabs/HYOKXKSConfig.tsx | 140 | - | Btn | void save()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/KMIPTab.tsx | 558 | - | Btn | setCapsExpanded(p=>!p)}> |  |
 | web/dashboard/src/components/v3/tabs/KMIPTab.tsx | 636 | - | Btn | downloadText(`$ .crt.pem`,issuedBundle.cert)}>Download Cert |  |
 | web/dashboard/src/components/v3/tabs/KMIPTab.tsx | 637 | - | Btn | downloadText(`$ .key.pem`,issuedBundle.key)}>Download Key |  |

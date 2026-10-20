@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"vecta-kms/pkg/clientip"
 
 	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/tenantcheck"
 )
 
@@ -19,12 +21,22 @@ type Handler struct {
 	svc       *Service
 	mux       *http.ServeMux
 	jwtParser JWTParser
+	version   string
 }
 
 func NewHandler(svc *Service, jwtParser JWTParser) *Handler {
 	h := &Handler{svc: svc, jwtParser: jwtParser}
 	h.mux = h.routes()
 	return h
+}
+
+// MountKernel registers the routes on the route kernel (AWS XKS, the
+// credential-usage lookup) with their audit emitter.
+func (h *Handler) MountKernel(audit route.Emitter, logger *log.Logger, version string) {
+	h.version = version
+	rt := route.New("hyok", audit, logger)
+	h.kernelRoutes(rt)
+	rt.MountOnWith(h.mux, h.kernelAuth)
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -221,11 +233,17 @@ func (h *Handler) handleConfigureEndpoint(w http.ResponseWriter, r *http.Request
 	if !h.adminCaller(w, r, reqID, tenantID, true) {
 		return
 	}
+	// The verified caller rides in the context: attaching a credential
+	// (AWS XKS) needs its compliance.connection.use.
+	ctx := r.Context()
+	if id, err := h.authenticate(r, tenantID); err == nil && id.Claims != nil {
+		ctx = pkgauth.ContextWithClaims(ctx, id.Claims)
+	}
 	enabled := true
 	if body.Enabled != nil {
 		enabled = *body.Enabled
 	}
-	out, err := h.svc.ConfigureEndpoint(r.Context(), EndpointConfig{
+	out, err := h.svc.ConfigureEndpoint(ctx, EndpointConfig{
 		TenantID:           tenantID,
 		Protocol:           r.PathValue("protocol"),
 		Enabled:            enabled,
@@ -402,6 +420,7 @@ func (h *Handler) authenticate(r *http.Request, tenantHint string) (AuthIdentity
 		TokenJTI:  strings.TrimSpace(claims.ID),
 		RemoteIP:  clientip.From(r),
 		JWTIssuer: strings.TrimSpace(claims.Issuer),
+		Claims:    claims,
 	}
 	for _, aud := range claims.Audience {
 		if aud = strings.TrimSpace(aud); aud != "" {
@@ -446,18 +465,16 @@ func (h *Handler) adminCaller(w http.ResponseWriter, r *http.Request, reqID, ten
 		status, code := authRefusal(err)
 		return refuse(status, code, err.Error())
 	}
-	if write && !hyokAdminRole(id.Role) {
-		return refuse(http.StatusForbidden, "forbidden", "changing HYOK endpoints requires a tenant administrator")
+	// A permission the token holds decides, never a role name (13.32.0-beta:
+	// "admin", "tenant-admin" and "super-admin" were matched by name).
+	perm := "hyok.read"
+	if write {
+		perm = "hyok.write"
+	}
+	if !route.Allowed(id.Claims, perm) {
+		return refuse(http.StatusForbidden, "forbidden", "missing permission "+perm)
 	}
 	return true
-}
-
-func hyokAdminRole(role string) bool {
-	switch strings.ToLower(strings.TrimSpace(role)) {
-	case "admin", "tenant-admin", "super-admin":
-		return true
-	}
-	return false
 }
 
 func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {

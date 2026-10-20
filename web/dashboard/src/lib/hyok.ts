@@ -1,9 +1,9 @@
 import type { AuthSession } from "./auth";
 import { serviceRequest } from "./serviceApi";
 
-export type HYOKProtocol = "dke" | "salesforce" | "google" | "generic" | "servicenow" | "alibaba" | "azure";
+export type HYOKProtocol = "dke" | "salesforce" | "google" | "generic" | "servicenow" | "alibaba" | "azure" | "aws_xks";
 
-const PROTOCOLS: HYOKProtocol[] = ["dke", "salesforce", "google", "generic", "servicenow", "alibaba", "azure"];
+const PROTOCOLS: HYOKProtocol[] = ["dke", "salesforce", "google", "generic", "servicenow", "alibaba", "azure", "aws_xks"];
 
 export type HYOKEndpoint = {
   tenant_id: string;
@@ -126,7 +126,7 @@ export async function configureHYOKEndpoint(
   input: {
     enabled: boolean;
     // mtls only for azure, whose listener verifies the client certificate.
-    auth_mode: "jwt" | "mtls";
+    auth_mode: "jwt" | "mtls" | "sigv4";
     policy_id?: string;
     governance_required?: boolean;
     metadata_json?: string;

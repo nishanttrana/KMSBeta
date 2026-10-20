@@ -8,7 +8,8 @@ export const HYOK_PROTOCOL_LABELS: Record<string, string> = {
   generic: "Generic HYOK",
   servicenow: "ServiceNow HYOK",
   alibaba: "Alibaba Cloud EKM",
-  azure: "Azure EKM"
+  azure: "Azure EKM",
+  aws_xks: "AWS XKS"
 };
 
 export const HYOK_PROTOCOL_DETAILS: Record<string, string> = {
@@ -18,7 +19,8 @@ export const HYOK_PROTOCOL_DETAILS: Record<string, string> = {
   generic: "Generic encrypt / decrypt / wrap / unwrap proxy",
   servicenow: "ServiceNow Shield Platform Encryption with Cache-Only Key Service (HYOK)",
   alibaba: "Alibaba Cloud External Key Manager for BYOK/EKM integration",
-  azure: "Azure Managed HSM external key management (EKM Proxy API)"
+  azure: "Azure Managed HSM external key management (EKM Proxy API)",
+  aws_xks: "AWS KMS external key store (XKS proxy API)"
 };
 
 export const HYOK_PROTOCOL_KEY_HINTS: Record<string, string> = {
@@ -28,7 +30,8 @@ export const HYOK_PROTOCOL_KEY_HINTS: Record<string, string> = {
   generic: "Any symmetric or asymmetric key supported by your Vecta KMS instance.",
   servicenow: "Supports AES-256 keys for wrap/unwrap operations using AES-KWP (RFC 5649).",
   alibaba: "Supports AES-256 keys for encrypt/decrypt operations using AES-256-GCM.",
-  azure: "AES-256 (A256KW, A256KWP) or RSA 2048/3072/4096 (RSA-OAEP-256, RSA-OAEP), each mapped to the key name Managed HSM uses."
+  azure: "AES-256 (A256KW, A256KWP) or RSA 2048/3072/4096 (RSA-OAEP-256, RSA-OAEP), each mapped to the key name Managed HSM uses.",
+  aws_xks: "AES-256 keys (AES-GCM with AAD); AWS signs every call with an XKS credential from Playbooks → Credentials."
 };
 
 export const HYOK_OPS_BY_PROTOCOL: Record<string, string[]> = {
@@ -38,7 +41,8 @@ export const HYOK_OPS_BY_PROTOCOL: Record<string, string[]> = {
   generic: ["encrypt", "decrypt", "wrap", "unwrap"],
   servicenow: ["wrap", "unwrap"],
   alibaba: ["encrypt", "decrypt"],
-  azure: ["wrapkey", "unwrapkey"]
+  azure: ["wrapkey", "unwrapkey"],
+  aws_xks: ["encrypt", "decrypt"]
 };
 
 export const HYOK_PROTOCOL_URLS: Record<string, { path: string; methods: string; description: string }[]> = {
@@ -76,6 +80,13 @@ export const HYOK_PROTOCOL_URLS: Record<string, { path: string; methods: string;
     { path: ":8443/{pathPrefix}/{keyName}/metadata", methods: "POST", description: "Key type, size and RSA public part" },
     { path: ":8443/{pathPrefix}/{keyName}/wrapkey", methods: "POST", description: "Wrap a data key" },
     { path: ":8443/{pathPrefix}/{keyName}/unwrapkey", methods: "POST", description: "Unwrap a data key" },
+  ],
+  // Through the HTTPS edge; XksProxyUriPath is /svc/hyok/xks/{pathPrefix}.
+  aws_xks: [
+    { path: "/svc/hyok/xks/{pathPrefix}/kms/xks/v1/health", methods: "POST", description: "Health (AWS checks it about once a minute)" },
+    { path: "/svc/hyok/xks/{pathPrefix}/kms/xks/v1/keys/{externalKeyId}/metadata", methods: "POST", description: "Key spec, usage and status" },
+    { path: "/svc/hyok/xks/{pathPrefix}/kms/xks/v1/keys/{externalKeyId}/encrypt", methods: "POST", description: "AES-GCM encrypt" },
+    { path: "/svc/hyok/xks/{pathPrefix}/kms/xks/v1/keys/{externalKeyId}/decrypt", methods: "POST", description: "AES-GCM decrypt" },
   ],
 };
 
@@ -133,7 +144,14 @@ export const HYOK_SETUP_GUIDES: Record<string, string[]> = {
     "3. In Managed HSM, create the EKM connection to https://<kms host>:8443/<path prefix>, trusting the CA of the KMS edge certificate (PKI tab)",
     "4. Add each key reference with its key name",
   ],
+  aws_xks: [
+    "1. Add an AWS XKS credential in Playbooks → Credentials (access key ID and secret)",
+    "2. Create an AES-256 key in Vecta KMS",
+    "3. Configure AWS XKS: path prefix, credential, external key IDs",
+    "4. In AWS KMS, create an external key store with public endpoint https://<kms host>, the XksProxyUriPath shown, and the same credential",
+    "5. Create KMS keys in the store, each with its external key ID",
+  ],
 };
 
 // The protocol cards, in order.
-export const HYOK_PROTOCOLS = ["dke", "salesforce", "google", "generic", "servicenow", "alibaba", "azure"];
+export const HYOK_PROTOCOLS = ["dke", "salesforce", "google", "generic", "servicenow", "alibaba", "azure", "aws_xks"];

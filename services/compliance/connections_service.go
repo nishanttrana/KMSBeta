@@ -31,6 +31,7 @@ var connectionUsers = map[string]string{
 	"kms-discovery":  "scan_source",
 	"kms-cloud":      "cloud_account",
 	"kms-hsm":        "hsm_session",
+	"kms-hyok-proxy": "xks_proxy",
 }
 
 const (
@@ -200,7 +201,7 @@ type ConnectionUsage interface {
 // service identity.
 type platformUsage struct {
 	auditURL, governanceURL, discoveryURL string
-	cloudURL, keycoreURL, hsmURL          string
+	cloudURL, keycoreURL, hsmURL, hyokURL string
 	http                                  *http.Client
 }
 

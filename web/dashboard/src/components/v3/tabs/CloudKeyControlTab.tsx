@@ -12,7 +12,8 @@ export const CloudKeyControlTab=({
   keyCatalog,
   onToast,
   subView,
-  onSubViewChange
+  onSubViewChange,
+  onNavigate
 })=>{
   const [cloudSubtab,setCloudSubtab]=useState("byok");
   const currentSubtab=String(subView||cloudSubtab||"byok");
@@ -31,7 +32,7 @@ export const CloudKeyControlTab=({
       <Btn small primary={currentSubtab==="hyok"} onClick={()=>selectSubtab("hyok")}>HYOK</Btn>
       <Btn small primary={currentSubtab==="google-cse"} onClick={()=>selectSubtab("google-cse")}>Google CSE</Btn>
     </div>}
-    {currentSubtab==="hyok" && <HYOKTab session={session} keyCatalog={keyCatalog} onToast={onToast}/>}
+    {currentSubtab==="hyok" && <HYOKTab session={session} keyCatalog={keyCatalog} onToast={onToast} onNavigate={onNavigate}/>}
     {currentSubtab==="google-cse" && (
       <Suspense fallback={SubFallback}>
         <EKMTab session={session} keyCatalog={keyCatalog} onToast={onToast} subView={currentSubtab}/>

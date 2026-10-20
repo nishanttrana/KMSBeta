@@ -25,6 +25,10 @@ type KeyCoreClient interface {
 	// PublicKey is GET /keys/{id}/public-key: public_key_pem, version and
 	// algorithm of the current version. GET /keys/{id} carries no public key.
 	PublicKey(ctx context.Context, tenantID string, keyID string) (map[string]interface{}, error)
+	// EncryptAAD and DecryptAAD are AES-GCM with associated data and, for
+	// decrypt, the key version that encrypted (AWS XKS).
+	EncryptAAD(ctx context.Context, tenantID string, keyID string, plaintextB64 string, aadB64 string, referenceID string) (map[string]interface{}, error)
+	DecryptAAD(ctx context.Context, tenantID string, keyID string, ciphertextB64 string, ivB64 string, aadB64 string, version int) (map[string]interface{}, error)
 }
 
 // keycoreError is keycore's answer to a refused call.
@@ -116,6 +120,18 @@ func (c *HTTPKeyCoreClient) UnwrapAs(ctx context.Context, tenantID string, keyID
 		"tenant_id":      strings.TrimSpace(tenantID),
 		"ciphertext":     strings.TrimSpace(ciphertextB64),
 		"wrap_algorithm": strings.TrimSpace(alg),
+	})
+}
+
+func (c *HTTPKeyCoreClient) EncryptAAD(ctx context.Context, tenantID string, keyID string, plaintextB64 string, aadB64 string, referenceID string) (map[string]interface{}, error) {
+	return c.doJSON(ctx, http.MethodPost, "/keys/"+url.PathEscape(strings.TrimSpace(keyID))+"/encrypt?tenant_id="+url.QueryEscape(strings.TrimSpace(tenantID)), map[string]interface{}{
+		"tenant_id": strings.TrimSpace(tenantID), "plaintext": plaintextB64, "aad": aadB64, "iv_mode": "internal", "reference_id": strings.TrimSpace(referenceID),
+	})
+}
+
+func (c *HTTPKeyCoreClient) DecryptAAD(ctx context.Context, tenantID string, keyID string, ciphertextB64 string, ivB64 string, aadB64 string, version int) (map[string]interface{}, error) {
+	return c.doJSON(ctx, http.MethodPost, "/keys/"+url.PathEscape(strings.TrimSpace(keyID))+"/decrypt?tenant_id="+url.QueryEscape(strings.TrimSpace(tenantID)), map[string]interface{}{
+		"tenant_id": strings.TrimSpace(tenantID), "ciphertext": ciphertextB64, "iv": ivB64, "aad": aadB64, "version": version,
 	})
 }
 

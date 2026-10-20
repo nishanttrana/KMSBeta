@@ -37,7 +37,7 @@ keep one.
 | notify | `slack`, `teams`, `webhook` (optional `signing_secret`, HMAC-SHA256 from `pkg/crypto`) | playbook actions, event streams; Slack/Teams also approval notices |
 | ticketing | `jira`, `servicenow` | playbook actions |
 | siem | `splunk_hec`, `datadog`, `elastic`, `sentinel`, `syslog` (`pkg/siem`) | `send_siem_alert`, event streams |
-| cloud | `aws` (`access_key_id`, `secret_access_key`; optional `role_arn`, `external_id`, `region`, `endpoint_url`), `azure` (Entra app registration: `tenant_id`, `client_id`, `client_secret`), `gcp` (`service_account_json`), `oci`, `alibaba`, `salesforce`; `servicenow` with `username` and `password` (8.0.0-beta) | Cloud BYOK accounts; `azure` also Azure EKM vaults |
+| cloud | `aws` (`access_key_id`, `secret_access_key`; optional `role_arn`, `external_id`, `region`, `endpoint_url`), `azure` (Entra app registration: `tenant_id`, `client_id`, `client_secret`), `gcp` (`service_account_json`), `oci`, `alibaba`, `salesforce`; `servicenow` with `username` and `password` (8.0.0-beta) | Cloud BYOK accounts; `azure` also Azure EKM vaults, `aws_xks` (`access_key_id` 20 to 30 of A-Z and 2-7, `secret_access_key` 43 to 64 characters; the credential AWS KMS signs XKS calls with) |
 | mail | `smtp`: `host`, `port`, `from`, optional `username`, `password`, `ca_pem` (8.0.0-beta) | governance approval and playbook mail |
 | hsm | `pkcs11_hsm`: `library_path`, `pin`, `slot_id` or `token_label`, optional `topology` (`single` or `ha_group`) and `vendor` (8.0.0-beta) | keys and CA keys created, formed or imported in an HSM |
 | source | `git`: the hosting site (`git_url`), an access `token`, optional `username` for Basic authentication (7.20.0-beta) | discovery's git repository scans |
@@ -126,6 +126,9 @@ from `GET /compliance/connections?type=`.
   `azure`; the feature was removed in 13.30.0-beta and `kms-ekm` opens no
   credential. Azure EKM is now a HYOK protocol that needs none: Managed HSM
   authenticates to the KMS with its client certificate.
+- **AWS XKS** (13.32.0-beta) is admitted as `kms-hyok-proxy` for
+  `aws_xks` only. The hyok service opens the credential to verify AWS's
+  SigV4 signature, never to call out, and caches it for 15 seconds.
 - **The HSM connector** (8.0.0-beta) is admitted as `kms-hsm` for
   `pkcs11_hsm` only, and caches an opened credential for 15 seconds, as it
   does a profile. The library path is confined to the provider workspace

@@ -54,6 +54,11 @@ var credentialTypes = []ConnectionSpec{
 	{Type: "salesforce", Label: "Salesforce connected app", Category: categoryCloud, Use: "Cloud BYOK",
 		Fields: []string{"instance_url", "client_id", "client_secret"}, Optional: []string{"username", "password", "security_token", "login_url", optionsField},
 		URLField: "instance_url", URLFields: []string{"login_url"}, Secrets: []string{"client_secret", "password", "security_token", optionsField}},
+	// The credential AWS KMS signs XKS proxy calls with (SigV4); the hyok
+	// service verifies each call against it. AWS requires the access key ID
+	// in A-Z and 2-7, 20 to 30 characters, and a secret of 43 to 64.
+	{Type: "aws_xks", Label: "AWS KMS external key store (XKS proxy credential)", Category: categoryCloud, Use: "HYOK: AWS XKS",
+		Fields: []string{"access_key_id", "secret_access_key"}, Secrets: []string{"secret_access_key"}},
 	// A mail relay speaks SMTP, not HTTPS: the host is checked like any
 	// outbound address and governance requires TLS before it authenticates.
 	{Type: "smtp", Label: "SMTP mail relay", Category: categoryMail, Use: "Governance mail",
@@ -74,6 +79,7 @@ var credentialTypes = []ConnectionSpec{
 var credentialUseTypes = map[string][]string{
 	"cloud_account": {"aws", "azure", "gcp", "oci", "alibaba", "salesforce", "servicenow"},
 	"hsm_session":   {"pkcs11_hsm"},
+	"xks_proxy":     {"aws_xks"},
 }
 
 // publicFields are returned as a credential's attributes.
@@ -118,6 +124,13 @@ func validateCredential(c Connection, allow ssrfguard.Allow) error {
 		}
 		if arn := f("role_arn"); arn != "" && !reIAMRole.MatchString(arn) {
 			return errors.New("role_arn must be an IAM role ARN (arn:aws:iam::123456789012:role/name)")
+		}
+	case "aws_xks":
+		if !reXKSAccessKeyID.MatchString(f("access_key_id")) {
+			return errors.New("access_key_id must be 20 to 30 characters of A-Z and 2-7 (AWS XKS)")
+		}
+		if n := len(f("secret_access_key")); n < 43 || n > 64 {
+			return errors.New("secret_access_key must be 43 to 64 characters (AWS XKS)")
 		}
 	case "gcp":
 		var sa struct {

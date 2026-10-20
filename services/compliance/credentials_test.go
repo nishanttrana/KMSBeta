@@ -73,9 +73,10 @@ func TestCredentialResolveAdmitsOnlyTheServiceThatUsesTheType(t *testing.T) {
 		"azure":      hs.conn(t, "azure", map[string]string{"tenant_id": "t", "client_id": "c", "client_secret": "azure-secret-value"}),
 		"pkcs11_hsm": hs.conn(t, "pkcs11_hsm", hsmFields()),
 		"smtp":       hs.conn(t, "smtp", map[string]string{"host": "1.1.1.1", "port": "587", "from": "kms@example.com"}),
+		"aws_xks":    hs.conn(t, "aws_xks", map[string]string{"access_key_id": "ABCDEFGHIJKLMNOPQRST234567", "secret_access_key": strings.Repeat("s", 43) + "-secret-value"}),
 	}
 	allowed := map[string][]string{
-		"kms-cloud": {"aws", "azure"}, "kms-hsm": {"pkcs11_hsm"}, "kms-governance": {"smtp"}, "kms-audit": {}, "kms-discovery": {},
+		"kms-cloud": {"aws", "azure"}, "kms-hsm": {"pkcs11_hsm"}, "kms-governance": {"smtp"}, "kms-audit": {}, "kms-discovery": {}, "kms-hyok-proxy": {"aws_xks"},
 	}
 	for client, types := range allowed {
 		for typ, id := range ids {
@@ -483,7 +484,7 @@ func TestEveryCredentialUserHasAServiceIdentity(t *testing.T) {
 	}
 	mains := map[string]string{
 		"kms-audit": "audit", "kms-governance": "governance", "kms-discovery": "discovery",
-		"kms-cloud": "cloud", "kms-hsm": "hsm-connector",
+		"kms-cloud": "cloud", "kms-hsm": "hsm-connector", "kms-hyok-proxy": "hyok",
 	}
 	for id := range connectionUsers {
 		if !strings.Contains(string(auth), `"`+id+`"`) {
@@ -497,6 +498,25 @@ func TestEveryCredentialUserHasAServiceIdentity(t *testing.T) {
 		src, err := os.ReadFile(filepath.Join(root, "services", dir, "main.go"))
 		if err != nil || !strings.Contains(string(src), `servicetoken.FromEnv("`+id+`")`) {
 			t.Errorf("services/%s/main.go does not obtain a service token as %s", dir, id)
+		}
+	}
+}
+
+// An XKS credential has the shape AWS requires, or it is refused at the store.
+func TestXKSCredentialShape(t *testing.T) {
+	ok := Connection{Type: "aws_xks", Fields: map[string]string{"access_key_id": "ABCDEFGHIJKLMNOPQRST", "secret_access_key": strings.Repeat("a", 43)}}
+	if err := validateCredential(ok, nil); err != nil {
+		t.Fatalf("valid credential refused: %v", err)
+	}
+	for name, f := range map[string]map[string]string{
+		"lowercase id":  {"access_key_id": "abcdefghijklmnopqrst", "secret_access_key": strings.Repeat("a", 43)},
+		"short id":      {"access_key_id": "ABCDEFGHIJ", "secret_access_key": strings.Repeat("a", 43)},
+		"digit 1 in id": {"access_key_id": "ABCDEFGHIJKLMNOPQRS1", "secret_access_key": strings.Repeat("a", 43)},
+		"short secret":  {"access_key_id": "ABCDEFGHIJKLMNOPQRST", "secret_access_key": strings.Repeat("a", 42)},
+		"long secret":   {"access_key_id": "ABCDEFGHIJKLMNOPQRST", "secret_access_key": strings.Repeat("a", 65)},
+	} {
+		if err := validateCredential(Connection{Type: "aws_xks", Fields: f}, nil); err == nil {
+			t.Fatalf("%s accepted", name)
 		}
 	}
 }

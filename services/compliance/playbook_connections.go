@@ -331,6 +331,7 @@ func validateConnection(c Connection, allow ssrfguard.Allow) error {
 	return checkOutboundURLAllowing(c.Fields[spec.URLField], allow)
 }
 
+var reXKSAccessKeyID = regexp.MustCompile(`^[A-Z2-7]{20,30}$`)
 var reIAMRole = regexp.MustCompile(`^arn:aws[a-z-]*:iam::\d{12}:role/[\w+=,.@/-]{1,512}$`)
 
 // validateSourceCredential checks the credential of a storage connection:

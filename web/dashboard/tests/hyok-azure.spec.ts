@@ -18,6 +18,13 @@ async function stub(page: Page): Promise<Request[]> {
   await page.route("**/svc/**", (r) => {
     const req = r.request();
     const p = new URL(req.url()).pathname;
+    if (p.endsWith("/compliance/connections")) return r.fulfill(json({ data: [
+      { id: "pbconn_x1", tenant_id: "root", name: "aws-xks-primary", type: "aws_xks", endpoint: "", fields_set: ["access_key_id", "secret_access_key"], attributes: {}, created_by: "alice", created_at: "", updated_at: "" },
+    ] }));
+    if (p.endsWith("/hyok/v1/endpoints/aws_xks") && req.method() === "PUT") {
+      writes.push(req);
+      return r.fulfill(json({ endpoint: { protocol: "aws_xks", ...req.postDataJSON() } }));
+    }
     if (p.endsWith("/hyok/v1/endpoints/azure") && req.method() === "PUT") {
       writes.push(req);
       return r.fulfill(json({ endpoint: { protocol: "azure", ...req.postDataJSON() } }));
@@ -62,4 +69,28 @@ test("Azure EKM is configured from HYOK and saves only the endpoint's fields", a
   expect(Object.keys(body).sort()).toEqual(["auth_mode", "enabled", "governance_required", "metadata_json", "policy_id", "tenant_id"]);
   expect(body).toMatchObject({ auth_mode: "mtls", governance_required: false, enabled: true });
   expect(JSON.parse(body.metadata_json)).toEqual({ path_prefix: "contoso/pool-1", client_ca_pem: CA, client_subject_cn: "mhsm-client", keys: { "aes-key-1": "key_aes" } });
+});
+
+test("AWS XKS is configured from HYOK with a stored credential and AES-256 keys only", async ({ page }) => {
+  const writes = await stub(page);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/#cloudctl/hyok");
+  const card = page.getByText("AWS KMS external key store (XKS proxy API)").locator("xpath=ancestor::*[.//button[normalize-space()='Configure']][1]");
+  await card.getByRole("button", { name: "Configure" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByPlaceholder("contoso/xks").fill("contoso/xks");
+  await dialog.locator("button[aria-haspopup='listbox']").first().click();
+  await page.getByRole("option", { name: /aws-xks-primary/ }).click();
+  await dialog.getByLabel("External key ID").fill("xks-key-1");
+  await dialog.getByLabel("Vecta key").click();
+  // The RSA key is not offered: XKS takes AES-256 only.
+  await expect(page.getByRole("option", { name: /azure-rsa/ })).toHaveCount(0);
+  await page.getByRole("option", { name: /azure-kek/ }).click();
+  await expect(dialog.getByTestId("xks-uri-path")).toContainText("/svc/hyok/xks/contoso/xks");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect.poll(() => writes.length).toBe(1);
+  const body = writes[0]!.postDataJSON();
+  expect(Object.keys(body).sort()).toEqual(["auth_mode", "enabled", "governance_required", "metadata_json", "policy_id", "tenant_id"]);
+  expect(body).toMatchObject({ auth_mode: "sigv4", governance_required: false });
+  expect(JSON.parse(body.metadata_json)).toEqual({ path_prefix: "contoso/xks", credential_ids: ["pbconn_x1"], keys: { "xks-key-1": "key_aes" } });
 });

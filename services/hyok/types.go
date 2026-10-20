@@ -1,6 +1,10 @@
 package main
 
-import "time"
+import (
+	"time"
+
+	pkgauth "vecta-kms/pkg/auth"
+)
 
 const (
 	ProtocolDKE        = "dke"
@@ -12,12 +16,16 @@ const (
 	// Azure Managed HSM external key management (EKM Proxy API), served on
 	// its own mTLS listener (azure_ekm.go).
 	ProtocolAzureEKM = "azure"
+	// AWS KMS external key store (XKS proxy API), SigV4-signed (aws_xks.go).
+	ProtocolAWSXKS = "aws_xks"
 )
 
 const (
 	AuthModeMTLSOrJWT = "mtls_or_jwt"
 	AuthModeMTLS      = "mtls"
 	AuthModeJWT       = "jwt"
+	// AuthModeSigV4: AWS SigV4 with an aws_xks credential (AWS XKS only).
+	AuthModeSigV4 = "sigv4"
 )
 
 type EndpointConfig struct {
@@ -69,6 +77,8 @@ type AuthIdentity struct {
 	// EntraTenantID is the verified Entra ID tenant (tid) of a Microsoft
 	// DKE caller; empty for a Vecta token.
 	EntraTenantID string `json:"entra_tenant_id,omitempty"`
+	// Claims is the verified Vecta token, for permission checks.
+	Claims *pkgauth.Claims `json:"-"`
 }
 
 type ProxyCryptoRequest struct {
@@ -88,6 +98,10 @@ type ProxyCryptoRequest struct {
 	// RSA-OAEP-256, RSA-OAEP). Set only by the Azure EKM listener; no
 	// request body names it.
 	WrapAlgorithm string `json:"-"`
+	// AADB64 and Version reach keycore's encrypt and decrypt for AWS XKS;
+	// set only by the XKS handler.
+	AADB64  string `json:"-"`
+	Version int    `json:"-"`
 }
 
 type ProxyCryptoResponse struct {

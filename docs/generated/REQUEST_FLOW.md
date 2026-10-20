@@ -1,16 +1,16 @@
 # Generated Request Flow Map
 
-Generated at `2026-10-20T19:42:20Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-20T20:33:26Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `896`
+- Backend routes analyzed: `898`
 - Routes with exact frontend call sites: `510`
-- Routes whose handlers call `h.svc.*`: `536`
-- Routes with detected store calls: `633`
-- Routes with detected internal `pkg/*` calls: `193`
+- Routes whose handlers call `h.svc.*`: `537`
+- Routes with detected store calls: `635`
+- Routes with detected internal `pkg/*` calls: `196`
 
 ## How To Trace One Frontend Click
 
@@ -200,7 +200,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | compliance\|GET\|/compliance/risk/remediation | GET /compliance/risk/remediation | handleGetRiskRemediation (services/compliance/handler_dri.go:322) |  |  |  |  | web/dashboard/src/lib/dri.ts:82 |
 | compliance\|GET\|/compliance/playbooks | GET /compliance/playbooks | listPlaybooks (services/compliance/handler_playbooks.go:163) |  | ListPlaybooks |  |  | web/dashboard/src/lib/byok.ts:224 |
 | compliance\|POST\|/compliance/playbooks | POST /compliance/playbooks | createPlaybook (services/compliance/handler_playbooks.go:183) |  | CreatePlaybook | h.triggers.Invalidate |  | web/dashboard/src/lib/byok.ts:234 |
-| compliance\|GET\|/compliance/playbooks/connections | GET /compliance/playbooks/connections | listConnections (services/compliance/playbook_connections.go:452) |  | ListConnections |  |  | web/dashboard/src/lib/credentials.ts:53, web/dashboard/src/lib/discovery.ts:381, web/dashboard/src/lib/governance.ts:220 |
+| compliance\|GET\|/compliance/playbooks/connections | GET /compliance/playbooks/connections | listConnections (services/compliance/playbook_connections.go:453) |  | ListConnections |  |  | web/dashboard/src/lib/credentials.ts:53, web/dashboard/src/lib/discovery.ts:381, web/dashboard/src/lib/governance.ts:220 |
 | compliance\|GET\|/compliance/private-endpoints | GET /compliance/private-endpoints | listPrivateEndpoints (services/compliance/private_endpoints.go:121) |  | ListPrivateEndpoints |  | pkg/route.Allowed, pkg/tenantcheck.InternalServiceTenant, pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/privateEndpoints.ts:16 |
 | compliance\|POST\|/compliance/private-endpoints | POST /compliance/private-endpoints | addPrivateEndpoint (services/compliance/private_endpoints.go:134) |  | ListPrivateEndpoints, CreatePrivateEndpoint |  |  | web/dashboard/src/lib/privateEndpoints.ts:25 |
 | compliance\|DELETE\|/compliance/private-endpoints/{param} | DELETE /compliance/private-endpoints/{id} | removePrivateEndpoint (services/compliance/private_endpoints.go:185) |  | DeletePrivateEndpoint |  |  | web/dashboard/src/lib/privateEndpoints.ts:32 |
@@ -312,12 +312,12 @@ This file connects frontend requests to backend Go processing. It is static anal
 | governance\|GET\|/governance/requests | GET /governance/requests | handleListRequests (services/governance/handler.go:628) | ListApprovalRequests | ListApprovalRequests |  |  | web/dashboard/src/lib/governance.ts:449 |
 | governance\|GET\|/governance/requests/{param} | GET /governance/requests/{id} | handleGetRequest (services/governance/handler.go:642) | GetApprovalRequest | GetApprovalRequest, ListApprovalVotes |  |  | web/dashboard/src/lib/governance.ts:462 |
 | governance\|POST\|/governance/approve/{param} | POST /governance/approve/{id} | handleApprovalVote (services/governance/handler.go:769) | Vote | GetPolicy, ConsumeToken, RequestApprovers, ApplyVote | s.callback.Execute |  | web/dashboard/src/lib/governance.ts:482 |
-| hyok\|GET\|/hyok/dke/v1/keys/{param}/publickey | GET /hyok/dke/v1/keys/{id}/publickey | handleDKEPublicKey (services/hyok/handler.go:172) | GetDKEPublicKey | CreateRequestLog, CompleteRequestLog | s.keycore.PublicKey |  | web/dashboard/src/lib/hyok.ts:213 |
-| hyok\|GET\|/hyok/v1/endpoints | GET /hyok/v1/endpoints | handleListEndpoints (services/hyok/handler.go:186) | ListEndpoints | ListEndpoints |  |  | web/dashboard/src/lib/hyok.ts:119 |
-| hyok\|PUT\|/hyok/v1/endpoints/{param} | PUT /hyok/v1/endpoints/{protocol} | handleConfigureEndpoint (services/hyok/handler.go:200) | ConfigureEndpoint | UpsertEndpoint, GetEndpoint |  |  | web/dashboard/src/lib/hyok.ts:135 |
-| hyok\|DELETE\|/hyok/v1/endpoints/{param} | DELETE /hyok/v1/endpoints/{protocol} | handleDeleteEndpoint (services/hyok/handler.go:244) | DeleteEndpoint | DeleteEndpoint |  |  | web/dashboard/src/lib/hyok.ts:150 |
-| hyok\|GET\|/hyok/v1/requests | GET /hyok/v1/requests | handleListRequests (services/hyok/handler.go:257) | ListRequests | ListRequestLogs |  |  | web/dashboard/src/lib/hyok.ts:170 |
-| hyok\|GET\|/hyok/v1/health | GET /hyok/v1/health | handleHealth (services/hyok/handler.go:273) | Health |  |  |  | web/dashboard/src/lib/hyok.ts:175 |
+| hyok\|GET\|/hyok/dke/v1/keys/{param}/publickey | GET /hyok/dke/v1/keys/{id}/publickey | handleDKEPublicKey (services/hyok/handler.go:184) | GetDKEPublicKey | CreateRequestLog, CompleteRequestLog | s.keycore.PublicKey |  | web/dashboard/src/lib/hyok.ts:213 |
+| hyok\|GET\|/hyok/v1/endpoints | GET /hyok/v1/endpoints | handleListEndpoints (services/hyok/handler.go:198) | ListEndpoints | ListEndpoints |  |  | web/dashboard/src/lib/hyok.ts:119 |
+| hyok\|PUT\|/hyok/v1/endpoints/{param} | PUT /hyok/v1/endpoints/{protocol} | handleConfigureEndpoint (services/hyok/handler.go:212) | ConfigureEndpoint | UpsertEndpoint, GetEndpoint |  | pkg/auth.ContextWithClaims, pkg/auth.ClaimsFromContext | web/dashboard/src/lib/hyok.ts:135 |
+| hyok\|DELETE\|/hyok/v1/endpoints/{param} | DELETE /hyok/v1/endpoints/{protocol} | handleDeleteEndpoint (services/hyok/handler.go:262) | DeleteEndpoint | DeleteEndpoint |  |  | web/dashboard/src/lib/hyok.ts:150 |
+| hyok\|GET\|/hyok/v1/requests | GET /hyok/v1/requests | handleListRequests (services/hyok/handler.go:275) | ListRequests | ListRequestLogs |  |  | web/dashboard/src/lib/hyok.ts:170 |
+| hyok\|GET\|/hyok/v1/health | GET /hyok/v1/health | handleHealth (services/hyok/handler.go:291) | Health |  |  |  | web/dashboard/src/lib/hyok.ts:175 |
 | keyaccess\|GET\|/key-access/settings | GET /key-access/settings | getSettings (services/keyaccess/handler.go:63) | GetSettings |  |  |  | web/dashboard/src/lib/keyaccess.ts:77 |
 | keyaccess\|PUT\|/key-access/settings | PUT /key-access/settings | putSettings (services/keyaccess/handler.go:72) | UpdateSettings | UpsertSettings |  |  | web/dashboard/src/lib/keyaccess.ts:82 |
 | keyaccess\|GET\|/key-access/summary | GET /key-access/summary | getSummary (services/keyaccess/handler.go:93) | GetSummary | ListRules, DecisionCountsSince |  |  | web/dashboard/src/lib/keyaccess.ts:90 |
@@ -796,12 +796,12 @@ This file connects frontend requests to backend Go processing. It is static anal
 | cluster-manager\|GET\|/cluster/sync/checkpoint | GET /cluster/sync/checkpoint | handleSyncCheckpoint (services/cluster-manager/handler.go:362) | GetSyncCheckpoint | GetSyncCheckpoint |  |  | web/dashboard/src/lib/cluster.ts:274 |
 | cluster-manager\|GET\|/cluster/logs | GET /cluster/logs | handleClusterLogs (services/cluster-manager/handler.go:378) | ListClusterLogs | ListClusterLogs |  |  | web/dashboard/src/lib/cluster.ts:288 |
 | cluster-manager\|GET\|/cluster/replication/status | GET /cluster/replication/status | handleReplicationStatus (services/cluster-manager/handler.go:530) | ReplicationStatus |  | s.replication.WALLevel, s.replication.Publications, s.replication.SubscriptionStatuses |  |  |
-| compliance\|POST\|/compliance/connections/{param}/resolve | POST /compliance/connections/{id}/resolve | resolveConnection (services/compliance/connections_service.go:86) |  | GetConnection | h.connVault.Open |  |  |
-| compliance\|POST\|/compliance/connections/import | POST /compliance/connections/import | importConnection (services/compliance/connections_service.go:141) |  | GetConnection, CreateConnection | h.connVault.current |  |  |
+| compliance\|POST\|/compliance/connections/{param}/resolve | POST /compliance/connections/{id}/resolve | resolveConnection (services/compliance/connections_service.go:87) |  | GetConnection | h.connVault.Open |  |  |
+| compliance\|POST\|/compliance/connections/import | POST /compliance/connections/import | importConnection (services/compliance/connections_service.go:142) |  | GetConnection, CreateConnection | h.connVault.current |  |  |
 | compliance\|GET\|/compliance/connections | GET /compliance/connections | listConnectionChoices (services/compliance/credentials.go:44) |  | ListConnections |  |  | web/dashboard/src/lib/credentials.ts:61 |
 | compliance\|GET\|/compliance/connections/{param} | GET /compliance/connections/{id} | checkConnectionUse (services/compliance/credentials.go:70) |  | GetConnection |  |  |  |
 | compliance\|GET\|/compliance/connections/{param}/usage | GET /compliance/connections/{id}/usage | connectionUsage (services/compliance/credentials.go:134) |  | GetConnection |  |  | web/dashboard/src/lib/credentials.ts:80 |
-| compliance\|POST\|/compliance/connections/{param}/tested | POST /compliance/connections/{id}/tested | reportConnectionTest (services/compliance/credentials.go:218) |  | GetConnection |  |  |  |
+| compliance\|POST\|/compliance/connections/{param}/tested | POST /compliance/connections/{id}/tested | reportConnectionTest (services/compliance/credentials.go:223) |  | GetConnection |  |  |  |
 | compliance\|GET\|/compliance/posture | GET /compliance/posture | handlePosture (services/compliance/handler.go:101) | GetPosture | GetLatestPosture |  |  |  |
 | compliance\|GET\|/compliance/posture/history | GET /compliance/posture/history | handlePostureHistory (services/compliance/handler.go:116) | GetPostureHistory | ListPostureHistory |  |  |  |
 | compliance\|GET\|/compliance/posture/breakdown | GET /compliance/posture/breakdown | handlePostureBreakdown (services/compliance/handler.go:131) | GetPostureBreakdown |  |  |  | web/dashboard/src/lib/compliance.ts:305 |
@@ -846,11 +846,11 @@ This file connects frontend requests to backend Go processing. It is static anal
 | compliance\|GET\|/compliance/playbook-runs/{param} | GET /compliance/playbook-runs/{run_id} | getRun (services/compliance/handler_playbooks.go:428) |  |  |  |  |  |
 | compliance\|POST\|/compliance/playbook-runs/{param}/cancel | POST /compliance/playbook-runs/{run_id}/cancel | cancelRun (services/compliance/handler_playbooks.go:436) |  |  | h.executor.Cancel |  |  |
 | compliance\|POST\|/compliance/playbook-runs/{param}/retry | POST /compliance/playbook-runs/{run_id}/retry | retryRun (services/compliance/handler_playbooks.go:465) |  |  |  |  |  |
-| compliance\|GET\|/compliance/playbooks/connections | GET /compliance/playbooks/connections | listConnections (services/compliance/playbook_connections.go:452) |  | ListConnections |  |  | web/dashboard/src/lib/credentials.ts:53, web/dashboard/src/lib/discovery.ts:381, web/dashboard/src/lib/governance.ts:220 |
-| compliance\|POST\|/compliance/playbooks/connections | POST /compliance/playbooks/connections | createConnection (services/compliance/playbook_connections.go:461) |  | CreateConnection |  |  |  |
-| compliance\|PUT\|/compliance/playbooks/connections/{param} | PUT /compliance/playbooks/connections/{id} | updateConnection (services/compliance/playbook_connections.go:487) |  | GetConnection, UpdateConnection, DeleteConnection, ListAllPlaybooks, CreateConnection, UpdatePlaybook | h.connVault.Open, h.connVault.current, h.connVault.Seal, h.executor.testConnection | pkg/tenantcheck.InternalServiceTenant |  |
-| compliance\|DELETE\|/compliance/playbooks/connections/{param} | DELETE /compliance/playbooks/connections/{id} | deleteConnection (services/compliance/playbook_connections.go:614) |  | GetConnection, DeleteConnection | h.connVault.current |  |  |
-| compliance\|POST\|/compliance/playbooks/connections/{param}/test | POST /compliance/playbooks/connections/{id}/test | testConnection (services/compliance/playbook_connections.go:654) |  | GetConnection, ListAllPlaybooks, CreateConnection, UpdatePlaybook | h.executor.testConnection | pkg/tenantcheck.InternalServiceTenant |  |
+| compliance\|GET\|/compliance/playbooks/connections | GET /compliance/playbooks/connections | listConnections (services/compliance/playbook_connections.go:453) |  | ListConnections |  |  | web/dashboard/src/lib/credentials.ts:53, web/dashboard/src/lib/discovery.ts:381, web/dashboard/src/lib/governance.ts:220 |
+| compliance\|POST\|/compliance/playbooks/connections | POST /compliance/playbooks/connections | createConnection (services/compliance/playbook_connections.go:462) |  | CreateConnection |  |  |  |
+| compliance\|PUT\|/compliance/playbooks/connections/{param} | PUT /compliance/playbooks/connections/{id} | updateConnection (services/compliance/playbook_connections.go:488) |  | GetConnection, UpdateConnection, DeleteConnection, ListAllPlaybooks, CreateConnection, UpdatePlaybook | h.connVault.Open, h.connVault.current, h.connVault.Seal, h.executor.testConnection | pkg/tenantcheck.InternalServiceTenant |  |
+| compliance\|DELETE\|/compliance/playbooks/connections/{param} | DELETE /compliance/playbooks/connections/{id} | deleteConnection (services/compliance/playbook_connections.go:615) |  | GetConnection, DeleteConnection | h.connVault.current |  |  |
+| compliance\|POST\|/compliance/playbooks/connections/{param}/test | POST /compliance/playbooks/connections/{id}/test | testConnection (services/compliance/playbook_connections.go:655) |  | GetConnection, ListAllPlaybooks, CreateConnection, UpdatePlaybook | h.executor.testConnection | pkg/tenantcheck.InternalServiceTenant |  |
 | compliance\|GET\|/compliance/private-endpoints | GET /compliance/private-endpoints | listPrivateEndpoints (services/compliance/private_endpoints.go:121) |  | ListPrivateEndpoints |  | pkg/route.Allowed, pkg/tenantcheck.InternalServiceTenant, pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/privateEndpoints.ts:16 |
 | compliance\|POST\|/compliance/private-endpoints | POST /compliance/private-endpoints | addPrivateEndpoint (services/compliance/private_endpoints.go:134) |  | ListPrivateEndpoints, CreatePrivateEndpoint |  |  | web/dashboard/src/lib/privateEndpoints.ts:25 |
 | compliance\|DELETE\|/compliance/private-endpoints/{param} | DELETE /compliance/private-endpoints/{id} | removePrivateEndpoint (services/compliance/private_endpoints.go:185) |  | DeletePrivateEndpoint |  |  | web/dashboard/src/lib/privateEndpoints.ts:32 |
@@ -1022,27 +1022,29 @@ This file connects frontend requests to backend Go processing. It is static anal
 | governance\|POST\|/governance/key-approval | POST /governance/key-approval | handleCreateKeyApproval (services/governance/handler.go:826) | CreateKeyApproval |  |  | pkg/tenantcheck.IsServicePrincipal |  |
 | governance\|GET\|/governance/key-approval/{param}/status | GET /governance/key-approval/{id}/status | handleGetKeyApprovalStatus (services/governance/handler.go:850) | GetKeyApprovalStatus | GetApprovalRequest |  |  |  |
 | governance\|POST\|/governance/notify/email | POST /governance/notify/email | notifyEmail (services/governance/notify.go:67) | GetSettings, mailer | RoleHolderEmails, IsActiveUserEmail, GetSettings | s.creds.Resolve | pkg/tenantcheck.IsServicePrincipal, pkg/ssrfguard.ParseAllow |  |
-| hyok\|GET\|/api/v1/keys/{param} | GET /api/v1/keys/{id} | handleMicrosoftDKEGetKey (services/hyok/handler.go:61) | GetMicrosoftDKEKey | CreateRequestLog, CompleteRequestLog | s.keycore.PublicKey | pkg/crypto.ParseRSAPublicKeyAny, pkg/crypto.RSAPublicKeyJWK |  |
-| hyok\|POST\|/api/v1/keys/{param}/{param}/decrypt | POST /api/v1/keys/{id}/{version}/decrypt | handleMicrosoftDKEDecrypt (services/hyok/handler.go:75) | ProcessMicrosoftDKEDecrypt |  | s.keycore.GetKey |  |  |
-| hyok\|POST\|/hyok/dke/v1/keys/{param}/decrypt | POST /hyok/dke/v1/keys/{id}/decrypt | handleDKEDecrypt (services/hyok/handler.go:94) |  |  |  |  |  |
-| hyok\|GET\|/hyok/dke/v1/keys/{param}/publickey | GET /hyok/dke/v1/keys/{id}/publickey | handleDKEPublicKey (services/hyok/handler.go:172) | GetDKEPublicKey | CreateRequestLog, CompleteRequestLog | s.keycore.PublicKey |  | web/dashboard/src/lib/hyok.ts:213 |
-| hyok\|POST\|/hyok/salesforce/v1/keys/{param}/wrap | POST /hyok/salesforce/v1/keys/{id}/wrap | handleSalesforceWrap (services/hyok/handler.go:98) |  |  |  |  |  |
-| hyok\|POST\|/hyok/salesforce/v1/keys/{param}/unwrap | POST /hyok/salesforce/v1/keys/{id}/unwrap | handleSalesforceUnwrap (services/hyok/handler.go:102) |  |  |  |  |  |
-| hyok\|POST\|/hyok/google/v1/keys/{param}/wrap | POST /hyok/google/v1/keys/{id}/wrap | handleGoogleWrap (services/hyok/handler.go:106) |  |  |  |  |  |
-| hyok\|POST\|/hyok/google/v1/keys/{param}/unwrap | POST /hyok/google/v1/keys/{id}/unwrap | handleGoogleUnwrap (services/hyok/handler.go:110) |  |  |  |  |  |
-| hyok\|POST\|/hyok/generic/v1/keys/{param}/encrypt | POST /hyok/generic/v1/keys/{id}/encrypt | handleGenericEncrypt (services/hyok/handler.go:114) |  |  |  |  |  |
-| hyok\|POST\|/hyok/generic/v1/keys/{param}/decrypt | POST /hyok/generic/v1/keys/{id}/decrypt | handleGenericDecrypt (services/hyok/handler.go:118) |  |  |  |  |  |
-| hyok\|POST\|/hyok/generic/v1/keys/{param}/wrap | POST /hyok/generic/v1/keys/{id}/wrap | handleGenericWrap (services/hyok/handler.go:122) |  |  |  |  |  |
-| hyok\|POST\|/hyok/generic/v1/keys/{param}/unwrap | POST /hyok/generic/v1/keys/{id}/unwrap | handleGenericUnwrap (services/hyok/handler.go:126) |  |  |  |  |  |
-| hyok\|POST\|/hyok/servicenow/v1/keys/{param}/wrap | POST /hyok/servicenow/v1/keys/{id}/wrap | handleServiceNowWrap (services/hyok/handler.go:130) |  |  |  |  |  |
-| hyok\|POST\|/hyok/servicenow/v1/keys/{param}/unwrap | POST /hyok/servicenow/v1/keys/{id}/unwrap | handleServiceNowUnwrap (services/hyok/handler.go:134) |  |  |  |  |  |
-| hyok\|POST\|/hyok/alibaba/v1/keys/{param}/encrypt | POST /hyok/alibaba/v1/keys/{id}/encrypt | handleAlibabaEncrypt (services/hyok/handler.go:138) |  |  |  |  |  |
-| hyok\|POST\|/hyok/alibaba/v1/keys/{param}/decrypt | POST /hyok/alibaba/v1/keys/{id}/decrypt | handleAlibabaDecrypt (services/hyok/handler.go:142) |  |  |  |  |  |
-| hyok\|GET\|/hyok/v1/endpoints | GET /hyok/v1/endpoints | handleListEndpoints (services/hyok/handler.go:186) | ListEndpoints | ListEndpoints |  |  | web/dashboard/src/lib/hyok.ts:119 |
-| hyok\|PUT\|/hyok/v1/endpoints/{param} | PUT /hyok/v1/endpoints/{protocol} | handleConfigureEndpoint (services/hyok/handler.go:200) | ConfigureEndpoint | UpsertEndpoint, GetEndpoint |  |  | web/dashboard/src/lib/hyok.ts:135 |
-| hyok\|DELETE\|/hyok/v1/endpoints/{param} | DELETE /hyok/v1/endpoints/{protocol} | handleDeleteEndpoint (services/hyok/handler.go:244) | DeleteEndpoint | DeleteEndpoint |  |  | web/dashboard/src/lib/hyok.ts:150 |
-| hyok\|GET\|/hyok/v1/requests | GET /hyok/v1/requests | handleListRequests (services/hyok/handler.go:257) | ListRequests | ListRequestLogs |  |  | web/dashboard/src/lib/hyok.ts:170 |
-| hyok\|GET\|/hyok/v1/health | GET /hyok/v1/health | handleHealth (services/hyok/handler.go:273) | Health |  |  |  | web/dashboard/src/lib/hyok.ts:175 |
+| hyok\|POST\|/xks/{param} | POST /xks/{rest...} | handleXKS (services/hyok/aws_xks.go:281) | xksEndpointForPrefix, xksSecrets | ListEnabledEndpointsByProtocol | s.creds.Resolve | pkg/sigv4.Verify |  |
+| hyok\|GET\|/hyok/credential-usage | GET /hyok/credential-usage | credentialUsage (services/hyok/aws_xks.go:517) |  | GetEndpoint |  | pkg/tenantcheck.IsServicePrincipal |  |
+| hyok\|GET\|/api/v1/keys/{param} | GET /api/v1/keys/{id} | handleMicrosoftDKEGetKey (services/hyok/handler.go:73) | GetMicrosoftDKEKey | CreateRequestLog, CompleteRequestLog | s.keycore.PublicKey | pkg/crypto.ParseRSAPublicKeyAny, pkg/crypto.RSAPublicKeyJWK |  |
+| hyok\|POST\|/api/v1/keys/{param}/{param}/decrypt | POST /api/v1/keys/{id}/{version}/decrypt | handleMicrosoftDKEDecrypt (services/hyok/handler.go:87) | ProcessMicrosoftDKEDecrypt |  | s.keycore.GetKey |  |  |
+| hyok\|POST\|/hyok/dke/v1/keys/{param}/decrypt | POST /hyok/dke/v1/keys/{id}/decrypt | handleDKEDecrypt (services/hyok/handler.go:106) |  |  |  |  |  |
+| hyok\|GET\|/hyok/dke/v1/keys/{param}/publickey | GET /hyok/dke/v1/keys/{id}/publickey | handleDKEPublicKey (services/hyok/handler.go:184) | GetDKEPublicKey | CreateRequestLog, CompleteRequestLog | s.keycore.PublicKey |  | web/dashboard/src/lib/hyok.ts:213 |
+| hyok\|POST\|/hyok/salesforce/v1/keys/{param}/wrap | POST /hyok/salesforce/v1/keys/{id}/wrap | handleSalesforceWrap (services/hyok/handler.go:110) |  |  |  |  |  |
+| hyok\|POST\|/hyok/salesforce/v1/keys/{param}/unwrap | POST /hyok/salesforce/v1/keys/{id}/unwrap | handleSalesforceUnwrap (services/hyok/handler.go:114) |  |  |  |  |  |
+| hyok\|POST\|/hyok/google/v1/keys/{param}/wrap | POST /hyok/google/v1/keys/{id}/wrap | handleGoogleWrap (services/hyok/handler.go:118) |  |  |  |  |  |
+| hyok\|POST\|/hyok/google/v1/keys/{param}/unwrap | POST /hyok/google/v1/keys/{id}/unwrap | handleGoogleUnwrap (services/hyok/handler.go:122) |  |  |  |  |  |
+| hyok\|POST\|/hyok/generic/v1/keys/{param}/encrypt | POST /hyok/generic/v1/keys/{id}/encrypt | handleGenericEncrypt (services/hyok/handler.go:126) |  |  |  |  |  |
+| hyok\|POST\|/hyok/generic/v1/keys/{param}/decrypt | POST /hyok/generic/v1/keys/{id}/decrypt | handleGenericDecrypt (services/hyok/handler.go:130) |  |  |  |  |  |
+| hyok\|POST\|/hyok/generic/v1/keys/{param}/wrap | POST /hyok/generic/v1/keys/{id}/wrap | handleGenericWrap (services/hyok/handler.go:134) |  |  |  |  |  |
+| hyok\|POST\|/hyok/generic/v1/keys/{param}/unwrap | POST /hyok/generic/v1/keys/{id}/unwrap | handleGenericUnwrap (services/hyok/handler.go:138) |  |  |  |  |  |
+| hyok\|POST\|/hyok/servicenow/v1/keys/{param}/wrap | POST /hyok/servicenow/v1/keys/{id}/wrap | handleServiceNowWrap (services/hyok/handler.go:142) |  |  |  |  |  |
+| hyok\|POST\|/hyok/servicenow/v1/keys/{param}/unwrap | POST /hyok/servicenow/v1/keys/{id}/unwrap | handleServiceNowUnwrap (services/hyok/handler.go:146) |  |  |  |  |  |
+| hyok\|POST\|/hyok/alibaba/v1/keys/{param}/encrypt | POST /hyok/alibaba/v1/keys/{id}/encrypt | handleAlibabaEncrypt (services/hyok/handler.go:150) |  |  |  |  |  |
+| hyok\|POST\|/hyok/alibaba/v1/keys/{param}/decrypt | POST /hyok/alibaba/v1/keys/{id}/decrypt | handleAlibabaDecrypt (services/hyok/handler.go:154) |  |  |  |  |  |
+| hyok\|GET\|/hyok/v1/endpoints | GET /hyok/v1/endpoints | handleListEndpoints (services/hyok/handler.go:198) | ListEndpoints | ListEndpoints |  |  | web/dashboard/src/lib/hyok.ts:119 |
+| hyok\|PUT\|/hyok/v1/endpoints/{param} | PUT /hyok/v1/endpoints/{protocol} | handleConfigureEndpoint (services/hyok/handler.go:212) | ConfigureEndpoint | UpsertEndpoint, GetEndpoint |  | pkg/auth.ContextWithClaims, pkg/auth.ClaimsFromContext | web/dashboard/src/lib/hyok.ts:135 |
+| hyok\|DELETE\|/hyok/v1/endpoints/{param} | DELETE /hyok/v1/endpoints/{protocol} | handleDeleteEndpoint (services/hyok/handler.go:262) | DeleteEndpoint | DeleteEndpoint |  |  | web/dashboard/src/lib/hyok.ts:150 |
+| hyok\|GET\|/hyok/v1/requests | GET /hyok/v1/requests | handleListRequests (services/hyok/handler.go:275) | ListRequests | ListRequestLogs |  |  | web/dashboard/src/lib/hyok.ts:170 |
+| hyok\|GET\|/hyok/v1/health | GET /hyok/v1/health | handleHealth (services/hyok/handler.go:291) | Health |  |  |  | web/dashboard/src/lib/hyok.ts:175 |
 | keyaccess\|GET\|/key-access/settings | GET /key-access/settings | getSettings (services/keyaccess/handler.go:63) | GetSettings |  |  |  | web/dashboard/src/lib/keyaccess.ts:77 |
 | keyaccess\|PUT\|/key-access/settings | PUT /key-access/settings | putSettings (services/keyaccess/handler.go:72) | UpdateSettings | UpsertSettings |  |  | web/dashboard/src/lib/keyaccess.ts:82 |
 | keyaccess\|GET\|/key-access/summary | GET /key-access/summary | getSummary (services/keyaccess/handler.go:93) | GetSummary | ListRules, DecisionCountsSince |  |  | web/dashboard/src/lib/keyaccess.ts:90 |

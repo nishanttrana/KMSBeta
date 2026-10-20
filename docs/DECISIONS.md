@@ -7,6 +7,29 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-21 — AWS XKS goes through the edge, signed with a stored credential
+**Decision:** the AWS XKS proxy API is served behind the HTTPS edge at
+`/svc/hyok/xks/<prefix>`, and AWS's SigV4 signature is the credential,
+verified by the hyok service against `aws_xks` credentials held in
+Playbooks → Credentials (one or two, for rotation). The key version rides
+in `ciphertextMetadata` and is bound into the AAD.
+**Why:** AWS requires a public-CA server certificate and, since 2026, no
+mTLS for XKS: the edge already serves that certificate. The secret is a
+credential like any other the platform holds, so it lives in the one store
+(CLAUDE.md), opened only by the hyok service. Without the version in the
+metadata, rotating the Vecta key would strand every data key AWS had
+encrypted.
+**Rejected:** a separate listener (no mTLS to verify, so nothing gained);
+keeping the secret in the endpoint's settings (a second credential store);
+decrypting with every version in turn (AES-GCM has no cheap version check
+and AWS allows 250 ms).
+**Enforced:** `TestAWSXKSEncryptsAndDecryptsAcrossRotation` (signed by the
+AWS SDK signer, output opened directly with the key, CDIV recomputed),
+`TestXKSCDIVMatchesTheSpecExample`, `pkg/sigv4` tests,
+`TestXKSCredentialShape`.
+
+---
+
 ## 2026-10-21 — Count tiles are neutral by construction; destructive buttons are outlined
 **Decision:** the shared `Stat` tile tints its icon only for the attention
 tones (red, amber, orange) and shows a word value as text; pages with their

@@ -714,6 +714,40 @@ put key material into Azure, use Cloud BYOK.
 
 Console: **Cloud Key Control → HYOK → Azure EKM → Configure**.
 
+### 2.7 AWS KMS External Key Store (AWS XKS)
+
+AWS KMS keys in an external key store encrypt and decrypt with an AES-256
+key that stays in the KMS (XKS proxy API v1, 13.32.0-beta).
+
+- **Endpoint.** Through the HTTPS edge. In AWS, the store's public endpoint
+  is `https://<kms host>` and its XksProxyUriPath `/svc/hyok/xks/<path
+  prefix>`. AWS requires the edge certificate to come from a public CA:
+  choose an external CA for the HTTPS listener in the PKI tab. AWS no
+  longer allows mTLS for XKS, so none is asked for.
+- **Who may call.** Every call is SigV4-signed (service `kms-xks-proxy`)
+  with an `aws_xks` credential from Playbooks → Credentials, the same
+  access key ID and secret given to AWS. One or two may be attached, so the
+  secret can be rotated without downtime. A signature more than five
+  minutes old, over another path, body or host, or by an unknown key is
+  refused (`AuthenticationFailedException`).
+- **Keys.** Each external key ID maps to one Vecta AES-256 key. Encrypt is
+  AES-GCM with a 12-byte IV generated in the FIPS module. The key version
+  is returned in `ciphertextMetadata` (5 bytes) and bound into the AAD as
+  the spec prescribes (`u16 len(aad) || aad || u8 len(metadata) ||
+  metadata`), so data encrypted before a rotation still decrypts.
+- **Integrity value.** When AWS asks for `ciphertextDataIntegrityValue`
+  (SHA-256, Appendix C), the KMS computes it and then decrypts its own
+  output before answering; an output that doesn't decrypt is never
+  returned.
+- **Controls.** Encrypt and decrypt go through the HYOK pipeline: policy,
+  key access justifications, the request log (sizes only) and audit.
+  Governance approval is refused for this endpoint: AWS waits 250 ms. A
+  disabled key reads `DISABLED` in metadata and refuses encrypt and decrypt
+  (`InvalidStateException`).
+- **Health.** The health call checks that keycore answers for a mapped key.
+
+Console: **Cloud Key Control → HYOK → AWS XKS → Configure**.
+
 ## 3. EKM (External Key Manager)
 
 ### 3.1 Database Transparent Data Encryption (TDE)

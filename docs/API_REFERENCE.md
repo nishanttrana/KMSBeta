@@ -671,6 +671,9 @@ strict mode everything but `RSA-OAEP-256` is `403 fips_mode_violation`.
 
 ---
 
+(`aad` with `iv_mode: internal` is how the AWS XKS proxy encrypts; its
+decrypt names `version`, 13.32.0-beta.)
+
 ### POST /svc/keycore/keys/{id}/unwrap
 
 Body: `ciphertext`, `iv`, `aad` (all base64). Response: `plaintext` (base64),
@@ -4102,6 +4105,26 @@ returns an `EKM-PUBLIC-` value derived from the tenant and key ID
 (6.12.0-beta). A rotation clears the stored copy and refreshes it from
 keycore. `GET /ekm/agents/{id}/status` carries
 `assigned_key_algorithm`, the algorithm of the agent's assigned TDE key.
+**AWS XKS** (13.32.0-beta) is the XKS proxy API v1 under
+`POST /xks/{rest...}` on the hyok service, reached through the edge as
+`/svc/hyok/xks/<path_prefix>/kms/xks/v1/health`, `.../keys/<external key
+id>/metadata`, `/encrypt` and `/decrypt`. Each call carries AWS SigV4
+(service `kms-xks-proxy`) by an `aws_xks` credential the endpoint names;
+errors are `{"errorName","errorMessage"}` (`AuthenticationFailedException`
+401, `InvalidUriPathException` 404, `KeyNotFoundException` 404,
+`ValidationException` 400, `InvalidStateException` 400,
+`InvalidCiphertextException` 400, `AccessDeniedException` 403,
+`ThrottlingException` 429, `DependencyTimeoutException` 503,
+`InternalException` 500), each audited as `audit.hyok.xks_request` with
+`result` and the error name as `reason`. The endpoint is configured with
+`PUT /hyok/v1/endpoints/aws_xks`, `metadata_json`
+`{"path_prefix","credential_ids":[one or two],"keys":{"<external key id>":"<AES-256 key id>"}}`;
+attaching a credential needs `compliance.connection.use`
+(`403 credential_use_not_permitted`). `GET /hyok/credential-usage`
+(`kms-compliance` only) names the XKS endpoints using each credential.
+HYOK endpoint administration needs `hyok.read` / `hyok.write`
+(13.32.0-beta; a role name granted it before).
+
 **Azure EKM** (13.30.0-beta) is the EKM Proxy API (`0.1-preview`) that
 Azure Managed HSM external key management calls, on the hyok service's own
 mTLS listener (`AZURE_EKM_PORT`, compose `8443`), not the HTTPS edge.

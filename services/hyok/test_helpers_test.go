@@ -13,6 +13,7 @@ import (
 	"testing"
 	pkgauth "vecta-kms/pkg/auth"
 
+	"vecta-kms/pkg/credstore"
 	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 	pkgkeyaccess "vecta-kms/pkg/keyaccess"
@@ -58,8 +59,65 @@ func (p *nopHYOKPublisher) Count(subject string) int {
 type fakeHYOKKeyCore struct {
 	mu       sync.Mutex
 	keys     map[string]map[string]interface{}
-	material map[string][]byte
+	material map[string][][]byte // per key, one entry per version
 	calls    []string
+}
+
+// current is a key's current version's material.
+func (f *fakeHYOKKeyCore) current(tenantID, keyID string) []byte {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	v := f.material[tenantID+":"+keyID]
+	return v[len(v)-1]
+}
+
+// Rotate adds a version, as keycore's rotate does.
+func (f *fakeHYOKKeyCore) Rotate(tenantID, keyID string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	m := make([]byte, 32)
+	_, _ = rand.Read(m)
+	f.material[tenantID+":"+keyID] = append(f.material[tenantID+":"+keyID], m)
+	f.keys[tenantID+":"+keyID]["current_version"] = len(f.material[tenantID+":"+keyID])
+}
+
+func (f *fakeHYOKKeyCore) EncryptAAD(ctx context.Context, tenantID string, keyID string, plaintextB64 string, aadB64 string, _ string) (map[string]interface{}, error) {
+	if _, err := f.GetKey(ctx, tenantID, keyID); err != nil {
+		return nil, err
+	}
+	plain, err1 := base64.StdEncoding.DecodeString(plaintextB64)
+	aad, err2 := base64.StdEncoding.DecodeString(aadB64)
+	if err1 != nil || err2 != nil {
+		return nil, keycoreError{Status: 400, Code: "bad_request", Message: "base64"}
+	}
+	f.mu.Lock()
+	versions := f.material[tenantID+":"+keyID]
+	f.mu.Unlock()
+	iv, ct, err := pkgcrypto.SealDetached(versions[len(versions)-1], plain, aad)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{"key_id": keyID, "version": len(versions), "ciphertext": base64.StdEncoding.EncodeToString(ct), "iv": base64.StdEncoding.EncodeToString(iv)}, nil
+}
+
+func (f *fakeHYOKKeyCore) DecryptAAD(ctx context.Context, tenantID string, keyID string, ciphertextB64 string, ivB64 string, aadB64 string, version int) (map[string]interface{}, error) {
+	if _, err := f.GetKey(ctx, tenantID, keyID); err != nil {
+		return nil, err
+	}
+	ct, _ := base64.StdEncoding.DecodeString(ciphertextB64)
+	iv, _ := base64.StdEncoding.DecodeString(ivB64)
+	aad, _ := base64.StdEncoding.DecodeString(aadB64)
+	f.mu.Lock()
+	versions := f.material[tenantID+":"+keyID]
+	f.mu.Unlock()
+	if version < 1 || version > len(versions) {
+		return nil, keycoreError{Status: 400, Code: "decrypt_failed", Message: "no such version"}
+	}
+	plain, err := pkgcrypto.OpenDetached(versions[version-1], iv, ct, aad)
+	if err != nil {
+		return nil, keycoreError{Status: 400, Code: "decrypt_failed", Message: "message authentication failed"}
+	}
+	return map[string]interface{}{"key_id": keyID, "version": version, "plaintext": base64.StdEncoding.EncodeToString(plain)}, nil
 }
 
 var (
@@ -70,7 +128,7 @@ var (
 func newFakeHYOKKeyCore() *fakeHYOKKeyCore {
 	return &fakeHYOKKeyCore{
 		keys:     map[string]map[string]interface{}{},
-		material: map[string][]byte{},
+		material: map[string][][]byte{},
 	}
 }
 
@@ -88,7 +146,7 @@ func (f *fakeHYOKKeyCore) Seed(tenantID string, keyID string, algorithm string) 
 	}
 	m := make([]byte, 32)
 	_, _ = rand.Read(m)
-	f.material[tenantID+":"+keyID] = m
+	f.material[tenantID+":"+keyID] = [][]byte{m}
 }
 
 // SetStatus changes a seeded key's lifecycle status.
@@ -154,10 +212,7 @@ func (f *fakeHYOKKeyCore) WrapAs(ctx context.Context, tenantID string, keyID str
 	if strings.Contains(strings.ToUpper(firstString(k["algorithm"])), "RSA") {
 		out, err = pkgcrypto.JWAWrapRSA(alg, &getTestRSAKey().PublicKey, plain)
 	} else {
-		f.mu.Lock()
-		m := f.material[tenantID+":"+keyID]
-		f.mu.Unlock()
-		out, err = pkgcrypto.JWAWrapAES(alg, m, plain)
+		out, err = pkgcrypto.JWAWrapAES(alg, f.current(tenantID, keyID), plain)
 	}
 	if err != nil {
 		return nil, keycoreError{Status: 400, Code: "encrypt_failed", Message: err.Error()}
@@ -178,10 +233,7 @@ func (f *fakeHYOKKeyCore) UnwrapAs(ctx context.Context, tenantID string, keyID s
 	if strings.Contains(strings.ToUpper(firstString(k["algorithm"])), "RSA") {
 		out, err = pkgcrypto.JWAUnwrapRSA(alg, getTestRSAKey(), wrapped)
 	} else {
-		f.mu.Lock()
-		m := f.material[tenantID+":"+keyID]
-		f.mu.Unlock()
-		out, err = pkgcrypto.JWAUnwrapAES(alg, m, wrapped)
+		out, err = pkgcrypto.JWAUnwrapAES(alg, f.current(tenantID, keyID), wrapped)
 	}
 	if err != nil {
 		return nil, keycoreError{Status: 400, Code: "decrypt_failed", Message: "the wrapped key does not open under this key version"}
@@ -377,5 +429,39 @@ func testJWTParser(tok string) (*pkgauth.Claims, error) {
 	if len(parts) != 3 || parts[0] != "jwt" {
 		return nil, errors.New("invalid token")
 	}
-	return &pkgauth.Claims{TenantID: parts[1], Role: parts[2], UserID: "u-" + parts[2]}, nil
+	// A tenant administrator holds "*", as auth grants tenant-admin; a role
+	// name alone grants nothing.
+	claims := &pkgauth.Claims{TenantID: parts[1], Role: parts[2], UserID: "u-" + parts[2]}
+	switch parts[2] {
+	case "admin":
+		claims.Permissions = []string{"*"}
+	case "reader":
+		claims.Permissions = []string{"hyok.read"}
+	}
+	return claims, nil
 }
+
+// fakeCreds is the credential store: credentials by ID, opened as compliance
+// returns them.
+type fakeCreds struct {
+	mu   sync.Mutex
+	byID map[string]credstore.Credential
+	n    int
+}
+
+func (f *fakeCreds) Resolve(_ context.Context, _ string, id string) (credstore.Credential, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.n++
+	c, ok := f.byID[id]
+	if !ok {
+		return credstore.Credential{}, credstore.ErrNotFound
+	}
+	return c, nil
+}
+
+func (f *fakeCreds) Import(context.Context, string, string, string, string, map[string]string, bool) (string, error) {
+	return "", errors.New("not used")
+}
+
+func (f *fakeCreds) ReportTest(context.Context, string, string, error) error { return nil }

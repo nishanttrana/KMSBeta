@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/credstore"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgkeyaccess "vecta-kms/pkg/keyaccess"
@@ -28,7 +30,12 @@ type Service struct {
 	events     EventPublisher
 	keyAccess  pkgkeyaccess.Gate
 	azure      azureProbes
+	creds      credstore.Store
+	xks        xksCreds
 }
+
+// SetCredentials wires the credential store (AWS XKS credentials).
+func (s *Service) SetCredentials(c credstore.Store) { s.creds = c }
 
 func NewService(store Store, keycore KeyCoreClient, policy PolicyClient, governance GovernanceClient, events EventPublisher) *Service {
 	return &Service{
@@ -66,7 +73,15 @@ func (s *Service) ConfigureEndpoint(ctx context.Context, cfg EndpointConfig) (En
 			})
 			return EndpointConfig{}, err
 		}
-	} else if cfg.AuthMode == AuthModeMTLS {
+	} else if cfg.Protocol == ProtocolAWSXKS {
+		claims, _ := pkgauth.ClaimsFromContext(ctx)
+		if err := s.validateAWSXKSEndpoint(ctx, &cfg, claims); err != nil {
+			_ = s.publishAudit(ctx, "audit.hyok.endpoint_refused", cfg.TenantID, map[string]interface{}{
+				"protocol": cfg.Protocol, "reason": err.Error(), "result": "refused", "severity": "warning",
+			})
+			return EndpointConfig{}, err
+		}
+	} else if cfg.AuthMode == AuthModeMTLS || cfg.AuthMode == AuthModeSigV4 {
 		// Envoy's edge listener does not verify client certificates, so no
 		// request could ever prove an mTLS identity; refuse rather than store a
 		// mode that looks enforced.
@@ -101,7 +116,7 @@ func (s *Service) ListEndpoints(ctx context.Context, tenantID string) ([]Endpoin
 	for _, item := range current {
 		index[item.Protocol] = item
 	}
-	protocols := []string{ProtocolDKE, ProtocolSalesforce, ProtocolGoogleEKM, ProtocolGeneric, ProtocolServiceNow, ProtocolAlibaba, ProtocolAzureEKM}
+	protocols := []string{ProtocolDKE, ProtocolSalesforce, ProtocolGoogleEKM, ProtocolGeneric, ProtocolServiceNow, ProtocolAlibaba, ProtocolAzureEKM, ProtocolAWSXKS}
 	out := make([]EndpointConfig, 0, len(protocols))
 	for _, p := range protocols {
 		if item, ok := index[p]; ok {
@@ -864,10 +879,16 @@ func (s *Service) keycoreDispatch(ctx context.Context, tenantID string, keyID st
 		if strings.TrimSpace(req.PlaintextB64) == "" {
 			return nil, errors.New("plaintext is required")
 		}
+		if req.AADB64 != "" {
+			return s.keycore.EncryptAAD(ctx, tenantID, keyID, req.PlaintextB64, req.AADB64, req.ReferenceID)
+		}
 		return s.keycore.Encrypt(ctx, tenantID, keyID, req.PlaintextB64, req.IVB64, req.ReferenceID)
 	case "decrypt":
 		if strings.TrimSpace(req.CiphertextB64) == "" {
 			return nil, errors.New("ciphertext is required")
+		}
+		if req.AADB64 != "" {
+			return s.keycore.DecryptAAD(ctx, tenantID, keyID, req.CiphertextB64, req.IVB64, req.AADB64, req.Version)
 		}
 		return s.keycore.Decrypt(ctx, tenantID, keyID, req.CiphertextB64, req.IVB64)
 	case "wrap":
@@ -929,6 +950,8 @@ func protocolEventSubject(protocol string, operation string) string {
 		return "audit.hyok.alibaba_request"
 	case ProtocolAzureEKM:
 		return "audit.hyok.azure_ekm_request"
+	case ProtocolAWSXKS:
+		return "audit.hyok.aws_xks_request"
 	default:
 		return "audit.hyok.wrap_request"
 	}
@@ -950,6 +973,12 @@ func checkAuthMode(required string, actual string) error {
 			return nil
 		}
 		return errors.New("this endpoint requires mTLS, which the edge cannot verify; reconfigure it to jwt")
+	case AuthModeSigV4:
+		// Only the XKS handler verifies a SigV4 signature and sets this mode.
+		if actual == AuthModeSigV4 {
+			return nil
+		}
+		return errors.New("this endpoint takes AWS SigV4-signed calls only")
 	case AuthModeJWT:
 		if actual == "jwt" {
 			return nil

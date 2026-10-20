@@ -5,6 +5,27 @@ Newest entries on top.
 
 ## 2026-10-21
 
+### A role name was still deciding access (13.32.0-beta)
+- HYOK let anyone whose token said role "admin" or "super-admin" change
+  endpoints; a role name grants nothing elsewhere since 13.14.0-beta, but
+  this service was never checked for it. Found while adding a permission
+  check for XKS credentials. **`grep -rn '"super-admin"\|Role ==' services`
+  is part of reviewing any service's access code.**
+
+### A middleware for one credential refuses another (13.32.0-beta)
+- `jwtauth.MustWrapRouter` treats any Authorization header as a bearer
+  token and marks a parse failure invalid, so an AWS SigV4 header would
+  have been refused before the XKS route verified it. hyok's kernel wrapper
+  parses only `Bearer` and leaves other schemes to the route that owns
+  them. **A route with its own credential is tested through the service's
+  real middleware chain, not by calling the handler.**
+
+### The spec's vector, and the SDK as the client (13.32.0-beta)
+- The XKS integrity value is checked against the spec's Appendix C bytes,
+  and SigV4 against requests signed by the AWS SDK's own signer, which
+  signs `content-length` (kept outside Go's header map) — a hand-written
+  signer would have shared the verifier's blind spot.
+
 ### Rendering every view found what per-page tests missed (13.31.0-beta)
 - Two pages crashed and one threw when a service answered with an empty
   object or a 503. Each page had smoke tests, all of them with well-formed

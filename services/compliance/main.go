@@ -114,6 +114,7 @@ func main() {
 		cloudURL:     strings.TrimRight(envOr("CLOUD_URL", "https://cloud:8080"), "/"),
 		keycoreURL:   strings.TrimRight(keycoreURL, "/"),
 		hsmURL:       strings.TrimRight(envOr("HSM_CONNECTOR_URL", "https://hsm-connector:8430"), "/"),
+		hyokURL:      strings.TrimRight(envOr("HYOK_URL", "https://hyok:8120"), "/"),
 		http:         executor.platform}
 	handler.usage, handler.sourceUsage = usage, usage.Sources
 	handler.credUsage, handler.credTest = usage.Credentials, usage.Test

@@ -14,6 +14,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"vecta-kms/pkg/credstore"
+	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/servicetoken"
 	pkgsvctls "vecta-kms/pkg/svctls"
 
@@ -71,9 +73,13 @@ func main() {
 	}
 
 	var publisher EventPublisher
+	var audit route.Emitter
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.hyok.dead_letter")
+		if c, err := pkgaudit.NewClient(js, "hyok"); err == nil {
+			audit = c
+		}
 	} else {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
 	}
@@ -99,7 +105,10 @@ func main() {
 	keyAccess := pkgkeyaccess.GateFromEnv(3 * time.Second)
 	svc.SetKeyAccess(keyAccess)
 	logger.Printf("key access justifications deployed=%v (%s)", keyAccess.IsDeployed(), pkgkeyaccess.ProfilesEnv)
+	// AWS XKS credentials are opened from the credential store.
+	svc.SetCredentials(credstore.FromEnv())
 	handler := NewHandler(svc, jwtParser)
+	handler.MountKernel(audit, logger, envOr("BUILD_VERSION", "dev"))
 
 	httpPort := envOr("HTTP_PORT", "8120")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "hyok"))

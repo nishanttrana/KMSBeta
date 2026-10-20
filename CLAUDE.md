@@ -723,6 +723,9 @@ Security rules are explained in
   outbound address is checked where it is dialled (`pkg/ssrfguard`), not by
   hostname. A URL that carries a credential is a secret, and errors name
   only its host.
+- A middleware that verifies one credential leaves other Authorization
+  schemes to the route that verifies them (AWS SigV4 for XKS); such a route
+  is tested through the service's real middleware (13.32.0-beta).
 - Every view renders when its services answer `{}` or 503
   (`tests/no-crash.spec.ts`); a client function that gets a response
   without the shape it returns throws, so the page shows "unavailable".

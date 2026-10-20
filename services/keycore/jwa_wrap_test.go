@@ -128,3 +128,37 @@ func TestWrapAlgorithmStrictModeRefusesNonModule(t *testing.T) {
 		t.Fatalf("RSA-OAEP-256 in strict mode: %v", err)
 	}
 }
+
+// The two calls the hyok service makes for AWS XKS, against the real
+// handler: AES-GCM with AAD and an internal IV, and a decrypt naming the
+// version after the key rotated (services/hyok/keycore_client.go).
+func TestEncryptWithAADDecryptsByVersionAfterRotation(t *testing.T) {
+	h, svc := newHandlerForTest(t)
+	ctx := adminCtx()
+	key, err := svc.CreateKey(ctx, CreateKeyRequest{TenantID: "t1", Name: "xks", Algorithm: "AES-256", KeyType: "symmetric", Purpose: "encrypt", Owner: "ops", CreatedBy: "tester"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	plain := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{9}, 32))
+	aad := base64.StdEncoding.EncodeToString([]byte{0, 3, 'a', 'b', 'c', 5, 1, 0, 0, 0, 1})
+	code, enc := jwaCall(t, h, key.ID, "encrypt", map[string]any{"tenant_id": "t1", "plaintext": plain, "aad": aad, "iv_mode": "internal", "reference_id": "kms-req-1"})
+	if code != http.StatusOK {
+		t.Fatalf("encrypt: %d %v", code, enc)
+	}
+	ct, _ := base64.StdEncoding.DecodeString(enc["ciphertext"].(string))
+	iv, _ := base64.StdEncoding.DecodeString(enc["iv"].(string))
+	if len(ct) != 32+16 || len(iv) != 12 || enc["version"].(float64) != 1 {
+		t.Fatalf("ciphertext %d bytes, iv %d bytes, version %v", len(ct), len(iv), enc["version"])
+	}
+	if _, err := svc.RotateKey(ctx, "t1", key.ID, "test", ""); err != nil {
+		t.Fatal(err)
+	}
+	code, out := jwaCall(t, h, key.ID, "decrypt", map[string]any{"tenant_id": "t1", "ciphertext": enc["ciphertext"], "iv": enc["iv"], "aad": aad, "version": 1})
+	if code != http.StatusOK || out["plaintext"] != plain {
+		t.Fatalf("decrypt of version 1 after rotation: %d %v", code, out)
+	}
+	code, _ = jwaCall(t, h, key.ID, "decrypt", map[string]any{"tenant_id": "t1", "ciphertext": enc["ciphertext"], "iv": enc["iv"], "aad": base64.StdEncoding.EncodeToString([]byte("other")), "version": 1})
+	if code == http.StatusOK {
+		t.Fatal("decrypted with another AAD")
+	}
+}

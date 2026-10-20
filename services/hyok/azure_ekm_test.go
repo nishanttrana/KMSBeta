@@ -190,7 +190,7 @@ func TestAzureEKMWrapsAndUnwrapsOverMutualTLS(t *testing.T) {
 		// KMS holds: the key opens it directly.
 		var direct []byte
 		if pkgcrypto.JWAIsAES(tc.alg) {
-			direct, err = pkgcrypto.JWAUnwrapAES(tc.alg, f.keycore.material["tenant-a:k-aes"], wrapped)
+			direct, err = pkgcrypto.JWAUnwrapAES(tc.alg, f.keycore.current("tenant-a", "k-aes"), wrapped)
 		} else {
 			direct, err = pkgcrypto.JWAUnwrapRSA(tc.alg, getTestRSAKey(), wrapped)
 		}

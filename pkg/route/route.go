@@ -318,6 +318,17 @@ func (c *Call) Refuse(status int, reason, msg string) {
 	c.result, c.reason = ResultRefused, reason
 }
 
+// Protocol writes a body in an external API's own shape (AWS XKS errors are
+// {"errorName","errorMessage"}) and records the event's result and reason,
+// which Error and Refuse would otherwise set. result is ResultRefused for a
+// refusal, ResultFailure for a failure, "" to derive it from status.
+func (c *Call) Protocol(status int, body interface{}, result, reason string) {
+	c.result, c.reason = result, reason
+	c.W.Header().Set("Content-Type", "application/json")
+	c.W.WriteHeader(status)
+	_ = json.NewEncoder(c.W).Encode(body)
+}
+
 func (c *Call) write(status int, payload map[string]interface{}) {
 	c.W.Header().Set("Content-Type", "application/json")
 	c.W.WriteHeader(status)

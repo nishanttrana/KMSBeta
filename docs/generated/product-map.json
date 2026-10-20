@@ -3860,7 +3860,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/connections_service.go",
       "handler": "h.resolveConnection",
-      "line": 70,
+      "line": 71,
       "match_key": "compliance|POST|/compliance/connections/{param}/resolve",
       "method": "POST",
       "normalized_path": "/compliance/connections/{param}/resolve",
@@ -3875,7 +3875,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/connections_service.go",
       "handler": "h.importConnection",
-      "line": 71,
+      "line": 72,
       "match_key": "compliance|POST|/compliance/connections/import",
       "method": "POST",
       "normalized_path": "/compliance/connections/import",
@@ -4610,7 +4610,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.listConnections",
-      "line": 444,
+      "line": 445,
       "match_key": "compliance|GET|/compliance/playbooks/connections",
       "method": "GET",
       "normalized_path": "/compliance/playbooks/connections",
@@ -4625,7 +4625,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.createConnection",
-      "line": 445,
+      "line": 446,
       "match_key": "compliance|POST|/compliance/playbooks/connections",
       "method": "POST",
       "normalized_path": "/compliance/playbooks/connections",
@@ -4640,7 +4640,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.updateConnection",
-      "line": 446,
+      "line": 447,
       "match_key": "compliance|PUT|/compliance/playbooks/connections/{param}",
       "method": "PUT",
       "normalized_path": "/compliance/playbooks/connections/{param}",
@@ -4655,7 +4655,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.deleteConnection",
-      "line": 447,
+      "line": 448,
       "match_key": "compliance|DELETE|/compliance/playbooks/connections/{param}",
       "method": "DELETE",
       "normalized_path": "/compliance/playbooks/connections/{param}",
@@ -4670,7 +4670,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.testConnection",
-      "line": 448,
+      "line": 449,
       "match_key": "compliance|POST|/compliance/playbooks/connections/{param}/test",
       "method": "POST",
       "normalized_path": "/compliance/playbooks/connections/{param}/test",
@@ -7246,11 +7246,41 @@
       "service": "governance"
     },
     {
+      "action": "xks_request",
+      "code_scope": "hyok",
+      "file": "services/hyok/aws_xks.go",
+      "handler": "h.handleXKS",
+      "line": 539,
+      "match_key": "hyok|POST|/xks/{param}",
+      "method": "POST",
+      "normalized_path": "/xks/{param}",
+      "path": "/xks/{rest...}",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "key",
+      "service": "hyok"
+    },
+    {
+      "action": "credential_usage_read",
+      "code_scope": "hyok",
+      "file": "services/hyok/aws_xks.go",
+      "handler": "h.credentialUsage",
+      "line": 540,
+      "match_key": "hyok|GET|/hyok/credential-usage",
+      "method": "GET",
+      "normalized_path": "/hyok/credential-usage",
+      "path": "/hyok/credential-usage",
+      "permission": "authenticated",
+      "registration": "kernel",
+      "resource": "credential",
+      "service": "hyok"
+    },
+    {
       "action": "",
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleMicrosoftDKEGetKey",
-      "line": 36,
+      "line": 48,
       "match_key": "hyok|GET|/api/v1/keys/{param}",
       "method": "GET",
       "normalized_path": "/api/v1/keys/{param}",
@@ -7265,7 +7295,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleMicrosoftDKEDecrypt",
-      "line": 37,
+      "line": 49,
       "match_key": "hyok|POST|/api/v1/keys/{param}/{param}/decrypt",
       "method": "POST",
       "normalized_path": "/api/v1/keys/{param}/{param}/decrypt",
@@ -7280,7 +7310,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleDKEDecrypt",
-      "line": 38,
+      "line": 50,
       "match_key": "hyok|POST|/hyok/dke/v1/keys/{param}/decrypt",
       "method": "POST",
       "normalized_path": "/hyok/dke/v1/keys/{param}/decrypt",
@@ -7295,7 +7325,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleDKEPublicKey",
-      "line": 39,
+      "line": 51,
       "match_key": "hyok|GET|/hyok/dke/v1/keys/{param}/publickey",
       "method": "GET",
       "normalized_path": "/hyok/dke/v1/keys/{param}/publickey",
@@ -7310,7 +7340,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleSalesforceWrap",
-      "line": 40,
+      "line": 52,
       "match_key": "hyok|POST|/hyok/salesforce/v1/keys/{param}/wrap",
       "method": "POST",
       "normalized_path": "/hyok/salesforce/v1/keys/{param}/wrap",
@@ -7325,7 +7355,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleSalesforceUnwrap",
-      "line": 41,
+      "line": 53,
       "match_key": "hyok|POST|/hyok/salesforce/v1/keys/{param}/unwrap",
       "method": "POST",
       "normalized_path": "/hyok/salesforce/v1/keys/{param}/unwrap",
@@ -7340,7 +7370,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleGoogleWrap",
-      "line": 42,
+      "line": 54,
       "match_key": "hyok|POST|/hyok/google/v1/keys/{param}/wrap",
       "method": "POST",
       "normalized_path": "/hyok/google/v1/keys/{param}/wrap",
@@ -7355,7 +7385,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleGoogleUnwrap",
-      "line": 43,
+      "line": 55,
       "match_key": "hyok|POST|/hyok/google/v1/keys/{param}/unwrap",
       "method": "POST",
       "normalized_path": "/hyok/google/v1/keys/{param}/unwrap",
@@ -7370,7 +7400,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleGenericEncrypt",
-      "line": 44,
+      "line": 56,
       "match_key": "hyok|POST|/hyok/generic/v1/keys/{param}/encrypt",
       "method": "POST",
       "normalized_path": "/hyok/generic/v1/keys/{param}/encrypt",
@@ -7385,7 +7415,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleGenericDecrypt",
-      "line": 45,
+      "line": 57,
       "match_key": "hyok|POST|/hyok/generic/v1/keys/{param}/decrypt",
       "method": "POST",
       "normalized_path": "/hyok/generic/v1/keys/{param}/decrypt",
@@ -7400,7 +7430,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleGenericWrap",
-      "line": 46,
+      "line": 58,
       "match_key": "hyok|POST|/hyok/generic/v1/keys/{param}/wrap",
       "method": "POST",
       "normalized_path": "/hyok/generic/v1/keys/{param}/wrap",
@@ -7415,7 +7445,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleGenericUnwrap",
-      "line": 47,
+      "line": 59,
       "match_key": "hyok|POST|/hyok/generic/v1/keys/{param}/unwrap",
       "method": "POST",
       "normalized_path": "/hyok/generic/v1/keys/{param}/unwrap",
@@ -7430,7 +7460,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleServiceNowWrap",
-      "line": 48,
+      "line": 60,
       "match_key": "hyok|POST|/hyok/servicenow/v1/keys/{param}/wrap",
       "method": "POST",
       "normalized_path": "/hyok/servicenow/v1/keys/{param}/wrap",
@@ -7445,7 +7475,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleServiceNowUnwrap",
-      "line": 49,
+      "line": 61,
       "match_key": "hyok|POST|/hyok/servicenow/v1/keys/{param}/unwrap",
       "method": "POST",
       "normalized_path": "/hyok/servicenow/v1/keys/{param}/unwrap",
@@ -7460,7 +7490,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleAlibabaEncrypt",
-      "line": 50,
+      "line": 62,
       "match_key": "hyok|POST|/hyok/alibaba/v1/keys/{param}/encrypt",
       "method": "POST",
       "normalized_path": "/hyok/alibaba/v1/keys/{param}/encrypt",
@@ -7475,7 +7505,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleAlibabaDecrypt",
-      "line": 51,
+      "line": 63,
       "match_key": "hyok|POST|/hyok/alibaba/v1/keys/{param}/decrypt",
       "method": "POST",
       "normalized_path": "/hyok/alibaba/v1/keys/{param}/decrypt",
@@ -7490,7 +7520,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleListEndpoints",
-      "line": 53,
+      "line": 65,
       "match_key": "hyok|GET|/hyok/v1/endpoints",
       "method": "GET",
       "normalized_path": "/hyok/v1/endpoints",
@@ -7505,7 +7535,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleConfigureEndpoint",
-      "line": 54,
+      "line": 66,
       "match_key": "hyok|PUT|/hyok/v1/endpoints/{param}",
       "method": "PUT",
       "normalized_path": "/hyok/v1/endpoints/{param}",
@@ -7520,7 +7550,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleDeleteEndpoint",
-      "line": 55,
+      "line": 67,
       "match_key": "hyok|DELETE|/hyok/v1/endpoints/{param}",
       "method": "DELETE",
       "normalized_path": "/hyok/v1/endpoints/{param}",
@@ -7535,7 +7565,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleListRequests",
-      "line": 56,
+      "line": 68,
       "match_key": "hyok|GET|/hyok/v1/requests",
       "method": "GET",
       "normalized_path": "/hyok/v1/requests",
@@ -7550,7 +7580,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleHealth",
-      "line": 57,
+      "line": 69,
       "match_key": "hyok|GET|/hyok/v1/health",
       "method": "GET",
       "normalized_path": "/hyok/v1/health",
@@ -14992,7 +15022,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/connections_service.go",
       "handler": "h.resolveConnection",
-      "line": 70,
+      "line": 71,
       "match_key": "compliance|POST|/compliance/connections/{param}/resolve",
       "method": "POST",
       "normalized_path": "/compliance/connections/{param}/resolve",
@@ -15007,7 +15037,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/connections_service.go",
       "handler": "h.importConnection",
-      "line": 71,
+      "line": 72,
       "match_key": "compliance|POST|/compliance/connections/import",
       "method": "POST",
       "normalized_path": "/compliance/connections/import",
@@ -15412,7 +15442,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.createConnection",
-      "line": 445,
+      "line": 446,
       "match_key": "compliance|POST|/compliance/playbooks/connections",
       "method": "POST",
       "normalized_path": "/compliance/playbooks/connections",
@@ -15427,7 +15457,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.updateConnection",
-      "line": 446,
+      "line": 447,
       "match_key": "compliance|PUT|/compliance/playbooks/connections/{param}",
       "method": "PUT",
       "normalized_path": "/compliance/playbooks/connections/{param}",
@@ -15442,7 +15472,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.deleteConnection",
-      "line": 447,
+      "line": 448,
       "match_key": "compliance|DELETE|/compliance/playbooks/connections/{param}",
       "method": "DELETE",
       "normalized_path": "/compliance/playbooks/connections/{param}",
@@ -15457,7 +15487,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.testConnection",
-      "line": 448,
+      "line": 449,
       "match_key": "compliance|POST|/compliance/playbooks/connections/{param}/test",
       "method": "POST",
       "normalized_path": "/compliance/playbooks/connections/{param}/test",
@@ -16368,11 +16398,41 @@
       "service": "governance"
     },
     {
+      "action": "xks_request",
+      "code_scope": "hyok",
+      "file": "services/hyok/aws_xks.go",
+      "handler": "h.handleXKS",
+      "line": 539,
+      "match_key": "hyok|POST|/xks/{param}",
+      "method": "POST",
+      "normalized_path": "/xks/{param}",
+      "path": "/xks/{rest...}",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "key",
+      "service": "hyok"
+    },
+    {
+      "action": "credential_usage_read",
+      "code_scope": "hyok",
+      "file": "services/hyok/aws_xks.go",
+      "handler": "h.credentialUsage",
+      "line": 540,
+      "match_key": "hyok|GET|/hyok/credential-usage",
+      "method": "GET",
+      "normalized_path": "/hyok/credential-usage",
+      "path": "/hyok/credential-usage",
+      "permission": "authenticated",
+      "registration": "kernel",
+      "resource": "credential",
+      "service": "hyok"
+    },
+    {
       "action": "",
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleMicrosoftDKEGetKey",
-      "line": 36,
+      "line": 48,
       "match_key": "hyok|GET|/api/v1/keys/{param}",
       "method": "GET",
       "normalized_path": "/api/v1/keys/{param}",
@@ -16387,7 +16447,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleMicrosoftDKEDecrypt",
-      "line": 37,
+      "line": 49,
       "match_key": "hyok|POST|/api/v1/keys/{param}/{param}/decrypt",
       "method": "POST",
       "normalized_path": "/api/v1/keys/{param}/{param}/decrypt",
@@ -16402,7 +16462,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleDKEDecrypt",
-      "line": 38,
+      "line": 50,
       "match_key": "hyok|POST|/hyok/dke/v1/keys/{param}/decrypt",
       "method": "POST",
       "normalized_path": "/hyok/dke/v1/keys/{param}/decrypt",
@@ -16417,7 +16477,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleSalesforceWrap",
-      "line": 40,
+      "line": 52,
       "match_key": "hyok|POST|/hyok/salesforce/v1/keys/{param}/wrap",
       "method": "POST",
       "normalized_path": "/hyok/salesforce/v1/keys/{param}/wrap",
@@ -16432,7 +16492,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleSalesforceUnwrap",
-      "line": 41,
+      "line": 53,
       "match_key": "hyok|POST|/hyok/salesforce/v1/keys/{param}/unwrap",
       "method": "POST",
       "normalized_path": "/hyok/salesforce/v1/keys/{param}/unwrap",
@@ -16447,7 +16507,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleGoogleWrap",
-      "line": 42,
+      "line": 54,
       "match_key": "hyok|POST|/hyok/google/v1/keys/{param}/wrap",
       "method": "POST",
       "normalized_path": "/hyok/google/v1/keys/{param}/wrap",
@@ -16462,7 +16522,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleGoogleUnwrap",
-      "line": 43,
+      "line": 55,
       "match_key": "hyok|POST|/hyok/google/v1/keys/{param}/unwrap",
       "method": "POST",
       "normalized_path": "/hyok/google/v1/keys/{param}/unwrap",
@@ -16477,7 +16537,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleGenericEncrypt",
-      "line": 44,
+      "line": 56,
       "match_key": "hyok|POST|/hyok/generic/v1/keys/{param}/encrypt",
       "method": "POST",
       "normalized_path": "/hyok/generic/v1/keys/{param}/encrypt",
@@ -16492,7 +16552,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleGenericDecrypt",
-      "line": 45,
+      "line": 57,
       "match_key": "hyok|POST|/hyok/generic/v1/keys/{param}/decrypt",
       "method": "POST",
       "normalized_path": "/hyok/generic/v1/keys/{param}/decrypt",
@@ -16507,7 +16567,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleGenericWrap",
-      "line": 46,
+      "line": 58,
       "match_key": "hyok|POST|/hyok/generic/v1/keys/{param}/wrap",
       "method": "POST",
       "normalized_path": "/hyok/generic/v1/keys/{param}/wrap",
@@ -16522,7 +16582,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleGenericUnwrap",
-      "line": 47,
+      "line": 59,
       "match_key": "hyok|POST|/hyok/generic/v1/keys/{param}/unwrap",
       "method": "POST",
       "normalized_path": "/hyok/generic/v1/keys/{param}/unwrap",
@@ -16537,7 +16597,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleServiceNowWrap",
-      "line": 48,
+      "line": 60,
       "match_key": "hyok|POST|/hyok/servicenow/v1/keys/{param}/wrap",
       "method": "POST",
       "normalized_path": "/hyok/servicenow/v1/keys/{param}/wrap",
@@ -16552,7 +16612,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleServiceNowUnwrap",
-      "line": 49,
+      "line": 61,
       "match_key": "hyok|POST|/hyok/servicenow/v1/keys/{param}/unwrap",
       "method": "POST",
       "normalized_path": "/hyok/servicenow/v1/keys/{param}/unwrap",
@@ -16567,7 +16627,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleAlibabaEncrypt",
-      "line": 50,
+      "line": 62,
       "match_key": "hyok|POST|/hyok/alibaba/v1/keys/{param}/encrypt",
       "method": "POST",
       "normalized_path": "/hyok/alibaba/v1/keys/{param}/encrypt",
@@ -16582,7 +16642,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/handler.go",
       "handler": "h.handleAlibabaDecrypt",
-      "line": 51,
+      "line": 63,
       "match_key": "hyok|POST|/hyok/alibaba/v1/keys/{param}/decrypt",
       "method": "POST",
       "normalized_path": "/hyok/alibaba/v1/keys/{param}/decrypt",
@@ -20784,16 +20844,6 @@
       "file": "web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx",
       "handler": "",
       "label": "selectSubtab(\"byok\")}>BYOK",
-      "line": 30,
-      "tabs": [
-        "cloudctl"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx",
-      "handler": "",
-      "label": "selectSubtab(\"hyok\")}>HYOK",
       "line": 31,
       "tabs": [
         "cloudctl"
@@ -20803,8 +20853,18 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx",
       "handler": "",
-      "label": "selectSubtab(\"google-cse\")}>Google CSE",
+      "label": "selectSubtab(\"hyok\")}>HYOK",
       "line": 32,
+      "tabs": [
+        "cloudctl"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx",
+      "handler": "",
+      "label": "selectSubtab(\"google-cse\")}>Google CSE",
+      "line": 33,
       "tabs": [
         "cloudctl"
       ],
@@ -22036,16 +22096,6 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "void refresh(false)} disabled= > Refresh",
-      "line": 290,
-      "tabs": [
-        "hyok"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
-      "handler": "",
-      "label": "}> Endpoint URLs",
       "line": 291,
       "tabs": [
         "hyok"
@@ -22055,7 +22105,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
-      "label": "}> Setup Guide",
+      "label": "}> Endpoint URLs",
       "line": 292,
       "tabs": [
         "hyok"
@@ -22065,8 +22115,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
-      "label": "openConfig(protocol)}>Configure",
-      "line": 331,
+      "label": "}> Setup Guide",
+      "line": 293,
       "tabs": [
         "hyok"
       ],
@@ -22075,7 +22125,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
-      "label": "}>URLs",
+      "label": "openConfig(protocol)}>Configure",
       "line": 332,
       "tabs": [
         "hyok"
@@ -22085,7 +22135,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
-      "label": "}>Guide",
+      "label": "}>URLs",
       "line": 333,
       "tabs": [
         "hyok"
@@ -22095,7 +22145,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
-      "label": "void runDelete(protocol)}>Reset",
+      "label": "}>Guide",
       "line": 334,
       "tabs": [
         "hyok"
@@ -22105,8 +22155,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
-      "label": "setModal(null)} disabled= >Cancel",
-      "line": 475,
+      "label": "void runDelete(protocol)}>Reset",
+      "line": 335,
       "tabs": [
         "hyok"
       ],
@@ -22115,7 +22165,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
-      "label": "void submitConfig()} disabled= >",
+      "label": "setModal(null)} disabled= >Cancel",
       "line": 476,
       "tabs": [
         "hyok"
@@ -22125,8 +22175,18 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
+      "label": "void submitConfig()} disabled= >",
+      "line": 477,
+      "tabs": [
+        "hyok"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
+      "handler": "",
       "label": "copyToClipboard(url.path)} style={ } title=\"Copy URL path\">",
-      "line": 500,
+      "line": 503,
       "tabs": [
         "hyok"
       ],
@@ -22136,7 +22196,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Close",
-      "line": 507,
+      "line": 510,
       "tabs": [
         "hyok"
       ],
@@ -22146,10 +22206,50 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Close",
-      "line": 549,
+      "line": 552,
       "tabs": [
         "hyok"
       ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/HYOKXKSConfig.tsx",
+      "handler": "",
+      "label": "setRows((cur) => cur.filter((_, j) => j !== i))} style={ }>",
+      "line": 116,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/HYOKXKSConfig.tsx",
+      "handler": "",
+      "label": "setRows((cur) => [...cur, ])}> Add key",
+      "line": 119,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/HYOKXKSConfig.tsx",
+      "handler": "",
+      "label": "{ try catch }} style={ }>",
+      "line": 134,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/HYOKXKSConfig.tsx",
+      "handler": "onClose",
+      "label": "Cancel",
+      "line": 139,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/HYOKXKSConfig.tsx",
+      "handler": "",
+      "label": "void save()} disabled= >",
+      "line": 140,
+      "tabs": [],
       "tag": "Btn"
     },
     {
@@ -32868,7 +32968,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-20T19:42:20Z",
+  "generated_at": "2026-10-20T20:33:26Z",
   "navigation": [
     {
       "group": "Home",
@@ -48969,7 +49069,7 @@
         "approvedRanges"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 86,
+      "handler_line": 87,
       "handler_name": "resolveConnection",
       "handler_receiver_calls": [
         "h.connVault.Open"
@@ -48982,7 +49082,7 @@
       "normalized_path": "/compliance/connections/{param}/resolve",
       "path": "/compliance/connections/{id}/resolve",
       "route_file": "services/compliance/connections_service.go",
-      "route_line": 70,
+      "route_line": 71,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -49010,7 +49110,7 @@
         "CreateConnection"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 141,
+      "handler_line": 142,
       "handler_name": "importConnection",
       "handler_receiver_calls": [
         "h.connVault.current"
@@ -49024,7 +49124,7 @@
       "normalized_path": "/compliance/connections/import",
       "path": "/compliance/connections/import",
       "route_file": "services/compliance/connections_service.go",
-      "route_line": 71,
+      "route_line": 72,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -49163,7 +49263,7 @@
         "recordTest"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 218,
+      "handler_line": 223,
       "handler_name": "reportConnectionTest",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -51738,7 +51838,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 452,
+      "handler_line": 453,
       "handler_name": "listConnections",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -51749,7 +51849,7 @@
       "normalized_path": "/compliance/playbooks/connections",
       "path": "/compliance/playbooks/connections",
       "route_file": "services/compliance/playbook_connections.go",
-      "route_line": 444,
+      "route_line": 445,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -51773,7 +51873,7 @@
         "CreateConnection"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 461,
+      "handler_line": 462,
       "handler_name": "createConnection",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -51784,7 +51884,7 @@
       "normalized_path": "/compliance/playbooks/connections",
       "path": "/compliance/playbooks/connections",
       "route_file": "services/compliance/playbook_connections.go",
-      "route_line": 445,
+      "route_line": 446,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -51846,7 +51946,7 @@
       "handler_internal_package_calls": [
         "pkg/tenantcheck.InternalServiceTenant"
       ],
-      "handler_line": 487,
+      "handler_line": 488,
       "handler_name": "updateConnection",
       "handler_receiver_calls": [
         "h.connVault.Open",
@@ -51867,7 +51967,7 @@
       "normalized_path": "/compliance/playbooks/connections/{param}",
       "path": "/compliance/playbooks/connections/{id}",
       "route_file": "services/compliance/playbook_connections.go",
-      "route_line": 446,
+      "route_line": 447,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -51892,7 +51992,7 @@
         "current"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 614,
+      "handler_line": 615,
       "handler_name": "deleteConnection",
       "handler_receiver_calls": [
         "h.connVault.current"
@@ -51906,7 +52006,7 @@
       "normalized_path": "/compliance/playbooks/connections/{param}",
       "path": "/compliance/playbooks/connections/{id}",
       "route_file": "services/compliance/playbook_connections.go",
-      "route_line": 447,
+      "route_line": 448,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -51952,7 +52052,7 @@
       "handler_internal_package_calls": [
         "pkg/tenantcheck.InternalServiceTenant"
       ],
-      "handler_line": 654,
+      "handler_line": 655,
       "handler_name": "testConnection",
       "handler_receiver_calls": [
         "h.executor.testConnection"
@@ -51968,7 +52068,7 @@
       "normalized_path": "/compliance/playbooks/connections/{param}/test",
       "path": "/compliance/playbooks/connections/{id}/test",
       "route_file": "services/compliance/playbook_connections.go",
-      "route_line": 448,
+      "route_line": 449,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -65739,6 +65839,140 @@
     },
     {
       "frontend_call_sites": [],
+      "handler": "h.handleXKS",
+      "handler_external_package_calls": [
+        "encoding/json.Unmarshal",
+        "io.ReadAll",
+        "io.LimitReader",
+        "strings.Index",
+        "strings.Trim",
+        "strings.Split",
+        "strings.EqualFold",
+        "time.Now"
+      ],
+      "handler_file": "services/hyok/aws_xks.go",
+      "handler_helper_calls": [
+        "xksError",
+        "xksEndpointForPrefix",
+        "xksSecrets",
+        "xksExternalPrefix",
+        "Error",
+        "remoteHost",
+        "xksHealth",
+        "GetKey",
+        "firstString",
+        "xksEncrypt",
+        "extractInt",
+        "xksDecrypt"
+      ],
+      "handler_internal_package_calls": [
+        "pkg/sigv4.Verify"
+      ],
+      "handler_line": 281,
+      "handler_name": "handleXKS",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "xksEndpointForPrefix",
+        "xksSecrets"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/xks/{param}",
+      "path": "/xks/{rest...}",
+      "route_file": "services/hyok/aws_xks.go",
+      "route_line": 539,
+      "service": "hyok",
+      "service_external_package_calls": [
+        "strings.EqualFold",
+        "fmt.Errorf",
+        "time.Now"
+      ],
+      "service_helper_calls": [
+        "ListEnabledEndpointsByProtocol",
+        "parseAWSXKSMetadata",
+        "Resolve"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "strings.EqualFold"
+          ],
+          "file": "services/hyok/aws_xks.go",
+          "helper_calls": [
+            "ListEnabledEndpointsByProtocol",
+            "parseAWSXKSMetadata"
+          ],
+          "internal_package_calls": [],
+          "line": 196,
+          "name": "xksEndpointForPrefix",
+          "receiver_calls": [],
+          "store_calls": [
+            "ListEnabledEndpointsByProtocol"
+          ]
+        },
+        {
+          "external_package_calls": [
+            "fmt.Errorf",
+            "time.Now"
+          ],
+          "file": "services/hyok/aws_xks.go",
+          "helper_calls": [
+            "Resolve"
+          ],
+          "internal_package_calls": [],
+          "line": 167,
+          "name": "xksSecrets",
+          "receiver_calls": [
+            "s.creds.Resolve"
+          ],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [
+        "s.creds.Resolve"
+      ],
+      "service_store_calls": [
+        "ListEnabledEndpointsByProtocol"
+      ]
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.credentialUsage",
+      "handler_external_package_calls": [
+        "errors.Is"
+      ],
+      "handler_file": "services/hyok/aws_xks.go",
+      "handler_helper_calls": [
+        "GetEndpoint",
+        "parseAWSXKSMetadata",
+        "Error"
+      ],
+      "handler_internal_package_calls": [
+        "pkg/tenantcheck.IsServicePrincipal"
+      ],
+      "handler_line": 517,
+      "handler_name": "credentialUsage",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "GetEndpoint"
+      ],
+      "method": "GET",
+      "normalized_path": "/hyok/credential-usage",
+      "path": "/hyok/credential-usage",
+      "route_file": "services/hyok/aws_xks.go",
+      "route_line": 540,
+      "service": "hyok",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
       "handler": "h.handleMicrosoftDKEGetKey",
       "handler_external_package_calls": [],
       "handler_file": "services/hyok/handler.go",
@@ -65751,7 +65985,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 61,
+      "handler_line": 73,
       "handler_name": "handleMicrosoftDKEGetKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -65762,7 +65996,7 @@
       "normalized_path": "/api/v1/keys/{param}",
       "path": "/api/v1/keys/{id}",
       "route_file": "services/hyok/handler.go",
-      "route_line": 36,
+      "route_line": 48,
       "service": "hyok",
       "service_external_package_calls": [
         "strconv.Itoa",
@@ -65827,7 +66061,7 @@
             "pkg/crypto.ParseRSAPublicKeyAny",
             "pkg/crypto.RSAPublicKeyJWK"
           ],
-          "line": 642,
+          "line": 657,
           "name": "GetMicrosoftDKEKey",
           "receiver_calls": [
             "s.keycore.PublicKey"
@@ -65862,7 +66096,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 75,
+      "handler_line": 87,
       "handler_name": "handleMicrosoftDKEDecrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -65873,7 +66107,7 @@
       "normalized_path": "/api/v1/keys/{param}/{param}/decrypt",
       "path": "/api/v1/keys/{id}/{version}/decrypt",
       "route_file": "services/hyok/handler.go",
-      "route_line": 37,
+      "route_line": 49,
       "service": "hyok",
       "service_external_package_calls": [
         "strconv.Itoa",
@@ -65918,7 +66152,7 @@
             "dkeRequesterEmail"
           ],
           "internal_package_calls": [],
-          "line": 752,
+          "line": 767,
           "name": "ProcessMicrosoftDKEDecrypt",
           "receiver_calls": [
             "s.keycore.GetKey"
@@ -65940,7 +66174,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 94,
+      "handler_line": 106,
       "handler_name": "handleDKEDecrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -65949,7 +66183,7 @@
       "normalized_path": "/hyok/dke/v1/keys/{param}/decrypt",
       "path": "/hyok/dke/v1/keys/{id}/decrypt",
       "route_file": "services/hyok/handler.go",
-      "route_line": 38,
+      "route_line": 50,
       "service": "hyok",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -65978,7 +66212,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 172,
+      "handler_line": 184,
       "handler_name": "handleDKEPublicKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -65989,7 +66223,7 @@
       "normalized_path": "/hyok/dke/v1/keys/{param}/publickey",
       "path": "/hyok/dke/v1/keys/{id}/publickey",
       "route_file": "services/hyok/handler.go",
-      "route_line": 39,
+      "route_line": 51,
       "service": "hyok",
       "service_external_package_calls": [
         "fmt.Errorf",
@@ -66038,7 +66272,7 @@
             "mustJSON"
           ],
           "internal_package_calls": [],
-          "line": 548,
+          "line": 563,
           "name": "GetDKEPublicKey",
           "receiver_calls": [
             "s.keycore.PublicKey"
@@ -66066,7 +66300,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 98,
+      "handler_line": 110,
       "handler_name": "handleSalesforceWrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -66075,7 +66309,7 @@
       "normalized_path": "/hyok/salesforce/v1/keys/{param}/wrap",
       "path": "/hyok/salesforce/v1/keys/{id}/wrap",
       "route_file": "services/hyok/handler.go",
-      "route_line": 40,
+      "route_line": 52,
       "service": "hyok",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -66093,7 +66327,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 102,
+      "handler_line": 114,
       "handler_name": "handleSalesforceUnwrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -66102,7 +66336,7 @@
       "normalized_path": "/hyok/salesforce/v1/keys/{param}/unwrap",
       "path": "/hyok/salesforce/v1/keys/{id}/unwrap",
       "route_file": "services/hyok/handler.go",
-      "route_line": 41,
+      "route_line": 53,
       "service": "hyok",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -66120,7 +66354,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 106,
+      "handler_line": 118,
       "handler_name": "handleGoogleWrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -66129,7 +66363,7 @@
       "normalized_path": "/hyok/google/v1/keys/{param}/wrap",
       "path": "/hyok/google/v1/keys/{id}/wrap",
       "route_file": "services/hyok/handler.go",
-      "route_line": 42,
+      "route_line": 54,
       "service": "hyok",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -66147,7 +66381,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 110,
+      "handler_line": 122,
       "handler_name": "handleGoogleUnwrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -66156,7 +66390,7 @@
       "normalized_path": "/hyok/google/v1/keys/{param}/unwrap",
       "path": "/hyok/google/v1/keys/{id}/unwrap",
       "route_file": "services/hyok/handler.go",
-      "route_line": 43,
+      "route_line": 55,
       "service": "hyok",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -66174,7 +66408,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 114,
+      "handler_line": 126,
       "handler_name": "handleGenericEncrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -66183,7 +66417,7 @@
       "normalized_path": "/hyok/generic/v1/keys/{param}/encrypt",
       "path": "/hyok/generic/v1/keys/{id}/encrypt",
       "route_file": "services/hyok/handler.go",
-      "route_line": 44,
+      "route_line": 56,
       "service": "hyok",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -66201,7 +66435,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 118,
+      "handler_line": 130,
       "handler_name": "handleGenericDecrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -66210,7 +66444,7 @@
       "normalized_path": "/hyok/generic/v1/keys/{param}/decrypt",
       "path": "/hyok/generic/v1/keys/{id}/decrypt",
       "route_file": "services/hyok/handler.go",
-      "route_line": 45,
+      "route_line": 57,
       "service": "hyok",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -66228,7 +66462,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 122,
+      "handler_line": 134,
       "handler_name": "handleGenericWrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -66237,7 +66471,7 @@
       "normalized_path": "/hyok/generic/v1/keys/{param}/wrap",
       "path": "/hyok/generic/v1/keys/{id}/wrap",
       "route_file": "services/hyok/handler.go",
-      "route_line": 46,
+      "route_line": 58,
       "service": "hyok",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -66255,7 +66489,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 126,
+      "handler_line": 138,
       "handler_name": "handleGenericUnwrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -66264,7 +66498,7 @@
       "normalized_path": "/hyok/generic/v1/keys/{param}/unwrap",
       "path": "/hyok/generic/v1/keys/{id}/unwrap",
       "route_file": "services/hyok/handler.go",
-      "route_line": 47,
+      "route_line": 59,
       "service": "hyok",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -66282,7 +66516,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 130,
+      "handler_line": 142,
       "handler_name": "handleServiceNowWrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -66291,7 +66525,7 @@
       "normalized_path": "/hyok/servicenow/v1/keys/{param}/wrap",
       "path": "/hyok/servicenow/v1/keys/{id}/wrap",
       "route_file": "services/hyok/handler.go",
-      "route_line": 48,
+      "route_line": 60,
       "service": "hyok",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -66309,7 +66543,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 134,
+      "handler_line": 146,
       "handler_name": "handleServiceNowUnwrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -66318,7 +66552,7 @@
       "normalized_path": "/hyok/servicenow/v1/keys/{param}/unwrap",
       "path": "/hyok/servicenow/v1/keys/{id}/unwrap",
       "route_file": "services/hyok/handler.go",
-      "route_line": 49,
+      "route_line": 61,
       "service": "hyok",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -66336,7 +66570,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 138,
+      "handler_line": 150,
       "handler_name": "handleAlibabaEncrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -66345,7 +66579,7 @@
       "normalized_path": "/hyok/alibaba/v1/keys/{param}/encrypt",
       "path": "/hyok/alibaba/v1/keys/{id}/encrypt",
       "route_file": "services/hyok/handler.go",
-      "route_line": 50,
+      "route_line": 62,
       "service": "hyok",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -66363,7 +66597,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 142,
+      "handler_line": 154,
       "handler_name": "handleAlibabaDecrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -66372,7 +66606,7 @@
       "normalized_path": "/hyok/alibaba/v1/keys/{param}/decrypt",
       "path": "/hyok/alibaba/v1/keys/{id}/decrypt",
       "route_file": "services/hyok/handler.go",
-      "route_line": 51,
+      "route_line": 63,
       "service": "hyok",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -66404,7 +66638,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 186,
+      "handler_line": 198,
       "handler_name": "handleListEndpoints",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -66415,7 +66649,7 @@
       "normalized_path": "/hyok/v1/endpoints",
       "path": "/hyok/v1/endpoints",
       "route_file": "services/hyok/handler.go",
-      "route_line": 53,
+      "route_line": 65,
       "service": "hyok",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -66436,7 +66670,7 @@
             "defaultEndpointConfig"
           ],
           "internal_package_calls": [],
-          "line": 91,
+          "line": 106,
           "name": "ListEndpoints",
           "receiver_calls": [],
           "store_calls": [
@@ -66469,12 +66703,15 @@
         "writeErr",
         "Error",
         "adminCaller",
+        "authenticate",
         "ConfigureEndpoint",
         "writeServiceError",
         "writeJSON"
       ],
-      "handler_internal_package_calls": [],
-      "handler_line": 200,
+      "handler_internal_package_calls": [
+        "pkg/auth.ContextWithClaims"
+      ],
+      "handler_line": 212,
       "handler_name": "handleConfigureEndpoint",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -66485,7 +66722,7 @@
       "normalized_path": "/hyok/v1/endpoints/{param}",
       "path": "/hyok/v1/endpoints/{protocol}",
       "route_file": "services/hyok/handler.go",
-      "route_line": 54,
+      "route_line": 66,
       "service": "hyok",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -66498,10 +66735,13 @@
         "validateAzureEndpoint",
         "publishAudit",
         "Error",
+        "validateAWSXKSEndpoint",
         "UpsertEndpoint",
         "GetEndpoint"
       ],
-      "service_internal_package_calls": [],
+      "service_internal_package_calls": [
+        "pkg/auth.ClaimsFromContext"
+      ],
       "service_method_details": [
         {
           "external_package_calls": [
@@ -66516,11 +66756,14 @@
             "validateAzureEndpoint",
             "publishAudit",
             "Error",
+            "validateAWSXKSEndpoint",
             "UpsertEndpoint",
             "GetEndpoint"
           ],
-          "internal_package_calls": [],
-          "line": 49,
+          "internal_package_calls": [
+            "pkg/auth.ClaimsFromContext"
+          ],
+          "line": 56,
           "name": "ConfigureEndpoint",
           "receiver_calls": [],
           "store_calls": [
@@ -66558,7 +66801,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 244,
+      "handler_line": 262,
       "handler_name": "handleDeleteEndpoint",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -66569,7 +66812,7 @@
       "normalized_path": "/hyok/v1/endpoints/{param}",
       "path": "/hyok/v1/endpoints/{protocol}",
       "route_file": "services/hyok/handler.go",
-      "route_line": 55,
+      "route_line": 67,
       "service": "hyok",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -66592,7 +66835,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 116,
+          "line": 131,
           "name": "DeleteEndpoint",
           "receiver_calls": [],
           "store_calls": [
@@ -66629,7 +66872,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 257,
+      "handler_line": 275,
       "handler_name": "handleListRequests",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -66640,7 +66883,7 @@
       "normalized_path": "/hyok/v1/requests",
       "path": "/hyok/v1/requests",
       "route_file": "services/hyok/handler.go",
-      "route_line": 56,
+      "route_line": 68,
       "service": "hyok",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -66663,7 +66906,7 @@
             "ListRequestLogs"
           ],
           "internal_package_calls": [],
-          "line": 131,
+          "line": 146,
           "name": "ListRequests",
           "receiver_calls": [],
           "store_calls": [
@@ -66699,7 +66942,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 273,
+      "handler_line": 291,
       "handler_name": "handleHealth",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -66710,7 +66953,7 @@
       "normalized_path": "/hyok/v1/health",
       "path": "/hyok/v1/health",
       "route_file": "services/hyok/handler.go",
-      "route_line": 57,
+      "route_line": 69,
       "service": "hyok",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -66721,7 +66964,7 @@
           "file": "services/hyok/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 145,
+          "line": 160,
           "name": "Health",
           "receiver_calls": [],
           "store_calls": []
@@ -89595,7 +89838,7 @@
       "ekm": 56,
       "governance": 35,
       "hsm-connector": 14,
-      "hyok": 21,
+      "hyok": 23,
       "keyaccess": 9,
       "keycore": 178,
       "kmip": 12,
@@ -89910,17 +90153,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 896,
+    "backend_routes": 898,
     "backend_services": 28,
-    "button_inventory": 753,
+    "button_inventory": 758,
     "frontend_call_sites": 533,
     "matched_frontend_call_sites": 506,
     "nav_items": 25,
-    "request_flows": 896,
+    "request_flows": 898,
     "request_flows_with_frontend": 510,
-    "request_flows_with_internal_package_calls": 193,
-    "request_flows_with_service_calls": 536,
-    "request_flows_with_store_calls": 633,
+    "request_flows_with_internal_package_calls": 196,
+    "request_flows_with_service_calls": 537,
+    "request_flows_with_store_calls": 635,
     "subpane_groups": 12,
     "tab_components": 32,
     "unmatched_frontend_call_sites": 27
@@ -99926,7 +100169,7 @@
         "frontendSites": [],
         "handler": "resolveConnection",
         "handlerFile": "services/compliance/connections_service.go",
-        "handlerLine": 86,
+        "handlerLine": 87,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -99957,7 +100200,7 @@
         "frontendSites": [],
         "handler": "importConnection",
         "handlerFile": "services/compliance/connections_service.go",
-        "handlerLine": 141,
+        "handlerLine": 142,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -100085,7 +100328,7 @@
         "frontendSites": [],
         "handler": "reportConnectionTest",
         "handlerFile": "services/compliance/credentials.go",
-        "handlerLine": 218,
+        "handlerLine": 223,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -101523,7 +101766,7 @@
         ],
         "handler": "listConnections",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 452,
+        "handlerLine": 453,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -101553,7 +101796,7 @@
         "frontendSites": [],
         "handler": "createConnection",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 461,
+        "handlerLine": 462,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -101587,7 +101830,7 @@
         "frontendSites": [],
         "handler": "updateConnection",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 487,
+        "handlerLine": 488,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/tenantcheck.InternalServiceTenant"
@@ -101627,7 +101870,7 @@
         "frontendSites": [],
         "handler": "deleteConnection",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 614,
+        "handlerLine": 615,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "DELETE",
@@ -101661,7 +101904,7 @@
         "frontendSites": [],
         "handler": "testConnection",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 654,
+        "handlerLine": 655,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/tenantcheck.InternalServiceTenant"
@@ -107989,6 +108232,77 @@
         ]
       },
       {
+        "complexity": 3,
+        "externalPackages": [
+          "encoding/json.Unmarshal",
+          "io.ReadAll",
+          "io.LimitReader",
+          "strings.Index",
+          "strings.Trim",
+          "strings.Split",
+          "strings.EqualFold",
+          "time.Now",
+          "fmt.Errorf"
+        ],
+        "frontendSites": [],
+        "handler": "handleXKS",
+        "handlerFile": "services/hyok/aws_xks.go",
+        "handlerLine": 281,
+        "hasFrontend": false,
+        "internalPackages": [
+          "pkg/sigv4.Verify"
+        ],
+        "method": "POST",
+        "normalizedPath": "/xks/{param}",
+        "path": "/xks/{rest...}",
+        "receiverCalls": [
+          "s.creds.Resolve"
+        ],
+        "risk": "medium",
+        "routeKey": "hyok|POST|/xks/{param}",
+        "sensitive": false,
+        "service": "hyok",
+        "serviceCalls": [
+          "xksEndpointForPrefix",
+          "xksSecrets"
+        ],
+        "storeCalls": [
+          "ListEnabledEndpointsByProtocol"
+        ],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [
+          "errors.Is"
+        ],
+        "frontendSites": [],
+        "handler": "credentialUsage",
+        "handlerFile": "services/hyok/aws_xks.go",
+        "handlerLine": 517,
+        "hasFrontend": false,
+        "internalPackages": [
+          "pkg/tenantcheck.IsServicePrincipal"
+        ],
+        "method": "GET",
+        "normalizedPath": "/hyok/credential-usage",
+        "path": "/hyok/credential-usage",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "hyok|GET|/hyok/credential-usage",
+        "sensitive": false,
+        "service": "hyok",
+        "serviceCalls": [],
+        "storeCalls": [
+          "GetEndpoint"
+        ],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
         "complexity": 5,
         "externalPackages": [
           "strconv.Itoa",
@@ -107999,7 +108313,7 @@
         "frontendSites": [],
         "handler": "handleMicrosoftDKEGetKey",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 61,
+        "handlerLine": 73,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.ParseRSAPublicKeyAny",
@@ -108036,7 +108350,7 @@
         "frontendSites": [],
         "handler": "handleMicrosoftDKEDecrypt",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 75,
+        "handlerLine": 87,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -108063,7 +108377,7 @@
         "frontendSites": [],
         "handler": "handleDKEDecrypt",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 94,
+        "handlerLine": 106,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -108097,7 +108411,7 @@
         ],
         "handler": "handleDKEPublicKey",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 172,
+        "handlerLine": 184,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -108127,7 +108441,7 @@
         "frontendSites": [],
         "handler": "handleSalesforceWrap",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 98,
+        "handlerLine": 110,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -108150,7 +108464,7 @@
         "frontendSites": [],
         "handler": "handleSalesforceUnwrap",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 102,
+        "handlerLine": 114,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -108173,7 +108487,7 @@
         "frontendSites": [],
         "handler": "handleGoogleWrap",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 106,
+        "handlerLine": 118,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -108196,7 +108510,7 @@
         "frontendSites": [],
         "handler": "handleGoogleUnwrap",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 110,
+        "handlerLine": 122,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -108219,7 +108533,7 @@
         "frontendSites": [],
         "handler": "handleGenericEncrypt",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 114,
+        "handlerLine": 126,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -108242,7 +108556,7 @@
         "frontendSites": [],
         "handler": "handleGenericDecrypt",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 118,
+        "handlerLine": 130,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -108265,7 +108579,7 @@
         "frontendSites": [],
         "handler": "handleGenericWrap",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 122,
+        "handlerLine": 134,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -108288,7 +108602,7 @@
         "frontendSites": [],
         "handler": "handleGenericUnwrap",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 126,
+        "handlerLine": 138,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -108311,7 +108625,7 @@
         "frontendSites": [],
         "handler": "handleServiceNowWrap",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 130,
+        "handlerLine": 142,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -108334,7 +108648,7 @@
         "frontendSites": [],
         "handler": "handleServiceNowUnwrap",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 134,
+        "handlerLine": 146,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -108357,7 +108671,7 @@
         "frontendSites": [],
         "handler": "handleAlibabaEncrypt",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 138,
+        "handlerLine": 150,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -108380,7 +108694,7 @@
         "frontendSites": [],
         "handler": "handleAlibabaDecrypt",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 142,
+        "handlerLine": 154,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -108412,7 +108726,7 @@
         ],
         "handler": "handleListEndpoints",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 186,
+        "handlerLine": 198,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -108434,7 +108748,7 @@
         ]
       },
       {
-        "complexity": 2,
+        "complexity": 4,
         "externalPackages": [
           "strings.TrimSpace"
         ],
@@ -108448,9 +108762,12 @@
         ],
         "handler": "handleConfigureEndpoint",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 200,
+        "handlerLine": 212,
         "hasFrontend": true,
-        "internalPackages": [],
+        "internalPackages": [
+          "pkg/auth.ContextWithClaims",
+          "pkg/auth.ClaimsFromContext"
+        ],
         "method": "PUT",
         "normalizedPath": "/hyok/v1/endpoints/{param}",
         "path": "/hyok/v1/endpoints/{protocol}",
@@ -108485,7 +108802,7 @@
         ],
         "handler": "handleDeleteEndpoint",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 244,
+        "handlerLine": 262,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -108522,7 +108839,7 @@
         ],
         "handler": "handleListRequests",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 257,
+        "handlerLine": 275,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -108558,7 +108875,7 @@
         ],
         "handler": "handleHealth",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 273,
+        "handlerLine": 291,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -121667,7 +121984,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-20T19:42:20Z",
+    "generatedAt": "2026-10-20T20:33:26Z",
     "methods": [
       "DELETE",
       "GET",
@@ -121707,7 +122024,7 @@
       "workload"
     ],
     "summary": {
-      "flows": 896,
+      "flows": 898,
       "frontendBacked": 510,
       "highRisk": 345,
       "services": 28

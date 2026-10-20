@@ -4,6 +4,28 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.32.0-beta] — 2026-10-21
+
+### Added
+- **AWS XKS (external key store), as HYOK.** AWS KMS keys in an external
+  key store encrypt and decrypt with an AES-256 key that stays in the KMS
+  (XKS proxy API v1: health, metadata, encrypt, decrypt). AWS signs every
+  call with SigV4; the KMS verifies it against an `aws_xks` credential in
+  Playbooks → Credentials, and two can be attached to rotate the secret.
+  The key version rides in `ciphertextMetadata`, so rotating the Vecta key
+  never strands AWS's data keys; the integrity value AWS asks for is
+  computed per the spec's Appendix C after the KMS has decrypted its own
+  output. Configure it in **Cloud Key Control → HYOK → AWS XKS**. Tested
+  with requests signed by the AWS SDK's own SigV4 signer.
+- `pkg/sigv4`: SigV4 verification on `pkg/crypto`, tested against the AWS
+  SDK signer; the route kernel's `Call.Protocol` writes an external API's
+  own error body and records the refusal for the route's event.
+
+### Security
+- HYOK endpoint administration was decided by role name ("admin",
+  "tenant-admin", "super-admin"); it now needs the `hyok.read` /
+  `hyok.write` permission, which tenant administrators hold.
+
 ## [13.31.0-beta] — 2026-10-21
 
 ### Fixed

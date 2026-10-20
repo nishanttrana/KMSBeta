@@ -307,3 +307,31 @@ func TestLegacyHandlerSeesOnlyTheCheckedTenant(t *testing.T) {
 		t.Fatalf("event: %+v", ev)
 	}
 }
+
+// A Public route that writes an external API's own body records the
+// refusal it wrote, with its reason and the tenant it resolved.
+func TestProtocolBodyRecordsTheOutcome(t *testing.T) {
+	rec := &routetest.Recorder{}
+	r := route.New("demo", rec, nil)
+	r.Handle("POST /proto/{op}", route.Spec{Action: "proto_call", Public: true, Tenancy: route.PlatformScoped}, func(c *route.Call) {
+		c.Tenant = "t1"
+		if c.R.PathValue("op") == "bad" {
+			c.Protocol(http.StatusUnauthorized, map[string]string{"errorName": "AuthenticationFailedException"}, route.ResultRefused, "signature_mismatch")
+			return
+		}
+		c.Authenticated("AKIAEXAMPLE", "xks_credential")
+		c.Protocol(http.StatusOK, map[string]string{"ok": "yes"}, "", "")
+	})
+	w := serve(t, r, http.MethodPost, "/proto/bad", "{}", nil)
+	if w.Code != http.StatusUnauthorized || !strings.Contains(w.Body.String(), `"errorName":"AuthenticationFailedException"`) {
+		t.Fatalf("refusal body %d %s", w.Code, w.Body.String())
+	}
+	e := rec.Last(t)
+	if e.Event.Result != route.ResultRefused || e.Event.TenantID != "t1" || e.Event.Details["reason"] != "signature_mismatch" {
+		t.Fatalf("refusal event %+v", e.Event)
+	}
+	w = serve(t, r, http.MethodPost, "/proto/ok", "{}", nil)
+	if w.Code != http.StatusOK || rec.Last(t).Event.Result != route.ResultSuccess || rec.Last(t).Event.ActorID != "AKIAEXAMPLE" {
+		t.Fatalf("success %d %+v", w.Code, rec.Last(t).Event)
+	}
+}

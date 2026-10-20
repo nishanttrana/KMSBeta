@@ -187,6 +187,11 @@ func (p platformUsage) Credentials(ctx context.Context, tenantID string, conn Co
 			return nil, err
 		}
 	}
+	if usable("xks_proxy", conn.Type) && deployed.Has("hyok_proxy") {
+		if err := add(p.hyokURL, "/hyok/credential-usage", "AWS XKS endpoints"); err != nil {
+			return nil, err
+		}
+	}
 	if conn.Type == "pkcs11_hsm" {
 		if err := add(p.keycoreURL, "/keys/hsm/credential-usage", "HSM keys"); err != nil {
 			return nil, err
