@@ -4,6 +4,36 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.33.0-beta] — 2026-10-21
+
+### Added
+- **Kubernetes KMS v2 plugin.** `services/k8s-kms-plugin` runs beside
+  kube-apiserver on each control-plane node and wraps the cluster's Secret
+  encryption keys with a Vecta AES-256 key through keycore, as an API
+  client: every wrap and unwrap is decided by the key's access rules and
+  audited by keycore. Rotating the Vecta key changes the key_id the plugin
+  reports, so kube-apiserver re-wraps; data wrapped before still decrypts.
+  **Enterprise KM → Kubernetes** builds the plugin's configuration and
+  kube-apiserver's EncryptionConfiguration from a chosen key and API
+  client. Tested through k8s.io/kms's gRPC server with the generated KMS v2
+  client kube-apiserver uses (docs/KUBERNETES_KMS.md).
+
+### Fixed
+- **Agents' API-key sign-in.** `pkg/agentauth` posted
+  `{api_key, tenant_id, role}` and read `{token, expires_in}`, neither of
+  which auth's `POST /auth/client-token` speaks, and then sent the API key
+  as `X-API-Key` on every call, which no service reads: an agent configured
+  with an API key went out unauthenticated. It now sends the key in the
+  header auth reads with `client_id`, reads `access_token`/`expires_at`,
+  and fails the call when the exchange fails. The EKM agent takes
+  `api_client_id` (`API_CLIENT_ID`). Tested against auth's real handler.
+- The console's API client list reads "unavailable" when auth answers
+  without the list, not "no clients".
+
+### Changed
+- Since 13.32.0-beta, reading HYOK endpoints, requests and health needs
+  `hyok.read` (tenant administrators hold `*`); it needed only a token.
+
 ## [13.32.0-beta] — 2026-10-21
 
 ### Added

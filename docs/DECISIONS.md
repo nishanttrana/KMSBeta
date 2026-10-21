@@ -7,6 +7,24 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-21 — The Kubernetes KMS plugin is an API client of keycore
+**Decision:** the KMS v2 plugin runs on the customer's control-plane nodes
+and calls keycore's encrypt/decrypt through the edge with an API client's
+short-lived JWT; the key version is part of the KMS key_id.
+**Why:** it reuses the one key access decision and keycore's audit, needs
+no new service, and keeps the cluster's wrapping key in the KMS. Putting
+the version in the key_id is what makes kube-apiserver re-wrap on rotation
+(KMS v2 compares key_ids), and lets old data decrypt.
+**Rejected:** a server-side Kubernetes service in the KMS (another network
+path into keycore for no gain); handing the plugin key material (the key
+would leave the KMS); mTLS client certificates per node (no enrolment flow
+for them yet; the API client is revocable and audited).
+**Enforced:** `pkg/kmsplugin` tests through k8s.io/kms's server and client,
+`TestEncryptWithAADDecryptsByVersionAfterRotation`,
+`TestAgentAuthExchangesAnAPIKeyWithTheRealHandler`, `tests/k8s-kms.spec.ts`.
+
+---
+
 ## 2026-10-21 — AWS XKS goes through the edge, signed with a stored credential
 **Decision:** the AWS XKS proxy API is served behind the HTTPS edge at
 `/svc/hyok/xks/<prefix>`, and AWS's SigV4 signature is the credential,

@@ -43,6 +43,7 @@ type AgentConfig struct {
 	MTLSCAPath   string `json:"mtls_ca_path"`
 	APIKey       string `json:"api_key"`
 	JWTEndpoint  string `json:"jwt_endpoint"`
+	APIClientID  string `json:"api_client_id"`
 
 	ActiveKeyID      string `json:"active_key_id"`
 	ActiveKeyVersion string `json:"active_key_version"`
@@ -104,6 +105,7 @@ func applyEnvOverrides(cfg *AgentConfig) {
 	cfg.MTLSCAPath = envOr("MTLS_CA_PATH", cfg.MTLSCAPath)
 	cfg.APIKey = envOr("API_KEY", cfg.APIKey)
 	cfg.JWTEndpoint = envOr("JWT_ENDPOINT", cfg.JWTEndpoint)
+	cfg.APIClientID = envOr("API_CLIENT_ID", cfg.APIClientID)
 	cfg.ActiveKeyID = envOr("ACTIVE_KEY_ID", cfg.ActiveKeyID)
 	cfg.ActiveKeyVersion = envOr("ACTIVE_KEY_VERSION", cfg.ActiveKeyVersion)
 	cfg.ClientKey = envOr("EKM_CLIENT_KEY", cfg.ClientKey)

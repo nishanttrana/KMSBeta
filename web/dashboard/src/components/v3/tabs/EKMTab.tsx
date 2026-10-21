@@ -29,6 +29,7 @@ import {
 } from "../../../lib/ekm";
 import { EKMClients } from "./ekm/Clients";
 import { KMIPTab } from "./KMIPTab";
+import { Kubernetes } from "./ekm/Kubernetes";
 
 /* ── Setup guide content per DB engine ── */
 /* ── Setup guide per DB engine ──
@@ -80,7 +81,7 @@ const SETUP_GUIDES: Record<string, { title: string; steps: string[] }> = {
   }
 };
 
-export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>{
+export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate,keyCatalog}:any)=>{
   const [loading,setLoading]=useState(false);
   const [agents,setAgents]=useState([]);
   const [databases,setDatabases]=useState([]);
@@ -702,6 +703,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate}:any)=>
 
     {/* ═══════════════════════ KMIP SUBTAB ═══════════════════════ */}
     {subView==="kmip"&&(<KMIPTab session={session} onToast={onToast}/>)}
+    {subView==="kubernetes"&&(<Kubernetes session={session} keyCatalog={keyCatalog} onNavigate={onNavigate}/>)}
 
 
     {/* ═══════════════════════ MODALS ═══════════════════════ */}

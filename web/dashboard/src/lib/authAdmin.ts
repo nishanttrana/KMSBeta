@@ -425,7 +425,10 @@ export async function getAuthSystemHealth(
 
 export async function listAuthClients(session: AuthSession): Promise<AuthClientRegistration[]> {
   const out = await serviceRequest<AuthClientsResponse>(session, "auth", "/auth/clients");
-  return Array.isArray(out?.items) ? out.items : [];
+  if (!Array.isArray(out?.items)) {
+    throw new Error("auth returned no client list");
+  }
+  return out.items;
 }
 
 export async function getAuthClient(session: AuthSession, clientID: string): Promise<AuthClientRegistration> {

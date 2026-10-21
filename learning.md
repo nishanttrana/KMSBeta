@@ -5,6 +5,20 @@ Newest entries on top.
 
 ## 2026-10-21
 
+### A shared client nobody had pointed at the real server (13.33.0-beta)
+- `pkg/agentauth` had a JWT exchange whose request and response matched no
+  route in auth, and a fallback that sent the API key on every request to
+  services that ignore it. Both looked like working auth: no error, a header
+  set. Found when the Kubernetes plugin needed the exchange. **A client
+  for another service's route has one test against that route's real
+  handler** (`TestAgentAuthExchangesAnAPIKeyWithTheRealHandler`), and **a
+  credential fallback that no server accepts is an unauthenticated call**:
+  fail instead.
+
+### Playwright answers with the last matching route (13.33.0-beta)
+- A catch-all `**/auth/**` stub registered after `**/svc/**` swallowed
+  `/svc/auth/auth/clients`. Register catch-alls first, specific stubs last.
+
 ### A role name was still deciding access (13.32.0-beta)
 - HYOK let anyone whose token said role "admin" or "super-admin" change
   endpoints; a role name grants nothing elsewhere since 13.14.0-beta, but

@@ -210,6 +210,7 @@ func NewAgentRunner(cfg AgentConfig, logger *log.Logger) *AgentRunner {
 		MTLSKeyPath:  cfg.MTLSKeyPath,
 		MTLSCAPath:   cfg.MTLSCAPath,
 		APIKey:       cfg.APIKey,
+		ClientID:     cfg.APIClientID,
 		JWTEndpoint:  cfg.JWTEndpoint,
 		AuthToken:    cfg.AuthToken,
 		TenantID:     cfg.TenantID,

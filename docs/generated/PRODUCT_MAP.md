@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-20T20:33:26Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-21T04:22:52Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -14,7 +14,7 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Frontend API call sites discovered: `533`
 - Frontend call sites with exact backend route match: `506`
 - Frontend call sites needing review or dynamic/runtime confirmation: `27`
-- Clickable controls with static `onClick` handlers: `758`
+- Clickable controls with static `onClick` handlers: `759`
 - Backend request flows with handler/service/package summaries: `898`
 
 ## How To Use This For Launch
@@ -242,14 +242,14 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | auth-edge | POST | /auth/login | trackedFetch | web/dashboard/src/lib/auth.ts | 190 |
 | auth-edge | POST | /auth/change-password | trackedFetch | web/dashboard/src/lib/auth.ts | 277 |
 | auth-edge | POST | /auth/refresh | trackedFetch | web/dashboard/src/lib/auth.ts | 324 |
-| auth | GET | /auth/password-policy{param} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 742 |
-| auth | PUT | /auth/password-policy{param} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 751 |
-| auth | GET | /auth/security-policy{param} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 759 |
-| auth | PUT | /auth/security-policy{param} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 768 |
-| auth | GET | /auth/roles{param} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 779 |
-| auth | GET | /auth/identity/providers/{param}/users{param}` : ""} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 933 |
-| auth | GET | /auth/identity/providers/{param}/groups{param}` : ""} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 963 |
-| auth | GET | /auth/identity/providers/{param}/groups/{param}/members{param}` : ""} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 989 |
+| auth | GET | /auth/password-policy{param} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 745 |
+| auth | PUT | /auth/password-policy{param} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 754 |
+| auth | GET | /auth/security-policy{param} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 762 |
+| auth | PUT | /auth/security-policy{param} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 771 |
+| auth | GET | /auth/roles{param} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 782 |
+| auth | GET | /auth/identity/providers/{param}/users{param}` : ""} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 936 |
+| auth | GET | /auth/identity/providers/{param}/groups{param}` : ""} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 966 |
+| auth | GET | /auth/identity/providers/{param}/groups/{param}/members{param}` : ""} | serviceRequest | web/dashboard/src/lib/authAdmin.ts | 992 |
 | cloud | POST | /cloud/console/{param} | serviceRequestRaw | web/dashboard/src/lib/byok.ts | 191 |
 | cloud | GET | /cloud/accounts{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 121 |
 | cloud | GET | /cloud/region-mappings{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 157 |

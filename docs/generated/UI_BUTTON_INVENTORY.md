@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-20T20:33:26Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-21T04:22:52Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -25,7 +25,7 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/VectaDashboardV3Shell.tsx | 889 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
 | web/dashboard/src/components/primitives.tsx | 23 | - | button | (icon or dynamic label) | onClick |
 | web/dashboard/src/components/v3/SidebarSearch.tsx | 60 | - | button | onOpen(src.tab, h.label)} title= style={ }> |  |
-| web/dashboard/src/components/v3/SidebarSubNav.tsx | 136 | - | button | onSelect(item.id)} style={ } > |  |
+| web/dashboard/src/components/v3/SidebarSubNav.tsx | 137 | - | button | onSelect(item.id)} style={ } > |  |
 | web/dashboard/src/components/v3/chartDrill.tsx | 133 | - | Btn | Clear | onClear |
 | web/dashboard/src/components/v3/chartDrill.tsx | 141 | - | Btn | (icon or dynamic label) | onMore} disabled={loading |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 56 | - | button | Close | onClose} aria-label="Close" style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", pa... |
@@ -250,37 +250,37 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 212 | discovery | Btn | void load()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 213 | discovery | Btn | setScheduleOpen(true)} title={schedule?.paused_reason \|\| (schedule?.enabled ?... |  |
 | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 217 | discovery | Btn | void runScan(scanAllTypes)} disabled= title={scanAllTypes.length ? `Scan $ `... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 447 | ekm | Btn | Register Database | openDbRegister} disabled={!agents.length |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 448 | ekm | Btn | setModal("setup-guide")}>Setup Guide |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 468 | ekm | Btn | setExpandedTdeGuide(prev=>( ))} style={ }>Guide |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 469 | ekm | Btn | runRevokeTDE(db)} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 500 | ekm | Btn | setBitLockerView(bitLockerView==="cards"?"list":"cards")} style={ }>{bitLocke... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 501 | ekm | Btn | Register Client | openBitLockerDeploy |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 502 | ekm | Btn | Network Scan | openBitLockerScan |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 503 | ekm | Btn | refresh(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 527 | ekm | Btn | runBitLockerOperation(client,op)} disabled={bitLockerOpClientID===`$ :$ `} st... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 528 | ekm | Btn | openBitLockerActivity(client)} style={ }>Activity |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 529 | ekm | Btn | openBitLockerDelete(client)} style={ }>Delete |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 550 | ekm | Btn | openBitLockerActivity(client)} style={ }>Activity |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 551 | ekm | Btn | openBitLockerOptions(client)} style={ }>Ops |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 552 | ekm | Btn | openBitLockerDelete(client)} style={ }>Del |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 584 | ekm | Btn | { setGoogleCSELoading(true); try{ const domains=googleCSEConfigForm.allowed_d... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 616 | ekm | Btn | { const v=await promptDialog.prompt( ); if(v===null) return; try{await update... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 621 | ekm | Btn | { if(!confirm("Delete this Google CSE config?")) return; try catch(e){onToast... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 650 | ekm | Btn | { setGoogleCSELoading(true); try{ await createGoogleCSEKey(session, ); onToas... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 678 | ekm | Btn | { if(!confirm("Delete this CSE key?")) return; try catch(e){onToast?.(`Delete... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 712 | ekm | Btn | setGuideEngine(eng)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 755 | ekm | Btn | (icon or dynamic label) | submitDbRegister} disabled={dbRegistering |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 756 | ekm | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 773 | ekm | Btn | (icon or dynamic label) | submitBitLockerDeploy} disabled={bitLockerDeploying |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 774 | ekm | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 781 | ekm | Btn | downloadText(file.path,file.content)} style={ }>Download |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 799 | ekm | Btn | (icon or dynamic label) | submitBitLockerDelete} disabled={bitLockerDeleteSubmitting\|\|!bitLockerDeleteConfirmBackup |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 800 | ekm | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 817 | ekm | Btn | (icon or dynamic label) | runBitLockerScan} disabled={bitLockerScanRunning |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 833 | ekm | Btn | (icon or dynamic label) | onboardScannedBitLocker} disabled={bitLockerOnboarding |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 834 | ekm | Btn | {const all= ;bitLockerScanCandidates.forEach(r=> );setBitLockerScanSelected(a... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 876 | ekm | Btn | } disabled={bitLockerOpClientID===`$ :$ `} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 448 | ekm | Btn | Register Database | openDbRegister} disabled={!agents.length |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 449 | ekm | Btn | setModal("setup-guide")}>Setup Guide |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 469 | ekm | Btn | setExpandedTdeGuide(prev=>( ))} style={ }>Guide |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 470 | ekm | Btn | runRevokeTDE(db)} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 501 | ekm | Btn | setBitLockerView(bitLockerView==="cards"?"list":"cards")} style={ }>{bitLocke... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 502 | ekm | Btn | Register Client | openBitLockerDeploy |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 503 | ekm | Btn | Network Scan | openBitLockerScan |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 504 | ekm | Btn | refresh(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 528 | ekm | Btn | runBitLockerOperation(client,op)} disabled={bitLockerOpClientID===`$ :$ `} st... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 529 | ekm | Btn | openBitLockerActivity(client)} style={ }>Activity |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 530 | ekm | Btn | openBitLockerDelete(client)} style={ }>Delete |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 551 | ekm | Btn | openBitLockerActivity(client)} style={ }>Activity |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 552 | ekm | Btn | openBitLockerOptions(client)} style={ }>Ops |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 553 | ekm | Btn | openBitLockerDelete(client)} style={ }>Del |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 585 | ekm | Btn | { setGoogleCSELoading(true); try{ const domains=googleCSEConfigForm.allowed_d... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 617 | ekm | Btn | { const v=await promptDialog.prompt( ); if(v===null) return; try{await update... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 622 | ekm | Btn | { if(!confirm("Delete this Google CSE config?")) return; try catch(e){onToast... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 651 | ekm | Btn | { setGoogleCSELoading(true); try{ await createGoogleCSEKey(session, ); onToas... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 679 | ekm | Btn | { if(!confirm("Delete this CSE key?")) return; try catch(e){onToast?.(`Delete... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 714 | ekm | Btn | setGuideEngine(eng)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 757 | ekm | Btn | (icon or dynamic label) | submitDbRegister} disabled={dbRegistering |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 758 | ekm | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 775 | ekm | Btn | (icon or dynamic label) | submitBitLockerDeploy} disabled={bitLockerDeploying |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 776 | ekm | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 783 | ekm | Btn | downloadText(file.path,file.content)} style={ }>Download |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 801 | ekm | Btn | (icon or dynamic label) | submitBitLockerDelete} disabled={bitLockerDeleteSubmitting\|\|!bitLockerDeleteConfirmBackup |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 802 | ekm | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 819 | ekm | Btn | (icon or dynamic label) | runBitLockerScan} disabled={bitLockerScanRunning |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 835 | ekm | Btn | (icon or dynamic label) | onboardScannedBitLocker} disabled={bitLockerOnboarding |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 836 | ekm | Btn | {const all= ;bitLockerScanCandidates.forEach(r=> );setBitLockerScanSelected(a... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 878 | ekm | Btn | } disabled={bitLockerOpClientID===`$ :$ `} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 254 | approvals | Btn | Configure | openSettingsModal |
 | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 255 | approvals | Btn | void refresh()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 320 | approvals | Btn | void doVote(r, "approved")}> {voteBusy === `$ :approved` ? "..." : "Approve"} |  |
@@ -640,6 +640,7 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/ekm/Clients.tsx | 109 | - | button | setDrill(null)} data-testid="ekm-drill" style={ }> · |  |
 | web/dashboard/src/components/v3/tabs/ekm/Clients.tsx | 117 | - | Btn | setWizard( )}> Add client |  |
 | web/dashboard/src/components/v3/tabs/ekm/Clients.tsx | 139 | - | Btn | }>{c.registration === "registered" ? <>Health : "Continue setup"} |  |
+| web/dashboard/src/components/v3/tabs/ekm/Kubernetes.tsx | 23 | - | button | { try catch }} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/playbooks/CredentialDetail.tsx | 75 | - | Btn | Delete | onDelete |
 | web/dashboard/src/components/v3/tabs/playbooks/CredentialDetail.tsx | 76 | - | Btn | Edit | onEdit |
 | web/dashboard/src/components/v3/tabs/playbooks/CredentialDetail.tsx | 77 | - | Btn | (icon or dynamic label) | onTest |

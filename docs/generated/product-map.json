@@ -19450,7 +19450,7 @@
       "file": "web/dashboard/src/components/v3/SidebarSubNav.tsx",
       "handler": "",
       "label": "onSelect(item.id)} style={ } >",
-      "line": 136,
+      "line": 137,
       "tabs": [],
       "tag": "button"
     },
@@ -21560,16 +21560,6 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "openDbRegister} disabled={!agents.length",
       "label": "Register Database",
-      "line": 447,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "setModal(\"setup-guide\")}>Setup Guide",
       "line": 448,
       "tabs": [
         "ekm"
@@ -21579,8 +21569,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "setExpandedTdeGuide(prev=>( ))} style={ }>Guide",
-      "line": 468,
+      "label": "setModal(\"setup-guide\")}>Setup Guide",
+      "line": 449,
       "tabs": [
         "ekm"
       ],
@@ -21589,7 +21579,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "runRevokeTDE(db)} disabled= style={ }>",
+      "label": "setExpandedTdeGuide(prev=>( ))} style={ }>Guide",
       "line": 469,
       "tabs": [
         "ekm"
@@ -21599,8 +21589,18 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
+      "label": "runRevokeTDE(db)} disabled= style={ }>",
+      "line": 470,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
       "label": "setBitLockerView(bitLockerView===\"cards\"?\"list\":\"cards\")} style={ }>{bitLocke...",
-      "line": 500,
+      "line": 501,
       "tabs": [
         "ekm"
       ],
@@ -21610,7 +21610,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "openBitLockerDeploy",
       "label": "Register Client",
-      "line": 501,
+      "line": 502,
       "tabs": [
         "ekm"
       ],
@@ -21620,16 +21620,6 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "openBitLockerScan",
       "label": "Network Scan",
-      "line": 502,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "refresh(false)} disabled= >",
       "line": 503,
       "tabs": [
         "ekm"
@@ -21639,8 +21629,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "runBitLockerOperation(client,op)} disabled={bitLockerOpClientID===`$ :$ `} st...",
-      "line": 527,
+      "label": "refresh(false)} disabled= >",
+      "line": 504,
       "tabs": [
         "ekm"
       ],
@@ -21649,7 +21639,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "openBitLockerActivity(client)} style={ }>Activity",
+      "label": "runBitLockerOperation(client,op)} disabled={bitLockerOpClientID===`$ :$ `} st...",
       "line": 528,
       "tabs": [
         "ekm"
@@ -21659,7 +21649,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "openBitLockerDelete(client)} style={ }>Delete",
+      "label": "openBitLockerActivity(client)} style={ }>Activity",
       "line": 529,
       "tabs": [
         "ekm"
@@ -21669,8 +21659,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "openBitLockerActivity(client)} style={ }>Activity",
-      "line": 550,
+      "label": "openBitLockerDelete(client)} style={ }>Delete",
+      "line": 530,
       "tabs": [
         "ekm"
       ],
@@ -21679,7 +21669,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "openBitLockerOptions(client)} style={ }>Ops",
+      "label": "openBitLockerActivity(client)} style={ }>Activity",
       "line": 551,
       "tabs": [
         "ekm"
@@ -21689,7 +21679,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "openBitLockerDelete(client)} style={ }>Del",
+      "label": "openBitLockerOptions(client)} style={ }>Ops",
       "line": 552,
       "tabs": [
         "ekm"
@@ -21699,8 +21689,18 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
+      "label": "openBitLockerDelete(client)} style={ }>Del",
+      "line": 553,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
       "label": "{ setGoogleCSELoading(true); try{ const domains=googleCSEConfigForm.allowed_d...",
-      "line": 584,
+      "line": 585,
       "tabs": [
         "ekm"
       ],
@@ -21710,7 +21710,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ const v=await promptDialog.prompt( ); if(v===null) return; try{await update...",
-      "line": 616,
+      "line": 617,
       "tabs": [
         "ekm"
       ],
@@ -21720,7 +21720,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ if(!confirm(\"Delete this Google CSE config?\")) return; try catch(e){onToast...",
-      "line": 621,
+      "line": 622,
       "tabs": [
         "ekm"
       ],
@@ -21730,7 +21730,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setGoogleCSELoading(true); try{ await createGoogleCSEKey(session, ); onToas...",
-      "line": 650,
+      "line": 651,
       "tabs": [
         "ekm"
       ],
@@ -21740,7 +21740,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ if(!confirm(\"Delete this CSE key?\")) return; try catch(e){onToast?.(`Delete...",
-      "line": 678,
+      "line": 679,
       "tabs": [
         "ekm"
       ],
@@ -21750,7 +21750,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setGuideEngine(eng)} style={ }>",
-      "line": 712,
+      "line": 714,
       "tabs": [
         "ekm"
       ],
@@ -21760,7 +21760,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "submitDbRegister} disabled={dbRegistering",
       "label": "(icon or dynamic label)",
-      "line": 755,
+      "line": 757,
       "tabs": [
         "ekm"
       ],
@@ -21770,7 +21770,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 756,
+      "line": 758,
       "tabs": [
         "ekm"
       ],
@@ -21780,7 +21780,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "submitBitLockerDeploy} disabled={bitLockerDeploying",
       "label": "(icon or dynamic label)",
-      "line": 773,
+      "line": 775,
       "tabs": [
         "ekm"
       ],
@@ -21790,7 +21790,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 774,
+      "line": 776,
       "tabs": [
         "ekm"
       ],
@@ -21800,7 +21800,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "downloadText(file.path,file.content)} style={ }>Download",
-      "line": 781,
+      "line": 783,
       "tabs": [
         "ekm"
       ],
@@ -21810,7 +21810,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "submitBitLockerDelete} disabled={bitLockerDeleteSubmitting||!bitLockerDeleteConfirmBackup",
       "label": "(icon or dynamic label)",
-      "line": 799,
+      "line": 801,
       "tabs": [
         "ekm"
       ],
@@ -21820,7 +21820,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 800,
+      "line": 802,
       "tabs": [
         "ekm"
       ],
@@ -21830,7 +21830,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "runBitLockerScan} disabled={bitLockerScanRunning",
       "label": "(icon or dynamic label)",
-      "line": 817,
+      "line": 819,
       "tabs": [
         "ekm"
       ],
@@ -21840,7 +21840,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "onboardScannedBitLocker} disabled={bitLockerOnboarding",
       "label": "(icon or dynamic label)",
-      "line": 833,
+      "line": 835,
       "tabs": [
         "ekm"
       ],
@@ -21850,7 +21850,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{const all= ;bitLockerScanCandidates.forEach(r=> );setBitLockerScanSelected(a...",
-      "line": 834,
+      "line": 836,
       "tabs": [
         "ekm"
       ],
@@ -21860,7 +21860,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "} disabled={bitLockerOpClientID===`$ :$ `} style={ }>",
-      "line": 876,
+      "line": 878,
       "tabs": [
         "ekm"
       ],
@@ -25045,6 +25045,14 @@
       "tag": "Btn"
     },
     {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/Kubernetes.tsx",
+      "handler": "",
+      "label": "{ try catch }} style={ }>",
+      "line": 23,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
       "file": "web/dashboard/src/components/v3/tabs/playbooks/CredentialDetail.tsx",
       "handler": "onDelete",
       "label": "Delete",
@@ -26276,7 +26284,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/clients/${encodeURIComponent(String(clientID || \"\").trim())}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 432,
+      "line": 435,
       "match_key": "auth|GET|/auth/clients/{param}",
       "method": "GET",
       "normalized_path": "/auth/clients/{param}",
@@ -26289,7 +26297,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/clients/${encodeURIComponent(String(clientID || \"\").trim())}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 445,
+      "line": 448,
       "match_key": "auth|PUT|/auth/clients/{param}",
       "method": "PUT",
       "normalized_path": "/auth/clients/{param}",
@@ -26302,7 +26310,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"auth\", \"/auth/register\")",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 466,
+      "line": 469,
       "match_key": "auth|POST|/auth/register",
       "method": "POST",
       "normalized_path": "/auth/register",
@@ -26315,7 +26323,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/register/${encodeURIComponent(String(clientID || \"\").trim())}/activate`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 480,
+      "line": 483,
       "match_key": "auth|POST|/auth/register/{param}/activate",
       "method": "POST",
       "normalized_path": "/auth/register/{param}/activate",
@@ -26328,7 +26336,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/clients/${encodeURIComponent(String(clientID || \"\").trim())}/rotate-key`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 495,
+      "line": 498,
       "match_key": "auth|POST|/auth/clients/{param}/rotate-key",
       "method": "POST",
       "normalized_path": "/auth/clients/{param}/rotate-key",
@@ -26341,7 +26349,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/clients/${encodeURIComponent(String(clientID || \"\").trim())}/revoke`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 507,
+      "line": 510,
       "match_key": "auth|POST|/auth/clients/{param}/revoke",
       "method": "POST",
       "normalized_path": "/auth/clients/{param}/revoke",
@@ -26354,7 +26362,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"auth\", \"/auth/rest-client-security/summary\")",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 519,
+      "line": 522,
       "match_key": "auth|GET|/auth/rest-client-security/summary",
       "method": "GET",
       "normalized_path": "/auth/rest-client-security/summary",
@@ -26367,7 +26375,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/tenants/${encodeURIComponent(target)}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 529,
+      "line": 532,
       "match_key": "auth|PUT|/tenants/{param}",
       "method": "PUT",
       "normalized_path": "/tenants/{param}",
@@ -26380,7 +26388,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"auth\", \"/tenants\")",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 552,
+      "line": 555,
       "match_key": "auth|POST|/tenants",
       "method": "POST",
       "normalized_path": "/tenants",
@@ -26393,7 +26401,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/tenants/${encodeURIComponent(target)}?${query}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 581,
+      "line": 584,
       "match_key": "auth|DELETE|/tenants/{param}",
       "method": "DELETE",
       "normalized_path": "/tenants/{param}",
@@ -26406,7 +26414,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/tenants/${encodeURIComponent(target)}/delete-readiness`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 596,
+      "line": 599,
       "match_key": "auth|GET|/tenants/{param}/delete-readiness",
       "method": "GET",
       "normalized_path": "/tenants/{param}/delete-readiness",
@@ -26419,7 +26427,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/tenants/${encodeURIComponent(target)}/disable`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 610,
+      "line": 613,
       "match_key": "auth|POST|/tenants/{param}/disable",
       "method": "POST",
       "normalized_path": "/tenants/{param}/disable",
@@ -26432,7 +26440,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"auth\", \"/auth/users\")",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 640,
+      "line": 643,
       "match_key": "auth|POST|/auth/users",
       "method": "POST",
       "normalized_path": "/auth/users",
@@ -26445,7 +26453,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/users/${encodeURIComponent(String(userID || \"\").trim())}/role${qs}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 663,
+      "line": 666,
       "match_key": "auth|PUT|/auth/users/{param}/role",
       "method": "PUT",
       "normalized_path": "/auth/users/{param}/role",
@@ -26458,7 +26466,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/users/${encodeURIComponent(String(userID || \"\").trim())}/status${qs}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 682,
+      "line": 685,
       "match_key": "auth|PUT|/auth/users/{param}/status",
       "method": "PUT",
       "normalized_path": "/auth/users/{param}/status",
@@ -26471,7 +26479,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/users/${encodeURIComponent(String(userID || \"\").trim())}/reset-password${qs}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 700,
+      "line": 703,
       "match_key": "auth|POST|/auth/users/{param}/reset-password",
       "method": "POST",
       "normalized_path": "/auth/users/{param}/reset-password",
@@ -26484,7 +26492,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/password-policy${tenantQuery(tenantID)}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 742,
+      "line": 745,
       "match_key": "auth|GET|/auth/password-policy{param}",
       "method": "GET",
       "normalized_path": "/auth/password-policy{param}",
@@ -26497,7 +26505,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/password-policy${tenantQuery(tenantID)}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 751,
+      "line": 754,
       "match_key": "auth|PUT|/auth/password-policy{param}",
       "method": "PUT",
       "normalized_path": "/auth/password-policy{param}",
@@ -26510,7 +26518,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/security-policy${tenantQuery(tenantID)}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 759,
+      "line": 762,
       "match_key": "auth|GET|/auth/security-policy{param}",
       "method": "GET",
       "normalized_path": "/auth/security-policy{param}",
@@ -26523,7 +26531,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/security-policy${tenantQuery(tenantID)}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 768,
+      "line": 771,
       "match_key": "auth|PUT|/auth/security-policy{param}",
       "method": "PUT",
       "normalized_path": "/auth/security-policy{param}",
@@ -26536,7 +26544,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/roles${tenantQuery(tenantID)}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 779,
+      "line": 782,
       "match_key": "auth|GET|/auth/roles{param}",
       "method": "GET",
       "normalized_path": "/auth/roles{param}",
@@ -26549,7 +26557,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"auth\", \"/auth/cli/status\")",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 784,
+      "line": 787,
       "match_key": "auth|GET|/auth/cli/status",
       "method": "GET",
       "normalized_path": "/auth/cli/status",
@@ -26562,7 +26570,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"auth\", \"/auth/cli/session\")",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 791,
+      "line": 794,
       "match_key": "auth|POST|/auth/cli/session",
       "method": "POST",
       "normalized_path": "/auth/cli/session",
@@ -26575,7 +26583,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/cli/hsm/partitions?${qp.toString()}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 810,
+      "line": 813,
       "match_key": "auth|GET|/auth/cli/hsm/partitions",
       "method": "GET",
       "normalized_path": "/auth/cli/hsm/partitions",
@@ -26588,7 +26596,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"auth\", \"/auth/cli/hsm/config\")",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 824,
+      "line": 827,
       "match_key": "auth|GET|/auth/cli/hsm/config",
       "method": "GET",
       "normalized_path": "/auth/cli/hsm/config",
@@ -26601,7 +26609,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"auth\", \"/auth/cli/hsm/config\")",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 832,
+      "line": 835,
       "match_key": "auth|PUT|/auth/cli/hsm/config",
       "method": "PUT",
       "normalized_path": "/auth/cli/hsm/config",
@@ -26614,7 +26622,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/identity/providers${qs}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 845,
+      "line": 848,
       "match_key": "auth|GET|/auth/identity/providers",
       "method": "GET",
       "normalized_path": "/auth/identity/providers",
@@ -26627,7 +26635,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/identity/providers/${encodeURIComponent(String(provider || \"\").trim())}${qs}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 863,
+      "line": 866,
       "match_key": "auth|PUT|/auth/identity/providers/{param}",
       "method": "PUT",
       "normalized_path": "/auth/identity/providers/{param}",
@@ -26640,7 +26648,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/identity/providers/${encodeURIComponent(String(provider || \"\").trim())}/test${qs}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 894,
+      "line": 897,
       "match_key": "auth|POST|/auth/identity/providers/{param}/test",
       "method": "POST",
       "normalized_path": "/auth/identity/providers/{param}/test",
@@ -26653,7 +26661,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/identity/providers/${encodeURIComponent(String(provider || \"\").trim())}/users${qs.toString() ? `?${qs.toStr...",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 933,
+      "line": 936,
       "match_key": "auth|GET|/auth/identity/providers/{param}/users{param}` : \"\"}",
       "method": "GET",
       "normalized_path": "/auth/identity/providers/{param}/users{param}` : \"\"}",
@@ -26666,7 +26674,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/identity/providers/${encodeURIComponent(String(provider || \"\").trim())}/groups${qs.toString() ? `?${qs.toSt...",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 963,
+      "line": 966,
       "match_key": "auth|GET|/auth/identity/providers/{param}/groups{param}` : \"\"}",
       "method": "GET",
       "normalized_path": "/auth/identity/providers/{param}/groups{param}` : \"\"}",
@@ -26679,7 +26687,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/identity/providers/${encodeURIComponent(String(provider || \"\").trim())}/groups/${encodeURIComponent(String(...",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 989,
+      "line": 992,
       "match_key": "auth|GET|/auth/identity/providers/{param}/groups/{param}/members{param}` : \"\"}",
       "method": "GET",
       "normalized_path": "/auth/identity/providers/{param}/groups/{param}/members{param}` : \"\"}",
@@ -26692,7 +26700,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"auth\", \"/auth/identity/import/users\")",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 1010,
+      "line": 1013,
       "match_key": "auth|POST|/auth/identity/import/users",
       "method": "POST",
       "normalized_path": "/auth/identity/import/users",
@@ -26705,7 +26713,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/groups/roles${qs}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 1031,
+      "line": 1034,
       "match_key": "auth|GET|/auth/groups/roles",
       "method": "GET",
       "normalized_path": "/auth/groups/roles",
@@ -26718,7 +26726,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/groups/${encodeURIComponent(String(groupID || \"\").trim())}/role${qs}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 1043,
+      "line": 1046,
       "match_key": "auth|PUT|/auth/groups/{param}/role",
       "method": "PUT",
       "normalized_path": "/auth/groups/{param}/role",
@@ -26731,7 +26739,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/groups/${encodeURIComponent(String(groupID || \"\").trim())}/role${qs}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 1062,
+      "line": 1065,
       "match_key": "auth|DELETE|/auth/groups/{param}/role",
       "method": "DELETE",
       "normalized_path": "/auth/groups/{param}/role",
@@ -26744,7 +26752,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/scim/settings${qs}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 1073,
+      "line": 1076,
       "match_key": "auth|GET|/auth/scim/settings",
       "method": "GET",
       "normalized_path": "/auth/scim/settings",
@@ -26757,7 +26765,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"auth\", \"/auth/scim/settings\")",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 1081,
+      "line": 1084,
       "match_key": "auth|PUT|/auth/scim/settings",
       "method": "PUT",
       "normalized_path": "/auth/scim/settings",
@@ -26770,7 +26778,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"auth\", \"/auth/scim/settings/rotate-token\")",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 1100,
+      "line": 1103,
       "match_key": "auth|POST|/auth/scim/settings/rotate-token",
       "method": "POST",
       "normalized_path": "/auth/scim/settings/rotate-token",
@@ -26783,7 +26791,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/scim/summary${qs}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 1111,
+      "line": 1114,
       "match_key": "auth|GET|/auth/scim/summary",
       "method": "GET",
       "normalized_path": "/auth/scim/summary",
@@ -26796,7 +26804,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/scim/users${qs}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 1118,
+      "line": 1121,
       "match_key": "auth|GET|/auth/scim/users",
       "method": "GET",
       "normalized_path": "/auth/scim/users",
@@ -26809,7 +26817,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/scim/groups${qs}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 1125,
+      "line": 1128,
       "match_key": "auth|GET|/auth/scim/groups",
       "method": "GET",
       "normalized_path": "/auth/scim/groups",
@@ -26822,7 +26830,7 @@
       "dynamic": true,
       "expression": "fetch(`/svc/auth/auth/sso/providers${qs}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 1133,
+      "line": 1136,
       "match_key": "auth|GET|/auth/sso/providers",
       "method": "GET",
       "normalized_path": "/auth/sso/providers",
@@ -26835,7 +26843,7 @@
       "dynamic": true,
       "expression": "fetch(`/svc/auth/auth/sso/${encodeURIComponent(provider)}/login${qs}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 1141,
+      "line": 1144,
       "match_key": "auth|GET|/auth/sso/{param}/login",
       "method": "GET",
       "normalized_path": "/auth/sso/{param}/login",
@@ -32968,7 +32976,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-20T20:33:26Z",
+  "generated_at": "2026-10-21T04:22:52Z",
   "navigation": [
     {
       "group": "Home",
@@ -34527,7 +34535,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/clients/${encodeURIComponent(String(clientID || \"\").trim())}/revoke`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 507,
+          "line": 510,
           "source": "serviceRequest"
         }
       ],
@@ -34565,7 +34573,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/clients/${encodeURIComponent(String(clientID || \"\").trim())}/rotate-key`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 495,
+          "line": 498,
           "source": "serviceRequest"
         }
       ],
@@ -34803,7 +34811,7 @@
         {
           "expression": "serviceRequest(\"auth\", \"/auth/register\")",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 466,
+          "line": 469,
           "source": "serviceRequest"
         }
       ],
@@ -35241,7 +35249,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/register/${encodeURIComponent(String(clientID || \"\").trim())}/activate`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 480,
+          "line": 483,
           "source": "serviceRequest"
         }
       ],
@@ -35366,7 +35374,7 @@
         {
           "expression": "serviceRequest(\"auth\", \"/tenants\")",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 552,
+          "line": 555,
           "source": "serviceRequest"
         }
       ],
@@ -35473,7 +35481,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/tenants/${encodeURIComponent(target)}/delete-readiness`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 596,
+          "line": 599,
           "source": "serviceRequest"
         }
       ],
@@ -35518,7 +35526,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/tenants/${encodeURIComponent(target)}/disable`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 610,
+          "line": 613,
           "source": "serviceRequest"
         }
       ],
@@ -35569,7 +35577,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/tenants/${encodeURIComponent(target)}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 529,
+          "line": 532,
           "source": "serviceRequest"
         }
       ],
@@ -35603,7 +35611,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/tenants/${encodeURIComponent(target)}?${query}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 581,
+          "line": 584,
           "source": "serviceRequest"
         }
       ],
@@ -35783,7 +35791,7 @@
         {
           "expression": "serviceRequest(\"auth\", \"/auth/users\")",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 640,
+          "line": 643,
           "source": "serviceRequest"
         }
       ],
@@ -35840,7 +35848,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/identity/providers${qs}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 845,
+          "line": 848,
           "source": "serviceRequest"
         }
       ],
@@ -35932,7 +35940,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/identity/providers/${encodeURIComponent(String(provider || \"\").trim())}${qs}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 863,
+          "line": 866,
           "source": "serviceRequest"
         }
       ],
@@ -36033,7 +36041,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/identity/providers/${encodeURIComponent(String(provider || \"\").trim())}/test${qs}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 894,
+          "line": 897,
           "source": "serviceRequest"
         }
       ],
@@ -36208,7 +36216,7 @@
         {
           "expression": "serviceRequest(\"auth\", \"/auth/identity/import/users\")",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 1010,
+          "line": 1013,
           "source": "serviceRequest"
         }
       ],
@@ -36264,7 +36272,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/users/${encodeURIComponent(String(userID || \"\").trim())}/role${qs}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 663,
+          "line": 666,
           "source": "serviceRequest"
         }
       ],
@@ -36321,7 +36329,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/users/${encodeURIComponent(String(userID || \"\").trim())}/status${qs}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 682,
+          "line": 685,
           "source": "serviceRequest"
         }
       ],
@@ -36371,7 +36379,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/users/${encodeURIComponent(String(userID || \"\").trim())}/reset-password${qs}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 700,
+          "line": 703,
           "source": "serviceRequest"
         }
       ],
@@ -36427,7 +36435,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/groups/roles${qs}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 1031,
+          "line": 1034,
           "source": "serviceRequest"
         }
       ],
@@ -36470,7 +36478,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/groups/${encodeURIComponent(String(groupID || \"\").trim())}/role${qs}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 1043,
+          "line": 1046,
           "source": "serviceRequest"
         }
       ],
@@ -36519,7 +36527,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/groups/${encodeURIComponent(String(groupID || \"\").trim())}/role${qs}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 1062,
+          "line": 1065,
           "source": "serviceRequest"
         }
       ],
@@ -36566,7 +36574,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/scim/settings${qs}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 1073,
+          "line": 1076,
           "source": "serviceRequest"
         }
       ],
@@ -36607,7 +36615,7 @@
         {
           "expression": "serviceRequest(\"auth\", \"/auth/scim/settings\")",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 1081,
+          "line": 1084,
           "source": "serviceRequest"
         }
       ],
@@ -36658,7 +36666,7 @@
         {
           "expression": "serviceRequest(\"auth\", \"/auth/scim/settings/rotate-token\")",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 1100,
+          "line": 1103,
           "source": "serviceRequest"
         }
       ],
@@ -36705,7 +36713,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/scim/summary${qs}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 1111,
+          "line": 1114,
           "source": "serviceRequest"
         }
       ],
@@ -36749,7 +36757,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/scim/users${qs}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 1118,
+          "line": 1121,
           "source": "serviceRequest"
         }
       ],
@@ -36793,7 +36801,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/scim/groups${qs}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 1125,
+          "line": 1128,
           "source": "serviceRequest"
         }
       ],
@@ -36985,7 +36993,7 @@
         {
           "expression": "serviceRequest(\"auth\", \"/auth/cli/status\")",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 784,
+          "line": 787,
           "source": "serviceRequest"
         }
       ],
@@ -37032,7 +37040,7 @@
         {
           "expression": "serviceRequest(\"auth\", \"/auth/cli/session\")",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 791,
+          "line": 794,
           "source": "serviceRequest"
         }
       ],
@@ -37183,7 +37191,7 @@
         {
           "expression": "serviceRequest(\"auth\", \"/auth/cli/hsm/config\")",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 824,
+          "line": 827,
           "source": "serviceRequest"
         }
       ],
@@ -37233,7 +37241,7 @@
         {
           "expression": "serviceRequest(\"auth\", \"/auth/cli/hsm/config\")",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 832,
+          "line": 835,
           "source": "serviceRequest"
         }
       ],
@@ -37293,7 +37301,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/cli/hsm/partitions?${qp.toString()}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 810,
+          "line": 813,
           "source": "serviceRequest"
         }
       ],
@@ -37344,7 +37352,7 @@
         {
           "expression": "fetch(`/svc/auth/auth/sso/providers${qs}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 1133,
+          "line": 1136,
           "source": "fetch"
         }
       ],
@@ -37386,7 +37394,7 @@
         {
           "expression": "fetch(`/svc/auth/auth/sso/${encodeURIComponent(provider)}/login${qs}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 1141,
+          "line": 1144,
           "source": "fetch"
         }
       ],
@@ -37620,7 +37628,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/clients/${encodeURIComponent(String(clientID || \"\").trim())}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 432,
+          "line": 435,
           "source": "serviceRequest"
         }
       ],
@@ -37663,7 +37671,7 @@
         {
           "expression": "serviceRequest(\"auth\", `/auth/clients/${encodeURIComponent(String(clientID || \"\").trim())}`)",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 445,
+          "line": 448,
           "source": "serviceRequest"
         }
       ],
@@ -37717,7 +37725,7 @@
         {
           "expression": "serviceRequest(\"auth\", \"/auth/rest-client-security/summary\")",
           "file": "web/dashboard/src/lib/authAdmin.ts",
-          "line": 519,
+          "line": 522,
           "source": "serviceRequest"
         }
       ],
@@ -90061,6 +90069,10 @@
       {
         "id": "kmip",
         "label": "KMIP"
+      },
+      {
+        "id": "kubernetes",
+        "label": "Kubernetes"
       }
     ],
     "home": [
@@ -90155,7 +90167,7 @@
   "summary": {
     "backend_routes": 898,
     "backend_services": 28,
-    "button_inventory": 758,
+    "button_inventory": 759,
     "frontend_call_sites": 533,
     "matched_frontend_call_sites": 506,
     "nav_items": 25,
@@ -90736,7 +90748,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/password-policy${tenantQuery(tenantID)}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 742,
+      "line": 745,
       "match_key": "auth|GET|/auth/password-policy{param}",
       "method": "GET",
       "normalized_path": "/auth/password-policy{param}",
@@ -90749,7 +90761,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/password-policy${tenantQuery(tenantID)}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 751,
+      "line": 754,
       "match_key": "auth|PUT|/auth/password-policy{param}",
       "method": "PUT",
       "normalized_path": "/auth/password-policy{param}",
@@ -90762,7 +90774,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/security-policy${tenantQuery(tenantID)}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 759,
+      "line": 762,
       "match_key": "auth|GET|/auth/security-policy{param}",
       "method": "GET",
       "normalized_path": "/auth/security-policy{param}",
@@ -90775,7 +90787,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/security-policy${tenantQuery(tenantID)}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 768,
+      "line": 771,
       "match_key": "auth|PUT|/auth/security-policy{param}",
       "method": "PUT",
       "normalized_path": "/auth/security-policy{param}",
@@ -90788,7 +90800,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/roles${tenantQuery(tenantID)}`)",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 779,
+      "line": 782,
       "match_key": "auth|GET|/auth/roles{param}",
       "method": "GET",
       "normalized_path": "/auth/roles{param}",
@@ -90801,7 +90813,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/identity/providers/${encodeURIComponent(String(provider || \"\").trim())}/users${qs.toString() ? `?${qs.toStr...",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 933,
+      "line": 936,
       "match_key": "auth|GET|/auth/identity/providers/{param}/users{param}` : \"\"}",
       "method": "GET",
       "normalized_path": "/auth/identity/providers/{param}/users{param}` : \"\"}",
@@ -90814,7 +90826,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/identity/providers/${encodeURIComponent(String(provider || \"\").trim())}/groups${qs.toString() ? `?${qs.toSt...",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 963,
+      "line": 966,
       "match_key": "auth|GET|/auth/identity/providers/{param}/groups{param}` : \"\"}",
       "method": "GET",
       "normalized_path": "/auth/identity/providers/{param}/groups{param}` : \"\"}",
@@ -90827,7 +90839,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"auth\", `/auth/identity/providers/${encodeURIComponent(String(provider || \"\").trim())}/groups/${encodeURIComponent(String(...",
       "file": "web/dashboard/src/lib/authAdmin.ts",
-      "line": 989,
+      "line": 992,
       "match_key": "auth|GET|/auth/identity/providers/{param}/groups/{param}/members{param}` : \"\"}",
       "method": "GET",
       "normalized_path": "/auth/identity/providers/{param}/groups/{param}/members{param}` : \"\"}",
@@ -92015,7 +92027,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/clients/${encodeURIComponent(String(clientID || \"\").trim())}/revoke`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 507,
+            "line": 510,
             "source": "serviceRequest"
           }
         ],
@@ -92052,7 +92064,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/clients/${encodeURIComponent(String(clientID || \"\").trim())}/rotate-key`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 495,
+            "line": 498,
             "source": "serviceRequest"
           }
         ],
@@ -92242,7 +92254,7 @@
           {
             "expression": "serviceRequest(\"auth\", \"/auth/register\")",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 466,
+            "line": 469,
             "source": "serviceRequest"
           }
         ],
@@ -92563,7 +92575,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/register/${encodeURIComponent(String(clientID || \"\").trim())}/activate`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 480,
+            "line": 483,
             "source": "serviceRequest"
           }
         ],
@@ -92657,7 +92669,7 @@
           {
             "expression": "serviceRequest(\"auth\", \"/tenants\")",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 552,
+            "line": 555,
             "source": "serviceRequest"
           }
         ],
@@ -92755,7 +92767,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/tenants/${encodeURIComponent(target)}/delete-readiness`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 596,
+            "line": 599,
             "source": "serviceRequest"
           }
         ],
@@ -92796,7 +92808,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/tenants/${encodeURIComponent(target)}/disable`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 610,
+            "line": 613,
             "source": "serviceRequest"
           }
         ],
@@ -92834,7 +92846,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/tenants/${encodeURIComponent(target)}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 529,
+            "line": 532,
             "source": "serviceRequest"
           }
         ],
@@ -92873,7 +92885,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/tenants/${encodeURIComponent(target)}?${query}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 581,
+            "line": 584,
             "source": "serviceRequest"
           }
         ],
@@ -93015,7 +93027,7 @@
           {
             "expression": "serviceRequest(\"auth\", \"/auth/users\")",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 640,
+            "line": 643,
             "source": "serviceRequest"
           }
         ],
@@ -93056,7 +93068,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/identity/providers${qs}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 845,
+            "line": 848,
             "source": "serviceRequest"
           }
         ],
@@ -93131,7 +93143,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/identity/providers/${encodeURIComponent(String(provider || \"\").trim())}${qs}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 863,
+            "line": 866,
             "source": "serviceRequest"
           }
         ],
@@ -93175,7 +93187,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/identity/providers/${encodeURIComponent(String(provider || \"\").trim())}/test${qs}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 894,
+            "line": 897,
             "source": "serviceRequest"
           }
         ],
@@ -93296,7 +93308,7 @@
           {
             "expression": "serviceRequest(\"auth\", \"/auth/identity/import/users\")",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 1010,
+            "line": 1013,
             "source": "serviceRequest"
           }
         ],
@@ -93338,7 +93350,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/users/${encodeURIComponent(String(userID || \"\").trim())}/role${qs}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 663,
+            "line": 666,
             "source": "serviceRequest"
           }
         ],
@@ -93378,7 +93390,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/users/${encodeURIComponent(String(userID || \"\").trim())}/status${qs}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 682,
+            "line": 685,
             "source": "serviceRequest"
           }
         ],
@@ -93419,7 +93431,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/users/${encodeURIComponent(String(userID || \"\").trim())}/reset-password${qs}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 700,
+            "line": 703,
             "source": "serviceRequest"
           }
         ],
@@ -93458,7 +93470,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/groups/roles${qs}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 1031,
+            "line": 1034,
             "source": "serviceRequest"
           }
         ],
@@ -93497,7 +93509,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/groups/${encodeURIComponent(String(groupID || \"\").trim())}/role${qs}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 1043,
+            "line": 1046,
             "source": "serviceRequest"
           }
         ],
@@ -93537,7 +93549,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/groups/${encodeURIComponent(String(groupID || \"\").trim())}/role${qs}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 1062,
+            "line": 1065,
             "source": "serviceRequest"
           }
         ],
@@ -93574,7 +93586,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/scim/settings${qs}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 1073,
+            "line": 1076,
             "source": "serviceRequest"
           }
         ],
@@ -93611,7 +93623,7 @@
           {
             "expression": "serviceRequest(\"auth\", \"/auth/scim/settings\")",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 1081,
+            "line": 1084,
             "source": "serviceRequest"
           }
         ],
@@ -93648,7 +93660,7 @@
           {
             "expression": "serviceRequest(\"auth\", \"/auth/scim/settings/rotate-token\")",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 1100,
+            "line": 1103,
             "source": "serviceRequest"
           }
         ],
@@ -93685,7 +93697,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/scim/summary${qs}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 1111,
+            "line": 1114,
             "source": "serviceRequest"
           }
         ],
@@ -93722,7 +93734,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/scim/users${qs}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 1118,
+            "line": 1121,
             "source": "serviceRequest"
           }
         ],
@@ -93759,7 +93771,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/scim/groups${qs}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 1125,
+            "line": 1128,
             "source": "serviceRequest"
           }
         ],
@@ -93903,7 +93915,7 @@
           {
             "expression": "serviceRequest(\"auth\", \"/auth/cli/status\")",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 784,
+            "line": 787,
             "source": "serviceRequest"
           }
         ],
@@ -93957,7 +93969,7 @@
           {
             "expression": "serviceRequest(\"auth\", \"/auth/cli/session\")",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 791,
+            "line": 794,
             "source": "serviceRequest"
           }
         ],
@@ -94019,7 +94031,7 @@
           {
             "expression": "serviceRequest(\"auth\", \"/auth/cli/hsm/config\")",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 824,
+            "line": 827,
             "source": "serviceRequest"
           }
         ],
@@ -94063,7 +94075,7 @@
           {
             "expression": "serviceRequest(\"auth\", \"/auth/cli/hsm/config\")",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 832,
+            "line": 835,
             "source": "serviceRequest"
           }
         ],
@@ -94107,7 +94119,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/cli/hsm/partitions?${qp.toString()}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 810,
+            "line": 813,
             "source": "serviceRequest"
           }
         ],
@@ -94144,7 +94156,7 @@
           {
             "expression": "fetch(`/svc/auth/auth/sso/providers${qs}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 1133,
+            "line": 1136,
             "source": "fetch"
           }
         ],
@@ -94181,7 +94193,7 @@
           {
             "expression": "fetch(`/svc/auth/auth/sso/${encodeURIComponent(provider)}/login${qs}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 1141,
+            "line": 1144,
             "source": "fetch"
           }
         ],
@@ -94358,7 +94370,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/clients/${encodeURIComponent(String(clientID || \"\").trim())}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 432,
+            "line": 435,
             "source": "serviceRequest"
           }
         ],
@@ -94398,7 +94410,7 @@
           {
             "expression": "serviceRequest(\"auth\", `/auth/clients/${encodeURIComponent(String(clientID || \"\").trim())}`)",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 445,
+            "line": 448,
             "source": "serviceRequest"
           }
         ],
@@ -94437,7 +94449,7 @@
           {
             "expression": "serviceRequest(\"auth\", \"/auth/rest-client-security/summary\")",
             "file": "web/dashboard/src/lib/authAdmin.ts",
-            "line": 519,
+            "line": 522,
             "source": "serviceRequest"
           }
         ],
@@ -121984,7 +121996,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-20T20:33:26Z",
+    "generatedAt": "2026-10-21T04:22:52Z",
     "methods": [
       "DELETE",
       "GET",

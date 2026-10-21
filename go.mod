@@ -51,6 +51,7 @@ require (
 	google.golang.org/grpc v1.85.0-dev.0.20260825072537-93e31b48545e
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
+	k8s.io/kms v0.37.1
 	modernc.org/sqlite v1.59.0
 	software.sslmate.com/src/go-pkcs12 v0.7.3
 )

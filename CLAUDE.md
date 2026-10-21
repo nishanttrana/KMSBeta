@@ -723,6 +723,9 @@ Security rules are explained in
   outbound address is checked where it is dialled (`pkg/ssrfguard`), not by
   hostname. A URL that carries a credential is a secret, and errors name
   only its host.
+- A client for another service's route is tested once against that
+  route's real handler, and a credential fallback no server accepts is an
+  error, never a quiet unauthenticated call (`pkg/agentauth`, 13.33.0-beta).
 - A middleware that verifies one credential leaves other Authorization
   schemes to the route that verifies them (AWS SigV4 for XKS); such a route
   is tested through the service's real middleware (13.32.0-beta).

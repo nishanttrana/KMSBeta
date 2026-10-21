@@ -15,22 +15,28 @@ import (
 )
 
 // Config describes all supported authentication methods.
-// Priority: mTLS (transport) → JWT (auto-refreshed) → API Key → static Bearer token.
+// Priority: mTLS (transport) → JWT exchanged for an API key → static Bearer token.
 type Config struct {
 	// mTLS paths — if all three are set, mutual TLS is used at the transport layer.
 	MTLSCertPath string `json:"mtls_cert_path"`
 	MTLSKeyPath  string `json:"mtls_key_path"`
 	MTLSCAPath   string `json:"mtls_ca_path"`
 
-	// API Key for KMS authentication (sent as X-API-Key header).
+	// APIKey is an API client's key. It is only ever sent to JWTEndpoint
+	// (auth's POST /auth/client-token, in the X-API-Key header), which
+	// exchanges it for a short-lived JWT; no other service reads it.
 	APIKey string `json:"api_key"`
-
-	// JWT endpoint — if set together with APIKey, the provider will exchange
-	// the API key for a short-lived JWT and refresh it before expiry.
+	// ClientID is the API client the key belongs to.
+	ClientID string `json:"client_id"`
+	// JWTEndpoint is auth's client-token URL (https://<kms>/svc/auth/auth/client-token).
 	JWTEndpoint string `json:"jwt_endpoint"`
 
 	// Static bearer token (lowest priority, used as fallback).
 	AuthToken string `json:"auth_token"`
+
+	// HTTPClient, when set, carries the token exchange (it holds the trust
+	// for the KMS edge's CA); otherwise one is built from the mTLS settings.
+	HTTPClient *http.Client `json:"-"`
 
 	// Tenant context.
 	TenantID string `json:"tenant_id"`
@@ -98,20 +104,16 @@ func (p *Provider) ApplyAuth(req *http.Request) error {
 		return nil
 	}
 
-	// Try auto-refresh JWT if endpoint is configured
-	if p.cfg.JWTEndpoint != "" && p.cfg.APIKey != "" {
-		if err := p.RefreshJWT(req.Context()); err == nil {
-			p.mu.RLock()
-			req.Header.Set("Authorization", "Bearer "+p.jwt)
-			p.mu.RUnlock()
-			return nil
-		}
-		// Fall through to API key on refresh failure
-	}
-
-	// API Key header
+	// An API key is exchanged for a JWT. A failed exchange is an error:
+	// until 13.33.0-beta the key was then sent as X-API-Key on the request
+	// itself, which no service reads, so the call went out unauthenticated.
 	if p.cfg.APIKey != "" {
-		req.Header.Set("X-API-Key", p.cfg.APIKey)
+		if err := p.RefreshJWT(req.Context()); err != nil {
+			return err
+		}
+		p.mu.RLock()
+		req.Header.Set("Authorization", "Bearer "+p.jwt)
+		p.mu.RUnlock()
 		return nil
 	}
 
@@ -124,22 +126,21 @@ func (p *Provider) ApplyAuth(req *http.Request) error {
 	return nil // no auth configured — request goes unauthenticated
 }
 
-// jwtResponse is the expected response from the JWT exchange endpoint.
+// jwtResponse is auth's POST /auth/client-token answer.
 type jwtResponse struct {
-	Token     string `json:"token"`
-	ExpiresIn int    `json:"expires_in"` // seconds
+	AccessToken string `json:"access_token"`
+	ExpiresAt   string `json:"expires_at"` // RFC 3339
 }
 
 // RefreshJWT exchanges the API key for a short-lived JWT.
 func (p *Provider) RefreshJWT(ctx context.Context) error {
-	if p.cfg.JWTEndpoint == "" || p.cfg.APIKey == "" {
-		return errors.New("agentauth: JWT endpoint or API key not configured")
+	if p.cfg.JWTEndpoint == "" || p.cfg.APIKey == "" || p.cfg.ClientID == "" {
+		return errors.New("agentauth: an API key needs jwt_endpoint and client_id")
 	}
 
 	body, _ := json.Marshal(map[string]string{
-		"api_key":   p.cfg.APIKey,
 		"tenant_id": p.cfg.TenantID,
-		"role":      p.cfg.Role,
+		"client_id": p.cfg.ClientID,
 	})
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.cfg.JWTEndpoint, bytes.NewReader(body))
@@ -147,10 +148,14 @@ func (p *Provider) RefreshJWT(ctx context.Context) error {
 		return fmt.Errorf("agentauth: build JWT request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", p.cfg.APIKey)
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	if p.tlsCfg != nil {
-		client.Transport = &http.Transport{TLSClientConfig: p.tlsCfg}
+	client := p.cfg.HTTPClient
+	if client == nil {
+		client = &http.Client{Timeout: 10 * time.Second}
+		if p.tlsCfg != nil {
+			client.Transport = &http.Transport{TLSClientConfig: p.tlsCfg}
+		}
 	}
 
 	resp, err := client.Do(req)
@@ -167,19 +172,18 @@ func (p *Provider) RefreshJWT(ctx context.Context) error {
 	if err := json.NewDecoder(resp.Body).Decode(&jr); err != nil {
 		return fmt.Errorf("agentauth: decode JWT response: %w", err)
 	}
-	if jr.Token == "" {
+	if jr.AccessToken == "" {
 		return errors.New("agentauth: empty token in response")
 	}
-
-	ttl := time.Duration(jr.ExpiresIn) * time.Second
-	if ttl <= 0 {
-		ttl = 15 * time.Minute // default if server doesn't specify
+	exp, err := time.Parse(time.RFC3339, jr.ExpiresAt)
+	if err != nil {
+		return fmt.Errorf("agentauth: expires_at: %w", err)
 	}
 	// Refresh 30s early to avoid using an expired token
-	expiry := time.Now().Add(ttl - 30*time.Second)
+	expiry := exp.Add(-30 * time.Second)
 
 	p.mu.Lock()
-	p.jwt = jr.Token
+	p.jwt = jr.AccessToken
 	p.jwtExpiry = expiry
 	p.mu.Unlock()
 	return nil
@@ -197,10 +201,8 @@ func (p *Provider) AuthMethod() string {
 		return "mTLS+JWT"
 	case p.tlsCfg != nil:
 		return "mTLS"
-	case p.cfg.JWTEndpoint != "" && p.cfg.APIKey != "":
-		return "JWT"
 	case p.cfg.APIKey != "":
-		return "API-Key"
+		return "API key exchanged for JWT"
 	case p.cfg.AuthToken != "":
 		return "Bearer"
 	default:

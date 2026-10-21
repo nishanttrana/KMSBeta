@@ -21,6 +21,10 @@ pull request.
 | Volume repair (Docker Compose) | the volume scripts against real Docker volumes |
 | Dashboard Lint/Type/Unit/Build/Smoke | the dashboard steps in order on the locked dependencies, then every Playwright spec |
 
+The Kubernetes plugin is tested through `k8s.io/kms`'s own gRPC server on
+a Unix socket with the generated KMS v2 client (`pkg/kmsplugin`), the same
+pair kube-apiserver and real plugins use; no cluster is needed.
+
 `tests/no-crash.spec.ts` (13.31.0-beta) opens every module and sidebar
 sub-option, read from `shellNav.ts` and `SUB_PANES`, twice: with every
 service answering `{}` and with every service answering 503. A view that

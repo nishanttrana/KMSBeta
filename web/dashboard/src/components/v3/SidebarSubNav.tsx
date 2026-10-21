@@ -58,7 +58,8 @@ export const SUB_PANES: Record<string, SubPane[]> = {
   ekm: [
     { id: "db", label: "EKM for DBs", hint: "MSSQL / Oracle TDE agents", icon: Database, feature: "ekm_database" },
     { id: "bitlocker", label: "BitLocker", hint: "Windows endpoint key lifecycle", icon: Lock, feature: "ekm_database" },
-    { id: "kmip", label: "KMIP", hint: "Profiles, clients, mTLS onboarding", icon: Link, feature: "kmip_server" }
+    { id: "kmip", label: "KMIP", hint: "Profiles, clients, mTLS onboarding", icon: Link, feature: "kmip_server" },
+    { id: "kubernetes", label: "Kubernetes", hint: "KMS v2 plugin for kube-apiserver secret encryption", icon: Layers }
   ],
   certs: [
     { id: "cert-overview", label: "Certificate Operations", hint: "CA hierarchy, issuance, signing and certificate lifecycle", icon: FileText, feature: "certs" },
