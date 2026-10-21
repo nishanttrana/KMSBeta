@@ -2,7 +2,7 @@ module vecta-kms
 
 go 1.27
 
-toolchain go1.27.2
+toolchain go1.27.3
 
 require (
 	cloud.google.com/go/iam v1.14.0

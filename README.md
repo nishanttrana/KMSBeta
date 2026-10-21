@@ -96,7 +96,7 @@ Vecta KMS is organized into five working areas:
 - Docker Desktop (macOS/Windows) or Docker Engine + Compose v2 (Linux), 8 GB+ memory for Docker
 - Bash 4+ on macOS (`brew install bash`) and Linux
 - Optional for development:
-  - Go 1.27.2+
+  - Go 1.27.3+
   - Node.js 24 LTS and npm 11+
 
 ### One-command local deployment (recommended)

@@ -4,6 +4,21 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.35.0-beta] — 2026-10-21
+
+### Security
+- **Go 1.27.3** (go.mod, every Dockerfile, both installers): go1.27.2's
+  `crypto/x509` has `GO-2026-6809`, reached from this code; 1.27.3 fixes
+  it. The certified FIPS module is the same snapshot (`v1.0.0-c2097c7c`,
+  checked in both toolchains' `lib/fips140`). **Rebuild and redeploy.**
+  Scan before and after: docs/SECURITY/govulncheck-2026-10-21.txt.
+
+### Fixed
+- **CI was red on 13.33.0-beta**: the runtime-config gate requires a
+  service's own `validateConfig` call, and the Kubernetes plugin validated
+  inside its loader. It now has `validateConfig`, which also refuses a
+  non-https server and a non-positive timeout.
+
 ## [13.34.0-beta] — 2026-10-21
 
 ### Added

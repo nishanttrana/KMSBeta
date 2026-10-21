@@ -1,4 +1,4 @@
-FROM vecta-local/golang:1.27.2-alpine AS build
+FROM vecta-local/golang:1.27.3-alpine AS build
 # Link the CMVP-certified Go Cryptographic Module (docs/SECURITY/FIPS.md).
 ENV GOFIPS140=v1.0.0
 ARG TARGETOS

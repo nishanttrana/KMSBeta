@@ -407,7 +407,7 @@ SPIFFE attestation flow:
 | Docker Compose | v2.20+ | Latest stable |
 | Kubernetes (prod) | 1.28+ | 1.30+ |
 | PostgreSQL | 15+ | 17 |
-| Go (source build) | 1.27.2+ | 1.27.x latest patch |
+| Go (source build) | 1.27.3+ | 1.27.x latest patch |
 | Node.js dashboard build | 24 LTS | 24.21.0+ with npm 11+ |
 
 ### 4.2 Docker Compose — Quickstart

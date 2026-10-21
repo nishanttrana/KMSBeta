@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-21T04:38:05Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-21T04:54:02Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 

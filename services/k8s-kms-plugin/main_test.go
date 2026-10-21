@@ -22,6 +22,12 @@ func TestConfigNeedsItsFieldsAndRefusesUnknownOnes(t *testing.T) {
 	if _, err := load(write(`{"server":"https://kms","tenant_id":"t1","key_id":"k","client_id":"c"}`)); err == nil {
 		t.Fatal("a config without an api key file was accepted")
 	}
+	if _, err := load(write(`{"server":"http://kms","tenant_id":"t1","key_id":"k","client_id":"c","api_key_file":"/k"}`)); err == nil {
+		t.Fatal("an http:// server was accepted")
+	}
+	if _, err := load(write(`{"server":"https://kms","tenant_id":"t1","key_id":"k","client_id":"c","api_key_file":"/k","timeout":"-1s"}`)); err == nil {
+		t.Fatal("a negative timeout was accepted")
+	}
 	if _, err := load(write(`{"server":"https://kms","tenant_id":"t1","key_id":"k","client_id":"c","api_key_file":"/k","api_key":"inline"}`)); err == nil {
 		t.Fatal("an inline api key was accepted")
 	}

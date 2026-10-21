@@ -109,6 +109,7 @@ Raw output: [`govulncheck-2026-10-13.txt`](govulncheck-2026-10-13.txt).
 | Scope | Before | After | How |
 |---|---|---|---|
 | Go stdlib (toolchain) | 11 advisories on go1.27.1 | 0 | go1.27.2 |
+| Go stdlib (toolchain), 2026-10-21 | 1 on go1.27.2 (`GO-2026-6809`, `crypto/x509`) | 0 | go1.27.3, same certified module `v1.0.0-c2097c7c` ([govulncheck-2026-10-21.txt](govulncheck-2026-10-21.txt)) |
 | Go modules | 5 on `golang.org/x/net` 0.59.0 (the same HTTP/2 faults) | 0 | 0.60.0 |
 | Required but not called | 1 (`golang.org/x/crypto`, GO-2026-5932, no fixed version) | 1 | none available |
 

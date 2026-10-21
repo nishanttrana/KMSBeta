@@ -57,10 +57,27 @@ func load(path string) (Config, error) {
 	if c.Socket == "" {
 		c.Socket = "/var/run/vecta-kms/kms.sock"
 	}
-	if c.Server == "" || c.TenantID == "" || c.KeyID == "" || c.ClientID == "" || c.APIKeyFile == "" {
-		return Config{}, errors.New("server, tenant_id, key_id, client_id and api_key_file are required")
+	if err := validateConfig(c); err != nil {
+		return Config{}, err
 	}
 	return c, nil
+}
+
+// validateConfig refuses a configuration the plugin can't serve with, before
+// it listens (CI "Runtime config validation gate").
+func validateConfig(c Config) error {
+	if c.Server == "" || c.TenantID == "" || c.KeyID == "" || c.ClientID == "" || c.APIKeyFile == "" {
+		return errors.New("server, tenant_id, key_id, client_id and api_key_file are required")
+	}
+	if !strings.HasPrefix(c.Server, "https://") {
+		return errors.New("server must be https://")
+	}
+	if c.Timeout != "" {
+		if d, err := time.ParseDuration(c.Timeout); err != nil || d <= 0 {
+			return errors.New("timeout must be a positive duration")
+		}
+	}
+	return nil
 }
 
 func httpClient(caFile string) (*http.Client, error) {

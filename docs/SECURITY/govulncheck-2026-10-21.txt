@@ -1,0 +1,12 @@
+# govulncheck ./... on go1.27.2 (before), 2026-10-21
+Vulnerability #1: GO-2026-6809
+  More info: https://pkg.go.dev/vuln/GO-2026-6809
+    Found in: crypto/x509@go1.27.2
+    Fixed in: crypto/x509@go1.27.3
+Your code is affected by 1 vulnerability from the Go standard library.
+
+# govulncheck ./... on go1.27.3 (after)
+This scan also found 0 vulnerabilities in packages you import and 1
+vulnerability in modules you require, but your code doesn't appear to call these
+vulnerabilities.
+Use '-show verbose' for more details.

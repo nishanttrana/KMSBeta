@@ -5,6 +5,14 @@ Newest entries on top.
 
 ## 2026-10-21
 
+### Run the job, not the checks I remember (13.35.0-beta)
+- Before pushing 13.33.0 I ran conformance, the tests and the dashboard
+  steps, but not the backend job's first step (`check-runtimecfg.sh`), and
+  CI went red on the new plugin; reading that job's steps for the fix also
+  showed a stdlib advisory govulncheck had not reported a day earlier. **The
+  pre-push list is the workflow's own steps, read from
+  `.github/workflows/ci-quality.yml`, not a remembered subset.**
+
 ### A test server that accepts anything proves nothing (13.34.0-beta)
 - The disposable Postgres used elsewhere runs with trust authentication,
   where any password logs in, so "the issued login works" would have passed
