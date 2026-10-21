@@ -4,6 +4,48 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.40.0-beta] — 2026-10-22
+
+### Security
+- **eMudhra CA compromise (CVE-2026-111943): already covered by Go 1.27.3.**
+  Go 1.27.3 (2026-10-19, in since 13.35.0-beta) makes `crypto/x509` refuse
+  any chain through the eight compromised eMudhra intermediates (Go issue
+  82345). The block applies to custom root pools too, so it covers every
+  chain the KMS verifies: discovery's TLS scans (which now record such a
+  certificate as `chain_trusted: false`), external CA chains, workload,
+  KMIP, HYOK and confidential-attestation verification. **Images built
+  before 13.35.0-beta don't have the block. Rebuild and redeploy.**
+- **Dependencies updated** (every direct Go module with a newer release,
+  the dashboard's npm packages, the dashboard images):
+  - Go: AWS SDK v2 (kms 1.61.5, sts 1.51.4), OpenTelemetry 1.47.0 /
+    contrib 0.72.0, `golang.org/x/crypto` 0.58.0, `x/net` 0.61.0, `x/sys`
+    0.49.0, `google.golang.org/api` 0.307.0, OCI SDK 65.128.0,
+    ProtonMail go-crypto 1.5.2, go-ldap 3.4.15, Consul API 1.35.0,
+    go-redis 9.23.0, Prometheus client 1.25.0, etree 1.8.1, cbor 2.9.6,
+    gopsutil 4.26.9, SCEP, modernc sqlite 1.61.0, go-pkcs12 0.7.4.
+    gRPC stays on its pinned fix commit: upstream has no tagged release
+    after v1.84.0 (docs/SECURITY/README.md).
+  - Dashboard: vite 8.3.5 fixes one high-severity advisory (dev server:
+    launch-editor command injection, `server.fs` bypasses), plus
+    react/react-dom 19.3.1, react-query 5.104.5, lucide-react 1.61.0,
+    eslint 10.13.0, typescript-eslint 8.72.0, vitest 5.0.5, Playwright
+    1.64.1, postcss 8.5.31 and swagger-ui-dist 5.34.0. TypeScript stays on
+    6.0 (7.0 is a major upgrade). `npm audit`: 0.
+  - Images: node 24.22.1-alpine (dashboard build), nginx 1.30.6-alpine
+    (dashboard runtime).
+  - Scan after: `govulncheck ./...` reports 0 affecting vulnerabilities
+    (docs/SECURITY/govulncheck-2026-10-22.txt).
+
+### Fixed
+- **The JCA provider in the SDK didn't build.** Its pom named
+  `net.nicholaswilliams…:maven-checksum-plugin:1.0.1`, which isn't on Maven
+  Central, so a customer's `mvn package` stopped at plugin resolution. It
+  now uses `net.nicoulaj.maven.plugins:checksum-maven-plugin` 1.11
+  (`.sha256` / `.sha512` next to each jar). Its other plugins are updated:
+  compiler 3.16.0, jar 3.5.1, source 3.4.0, surefire 3.6.0, OWASP
+  dependency-check 13.0.0. CI now builds it with Maven
+  (`mvn verify`, FIPS-off job).
+
 ## [13.39.0-beta] — 2026-10-22
 
 ### Fixed

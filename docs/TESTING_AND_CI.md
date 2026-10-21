@@ -14,6 +14,7 @@ pull request.
 |---|---|
 | Documentation ships with the change | `scripts/check-docs.sh` over the pushed commits ([below](#the-documentation-gate)) |
 | Go tests — FIPS mode off / on / only | the whole suite in each customer-selectable FIPS mode, on the certified module, with SoftHSM and a JDK required |
+| Go tests — FIPS mode off, JCA step | `mvn verify` on `services/jca-provider`, the pom the SDK ships, built as a customer builds it (13.40.0-beta) |
 | Go tests — race detector | the whole suite under `-race` (13.8.0-beta) |
 | Backend RuntimeCfg/Vet/Test/Security | runtime config validation, `scripts/conformance.sh`, `go vet`, every test run twice (`-count=2`), the suite with no network, `govulncheck` |
 | Integration tests (Postgres) | storage behaviour SQLite cannot prove, a real NATS, an AWS KMS emulator (LocalStack) for BYOK, a real Envoy |

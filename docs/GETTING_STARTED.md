@@ -408,7 +408,7 @@ SPIFFE attestation flow:
 | Kubernetes (prod) | 1.28+ | 1.30+ |
 | PostgreSQL | 15+ | 17 |
 | Go (source build) | 1.27.3+ | 1.27.x latest patch |
-| Node.js dashboard build | 24 LTS | 24.21.0+ with npm 11+ |
+| Node.js dashboard build | 24 LTS | 24.22.1+ with npm 11+ |
 
 ### 4.2 Docker Compose — Quickstart
 

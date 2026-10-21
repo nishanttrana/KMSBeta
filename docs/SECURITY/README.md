@@ -102,6 +102,23 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
   tenant and permission, and audits each request and refusal. Enforced by
   `make conformance` (`route-kernel`).
 
+## Latest scan — 2026-10-22 (13.40.0-beta)
+
+Raw output: [`govulncheck-2026-10-22.txt`](govulncheck-2026-10-22.txt).
+
+| Scope | Before | After | How |
+|---|---|---|---|
+| Go stdlib (toolchain) | 0 on go1.27.3 | 0 | go1.27.3 already refuses chains through the eight compromised eMudhra intermediates (CVE-2026-111943, Go issue 82345), custom root pools included |
+| Go modules | 0 affecting; 30 direct modules behind their latest release | 0 | every direct module updated; gRPC kept on its pinned fix commit (still no tagged release after v1.84.0) |
+| Required but not called | 1 (`golang.org/x/crypto`, GO-2026-5932, no fixed version) | 1 | none available |
+| Dashboard npm | 1 high (vite 8.3.1, dev server) | 0 | vite 8.3.5 and same-major updates |
+| JCA provider (Maven) | the pom didn't resolve (missing checksum plugin) | builds | `checksum-maven-plugin` 1.11, plugins updated, CI `mvn verify` |
+
+Go's eMudhra block lives in `crypto/x509` itself, so it covers every
+`Verify` in the KMS (discovery TLS scans, external CA chains, workload,
+KMIP, HYOK, attestation). It reaches a deployment only once its images are
+rebuilt with go1.27.3.
+
 ## Latest scan — 2026-10-13 (13.4.0-beta)
 
 Raw output: [`govulncheck-2026-10-13.txt`](govulncheck-2026-10-13.txt).

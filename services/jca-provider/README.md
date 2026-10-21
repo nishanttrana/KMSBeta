@@ -52,6 +52,11 @@ code-signing certificate; this source is not signed, so on Oracle JDK
 mvn package
 ```
 
+`mvn verify` also writes `.sha256` and `.sha512` checksums next to each
+jar and runs the OWASP dependency check, which downloads the NVD feed
+(`-Ddependency-check.skip=true` leaves it out). CI runs
+`mvn verify -Ddependency-check.skip=true` on this pom.
+
 `services/ekm/jca_consumer_test.go` compiles this source and drives it
 through `javax.crypto.Cipher` against the real ekm API over TLS
 (`VECTA_TEST_JDK_IMAGE=eclipse-temurin:17-jdk go test ./services/ekm -run JCA`).

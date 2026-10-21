@@ -71,6 +71,13 @@ jobs:
       - name: Cross-build the Windows customer agent
         run: GOOS=windows GOARCH=amd64 go build ./services/ekm-agent/...
 
+      # The SDK ships this pom; until 13.40.0-beta it named a plugin Maven
+      # Central doesn't have and nothing built it. Built as a customer does.
+      - name: Build the JCA provider with Maven (as shipped in the SDK)
+        if: matrix.mode == 'off'
+        working-directory: services/jca-provider
+        run: mvn -B -q -Ddependency-check.skip=true verify
+
   race:
     # Data races make tests fail now and then; the race detector finds them
     # every time. Two were found this way (13.8.0-beta).

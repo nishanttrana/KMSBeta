@@ -1,4 +1,4 @@
-FROM vecta-local/node:24.21.0-alpine AS build
+FROM vecta-local/node:24.22.1-alpine AS build
 
 WORKDIR /app
 ENV npm_config_fetch_retries=5 \
@@ -19,7 +19,7 @@ ENV VITE_VERSION=${VECTA_VERSION} \
     VITE_BUILD_TIME=${VECTA_BUILD_TIME}
 RUN npm run build:docker
 
-FROM vecta-local/nginx:1.30.5-alpine AS runtime
+FROM vecta-local/nginx:1.30.6-alpine AS runtime
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --chmod=0755 tls-watch.sh /docker-entrypoint.d/40-tls-watch.sh

@@ -5,6 +5,26 @@ Newest entries on top.
 
 ## 2026-10-22
 
+### A file we ship is built the way the customer builds it (13.40.0-beta)
+- The SDK's JCA provider pom named a Maven plugin
+  (`net.nicholaswilliams…:maven-checksum-plugin:1.0.1`) that Maven Central
+  doesn't have, so `mvn package`, the README's only build step, failed for
+  every customer. The real-consumer test (`jca_consumer_test.go`) compiles
+  the Java sources with `javac` and never runs Maven, and nothing else read
+  the pom. **A build file we ship is exercised by its own tool in CI**
+  (`mvn verify` step in ci-quality.yml).
+- `GOOS=windows go build ./services/ekm-agent/...` with one main package
+  writes `ekm-agent.exe` into the working directory, overwriting the
+  tracked copy. Cross-build checks use `-o /dev/null`, or run in a scratch
+  tree.
+- One smoke spec (`rotation schedule is offered only to a caller who may
+  set one`) timed out at 5 s while the three-mode FIPS suite was using
+  the CPU. It passed alone and in a full re-run (121/121). It's recorded
+  here, not fixed: if it fails in CI, its wait is the assumption to remove.
+- The eMudhra intermediates are refused by Go's verifier itself (Go
+  1.27.3), so the fix reached every chain the KMS checks with no product
+  code. Only rebuilding the images puts it into the running binaries.
+
 ### A stream consumer's writes must survive a redelivery (13.39.0-beta)
 - After a restart, NATS could not load the `audit-ingest` consumer: its
   `o.dat` was 24 zero bytes, a rewrite interrupted at 17:51:43 UTC with an
