@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -61,6 +62,9 @@ type fakeHYOKKeyCore struct {
 	keys     map[string]map[string]interface{}
 	material map[string][][]byte // per key, one entry per version
 	calls    []string
+	// versionStatus is "tenant:key:version" → status, for versions a
+	// test deactivated.
+	versionStatus map[string]string
 }
 
 // current is a key's current version's material.
@@ -118,6 +122,24 @@ func (f *fakeHYOKKeyCore) DecryptAAD(ctx context.Context, tenantID string, keyID
 		return nil, keycoreError{Status: 400, Code: "decrypt_failed", Message: "message authentication failed"}
 	}
 	return map[string]interface{}{"key_id": keyID, "version": version, "plaintext": base64.StdEncoding.EncodeToString(plain)}, nil
+}
+
+// KeyVersions lists each version; statuses holds any a test deactivated.
+func (f *fakeHYOKKeyCore) KeyVersions(ctx context.Context, tenantID string, keyID string) ([]map[string]interface{}, error) {
+	if _, err := f.GetKey(ctx, tenantID, keyID); err != nil {
+		return nil, err
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := []map[string]interface{}{}
+	for i := range f.material[tenantID+":"+keyID] {
+		status := "active"
+		if s, ok := f.versionStatus[fmt.Sprintf("%s:%s:%d", tenantID, keyID, i+1)]; ok {
+			status = s
+		}
+		out = append(out, map[string]interface{}{"version": float64(i + 1), "status": status})
+	}
+	return out, nil
 }
 
 var (

@@ -11259,6 +11259,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "hyok-get-oci-rest",
+    "group": "HYOK (hyok)",
+    "title": "GET /oci/{rest...}",
+    "service": "hyok",
+    "method": "GET",
+    "pathTemplate": "/oci/{rest...}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from HYOK service.",
+    "requestExample": "GET /svc/hyok/oci/{rest...}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "hyok-post-api-v1-keys-id-version-decrypt",
     "group": "HYOK (hyok)",
     "title": "POST /api/v1/keys/{id}/{version}/decrypt",
@@ -11632,6 +11660,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from HYOK service.",
     "requestExample": "POST /svc/hyok/hyok/servicenow/v1/keys/{id}/wrap?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "hyok-post-oci-rest",
+    "group": "HYOK (hyok)",
+    "title": "POST /oci/{rest...}",
+    "service": "hyok",
+    "method": "POST",
+    "pathTemplate": "/oci/{rest...}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from HYOK service.",
+    "requestExample": "POST /svc/hyok/oci/{rest...}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

@@ -25,6 +25,10 @@ async function stub(page: Page): Promise<Request[]> {
       writes.push(req);
       return r.fulfill(json({ endpoint: { protocol: "aws_xks", ...req.postDataJSON() } }));
     }
+    if (p.endsWith("/hyok/v1/endpoints/oci_ekm") && req.method() === "PUT") {
+      writes.push(req);
+      return r.fulfill(json({ endpoint: { protocol: "oci_ekm", ...req.postDataJSON() } }));
+    }
     if (p.endsWith("/hyok/v1/endpoints/azure") && req.method() === "PUT") {
       writes.push(req);
       return r.fulfill(json({ endpoint: { protocol: "azure", ...req.postDataJSON() } }));
@@ -93,4 +97,31 @@ test("AWS XKS is configured from HYOK with a stored credential and AES-256 keys 
   expect(Object.keys(body).sort()).toEqual(["auth_mode", "enabled", "governance_required", "metadata_json", "policy_id", "tenant_id"]);
   expect(body).toMatchObject({ auth_mode: "sigv4", governance_required: false });
   expect(JSON.parse(body.metadata_json)).toEqual({ path_prefix: "contoso/xks", credential_ids: ["pbconn_x1"], keys: { "xks-key-1": "key_aes" } });
+});
+
+test("OCI External KMS is configured from HYOK with the identity domain's JWKS and AES keys only", async ({ page }) => {
+  const writes = await stub(page);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/#cloudctl/hyok");
+  const card = page.getByText("Oracle Cloud external key management (External KMS vendor API)").locator("xpath=ancestor::*[.//button[normalize-space()='Configure']][1]");
+  await card.getByRole("button", { name: "Configure" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByPlaceholder("contoso", { exact: true }).fill("contoso");
+  await dialog.getByPlaceholder("vecta-vault-1").fill("vault-1");
+  await dialog.getByPlaceholder(/SigningCert\/jwk/).fill("https://idcs-abc.identity.oraclecloud.com/admin/v1/SigningCert/jwk");
+  await dialog.getByPlaceholder("https://10.0.0.5/").fill("https://10.0.0.5/");
+  await dialog.getByLabel("Allowed client IDs").fill("ocid-client-1, ocid-client-2");
+  await dialog.getByLabel("External key ID").fill("orders");
+  await dialog.getByLabel("Vecta key").click();
+  await expect(page.getByRole("option", { name: /azure-rsa/ })).toHaveCount(0);
+  await page.getByRole("option", { name: /azure-kek/ }).click();
+  await expect(dialog.getByTestId("oci-base-path")).toContainText("/svc/hyok/oci/contoso");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect.poll(() => writes.length).toBe(1);
+  const body = writes[0]!.postDataJSON();
+  expect(body).toMatchObject({ auth_mode: "oci_jwt", governance_required: false });
+  expect(JSON.parse(body.metadata_json)).toEqual({
+    path_prefix: "contoso", vault_id: "vault-1", issuer: "https://identity.oraclecloud.com/", jwks_url: "https://idcs-abc.identity.oraclecloud.com/admin/v1/SigningCert/jwk",
+    audience: "https://10.0.0.5/", client_ids: ["ocid-client-1", "ocid-client-2"], keys: { orders: "key_aes" },
+  });
 });

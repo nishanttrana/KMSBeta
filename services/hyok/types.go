@@ -18,6 +18,9 @@ const (
 	ProtocolAzureEKM = "azure"
 	// AWS KMS external key store (XKS proxy API), SigV4-signed (aws_xks.go).
 	ProtocolAWSXKS = "aws_xks"
+	// OCI External Key Management (External KMS vendor API), with OCI
+	// identity domain access tokens (oci_ekm.go).
+	ProtocolOCIEKM = "oci_ekm"
 )
 
 const (
@@ -26,6 +29,9 @@ const (
 	AuthModeJWT       = "jwt"
 	// AuthModeSigV4: AWS SigV4 with an aws_xks credential (AWS XKS only).
 	AuthModeSigV4 = "sigv4"
+	// AuthModeOCIJWT: an OCI identity domain access token verified against
+	// the endpoint's JWKS (OCI External KMS only).
+	AuthModeOCIJWT = "oci_jwt"
 )
 
 type EndpointConfig struct {
@@ -98,8 +104,8 @@ type ProxyCryptoRequest struct {
 	// RSA-OAEP-256, RSA-OAEP). Set only by the Azure EKM listener; no
 	// request body names it.
 	WrapAlgorithm string `json:"-"`
-	// AADB64 and Version reach keycore's encrypt and decrypt for AWS XKS;
-	// set only by the XKS handler.
+	// AADB64 and Version reach keycore's encrypt and decrypt for AWS XKS
+	// and OCI External KMS; set only by their handlers.
 	AADB64  string `json:"-"`
 	Version int    `json:"-"`
 }

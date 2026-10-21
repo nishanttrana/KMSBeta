@@ -7,6 +7,25 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-21 — OCI External KMS: identity domain tokens, Vecta's own nonces
+**Decision:** the OCI vendor API is served through the edge like XKS. A
+call is trusted only for an identity domain access token whose signature,
+issuer, audience, `oci_ekms` scope and `client_id` match the endpoint;
+`keyVersionId` is the Vecta key version number; only AES-GCM with 16-byte
+tags; the IV in an encrypt request is ignored and keycore's is returned.
+**Why:** the vendor API's only authentication is that token, so every
+claim that narrows it is checked. A version number needs no mapping table
+and survives rotation. A caller-chosen GCM nonce could repeat.
+**Rejected:** trusting any token from the domain (any app with a token
+could encrypt); CBC and short tags (unauthenticated or weaker, and keycore
+holds GCM keys); honouring the caller's IV.
+**Enforced:** `TestOCIEKMRefusesAndAuditsBadCalls`,
+`TestOCIEKMEncryptsAndDecryptsAcrossRotation`,
+`TestOCIEKMReadsAProtectedJWKSWithTheDomainCredential`,
+`TestOCIEKMEndpointSettingsAreChecked`.
+
+---
+
 ## 2026-10-21 — Dynamic database credentials: templates of generated values, verified TLS only
 **Decision:** roles carry SQL templates whose placeholders are filled only
 with values the vault generates, quoted for their position; connections to

@@ -748,6 +748,46 @@ key that stays in the KMS (XKS proxy API v1, 13.32.0-beta).
 
 Console: **Cloud Key Control → HYOK → AWS XKS → Configure**.
 
+### 2.8 OCI External Key Management (OCI External KMS)
+
+An Oracle Cloud vault of type "external" encrypts and decrypts with an AES
+key that stays in the KMS (External KMS vendor API v1, 13.36.0-beta).
+
+- **Endpoint.** Through the HTTPS edge at `/svc/hyok/oci/<path
+  prefix>/ekm/v1/vaults/<vault id>/...`. OCI reaches an external key
+  manager through a private endpoint in the customer's VCN, so the KMS
+  must be reachable on an address in that network, and the edge
+  certificate must be one OCI trusts for it.
+- **Identity domain.** In the customer's OCI identity domain: a
+  confidential *resource* app with scope `oci_ekms` and, as its primary
+  audience, the address OCI calls the KMS on; and a confidential *client*
+  app with client credentials and that scope. Copy the issuer and JWKS URL
+  from `<domain URL>/.well-known/idcs-configuration`.
+- **Who may call.** Every call carries the client app's access token. The
+  KMS verifies its signature against the JWKS (RS/PS/ES algorithms only),
+  the issuer exactly, the audience, expiry, the `oci_ekms` scope, and that
+  `client_id` is one the endpoint allows. If the domain does not expose its
+  signing certificate, add the resource app's client ID and secret as an
+  `oci_identity_domain` credential in Playbooks → Credentials and pick it:
+  the KMS gets a domain token with it to read the JWKS, nothing else.
+- **Keys.** Each external key ID maps to one Vecta AES-128, 192 or 256
+  key. `keyVersionId` is the Vecta key version number; encrypt uses the
+  current version (naming an older one is refused), decrypt the version
+  named, so data encrypted before a rotation still decrypts. Encrypt is
+  AES-GCM with a 16-byte tag and a 12-byte IV the FIPS module generates; an
+  `iv` in the request is not used, and the answer carries the one that
+  was. The AAD keycore authenticates is `"oci-ekm/v1" || u16 len(aad) ||
+  aad`. `AES_CBC` and tag lengths other than 16 are refused.
+- **Controls.** Encrypt and decrypt go through the HYOK pipeline: policy,
+  key access justifications, the request log (sizes only) and audit.
+  Governance approval is refused for this endpoint. A disabled key answers
+  403, as the vendor API's error table prescribes; a deactivated key
+  version reads `DISABLED`.
+- **Errors** are `{"code": "<HTTP status>", "message"}`, with the caller's
+  `opc-request-id` echoed (or one generated).
+
+Console: **Cloud Key Control → HYOK → OCI External KMS → Configure**.
+
 ## 3. EKM (External Key Manager)
 
 ### 3.1 Database Transparent Data Encryption (TDE)

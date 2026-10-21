@@ -9,7 +9,8 @@ export const HYOK_PROTOCOL_LABELS: Record<string, string> = {
   servicenow: "ServiceNow HYOK",
   alibaba: "Alibaba Cloud EKM",
   azure: "Azure EKM",
-  aws_xks: "AWS XKS"
+  aws_xks: "AWS XKS",
+  oci_ekm: "OCI External KMS"
 };
 
 export const HYOK_PROTOCOL_DETAILS: Record<string, string> = {
@@ -20,7 +21,8 @@ export const HYOK_PROTOCOL_DETAILS: Record<string, string> = {
   servicenow: "ServiceNow Shield Platform Encryption with Cache-Only Key Service (HYOK)",
   alibaba: "Alibaba Cloud External Key Manager for BYOK/EKM integration",
   azure: "Azure Managed HSM external key management (EKM Proxy API)",
-  aws_xks: "AWS KMS external key store (XKS proxy API)"
+  aws_xks: "AWS KMS external key store (XKS proxy API)",
+  oci_ekm: "Oracle Cloud external key management (External KMS vendor API)"
 };
 
 export const HYOK_PROTOCOL_KEY_HINTS: Record<string, string> = {
@@ -31,7 +33,8 @@ export const HYOK_PROTOCOL_KEY_HINTS: Record<string, string> = {
   servicenow: "Supports AES-256 keys for wrap/unwrap operations using AES-KWP (RFC 5649).",
   alibaba: "Supports AES-256 keys for encrypt/decrypt operations using AES-256-GCM.",
   azure: "AES-256 (A256KW, A256KWP) or RSA 2048/3072/4096 (RSA-OAEP-256, RSA-OAEP), each mapped to the key name Managed HSM uses.",
-  aws_xks: "AES-256 keys (AES-GCM with AAD); AWS signs every call with an XKS credential from Playbooks → Credentials."
+  aws_xks: "AES-256 keys (AES-GCM with AAD); AWS signs every call with an XKS credential from Playbooks → Credentials.",
+  oci_ekm: "AES-128, 192 or 256 keys (AES-GCM with AAD); OCI calls with an access token from your identity domain, checked against its JWKS."
 };
 
 export const HYOK_OPS_BY_PROTOCOL: Record<string, string[]> = {
@@ -42,7 +45,8 @@ export const HYOK_OPS_BY_PROTOCOL: Record<string, string[]> = {
   servicenow: ["wrap", "unwrap"],
   alibaba: ["encrypt", "decrypt"],
   azure: ["wrapkey", "unwrapkey"],
-  aws_xks: ["encrypt", "decrypt"]
+  aws_xks: ["encrypt", "decrypt"],
+  oci_ekm: ["encrypt", "decrypt"]
 };
 
 export const HYOK_PROTOCOL_URLS: Record<string, { path: string; methods: string; description: string }[]> = {
@@ -87,6 +91,15 @@ export const HYOK_PROTOCOL_URLS: Record<string, { path: string; methods: string;
     { path: "/svc/hyok/xks/{pathPrefix}/kms/xks/v1/keys/{externalKeyId}/metadata", methods: "POST", description: "Key spec, usage and status" },
     { path: "/svc/hyok/xks/{pathPrefix}/kms/xks/v1/keys/{externalKeyId}/encrypt", methods: "POST", description: "AES-GCM encrypt" },
     { path: "/svc/hyok/xks/{pathPrefix}/kms/xks/v1/keys/{externalKeyId}/decrypt", methods: "POST", description: "AES-GCM decrypt" },
+  ],
+  // Through the HTTPS edge; OCI's external key manager URL is /svc/hyok/oci/{pathPrefix}.
+  oci_ekm: [
+    { path: "/svc/hyok/oci/{pathPrefix}/ekm/v1/vaults/{vaultId}/metadata", methods: "GET", description: "Vault state" },
+    { path: "/svc/hyok/oci/{pathPrefix}/ekm/v1/vaults/{vaultId}/keys/{externalKeyId}/metadata", methods: "GET", description: "Key shape, state and current version" },
+    { path: "/svc/hyok/oci/{pathPrefix}/ekm/v1/vaults/{vaultId}/keys/{externalKeyId}/keyVersions/{version}/metadata", methods: "GET", description: "Key version state" },
+    { path: "/svc/hyok/oci/{pathPrefix}/ekm/v1/vaults/{vaultId}/keys/{externalKeyId}/encrypt", methods: "POST", description: "AES-GCM encrypt" },
+    { path: "/svc/hyok/oci/{pathPrefix}/ekm/v1/vaults/{vaultId}/keys/{externalKeyId}/decrypt", methods: "POST", description: "AES-GCM decrypt" },
+    { path: "/svc/hyok/oci/{pathPrefix}/ekm/v1/vaults/{vaultId}/generateRandomBytes", methods: "POST", description: "16, 24 or 32 random bytes" },
   ],
 };
 
@@ -151,7 +164,14 @@ export const HYOK_SETUP_GUIDES: Record<string, string[]> = {
     "4. In AWS KMS, create an external key store with public endpoint https://<kms host>, the XksProxyUriPath shown, and the same credential",
     "5. Create KMS keys in the store, each with its external key ID",
   ],
+  oci_ekm: [
+    "1. In your OCI identity domain, create the confidential resource app (scope oci_ekms, primary audience = the address OCI reaches the KMS on) and a client app with client credentials",
+    "2. Create an AES key in Vecta KMS",
+    "3. Configure OCI External KMS: path prefix, vault ID, JWKS URL and issuer from /.well-known/idcs-configuration, audience, client ID, external key IDs",
+    "4. If the domain's signing certificate is not public, add an OCI identity domain credential (resource app) in Playbooks → Credentials and pick it",
+    "5. In OCI KMS, create an external vault pointing at https://<kms host>/svc/hyok/oci/<path prefix> through a private endpoint, then key references by external key ID",
+  ],
 };
 
 // The protocol cards, in order.
-export const HYOK_PROTOCOLS = ["dke", "salesforce", "google", "generic", "servicenow", "alibaba", "azure", "aws_xks"];
+export const HYOK_PROTOCOLS = ["dke", "salesforce", "google", "generic", "servicenow", "alibaba", "azure", "aws_xks", "oci_ekm"];

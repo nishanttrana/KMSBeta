@@ -4,6 +4,28 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.36.0-beta] — 2026-10-21
+
+### Added
+- **OCI External KMS as HYOK.** An Oracle Cloud vault of type "external"
+  encrypts and decrypts with an AES key (128, 192 or 256) that stays in
+  the KMS, through the External KMS vendor API v1 at
+  `/svc/hyok/oci/<path prefix>/ekm/v1/...`: vault, key and key version
+  metadata, AES-GCM encrypt and decrypt, random bytes. OCI calls with an
+  access token from the customer's identity domain; the KMS verifies its
+  signature against the domain's JWKS, the issuer, the resource app's
+  audience, the `oci_ekms` scope and an allow-list of client IDs. A domain
+  that does not publish its signing keys is read with an
+  `oci_identity_domain` credential from Playbooks → Credentials. The key
+  version is OCI's `keyVersionId`, so data encrypted before a rotation
+  still decrypts. Calls go through the HYOK pipeline (policy, key access
+  justifications, request log, audit). Console: **Cloud Key Control →
+  HYOK → OCI External KMS → Configure** (docs/CLOUD_INTEGRATION.md §2.8).
+
+### Changed
+- The hyok service's credential use is `hyok_proxy` (`aws_xks`,
+  `oci_identity_domain`); it was `xks_proxy`.
+
 ## [13.35.0-beta] — 2026-10-21
 
 ### Security

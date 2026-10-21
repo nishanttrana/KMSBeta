@@ -56,6 +56,8 @@ func normalizeProtocol(v string) string {
 		return ProtocolAzureEKM
 	case ProtocolAWSXKS:
 		return ProtocolAWSXKS
+	case ProtocolOCIEKM:
+		return ProtocolOCIEKM
 	default:
 		return ""
 	}
@@ -72,6 +74,8 @@ func normalizeAuthMode(v string) string {
 		return AuthModeJWT
 	case AuthModeSigV4:
 		return AuthModeSigV4
+	case AuthModeOCIJWT:
+		return AuthModeOCIJWT
 	default:
 		return ""
 	}
@@ -132,6 +136,10 @@ func validateProtocolOperation(protocol string, operation string) error {
 			"unwrap": {},
 		},
 		ProtocolAWSXKS: {
+			"encrypt": {},
+			"decrypt": {},
+		},
+		ProtocolOCIEKM: {
 			"encrypt": {},
 			"decrypt": {},
 		},

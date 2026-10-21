@@ -4138,6 +4138,23 @@ attaching a credential needs `compliance.connection.use`
 HYOK endpoint administration needs `hyok.read` / `hyok.write`
 (13.32.0-beta; a role name granted it before).
 
+**OCI External KMS** (13.36.0-beta) is the External KMS vendor API v1
+under `GET|POST /oci/{rest...}` on the hyok service, reached through the
+edge as `/svc/hyok/oci/<path_prefix>/ekm/v1/vaults/<vault_id>/metadata`,
+`.../keys/<external key id>/metadata`,
+`.../keys/<id>/keyVersions/<version>/metadata`, `.../keys/<id>/encrypt`,
+`.../keys/<id>/decrypt` and `.../generateRandomBytes` (201). Each call
+carries `Authorization: Bearer <OCI identity domain access token>`,
+verified against the endpoint's JWKS, issuer, audience, the `oci_ekms`
+scope and its client IDs. Errors are `{"code":"<status>","message"}`
+(401 token, 404 vault/key/version, 403 disabled key or approval needed,
+400 bad input or a value that does not decrypt, 503 dependency), each
+audited as `audit.hyok.oci_ekm_request` with `result`, `reason` and
+`opc_request_id`. Configure with `PUT /hyok/v1/endpoints/oci_ekm`,
+`metadata_json`
+`{"path_prefix","vault_id","issuer","jwks_url","audience","client_ids":[...],"jwks_credential_id"?,"keys":{"<external key id>":"<AES key id>"}}`;
+naming a `jwks_credential_id` needs `compliance.connection.use`.
+
 **Azure EKM** (13.30.0-beta) is the EKM Proxy API (`0.1-preview`) that
 Azure Managed HSM external key management calls, on the hyok service's own
 mTLS listener (`AZURE_EKM_PORT`, compose `8443`), not the HTTPS edge.

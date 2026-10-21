@@ -31,7 +31,7 @@ var connectionUsers = map[string]string{
 	"kms-discovery":  "scan_source",
 	"kms-cloud":      "cloud_account",
 	"kms-hsm":        "hsm_session",
-	"kms-hyok-proxy": "xks_proxy",
+	"kms-hyok-proxy": "hyok_proxy",
 	"kms-secrets":    "database_engine",
 }
 

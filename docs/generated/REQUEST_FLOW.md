@@ -1,15 +1,15 @@
 # Generated Request Flow Map
 
-Generated at `2026-10-21T04:54:02Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-21T05:28:02Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `907`
+- Backend routes analyzed: `909`
 - Routes with exact frontend call sites: `513`
-- Routes whose handlers call `h.svc.*`: `537`
-- Routes with detected store calls: `641`
+- Routes whose handlers call `h.svc.*`: `539`
+- Routes with detected store calls: `643`
 - Routes with detected internal `pkg/*` calls: `198`
 
 ## How To Trace One Frontend Click
@@ -1026,7 +1026,9 @@ This file connects frontend requests to backend Go processing. It is static anal
 | governance\|GET\|/governance/key-approval/{param}/status | GET /governance/key-approval/{id}/status | handleGetKeyApprovalStatus (services/governance/handler.go:850) | GetKeyApprovalStatus | GetApprovalRequest |  |  |  |
 | governance\|POST\|/governance/notify/email | POST /governance/notify/email | notifyEmail (services/governance/notify.go:67) | GetSettings, mailer | RoleHolderEmails, IsActiveUserEmail, GetSettings | s.creds.Resolve | pkg/tenantcheck.IsServicePrincipal, pkg/ssrfguard.ParseAllow |  |
 | hyok\|POST\|/xks/{param} | POST /xks/{rest...} | handleXKS (services/hyok/aws_xks.go:281) | xksEndpointForPrefix, xksSecrets | ListEnabledEndpointsByProtocol | s.creds.Resolve | pkg/sigv4.Verify |  |
-| hyok\|GET\|/hyok/credential-usage | GET /hyok/credential-usage | credentialUsage (services/hyok/aws_xks.go:517) |  | GetEndpoint |  | pkg/tenantcheck.IsServicePrincipal |  |
+| hyok\|GET\|/oci/{param} | GET /oci/{rest...} | handleOCI (services/hyok/oci_ekm.go:394) | ociEndpointForPrefix, ociVerify | ListEnabledEndpointsByProtocol |  |  |  |
+| hyok\|POST\|/oci/{param} | POST /oci/{rest...} | handleOCI (services/hyok/oci_ekm.go:394) | ociEndpointForPrefix, ociVerify | ListEnabledEndpointsByProtocol |  |  |  |
+| hyok\|GET\|/hyok/credential-usage | GET /hyok/credential-usage | credentialUsage (services/hyok/aws_xks.go:518) |  | GetEndpoint |  | pkg/tenantcheck.IsServicePrincipal |  |
 | hyok\|GET\|/api/v1/keys/{param} | GET /api/v1/keys/{id} | handleMicrosoftDKEGetKey (services/hyok/handler.go:73) | GetMicrosoftDKEKey | CreateRequestLog, CompleteRequestLog | s.keycore.PublicKey | pkg/crypto.ParseRSAPublicKeyAny, pkg/crypto.RSAPublicKeyJWK |  |
 | hyok\|POST\|/api/v1/keys/{param}/{param}/decrypt | POST /api/v1/keys/{id}/{version}/decrypt | handleMicrosoftDKEDecrypt (services/hyok/handler.go:87) | ProcessMicrosoftDKEDecrypt |  | s.keycore.GetKey |  |  |
 | hyok\|POST\|/hyok/dke/v1/keys/{param}/decrypt | POST /hyok/dke/v1/keys/{id}/decrypt | handleDKEDecrypt (services/hyok/handler.go:106) |  |  |  |  |  |

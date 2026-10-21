@@ -512,24 +512,32 @@ func (h *Handler) xksDecrypt(c *route.Call, tenantID, keyID string, identity Aut
 	c.Protocol(http.StatusOK, map[string]interface{}{"plaintext": out.PlaintextB64}, "", "")
 }
 
-// credentialUsage names the XKS endpoints using each credential, for the
-// credential store's "used by" and its delete guard. Only compliance asks.
+// credentialUsage names the XKS and OCI endpoints using each credential,
+// for the credential store's "used by" and its delete guard. Only
+// compliance asks.
 func (h *Handler) credentialUsage(c *route.Call) {
 	if !tenantcheck.IsServicePrincipal(c.Claims) || c.Claims.ClientID != "kms-compliance" {
 		c.Refuse(http.StatusForbidden, "caller_not_allowed", "only the credential store may call this")
 		return
 	}
-	cfg, err := h.svc.store.GetEndpoint(c.R.Context(), c.Tenant, ProtocolAWSXKS)
 	items := []map[string]string{}
-	if err == nil {
-		if meta, err := parseAWSXKSMetadata(cfg.MetadataJSON); err == nil {
+	for _, protocol := range []string{ProtocolAWSXKS, ProtocolOCIEKM} {
+		cfg, err := h.svc.store.GetEndpoint(c.R.Context(), c.Tenant, protocol)
+		if errors.Is(err, errNotFound) {
+			continue
+		}
+		if err != nil {
+			c.Error(http.StatusInternalServerError, "internal_error", "endpoint lookup failed")
+			return
+		}
+		if meta, err := parseAWSXKSMetadata(cfg.MetadataJSON); protocol == ProtocolAWSXKS && err == nil {
 			for _, id := range meta.CredentialIDs {
 				items = append(items, map[string]string{"connection_id": id, "label": "AWS XKS endpoint " + meta.PathPrefix})
 			}
 		}
-	} else if !errors.Is(err, errNotFound) {
-		c.Error(http.StatusInternalServerError, "internal_error", "endpoint lookup failed")
-		return
+		if meta, err := parseOCIEKMMetadata(cfg.MetadataJSON); protocol == ProtocolOCIEKM && err == nil && meta.JWKSCredentialID != "" {
+			items = append(items, map[string]string{"connection_id": meta.JWKSCredentialID, "label": "OCI External KMS endpoint " + meta.PathPrefix})
+		}
 	}
 	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
@@ -537,17 +545,19 @@ func (h *Handler) credentialUsage(c *route.Call) {
 // kernelRoutes are the hyok routes on the route kernel.
 func (h *Handler) kernelRoutes(rt *route.Router) {
 	rt.Handle("POST /xks/{rest...}", route.Spec{Action: "xks_request", Public: true, Tenancy: route.PlatformScoped, Resource: "key", OpaqueBody: true}, h.handleXKS)
+	rt.Handle("GET /oci/{rest...}", route.Spec{Action: "oci_ekm_request", Public: true, Tenancy: route.PlatformScoped, Resource: "key"}, h.handleOCI)
+	rt.Handle("POST /oci/{rest...}", route.Spec{Action: "oci_ekm_request", Public: true, Tenancy: route.PlatformScoped, Resource: "key", OpaqueBody: true}, h.handleOCI)
 	rt.Handle("GET /hyok/credential-usage", route.Spec{Action: "credential_usage_read", Permission: route.Authenticated, Resource: "credential"}, h.credentialUsage)
 }
 
 // kernelAuth puts a verified Vecta bearer token's claims in the context for
 // the kernel. Any other Authorization (an XKS SigV4 header) is left for the
-// route that verifies it.
+// route that verifies it, as is the OCI identity domain token on /oci/.
 func (h *Handler) kernelAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authz := strings.TrimSpace(r.Header.Get("Authorization"))
 		ctx := r.Context()
-		if strings.HasPrefix(strings.ToLower(authz), "bearer ") {
+		if strings.HasPrefix(strings.ToLower(authz), "bearer ") && !strings.HasPrefix(r.URL.Path, "/oci/") {
 			if claims, err := h.jwtParser(strings.TrimSpace(authz[7:])); err == nil && claims != nil {
 				ctx = pkgauth.ContextWithClaims(ctx, claims)
 			} else {

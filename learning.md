@@ -5,6 +5,24 @@ Newest entries on top.
 
 ## 2026-10-21
 
+### Two bearer tokens on one service (13.36.0-beta)
+- hyok's kernel wrapper parses every `Bearer` token as a Vecta JWT and marks
+  a failure invalid, which XKS never hit (SigV4 isn't Bearer). OCI's
+  identity domain token is Bearer, so every OCI call would have been a 401
+  before its route verified it. The wrapper now leaves `/oci/` to its
+  route, and the OCI tests run through `MountKernel`, not the handler.
+  **When a second issuer's tokens share a scheme, the path decides which
+  verifier owns them, and a test sends that issuer's token through the
+  real middleware.**
+
+### A caller's nonce is a request to reuse one (13.36.0-beta)
+- The OCI vendor API lets the caller send an `iv` with encrypt. Honouring
+  it would let any caller with a token pick a repeated GCM nonce under the
+  customer's key. keycore draws every nonce; the answer carries it, and the
+  audit event notes `caller_iv_replaced`. **Never take an AEAD nonce from
+  the network.**
+
+
 ### Run the job, not the checks I remember (13.35.0-beta)
 - Before pushing 13.33.0 I ran conformance, the tests and the dashboard
   steps, but not the backend job's first step (`check-runtimecfg.sh`), and

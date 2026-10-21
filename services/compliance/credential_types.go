@@ -56,6 +56,11 @@ var credentialTypes = []ConnectionSpec{
 	{Type: "salesforce", Label: "Salesforce connected app", Category: categoryCloud, Use: "Cloud BYOK",
 		Fields: []string{"instance_url", "client_id", "client_secret"}, Optional: []string{"username", "password", "security_token", "login_url", optionsField},
 		URLField: "instance_url", URLFields: []string{"login_url"}, Secrets: []string{"client_secret", "password", "security_token", optionsField}},
+	// An OCI identity domain confidential app (the External KMS resource
+	// app): the hyok service uses it to read the domain's signing keys
+	// when they are not public, to verify OCI External KMS tokens.
+	{Type: "oci_identity_domain", Label: "OCI identity domain app (External KMS token verification)", Category: categoryCloud, Use: "HYOK: OCI External KMS",
+		Fields: []string{"client_id", "client_secret"}, Secrets: []string{"client_secret"}},
 	// The credential AWS KMS signs XKS proxy calls with (SigV4); the hyok
 	// service verifies each call against it. AWS requires the access key ID
 	// in A-Z and 2-7, 20 to 30 characters, and a secret of 43 to 64.
@@ -88,7 +93,7 @@ var credentialTypes = []ConnectionSpec{
 var credentialUseTypes = map[string][]string{
 	"cloud_account":   {"aws", "azure", "gcp", "oci", "alibaba", "salesforce", "servicenow"},
 	"hsm_session":     {"pkcs11_hsm"},
-	"xks_proxy":       {"aws_xks"},
+	"hyok_proxy":      {"aws_xks", "oci_identity_domain"},
 	"database_engine": {"database"},
 }
 

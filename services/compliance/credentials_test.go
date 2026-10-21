@@ -69,15 +69,16 @@ func TestCredentialTypesValidateTheirFields(t *testing.T) {
 func TestCredentialResolveAdmitsOnlyTheServiceThatUsesTheType(t *testing.T) {
 	hs := newPlaybookHarness(t)
 	ids := map[string]string{
-		"aws":        hs.conn(t, "aws", map[string]string{"access_key_id": "AKIA", "secret_access_key": "aws-secret-value"}),
-		"azure":      hs.conn(t, "azure", map[string]string{"tenant_id": "t", "client_id": "c", "client_secret": "azure-secret-value"}),
-		"pkcs11_hsm": hs.conn(t, "pkcs11_hsm", hsmFields()),
-		"smtp":       hs.conn(t, "smtp", map[string]string{"host": "1.1.1.1", "port": "587", "from": "kms@example.com"}),
-		"database":   hs.conn(t, "database", map[string]string{"host": "1.1.1.1", "database": "app", "username": "admin", "password": "db-secret-value"}),
-		"aws_xks":    hs.conn(t, "aws_xks", map[string]string{"access_key_id": "ABCDEFGHIJKLMNOPQRST234567", "secret_access_key": strings.Repeat("s", 43) + "-secret-value"}),
+		"aws":                 hs.conn(t, "aws", map[string]string{"access_key_id": "AKIA", "secret_access_key": "aws-secret-value"}),
+		"azure":               hs.conn(t, "azure", map[string]string{"tenant_id": "t", "client_id": "c", "client_secret": "azure-secret-value"}),
+		"pkcs11_hsm":          hs.conn(t, "pkcs11_hsm", hsmFields()),
+		"smtp":                hs.conn(t, "smtp", map[string]string{"host": "1.1.1.1", "port": "587", "from": "kms@example.com"}),
+		"database":            hs.conn(t, "database", map[string]string{"host": "1.1.1.1", "database": "app", "username": "admin", "password": "db-secret-value"}),
+		"oci_identity_domain": hs.conn(t, "oci_identity_domain", map[string]string{"client_id": "ocid-app", "client_secret": "oci-secret-value"}),
+		"aws_xks":             hs.conn(t, "aws_xks", map[string]string{"access_key_id": "ABCDEFGHIJKLMNOPQRST234567", "secret_access_key": strings.Repeat("s", 43) + "-secret-value"}),
 	}
 	allowed := map[string][]string{
-		"kms-cloud": {"aws", "azure"}, "kms-hsm": {"pkcs11_hsm"}, "kms-governance": {"smtp"}, "kms-audit": {}, "kms-discovery": {}, "kms-hyok-proxy": {"aws_xks"}, "kms-secrets": {"database"},
+		"kms-cloud": {"aws", "azure"}, "kms-hsm": {"pkcs11_hsm"}, "kms-governance": {"smtp"}, "kms-audit": {}, "kms-discovery": {}, "kms-hyok-proxy": {"aws_xks", "oci_identity_domain"}, "kms-secrets": {"database"},
 	}
 	for client, types := range allowed {
 		for typ, id := range ids {

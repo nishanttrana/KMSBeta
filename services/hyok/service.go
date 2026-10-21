@@ -32,9 +32,11 @@ type Service struct {
 	azure      azureProbes
 	creds      credstore.Store
 	xks        xksCreds
+	oci        ociVerifiers
 }
 
-// SetCredentials wires the credential store (AWS XKS credentials).
+// SetCredentials wires the credential store (AWS XKS credentials, OCI
+// identity domain apps).
 func (s *Service) SetCredentials(c credstore.Store) { s.creds = c }
 
 func NewService(store Store, keycore KeyCoreClient, policy PolicyClient, governance GovernanceClient, events EventPublisher) *Service {
@@ -81,7 +83,15 @@ func (s *Service) ConfigureEndpoint(ctx context.Context, cfg EndpointConfig) (En
 			})
 			return EndpointConfig{}, err
 		}
-	} else if cfg.AuthMode == AuthModeMTLS || cfg.AuthMode == AuthModeSigV4 {
+	} else if cfg.Protocol == ProtocolOCIEKM {
+		claims, _ := pkgauth.ClaimsFromContext(ctx)
+		if err := s.validateOCIEKMEndpoint(ctx, &cfg, claims); err != nil {
+			_ = s.publishAudit(ctx, "audit.hyok.endpoint_refused", cfg.TenantID, map[string]interface{}{
+				"protocol": cfg.Protocol, "reason": err.Error(), "result": "refused", "severity": "warning",
+			})
+			return EndpointConfig{}, err
+		}
+	} else if cfg.AuthMode == AuthModeMTLS || cfg.AuthMode == AuthModeSigV4 || cfg.AuthMode == AuthModeOCIJWT {
 		// Envoy's edge listener does not verify client certificates, so no
 		// request could ever prove an mTLS identity; refuse rather than store a
 		// mode that looks enforced.
@@ -116,7 +126,7 @@ func (s *Service) ListEndpoints(ctx context.Context, tenantID string) ([]Endpoin
 	for _, item := range current {
 		index[item.Protocol] = item
 	}
-	protocols := []string{ProtocolDKE, ProtocolSalesforce, ProtocolGoogleEKM, ProtocolGeneric, ProtocolServiceNow, ProtocolAlibaba, ProtocolAzureEKM, ProtocolAWSXKS}
+	protocols := []string{ProtocolDKE, ProtocolSalesforce, ProtocolGoogleEKM, ProtocolGeneric, ProtocolServiceNow, ProtocolAlibaba, ProtocolAzureEKM, ProtocolAWSXKS, ProtocolOCIEKM}
 	out := make([]EndpointConfig, 0, len(protocols))
 	for _, p := range protocols {
 		if item, ok := index[p]; ok {
@@ -952,6 +962,8 @@ func protocolEventSubject(protocol string, operation string) string {
 		return "audit.hyok.azure_ekm_request"
 	case ProtocolAWSXKS:
 		return "audit.hyok.aws_xks_request"
+	case ProtocolOCIEKM:
+		return "audit.hyok.oci_ekm_request"
 	default:
 		return "audit.hyok.wrap_request"
 	}
@@ -979,6 +991,13 @@ func checkAuthMode(required string, actual string) error {
 			return nil
 		}
 		return errors.New("this endpoint takes AWS SigV4-signed calls only")
+	case AuthModeOCIJWT:
+		// Only the OCI handler verifies an identity domain token and sets
+		// this mode.
+		if actual == AuthModeOCIJWT {
+			return nil
+		}
+		return errors.New("this endpoint takes OCI identity domain tokens only")
 	case AuthModeJWT:
 		if actual == "jwt" {
 			return nil

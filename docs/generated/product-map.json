@@ -7250,7 +7250,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/aws_xks.go",
       "handler": "h.handleXKS",
-      "line": 539,
+      "line": 547,
       "match_key": "hyok|POST|/xks/{param}",
       "method": "POST",
       "normalized_path": "/xks/{param}",
@@ -7261,11 +7261,41 @@
       "service": "hyok"
     },
     {
+      "action": "oci_ekm_request",
+      "code_scope": "hyok",
+      "file": "services/hyok/aws_xks.go",
+      "handler": "h.handleOCI",
+      "line": 548,
+      "match_key": "hyok|GET|/oci/{param}",
+      "method": "GET",
+      "normalized_path": "/oci/{param}",
+      "path": "/oci/{rest...}",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "key",
+      "service": "hyok"
+    },
+    {
+      "action": "oci_ekm_request",
+      "code_scope": "hyok",
+      "file": "services/hyok/aws_xks.go",
+      "handler": "h.handleOCI",
+      "line": 549,
+      "match_key": "hyok|POST|/oci/{param}",
+      "method": "POST",
+      "normalized_path": "/oci/{param}",
+      "path": "/oci/{rest...}",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "key",
+      "service": "hyok"
+    },
+    {
       "action": "credential_usage_read",
       "code_scope": "hyok",
       "file": "services/hyok/aws_xks.go",
       "handler": "h.credentialUsage",
-      "line": 540,
+      "line": 550,
       "match_key": "hyok|GET|/hyok/credential-usage",
       "method": "GET",
       "normalized_path": "/hyok/credential-usage",
@@ -16537,7 +16567,7 @@
       "code_scope": "hyok",
       "file": "services/hyok/aws_xks.go",
       "handler": "h.handleXKS",
-      "line": 539,
+      "line": 547,
       "match_key": "hyok|POST|/xks/{param}",
       "method": "POST",
       "normalized_path": "/xks/{param}",
@@ -16548,11 +16578,41 @@
       "service": "hyok"
     },
     {
+      "action": "oci_ekm_request",
+      "code_scope": "hyok",
+      "file": "services/hyok/aws_xks.go",
+      "handler": "h.handleOCI",
+      "line": 548,
+      "match_key": "hyok|GET|/oci/{param}",
+      "method": "GET",
+      "normalized_path": "/oci/{param}",
+      "path": "/oci/{rest...}",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "key",
+      "service": "hyok"
+    },
+    {
+      "action": "oci_ekm_request",
+      "code_scope": "hyok",
+      "file": "services/hyok/aws_xks.go",
+      "handler": "h.handleOCI",
+      "line": 549,
+      "match_key": "hyok|POST|/oci/{param}",
+      "method": "POST",
+      "normalized_path": "/oci/{param}",
+      "path": "/oci/{rest...}",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "key",
+      "service": "hyok"
+    },
+    {
       "action": "credential_usage_read",
       "code_scope": "hyok",
       "file": "services/hyok/aws_xks.go",
       "handler": "h.credentialUsage",
-      "line": 540,
+      "line": 550,
       "match_key": "hyok|GET|/hyok/credential-usage",
       "method": "GET",
       "normalized_path": "/hyok/credential-usage",
@@ -22318,10 +22378,50 @@
       "tag": "button"
     },
     {
+      "file": "web/dashboard/src/components/v3/tabs/HYOKOCIConfig.tsx",
+      "handler": "",
+      "label": "set( )} style={ }>",
+      "line": 132,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/HYOKOCIConfig.tsx",
+      "handler": "",
+      "label": "set({ rows: [...m.rows, ] })}> Add key",
+      "line": 135,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/HYOKOCIConfig.tsx",
+      "handler": "",
+      "label": "{ try catch }} style={ }>",
+      "line": 150,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/HYOKOCIConfig.tsx",
+      "handler": "onClose",
+      "label": "Cancel",
+      "line": 155,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/HYOKOCIConfig.tsx",
+      "handler": "",
+      "label": "void save()} disabled= >",
+      "line": 156,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "void refresh(false)} disabled= > Refresh",
-      "line": 291,
+      "line": 294,
       "tabs": [
         "hyok"
       ],
@@ -22331,7 +22431,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "}> Endpoint URLs",
-      "line": 292,
+      "line": 295,
       "tabs": [
         "hyok"
       ],
@@ -22341,7 +22441,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "}> Setup Guide",
-      "line": 293,
+      "line": 296,
       "tabs": [
         "hyok"
       ],
@@ -22351,36 +22451,6 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "openConfig(protocol)}>Configure",
-      "line": 332,
-      "tabs": [
-        "hyok"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
-      "handler": "",
-      "label": "}>URLs",
-      "line": 333,
-      "tabs": [
-        "hyok"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
-      "handler": "",
-      "label": "}>Guide",
-      "line": 334,
-      "tabs": [
-        "hyok"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
-      "handler": "",
-      "label": "void runDelete(protocol)}>Reset",
       "line": 335,
       "tabs": [
         "hyok"
@@ -22390,8 +22460,38 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
+      "label": "}>URLs",
+      "line": 336,
+      "tabs": [
+        "hyok"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
+      "handler": "",
+      "label": "}>Guide",
+      "line": 337,
+      "tabs": [
+        "hyok"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
+      "handler": "",
+      "label": "void runDelete(protocol)}>Reset",
+      "line": 338,
+      "tabs": [
+        "hyok"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
+      "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 476,
+      "line": 479,
       "tabs": [
         "hyok"
       ],
@@ -22401,7 +22501,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "void submitConfig()} disabled= >",
-      "line": 477,
+      "line": 480,
       "tabs": [
         "hyok"
       ],
@@ -22411,7 +22511,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "copyToClipboard(url.path)} style={ } title=\"Copy URL path\">",
-      "line": 503,
+      "line": 508,
       "tabs": [
         "hyok"
       ],
@@ -22421,7 +22521,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Close",
-      "line": 510,
+      "line": 515,
       "tabs": [
         "hyok"
       ],
@@ -22431,7 +22531,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Close",
-      "line": 552,
+      "line": 557,
       "tabs": [
         "hyok"
       ],
@@ -33364,7 +33464,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-21T04:54:02Z",
+  "generated_at": "2026-10-21T05:28:02Z",
   "navigation": [
     {
       "group": "Home",
@@ -66276,7 +66376,7 @@
       "normalized_path": "/xks/{param}",
       "path": "/xks/{rest...}",
       "route_file": "services/hyok/aws_xks.go",
-      "route_line": 539,
+      "route_line": 547,
       "service": "hyok",
       "service_external_package_calls": [
         "strings.EqualFold",
@@ -66334,6 +66434,214 @@
     },
     {
       "frontend_call_sites": [],
+      "handler": "h.handleOCI",
+      "handler_external_package_calls": [
+        "encoding/json.Unmarshal",
+        "io.ReadAll",
+        "io.LimitReader",
+        "strconv.Itoa",
+        "strings.TrimSpace",
+        "strings.Index",
+        "strings.Trim",
+        "strings.Split",
+        "strings.Join",
+        "strings.EqualFold"
+      ],
+      "handler_file": "services/hyok/oci_ekm.go",
+      "handler_helper_calls": [
+        "newID",
+        "ociError",
+        "ociEndpointForPrefix",
+        "ociVerify",
+        "Error",
+        "remoteHost",
+        "ociRandom",
+        "GetKey",
+        "firstString",
+        "extractInt",
+        "ociKeyBytes",
+        "ociVersionMetadata",
+        "ociEncrypt",
+        "ociDecrypt"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 394,
+      "handler_name": "handleOCI",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "ociEndpointForPrefix",
+        "ociVerify"
+      ],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/oci/{param}",
+      "path": "/oci/{rest...}",
+      "route_file": "services/hyok/aws_xks.go",
+      "route_line": 548,
+      "service": "hyok",
+      "service_external_package_calls": [
+        "strings.EqualFold",
+        "errors.New",
+        "fmt.Errorf",
+        "strings.TrimSpace",
+        "time.Now"
+      ],
+      "service_helper_calls": [
+        "ListEnabledEndpointsByProtocol",
+        "parseOCIEKMMetadata",
+        "ociVerifier",
+        "ociHasScope"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "strings.EqualFold"
+          ],
+          "file": "services/hyok/oci_ekm.go",
+          "helper_calls": [
+            "ListEnabledEndpointsByProtocol",
+            "parseOCIEKMMetadata"
+          ],
+          "internal_package_calls": [],
+          "line": 306,
+          "name": "ociEndpointForPrefix",
+          "receiver_calls": [],
+          "store_calls": [
+            "ListEnabledEndpointsByProtocol"
+          ]
+        },
+        {
+          "external_package_calls": [
+            "errors.New",
+            "fmt.Errorf",
+            "strings.TrimSpace",
+            "strings.EqualFold",
+            "time.Now"
+          ],
+          "file": "services/hyok/oci_ekm.go",
+          "helper_calls": [
+            "ociVerifier",
+            "ociHasScope"
+          ],
+          "internal_package_calls": [],
+          "line": 320,
+          "name": "ociVerify",
+          "receiver_calls": [],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "ListEnabledEndpointsByProtocol"
+      ]
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.handleOCI",
+      "handler_external_package_calls": [
+        "encoding/json.Unmarshal",
+        "io.ReadAll",
+        "io.LimitReader",
+        "strconv.Itoa",
+        "strings.TrimSpace",
+        "strings.Index",
+        "strings.Trim",
+        "strings.Split",
+        "strings.Join",
+        "strings.EqualFold"
+      ],
+      "handler_file": "services/hyok/oci_ekm.go",
+      "handler_helper_calls": [
+        "newID",
+        "ociError",
+        "ociEndpointForPrefix",
+        "ociVerify",
+        "Error",
+        "remoteHost",
+        "ociRandom",
+        "GetKey",
+        "firstString",
+        "extractInt",
+        "ociKeyBytes",
+        "ociVersionMetadata",
+        "ociEncrypt",
+        "ociDecrypt"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 394,
+      "handler_name": "handleOCI",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "ociEndpointForPrefix",
+        "ociVerify"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/oci/{param}",
+      "path": "/oci/{rest...}",
+      "route_file": "services/hyok/aws_xks.go",
+      "route_line": 549,
+      "service": "hyok",
+      "service_external_package_calls": [
+        "strings.EqualFold",
+        "errors.New",
+        "fmt.Errorf",
+        "strings.TrimSpace",
+        "time.Now"
+      ],
+      "service_helper_calls": [
+        "ListEnabledEndpointsByProtocol",
+        "parseOCIEKMMetadata",
+        "ociVerifier",
+        "ociHasScope"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "strings.EqualFold"
+          ],
+          "file": "services/hyok/oci_ekm.go",
+          "helper_calls": [
+            "ListEnabledEndpointsByProtocol",
+            "parseOCIEKMMetadata"
+          ],
+          "internal_package_calls": [],
+          "line": 306,
+          "name": "ociEndpointForPrefix",
+          "receiver_calls": [],
+          "store_calls": [
+            "ListEnabledEndpointsByProtocol"
+          ]
+        },
+        {
+          "external_package_calls": [
+            "errors.New",
+            "fmt.Errorf",
+            "strings.TrimSpace",
+            "strings.EqualFold",
+            "time.Now"
+          ],
+          "file": "services/hyok/oci_ekm.go",
+          "helper_calls": [
+            "ociVerifier",
+            "ociHasScope"
+          ],
+          "internal_package_calls": [],
+          "line": 320,
+          "name": "ociVerify",
+          "receiver_calls": [],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "ListEnabledEndpointsByProtocol"
+      ]
+    },
+    {
+      "frontend_call_sites": [],
       "handler": "h.credentialUsage",
       "handler_external_package_calls": [
         "errors.Is"
@@ -66341,13 +66649,14 @@
       "handler_file": "services/hyok/aws_xks.go",
       "handler_helper_calls": [
         "GetEndpoint",
+        "Error",
         "parseAWSXKSMetadata",
-        "Error"
+        "parseOCIEKMMetadata"
       ],
       "handler_internal_package_calls": [
         "pkg/tenantcheck.IsServicePrincipal"
       ],
-      "handler_line": 517,
+      "handler_line": 518,
       "handler_name": "credentialUsage",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -66358,7 +66667,7 @@
       "normalized_path": "/hyok/credential-usage",
       "path": "/hyok/credential-usage",
       "route_file": "services/hyok/aws_xks.go",
-      "route_line": 540,
+      "route_line": 550,
       "service": "hyok",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -66457,7 +66766,7 @@
             "pkg/crypto.ParseRSAPublicKeyAny",
             "pkg/crypto.RSAPublicKeyJWK"
           ],
-          "line": 657,
+          "line": 667,
           "name": "GetMicrosoftDKEKey",
           "receiver_calls": [
             "s.keycore.PublicKey"
@@ -66548,7 +66857,7 @@
             "dkeRequesterEmail"
           ],
           "internal_package_calls": [],
-          "line": 767,
+          "line": 777,
           "name": "ProcessMicrosoftDKEDecrypt",
           "receiver_calls": [
             "s.keycore.GetKey"
@@ -66668,7 +66977,7 @@
             "mustJSON"
           ],
           "internal_package_calls": [],
-          "line": 563,
+          "line": 573,
           "name": "GetDKEPublicKey",
           "receiver_calls": [
             "s.keycore.PublicKey"
@@ -67066,7 +67375,7 @@
             "defaultEndpointConfig"
           ],
           "internal_package_calls": [],
-          "line": 106,
+          "line": 116,
           "name": "ListEndpoints",
           "receiver_calls": [],
           "store_calls": [
@@ -67132,6 +67441,7 @@
         "publishAudit",
         "Error",
         "validateAWSXKSEndpoint",
+        "validateOCIEKMEndpoint",
         "UpsertEndpoint",
         "GetEndpoint"
       ],
@@ -67153,13 +67463,14 @@
             "publishAudit",
             "Error",
             "validateAWSXKSEndpoint",
+            "validateOCIEKMEndpoint",
             "UpsertEndpoint",
             "GetEndpoint"
           ],
           "internal_package_calls": [
             "pkg/auth.ClaimsFromContext"
           ],
-          "line": 56,
+          "line": 58,
           "name": "ConfigureEndpoint",
           "receiver_calls": [],
           "store_calls": [
@@ -67231,7 +67542,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 131,
+          "line": 141,
           "name": "DeleteEndpoint",
           "receiver_calls": [],
           "store_calls": [
@@ -67302,7 +67613,7 @@
             "ListRequestLogs"
           ],
           "internal_package_calls": [],
-          "line": 146,
+          "line": 156,
           "name": "ListRequests",
           "receiver_calls": [],
           "store_calls": [
@@ -67360,7 +67671,7 @@
           "file": "services/hyok/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 160,
+          "line": 170,
           "name": "Health",
           "receiver_calls": [],
           "store_calls": []
@@ -90594,7 +90905,7 @@
       "ekm": 56,
       "governance": 35,
       "hsm-connector": 14,
-      "hyok": 23,
+      "hyok": 25,
       "keyaccess": 9,
       "keycore": 178,
       "kmip": 12,
@@ -90923,17 +91234,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 907,
+    "backend_routes": 909,
     "backend_services": 28,
-    "button_inventory": 768,
+    "button_inventory": 773,
     "frontend_call_sites": 540,
     "matched_frontend_call_sites": 509,
     "nav_items": 25,
-    "request_flows": 907,
+    "request_flows": 909,
     "request_flows_with_frontend": 513,
     "request_flows_with_internal_package_calls": 198,
-    "request_flows_with_service_calls": 537,
-    "request_flows_with_store_calls": 641,
+    "request_flows_with_service_calls": 539,
+    "request_flows_with_store_calls": 643,
     "subpane_groups": 13,
     "tab_components": 32,
     "unmatched_frontend_call_sites": 31
@@ -109096,6 +109407,90 @@
         ]
       },
       {
+        "complexity": 1,
+        "externalPackages": [
+          "encoding/json.Unmarshal",
+          "io.ReadAll",
+          "io.LimitReader",
+          "strconv.Itoa",
+          "strings.TrimSpace",
+          "strings.Index",
+          "strings.Trim",
+          "strings.Split",
+          "strings.Join",
+          "strings.EqualFold",
+          "errors.New",
+          "fmt.Errorf",
+          "time.Now"
+        ],
+        "frontendSites": [],
+        "handler": "handleOCI",
+        "handlerFile": "services/hyok/oci_ekm.go",
+        "handlerLine": 394,
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/oci/{param}",
+        "path": "/oci/{rest...}",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "hyok|GET|/oci/{param}",
+        "sensitive": false,
+        "service": "hyok",
+        "serviceCalls": [
+          "ociEndpointForPrefix",
+          "ociVerify"
+        ],
+        "storeCalls": [
+          "ListEnabledEndpointsByProtocol"
+        ],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [
+          "encoding/json.Unmarshal",
+          "io.ReadAll",
+          "io.LimitReader",
+          "strconv.Itoa",
+          "strings.TrimSpace",
+          "strings.Index",
+          "strings.Trim",
+          "strings.Split",
+          "strings.Join",
+          "strings.EqualFold",
+          "errors.New",
+          "fmt.Errorf",
+          "time.Now"
+        ],
+        "frontendSites": [],
+        "handler": "handleOCI",
+        "handlerFile": "services/hyok/oci_ekm.go",
+        "handlerLine": 394,
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/oci/{param}",
+        "path": "/oci/{rest...}",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "hyok|POST|/oci/{param}",
+        "sensitive": false,
+        "service": "hyok",
+        "serviceCalls": [
+          "ociEndpointForPrefix",
+          "ociVerify"
+        ],
+        "storeCalls": [
+          "ListEnabledEndpointsByProtocol"
+        ],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
         "complexity": 2,
         "externalPackages": [
           "errors.Is"
@@ -109103,7 +109498,7 @@
         "frontendSites": [],
         "handler": "credentialUsage",
         "handlerFile": "services/hyok/aws_xks.go",
-        "handlerLine": 517,
+        "handlerLine": 518,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/tenantcheck.IsServicePrincipal"
@@ -123071,7 +123466,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-21T04:54:02Z",
+    "generatedAt": "2026-10-21T05:28:02Z",
     "methods": [
       "DELETE",
       "GET",
@@ -123111,7 +123506,7 @@
       "workload"
     ],
     "summary": {
-      "flows": 907,
+      "flows": 909,
       "frontendBacked": 513,
       "highRisk": 346,
       "services": 28

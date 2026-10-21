@@ -45,6 +45,10 @@ const (
 type Verifier struct {
 	HTTP     *http.Client
 	CheckURL func(string) error
+	// Authorize, when set, adds a credential to each discovery and JWKS
+	// request: an issuer whose JWKS is protected (an OCI identity domain
+	// unless it exposes its signing certificate).
+	Authorize func(ctx context.Context, req *http.Request) error
 
 	mu   sync.Mutex
 	jwks map[string]jwksEntry
@@ -216,6 +220,11 @@ func (v *Verifier) getJSON(ctx context.Context, url string, out any) error {
 		return err
 	}
 	req.Header.Set("Accept", "application/json")
+	if v.Authorize != nil {
+		if err := v.Authorize(ctx, req); err != nil {
+			return err
+		}
+	}
 	client := v.HTTP
 	if client == nil {
 		client = &http.Client{Timeout: 10 * time.Second}

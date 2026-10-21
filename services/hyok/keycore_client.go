@@ -29,6 +29,9 @@ type KeyCoreClient interface {
 	// decrypt, the key version that encrypted (AWS XKS).
 	EncryptAAD(ctx context.Context, tenantID string, keyID string, plaintextB64 string, aadB64 string, referenceID string) (map[string]interface{}, error)
 	DecryptAAD(ctx context.Context, tenantID string, keyID string, ciphertextB64 string, ivB64 string, aadB64 string, version int) (map[string]interface{}, error)
+	// KeyVersions is GET /keys/{id}/versions: each version's number and
+	// status (OCI External KMS key version metadata).
+	KeyVersions(ctx context.Context, tenantID string, keyID string) ([]map[string]interface{}, error)
 }
 
 // keycoreError is keycore's answer to a refused call.
@@ -133,6 +136,26 @@ func (c *HTTPKeyCoreClient) DecryptAAD(ctx context.Context, tenantID string, key
 	return c.doJSON(ctx, http.MethodPost, "/keys/"+url.PathEscape(strings.TrimSpace(keyID))+"/decrypt?tenant_id="+url.QueryEscape(strings.TrimSpace(tenantID)), map[string]interface{}{
 		"tenant_id": strings.TrimSpace(tenantID), "ciphertext": ciphertextB64, "iv": ivB64, "aad": aadB64, "version": version,
 	})
+}
+
+func (c *HTTPKeyCoreClient) KeyVersions(ctx context.Context, tenantID string, keyID string) ([]map[string]interface{}, error) {
+	out, err := c.doJSON(ctx, http.MethodGet, "/keys/"+url.PathEscape(strings.TrimSpace(keyID))+"/versions?tenant_id="+url.QueryEscape(strings.TrimSpace(tenantID)), nil)
+	if err != nil {
+		return nil, err
+	}
+	raw, ok := out["items"].([]interface{})
+	if !ok {
+		return nil, errors.New("invalid versions response")
+	}
+	items := make([]map[string]interface{}, 0, len(raw))
+	for _, it := range raw {
+		m, ok := it.(map[string]interface{})
+		if !ok {
+			return nil, errors.New("invalid versions response")
+		}
+		items = append(items, m)
+	}
+	return items, nil
 }
 
 func (c *HTTPKeyCoreClient) PublicKey(ctx context.Context, tenantID string, keyID string) (map[string]interface{}, error) {

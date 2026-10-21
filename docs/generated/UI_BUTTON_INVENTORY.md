@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-21T04:54:02Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-21T05:28:02Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -305,18 +305,23 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/HYOKAzureConfig.tsx | 140 | - | Btn | void save()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/HYOKLiveTestPane.tsx | 166 | - | Btn | void executeTest()} disabled= style={ }> {executing ? "Executing..." : `Execu... |  |
 | web/dashboard/src/components/v3/tabs/HYOKLiveTestPane.tsx | 173 | - | button | copyToClipboard(testOutput)} style={ } title="Copy output"> |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 291 | hyok | Btn | void refresh(false)} disabled= > Refresh |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 292 | hyok | Btn | }> Endpoint URLs |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 293 | hyok | Btn | }> Setup Guide |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 332 | hyok | Btn | openConfig(protocol)}>Configure |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 333 | hyok | Btn | }>URLs |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 334 | hyok | Btn | }>Guide |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 335 | hyok | Btn | void runDelete(protocol)}>Reset |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 476 | hyok | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 477 | hyok | Btn | void submitConfig()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 503 | hyok | button | copyToClipboard(url.path)} style={ } title="Copy URL path"> |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 510 | hyok | Btn | setModal(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 552 | hyok | Btn | setModal(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/HYOKOCIConfig.tsx | 132 | - | button | set( )} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/HYOKOCIConfig.tsx | 135 | - | Btn | set({ rows: [...m.rows, ] })}> Add key |  |
+| web/dashboard/src/components/v3/tabs/HYOKOCIConfig.tsx | 150 | - | button | { try catch }} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/HYOKOCIConfig.tsx | 155 | - | Btn | Cancel | onClose |
+| web/dashboard/src/components/v3/tabs/HYOKOCIConfig.tsx | 156 | - | Btn | void save()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 294 | hyok | Btn | void refresh(false)} disabled= > Refresh |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 295 | hyok | Btn | }> Endpoint URLs |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 296 | hyok | Btn | }> Setup Guide |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 335 | hyok | Btn | openConfig(protocol)}>Configure |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 336 | hyok | Btn | }>URLs |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 337 | hyok | Btn | }>Guide |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 338 | hyok | Btn | void runDelete(protocol)}>Reset |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 479 | hyok | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 480 | hyok | Btn | void submitConfig()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 508 | hyok | button | copyToClipboard(url.path)} style={ } title="Copy URL path"> |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 515 | hyok | Btn | setModal(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 557 | hyok | Btn | setModal(null)}>Close |  |
 | web/dashboard/src/components/v3/tabs/HYOKXKSConfig.tsx | 116 | - | button | setRows((cur) => cur.filter((_, j) => j !== i))} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/HYOKXKSConfig.tsx | 119 | - | Btn | setRows((cur) => [...cur, ])}> Add key |  |
 | web/dashboard/src/components/v3/tabs/HYOKXKSConfig.tsx | 134 | - | button | { try catch }} style={ }> |  |

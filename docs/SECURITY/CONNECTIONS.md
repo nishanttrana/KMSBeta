@@ -37,7 +37,7 @@ keep one.
 | notify | `slack`, `teams`, `webhook` (optional `signing_secret`, HMAC-SHA256 from `pkg/crypto`) | playbook actions, event streams; Slack/Teams also approval notices |
 | ticketing | `jira`, `servicenow` | playbook actions |
 | siem | `splunk_hec`, `datadog`, `elastic`, `sentinel`, `syslog` (`pkg/siem`) | `send_siem_alert`, event streams |
-| cloud | `aws` (`access_key_id`, `secret_access_key`; optional `role_arn`, `external_id`, `region`, `endpoint_url`), `azure` (Entra app registration: `tenant_id`, `client_id`, `client_secret`), `gcp` (`service_account_json`), `oci`, `alibaba`, `salesforce`; `servicenow` with `username` and `password` (8.0.0-beta) | Cloud BYOK accounts; `azure` also Azure EKM vaults, `aws_xks` (`access_key_id` 20 to 30 of A-Z and 2-7, `secret_access_key` 43 to 64 characters; the credential AWS KMS signs XKS calls with) |
+| cloud | `aws` (`access_key_id`, `secret_access_key`; optional `role_arn`, `external_id`, `region`, `endpoint_url`), `azure` (Entra app registration: `tenant_id`, `client_id`, `client_secret`), `gcp` (`service_account_json`), `oci`, `alibaba`, `salesforce`; `servicenow` with `username` and `password` (8.0.0-beta) | Cloud BYOK accounts; `azure` also Azure EKM vaults, `aws_xks` (`access_key_id` 20 to 30 of A-Z and 2-7, `secret_access_key` 43 to 64 characters; the credential AWS KMS signs XKS calls with), `oci_identity_domain` (`client_id`, `client_secret` of the OCI External KMS resource app, to read a protected JWKS) |
 | database | `database` (`host`, `database`, `username`, `password`; optional `port`, `ca_pem`): a PostgreSQL administrator the secret vault issues short-lived logins with (13.34.0-beta) |
 | mail | `smtp`: `host`, `port`, `from`, optional `username`, `password`, `ca_pem` (8.0.0-beta) | governance approval and playbook mail |
 | hsm | `pkcs11_hsm`: `library_path`, `pin`, `slot_id` or `token_label`, optional `topology` (`single` or `ha_group`) and `vendor` (8.0.0-beta) | keys and CA keys created, formed or imported in an HSM |
@@ -130,8 +130,12 @@ from `GET /compliance/connections?type=`.
 - **Database credentials** (13.34.0-beta) are admitted as `kms-secrets`
   for `database` only.
 - **AWS XKS** (13.32.0-beta) is admitted as `kms-hyok-proxy` for
-  `aws_xks` only. The hyok service opens the credential to verify AWS's
-  SigV4 signature, never to call out, and caches it for 15 seconds.
+  `aws_xks` and, since 13.36.0-beta, `oci_identity_domain`. The hyok
+  service opens an `aws_xks` credential to verify AWS's SigV4 signature,
+  never to call out, and caches it for 15 seconds. It uses an
+  `oci_identity_domain` credential only to get a token from that domain's
+  `/oauth2/v1/token` (on the JWKS URL's host, through the SSRF guard) and
+  read its JWKS.
 - **The HSM connector** (8.0.0-beta) is admitted as `kms-hsm` for
   `pkcs11_hsm` only, and caches an opened credential for 15 seconds, as it
   does a profile. The library path is confined to the provider workspace

@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-21T04:54:02Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-21T05:28:02Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `25`
 - Tab/component mappings: `32`
 - Sub-pane groups: `13`
-- Backend HTTP routes discovered: `907` across `28` services
-- Backend routes on the `pkg/route` kernel: `534` (permission and audit action in `backend-routes.csv`)
+- Backend HTTP routes discovered: `909` across `28` services
+- Backend routes on the `pkg/route` kernel: `536` (permission and audit action in `backend-routes.csv`)
 - Frontend API call sites discovered: `540`
 - Frontend call sites with exact backend route match: `509`
 - Frontend call sites needing review or dynamic/runtime confirmation: `31`
-- Clickable controls with static `onClick` handlers: `768`
-- Backend request flows with handler/service/package summaries: `907`
+- Clickable controls with static `onClick` handlers: `773`
+- Backend request flows with handler/service/package summaries: `909`
 
 ## How To Use This For Launch
 
@@ -146,7 +146,7 @@ flowchart LR
   svc_discovery["discovery (24 routes)"]
   svc_ekm["ekm (56 routes)"]
   svc_governance["governance (35 routes)"]
-  svc_hyok["hyok (23 routes)"]
+  svc_hyok["hyok (25 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
   svc_keycore["keycore (178 routes)"]
   svc_posture["posture (13 routes)"]
@@ -216,7 +216,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | ekm | 56 | 29 |
 | governance | 35 | 23 |
 | hsm-connector | 14 | 0 |
-| hyok | 23 | 7 |
+| hyok | 25 | 7 |
 | keyaccess | 9 | 6 |
 | keycore | 178 | 94 |
 | kmip | 12 | 11 |
@@ -398,7 +398,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/cbom/diff | h.handleCBOMDiff |  | services/compliance/handler.go | 88 |
 | compliance | GET | /compliance/playbooks/catalog | h.playbookCatalog | compliance.playbook.read | services/compliance/handler_playbooks.go | 135 |
 
-Showing `120` of `394`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `396`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

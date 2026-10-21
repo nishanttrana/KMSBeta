@@ -482,8 +482,10 @@ governance,POST,/governance/approve/{id},/governance/approve/{param},h.handleApp
 governance,POST,/governance/key-approval,/governance/key-approval,h.handleCreateKeyApproval,mux,,,,services/governance/handler.go,92,governance|POST|/governance/key-approval
 governance,GET,/governance/key-approval/{id}/status,/governance/key-approval/{param}/status,h.handleGetKeyApprovalStatus,mux,,,,services/governance/handler.go,93,governance|GET|/governance/key-approval/{param}/status
 governance,POST,/governance/notify/email,/governance/notify/email,h.notifyEmail,kernel,authenticated,notification_email_sent,notification,services/governance/notify.go,47,governance|POST|/governance/notify/email
-hyok,POST,/xks/{rest...},/xks/{param},h.handleXKS,kernel,public,xks_request,key,services/hyok/aws_xks.go,539,hyok|POST|/xks/{param}
-hyok,GET,/hyok/credential-usage,/hyok/credential-usage,h.credentialUsage,kernel,authenticated,credential_usage_read,credential,services/hyok/aws_xks.go,540,hyok|GET|/hyok/credential-usage
+hyok,POST,/xks/{rest...},/xks/{param},h.handleXKS,kernel,public,xks_request,key,services/hyok/aws_xks.go,547,hyok|POST|/xks/{param}
+hyok,GET,/oci/{rest...},/oci/{param},h.handleOCI,kernel,public,oci_ekm_request,key,services/hyok/aws_xks.go,548,hyok|GET|/oci/{param}
+hyok,POST,/oci/{rest...},/oci/{param},h.handleOCI,kernel,public,oci_ekm_request,key,services/hyok/aws_xks.go,549,hyok|POST|/oci/{param}
+hyok,GET,/hyok/credential-usage,/hyok/credential-usage,h.credentialUsage,kernel,authenticated,credential_usage_read,credential,services/hyok/aws_xks.go,550,hyok|GET|/hyok/credential-usage
 hyok,GET,/api/v1/keys/{id},/api/v1/keys/{param},h.handleMicrosoftDKEGetKey,mux,,,,services/hyok/handler.go,48,hyok|GET|/api/v1/keys/{param}
 hyok,POST,/api/v1/keys/{id}/{version}/decrypt,/api/v1/keys/{param}/{param}/decrypt,h.handleMicrosoftDKEDecrypt,mux,,,,services/hyok/handler.go,49,hyok|POST|/api/v1/keys/{param}/{param}/decrypt
 hyok,POST,/hyok/dke/v1/keys/{id}/decrypt,/hyok/dke/v1/keys/{param}/decrypt,h.handleDKEDecrypt,mux,,,,services/hyok/handler.go,50,hyok|POST|/hyok/dke/v1/keys/{param}/decrypt

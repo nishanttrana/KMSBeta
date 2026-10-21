@@ -13,6 +13,7 @@ import { C } from "../theme";
 import { B, Btn, Card, Chk, FG, Inp, Modal, Row2, Section, Sel, Stat, Txt, usePromptDialog } from "../legacyPrimitives";
 import { HYOKAzureConfig } from "./HYOKAzureConfig";
 import { HYOKXKSConfig } from "./HYOKXKSConfig";
+import { HYOKOCIConfig } from "./HYOKOCIConfig";
 import { HYOK_OPS_BY_PROTOCOL, HYOK_PROTOCOLS, HYOK_PROTOCOL_DETAILS, HYOK_PROTOCOL_KEY_HINTS, HYOK_PROTOCOL_LABELS, HYOK_PROTOCOL_URLS, HYOK_SETUP_GUIDES } from "./hyokProtocols";
 
 function formatAgo(value: unknown): string {
@@ -65,7 +66,7 @@ function copyToClipboard(text: string) {
 }
 
 export const HYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
-  const [modal, setModal] = useState<null | "config" | "urls" | "guide" | "azure" | "xks">(null);
+  const [modal, setModal] = useState<null | "config" | "urls" | "guide" | "azure" | "xks" | "oci">(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -127,7 +128,9 @@ export const HYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
   }, [session?.token, session?.tenantId]);
 
   const openConfig = (protocol: string) => {
-    if (protocol === "azure" || protocol === "aws_xks") { setModal(protocol === "azure" ? "azure" : "xks"); return; }
+    const own: Record<string, "azure" | "xks" | "oci"> = { azure: "azure", aws_xks: "xks", oci_ekm: "oci" };
+    const target = own[protocol];
+    if (target) { setModal(target); return; }
     const existing = (Array.isArray(endpoints) ? endpoints : []).find((item) => String(item?.protocol || "") === protocol);
     setCfgProtocol(protocol);
     setCfgEnabled(existing ? Boolean(existing.enabled) : true);
@@ -408,7 +411,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
       </div>
       <FG label="Protocol">
         <Sel value={cfgProtocol} onChange={(e) => setCfgProtocol(e.target.value)}>
-          {HYOK_PROTOCOLS.filter((p) => p !== "azure" && p !== "aws_xks").map((p) => <option key={p} value={p}>{HYOK_PROTOCOL_LABELS[p]}</option>)}
+          {HYOK_PROTOCOLS.filter((p) => !["azure", "aws_xks", "oci_ekm"].includes(p)).map((p) => <option key={p} value={p}>{HYOK_PROTOCOL_LABELS[p]}</option>)}
         </Sel>
       </FG>
       <Row2>
@@ -482,6 +485,8 @@ export const HYOKTab = ({ session, keyCatalog, onToast, onNavigate }) => {
     <HYOKAzureConfig open={modal === "azure"} session={session} endpoint={endpoints.find((e) => e?.protocol === "azure" && e?.metadata_json && e.metadata_json !== "{}")} keyChoices={keyChoices.map((k) => ({ id: k.id, name: k.name, algo: k.algo }))}
       onClose={() => setModal(null)} onSaved={(m) => { onToast?.(m); setModal(null); void refresh(true); }} />
     <HYOKXKSConfig open={modal === "xks"} session={session} endpoint={endpoints.find((e) => e?.protocol === "aws_xks" && e?.metadata_json && e.metadata_json !== "{}")} keyChoices={keyChoices.map((k) => ({ id: k.id, name: k.name, algo: k.algo }))}
+      onClose={() => setModal(null)} onSaved={(m) => { onToast?.(m); setModal(null); void refresh(true); }} onNavigate={onNavigate} />
+    <HYOKOCIConfig open={modal === "oci"} session={session} endpoint={endpoints.find((e) => e?.protocol === "oci_ekm" && e?.metadata_json && e.metadata_json !== "{}")} keyChoices={keyChoices.map((k) => ({ id: k.id, name: k.name, algo: k.algo }))}
       onClose={() => setModal(null)} onSaved={(m) => { onToast?.(m); setModal(null); void refresh(true); }} onNavigate={onNavigate} />
     <Modal open={modal === "urls"} onClose={() => setModal(null)} title={`Endpoint URLs — ${HYOK_PROTOCOL_LABELS[urlsProtocol] || urlsProtocol}`} wide>
       <div style={{ fontSize: 10, color: C.muted, marginBottom: 10, padding: "8px 10px", background: C.bg, borderRadius: 6 }}>
