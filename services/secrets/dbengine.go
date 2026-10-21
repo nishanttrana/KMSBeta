@@ -300,8 +300,6 @@ func ttlWithin(requested, def, max int) (time.Duration, error) {
 	return ttl, nil
 }
 
-var errLeaseNotFound = errors.New("lease not found")
-
 // issue creates a login for role and records its lease.
 func (h *Handler) issue(ctx context.Context, tenantID string, role DBRole, ttlSeconds int, actor string) (DBLease, string, error) {
 	ttl, err := ttlWithin(ttlSeconds, role.DefaultTTLSeconds, role.MaxTTLSeconds)

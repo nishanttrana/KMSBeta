@@ -12,6 +12,7 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgcrypto "vecta-kms/pkg/crypto"
+	"vecta-kms/pkg/mek"
 )
 
 type Service struct {
@@ -26,7 +28,7 @@ type Service struct {
 	keycore KeyCoreClient
 	certs   CertsClient
 	events  EventPublisher
-	jwtKey  []byte
+	jwtKeys *wrapperTokenKeys
 	jwtIss  string
 	jwtAud  string
 	jwtTTL  time.Duration
@@ -43,9 +45,17 @@ func WithCertsClient(client CertsClient) ServiceOption {
 	}
 }
 
-func WithWrapperJWT(secret string, issuer string, audience string, ttl time.Duration) ServiceOption {
+// WithWrapperTokenKeys sets the source of the wrapper token signing key: the
+// service's keycore system key (wrapper_token_key.go). Without it, wrapper
+// tokens are neither issued nor accepted.
+func WithWrapperTokenKeys(src mek.Source) ServiceOption {
 	return func(s *Service) {
-		s.jwtKey = []byte(strings.TrimSpace(secret))
+		s.jwtKeys = &wrapperTokenKeys{src: src}
+	}
+}
+
+func WithWrapperJWT(issuer string, audience string, ttl time.Duration) ServiceOption {
+	return func(s *Service) {
 		if strings.TrimSpace(issuer) != "" {
 			s.jwtIss = strings.TrimSpace(issuer)
 		}
@@ -863,7 +873,7 @@ func (s *Service) ResolveFieldProtectionPolicyBundle(ctx context.Context, req Fi
 		if !strings.EqualFold(strings.TrimSpace(wrapper.AppID), req.AppID) {
 			return FieldProtectionPolicyBundle{}, newServiceError(http.StatusForbidden, "access_denied", "wrapper app binding mismatch")
 		}
-		if err := s.verifyWrapperAuthProfileToken(req.AuthToken, wrapper, "field-protection:resolve"); err != nil {
+		if err := s.verifyWrapperAuthProfileToken(ctx, req.AuthToken, wrapper, "field-protection:resolve"); err != nil {
 			return FieldProtectionPolicyBundle{}, err
 		}
 		if policy.RequireRegisteredWrapper && !strings.EqualFold(strings.TrimSpace(wrapper.Status), "active") {
@@ -1115,12 +1125,9 @@ func (s *Service) CompleteFieldEncryptionWrapperRegistration(ctx context.Context
 	if err := s.store.MarkFieldEncryptionWrapperChallengeUsed(ctx, req.TenantID, req.ChallengeID); err != nil {
 		return FieldEncryptionWrapperRegistrationResult{}, err
 	}
-	authProfile, err := s.issueWrapperAuthProfile(wrapper)
+	authProfile, err := s.issueWrapperAuthProfile(ctx, wrapper)
 	if err != nil {
 		return FieldEncryptionWrapperRegistrationResult{}, err
-	}
-	if len(s.jwtKey) == 0 {
-		warnings = append(warnings, "wrapper jwt secret is not configured; set DATAPROTECT_WRAPPER_JWT_SECRET for stable tokens")
 	}
 	_ = s.publishAudit(ctx, "audit.dataprotect.field_encryption.register_complete", req.TenantID, map[string]interface{}{
 		"wrapper_id":       wrapper.WrapperID,
@@ -1174,7 +1181,7 @@ func (s *Service) IssueFieldEncryptionLease(ctx context.Context, req FieldEncryp
 		}
 		return FieldEncryptionLease{}, err
 	}
-	if err := s.verifyWrapperAuthProfileToken(req.AuthToken, wrapper, "field-encryption:lease"); err != nil {
+	if err := s.verifyWrapperAuthProfileToken(ctx, req.AuthToken, wrapper, "field-encryption:lease"); err != nil {
 		return FieldEncryptionLease{}, err
 	}
 	if policy.RequireRegisteredWrapper && strings.ToLower(strings.TrimSpace(wrapper.Status)) != "active" {
@@ -1315,7 +1322,7 @@ func (s *Service) SubmitFieldEncryptionUsageReceipt(ctx context.Context, req Fie
 		}
 		return FieldEncryptionUsageReceipt{}, err
 	}
-	if err := s.verifyWrapperAuthProfileToken(req.AuthToken, wrapper, "field-encryption:receipt"); err != nil {
+	if err := s.verifyWrapperAuthProfileToken(ctx, req.AuthToken, wrapper, "field-encryption:receipt"); err != nil {
 		return FieldEncryptionUsageReceipt{}, err
 	}
 	if policy.RequireRegisteredWrapper && strings.ToLower(strings.TrimSpace(wrapper.Status)) != "active" {
@@ -1654,7 +1661,7 @@ func (s *Service) classifyLocalAlgorithm(keyAlgorithm string) string {
 	}
 }
 
-func (s *Service) verifyWrapperAuthProfileToken(rawToken string, wrapper FieldEncryptionWrapper, requiredScope string) error {
+func (s *Service) verifyWrapperAuthProfileToken(ctx context.Context, rawToken string, wrapper FieldEncryptionWrapper, requiredScope string) error {
 	rawToken = strings.TrimSpace(rawToken)
 	if rawToken == "" {
 		return newServiceError(http.StatusUnauthorized, "auth_required", "wrapper token is required")
@@ -1677,20 +1684,17 @@ func (s *Service) verifyWrapperAuthProfileToken(rawToken string, wrapper FieldEn
 		if token.Method == nil || token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
 			return nil, errors.New("unsupported signing method")
 		}
-		if len(s.jwtKey) > 0 {
-			return s.jwtKey, nil
+		kid, _ := token.Header["kid"].(string)
+		version, convErr := strconv.Atoi(kid)
+		if convErr != nil || version <= 0 {
+			return nil, errors.New("wrapper token names no signing key version")
 		}
-		info := fmt.Sprintf("%s|%s|%s|field-wrapper", wrapper.TenantID, wrapper.WrapperID, wrapper.AppID)
-		ikm, err := pkgcrypto.Hash("SHA-256", []byte(info))
-		if err != nil {
-			return nil, errors.New("key derivation failed")
-		}
-		fallbackKey, err := pkgcrypto.HKDFSHA256(ikm, nil, []byte("vecta-field-wrapper-jwt-v1"), 32)
-		if err != nil {
-			return nil, errors.New("key derivation failed")
-		}
-		return fallbackKey, nil
+		return s.jwtKeys.version(ctx, version)
 	})
+	var unavailable serviceError
+	if errors.As(err, &unavailable) && unavailable.HTTPStatus == http.StatusServiceUnavailable {
+		return unavailable
+	}
 	if err != nil || token == nil || !token.Valid {
 		return newServiceError(http.StatusUnauthorized, "invalid_token", "wrapper token is invalid")
 	}
@@ -1708,30 +1712,6 @@ func (s *Service) verifyWrapperAuthProfileToken(rawToken string, wrapper FieldEn
 		return newServiceError(http.StatusForbidden, "access_denied", "wrapper token scope is insufficient")
 	}
 	return nil
-}
-
-func claimContainsAudience(raw interface{}, expected string) bool {
-	expected = strings.TrimSpace(expected)
-	if expected == "" {
-		return true
-	}
-	switch v := raw.(type) {
-	case string:
-		return strings.EqualFold(strings.TrimSpace(v), expected)
-	case []string:
-		for _, item := range v {
-			if strings.EqualFold(strings.TrimSpace(item), expected) {
-				return true
-			}
-		}
-	case []interface{}:
-		for _, item := range v {
-			if strings.EqualFold(strings.TrimSpace(firstString(item)), expected) {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func claimContainsScope(raw interface{}, required string) bool {
@@ -2310,7 +2290,7 @@ func certFingerprintFromPEM(certPEM string) (string, error) {
 	return hex.EncodeToString(sum), nil
 }
 
-func (s *Service) issueWrapperAuthProfile(wrapper FieldEncryptionWrapper) (FieldEncryptionAuthProfile, error) {
+func (s *Service) issueWrapperAuthProfile(ctx context.Context, wrapper FieldEncryptionWrapper) (FieldEncryptionAuthProfile, error) {
 	now := s.now().UTC()
 	ttl := s.jwtTTL
 	if ttl <= 0 {
@@ -2335,20 +2315,12 @@ func (s *Service) issueWrapperAuthProfile(wrapper FieldEncryptionWrapper) (Field
 		"nbf":        now.Unix(),
 		"exp":        expiresAt.Unix(),
 	}
-	secret := append([]byte{}, s.jwtKey...)
-	if len(secret) == 0 {
-		info := fmt.Sprintf("%s|%s|%s|field-wrapper", wrapper.TenantID, wrapper.WrapperID, wrapper.AppID)
-		ikm, ikmErr := pkgcrypto.Hash("SHA-256", []byte(info))
-		if ikmErr != nil {
-			return FieldEncryptionAuthProfile{}, errors.New("key derivation failed")
-		}
-		derived, deriveErr := pkgcrypto.HKDFSHA256(ikm, nil, []byte("vecta-field-wrapper-jwt-v1"), 32)
-		if deriveErr != nil {
-			return FieldEncryptionAuthProfile{}, errors.New("key derivation failed")
-		}
-		secret = derived
+	version, secret, err := s.jwtKeys.current(ctx)
+	if err != nil {
+		return FieldEncryptionAuthProfile{}, err
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token.Header["kid"] = strconv.Itoa(version)
 	signed, err := token.SignedString(secret)
 	if err != nil {
 		return FieldEncryptionAuthProfile{}, err
@@ -2869,11 +2841,11 @@ func (s *Service) CreateTokenVault(ctx context.Context, tenantID string, in Toke
 		return TokenVault{}, err
 	}
 	_ = s.publishAudit(ctx, "audit.dataprotect.token_vault_created", tenantID, map[string]interface{}{
-		"vault_id":          in.ID,
-		"storage_type":      in.StorageType,
-		"token_type":        in.TokenType,
-		"token_format":      in.Format,
-		"custom_format":     in.CustomTokenFormat,
+		"vault_id":      in.ID,
+		"storage_type":  in.StorageType,
+		"token_type":    in.TokenType,
+		"token_format":  in.Format,
+		"custom_format": in.CustomTokenFormat,
 	})
 	return s.store.GetTokenVault(ctx, tenantID, in.ID)
 }

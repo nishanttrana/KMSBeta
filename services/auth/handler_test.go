@@ -18,10 +18,12 @@ import (
 
 type mockPublisher struct {
 	subjects []string
+	payloads [][]byte
 }
 
-func (m *mockPublisher) Publish(_ context.Context, subject string, _ []byte) error {
+func (m *mockPublisher) Publish(_ context.Context, subject string, payload []byte) error {
 	m.subjects = append(m.subjects, subject)
+	m.payloads = append(m.payloads, payload)
 	return nil
 }
 

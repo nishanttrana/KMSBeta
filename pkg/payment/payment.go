@@ -3,12 +3,9 @@ package payment
 import (
 	"bytes"
 	"crypto/des"
-	"crypto/hmac"
-	"crypto/sha1"
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -44,28 +41,6 @@ func ParseTR31(raw string) (TR31Block, error) {
 		Key:       key,
 		KCV:       parts[4],
 	}, nil
-}
-
-func TranslatePINBlockISO0ToISO4(iso0 string) (string, error) {
-	if len(iso0) != 16 {
-		return "", errors.New("iso-0 block must be 16 hex chars")
-	}
-	return "4" + iso0[1:], nil
-}
-
-func TranslatePINBlockISO4ToISO0(iso4 string) (string, error) {
-	if len(iso4) != 16 {
-		return "", errors.New("iso-4 block must be 16 hex chars")
-	}
-	return "0" + iso4[1:], nil
-}
-
-func ComputeCVV(cvk []byte, pan string, expiryYYMM string, serviceCode string) (string, error) {
-	mac := hmac.New(sha1.New, cvk)
-	_, _ = mac.Write([]byte(pan + expiryYYMM + serviceCode))
-	sum := mac.Sum(nil)
-	v := int(sum[0])<<8 | int(sum[1])
-	return fmt.Sprintf("%03d", v%1000), nil
 }
 
 // RetailMACANSI919 computes a two-key 3DES retail MAC.
@@ -112,9 +87,4 @@ func xor8(a []byte, b []byte) []byte {
 		out[i] = a[i] ^ b[i]
 	}
 	return out
-}
-
-func MustDecimal(s string) int {
-	n, _ := strconv.Atoi(s)
-	return n
 }

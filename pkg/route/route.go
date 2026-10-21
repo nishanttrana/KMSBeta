@@ -235,7 +235,6 @@ type Call struct {
 	Claims    *pkgauth.Claims // nil only on Public routes without a token
 	RequestID string
 
-	status  int
 	result  string
 	reason  string
 	errCode string

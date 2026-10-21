@@ -36,6 +36,13 @@ import (
 	"sync"
 	"time"
 
+	"vecta-kms/pkg/clustersync"
+	"vecta-kms/pkg/crypto"
+	"vecta-kms/pkg/cryptocatalog"
+	"vecta-kms/pkg/hsm"
+	"vecta-kms/pkg/metering"
+	"vecta-kms/pkg/payment"
+
 	"github.com/bits-and-blooms/bloom/v3"
 	"github.com/cloudflare/circl/sign/mldsa/mldsa65"
 	"github.com/cloudflare/circl/sign/mldsa/mldsa87"
@@ -44,12 +51,6 @@ import (
 	"golang.org/x/crypto/hkdf"
 	"golang.org/x/crypto/pkcs12"
 	"golang.org/x/crypto/sha3"
-	"vecta-kms/pkg/clustersync"
-	"vecta-kms/pkg/crypto"
-	"vecta-kms/pkg/cryptocatalog"
-	"vecta-kms/pkg/hsm"
-	"vecta-kms/pkg/metering"
-	"vecta-kms/pkg/payment"
 )
 
 type Service struct {
@@ -4144,10 +4145,6 @@ func (s *Service) decryptMaterial(ver KeyVersion) ([]byte, error) {
 		Ciphertext:   ver.EncryptedMaterial,
 		DataIV:       ver.MaterialIV,
 	})
-}
-
-func selectIV(ivMode string, keyMaterial []byte, externalIVB64 string, payload []byte) ([]byte, bool, error) {
-	return selectIVWithSize(ivMode, keyMaterial, externalIVB64, payload, 12)
 }
 
 func selectIVWithSize(ivMode string, keyMaterial []byte, externalIVB64 string, payload []byte, size int) ([]byte, bool, error) {

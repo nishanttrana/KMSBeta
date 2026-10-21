@@ -797,6 +797,12 @@ Security rules are explained in
   previews promising it go in the same release.
 - Two engines or stores for one job: keep the one the UI uses, remove the
   other with a migration.
+- Code nothing calls is removed, and `scripts/check-dead-code.sh` keeps it
+  out. An unreachable check or validator is read first, as a control that
+  may not be enforced: the client `ip_whitelist` was stored and shown
+  for months while its only check had no caller (13.41.0-beta).
+- Stage files by name, never `git add -A` after a build or dump: a 27 MB
+  binary and a CA table dump reached `main` that way (13.41.0-beta).
 
 **Data**
 - A person's decision and a machine's observation never share a column; the

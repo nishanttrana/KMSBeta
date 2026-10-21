@@ -2,11 +2,10 @@ package resilience
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"crypto/rand"
 	"encoding/binary"
-	"math"
+	"errors"
+	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -149,14 +148,6 @@ func (e *TransientError) Unwrap() error {
 	return e.Err
 }
 
-// MarkTransient wraps err so that IsRetryable returns true.
-func MarkTransient(err error) error {
-	if err == nil {
-		return nil
-	}
-	return &TransientError{Err: err}
-}
-
 // httpStatusError is an interface for errors that carry an HTTP status code
 // (e.g., from HTTP client libraries).
 type httpStatusError interface {
@@ -238,20 +229,4 @@ func IsRetryable(err error) bool {
 	}
 
 	return false
-}
-
-// RetryableError is a convenience for creating errors that always pass IsRetryable.
-// Use MarkTransient(err) for wrapping existing errors.
-func RetryableError(msg string) error {
-	return &TransientError{Err: errors.New(msg)}
-}
-
-// backoffDelay computes the delay for a given attempt (0-indexed) using
-// exponential backoff. Exported for testing.
-func backoffDelay(attempt int, initial time.Duration, multiplier float64, maxDelay time.Duration) time.Duration {
-	d := time.Duration(float64(initial) * math.Pow(multiplier, float64(attempt)))
-	if d > maxDelay {
-		return maxDelay
-	}
-	return d
 }

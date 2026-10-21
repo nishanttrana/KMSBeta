@@ -846,39 +846,6 @@ func sanitizeEnterpriseMetadata(in map[string]any) map[string]any {
 	return out
 }
 
-func intFromAny(v any) int {
-	switch t := v.(type) {
-	case int:
-		return t
-	case int64:
-		return int(t)
-	case float64:
-		return int(t)
-	case string:
-		var out int
-		_, _ = fmt.Sscanf(t, "%d", &out)
-		return out
-	default:
-		return 0
-	}
-}
-
-func firstString(values ...any) string {
-	for _, value := range values {
-		switch v := value.(type) {
-		case string:
-			if strings.TrimSpace(v) != "" {
-				return strings.TrimSpace(v)
-			}
-		case fmt.Stringer:
-			if strings.TrimSpace(v.String()) != "" {
-				return strings.TrimSpace(v.String())
-			}
-		}
-	}
-	return ""
-}
-
 func statusResult(status string) string {
 	switch strings.ToLower(strings.TrimSpace(status)) {
 	case "failed", "blocked", "denied":

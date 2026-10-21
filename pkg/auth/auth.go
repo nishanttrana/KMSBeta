@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 )
 
 type ctxKey string
@@ -48,10 +46,6 @@ type ParseOptions struct {
 	Issuer   string
 	Audience string
 	Leeway   time.Duration
-}
-
-func ParseRS256(tokenString string, publicKey crypto.PublicKey) (*Claims, error) {
-	return ParseRS256WithOptions(tokenString, publicKey, ParseOptions{})
 }
 
 func ParseRS256WithOptions(tokenString string, publicKey crypto.PublicKey, options ParseOptions) (*Claims, error) {
@@ -151,39 +145,4 @@ func HTTPMiddleware(next http.Handler, parser func(string) (*Claims, error)) htt
 		ctx := ContextWithVerifiedToken(ContextWithClaims(r.Context(), claims), raw)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
-}
-
-func UnaryTenantPropagationInterceptor(parser func(string) (*Claims, error)) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		md, _ := metadata.FromIncomingContext(ctx)
-		authz := ""
-		if vals := md.Get("authorization"); len(vals) > 0 {
-			authz = strings.TrimSpace(strings.TrimPrefix(vals[0], "Bearer"))
-		}
-		if authz != "" {
-			if claims, err := parser(authz); err == nil {
-				ctx = ContextWithClaims(ctx, claims)
-			}
-		}
-		return handler(ctx, req)
-	}
-}
-
-func RBACInterceptor(requiredPermission string) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		claims, ok := ClaimsFromContext(ctx)
-		if !ok || !hasPermission(claims.Permissions, requiredPermission) {
-			return nil, errors.New("forbidden")
-		}
-		return handler(ctx, req)
-	}
-}
-
-func hasPermission(perms []string, target string) bool {
-	for _, p := range perms {
-		if p == target || p == "*" {
-			return true
-		}
-	}
-	return false
 }

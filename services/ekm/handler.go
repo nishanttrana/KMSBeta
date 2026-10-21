@@ -112,32 +112,6 @@ func (h *Handler) routes() *http.ServeMux {
 	return mux
 }
 
-func (h *Handler) handleFileEncryptDownload(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID, _, err := tenantFromRequest(r, "")
-	if err != nil {
-		h.writeServiceError(w, err, reqID, "")
-		return
-	}
-	q := r.URL.Query()
-	req := FileEncryptDownloadRequest{
-		TenantID:     tenantID,
-		TargetOS:     strings.TrimSpace(q.Get("os")),
-		Distro:       strings.TrimSpace(q.Get("distro")),
-		KeyID:        strings.TrimSpace(q.Get("key_id")),
-		WatchDirs:    strings.TrimSpace(q.Get("watch_dirs")),
-		FilePatterns: strings.TrimSpace(q.Get("file_patterns")),
-		RotationDays: intParam(q.Get("rotation_days"), 90),
-		APIBaseURL:   strings.TrimSpace(q.Get("api_base_url")),
-	}
-	out, err := h.svc.BuildFileEncryptAgentPackage(r.Context(), req)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"package": out, "request_id": reqID})
-}
-
 func (h *Handler) handleRegisterAgent(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	var req RegisterAgentRequest
@@ -890,11 +864,6 @@ func tenantFromRequest(r *http.Request, bodyTenant string) (string, string, erro
 		return "", "", newServiceError(http.StatusForbidden, "tenant_mismatch", "tenant_id does not match authenticated token")
 	}
 	return tenantID, firstNonEmpty(claims.UserID, claims.ClientID, claims.Subject), nil
-}
-
-func isEKMRole(role string) bool {
-	r := strings.ToLower(strings.TrimSpace(role))
-	return r == "ekm-agent" || r == "ekm-client" || r == "ekm-admin" || r == "ekm-service"
 }
 
 func isBitLockerRole(role string) bool {

@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -155,8 +154,4 @@ func toString(v interface{}) string {
 func sha256Hex(parts ...string) string {
 	sum := sha256.Sum256([]byte(strings.Join(parts, "|")))
 	return hex.EncodeToString(sum[:])
-}
-
-func base64URLEncode(raw []byte) string {
-	return base64.RawURLEncoding.EncodeToString(raw)
 }

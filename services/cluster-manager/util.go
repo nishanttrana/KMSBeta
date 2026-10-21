@@ -266,69 +266,6 @@ func normalizeComponents(in []string) []string {
 	return out
 }
 
-func componentDisplayName(component string) string {
-	switch normalizeComponentName(component) {
-	case "auth":
-		return "Auth"
-	case "keycore":
-		return "KeyCore"
-	case "audit":
-		return "Audit"
-	case "policy":
-		return "Policy"
-	case "governance":
-		return "Gov"
-	case "byok":
-		return "BYOK"
-	case "hyok":
-		return "HYOK"
-	case "autokey":
-		return "Autokey"
-	case "signing":
-		return "Artifact Signing"
-	case "workload":
-		return "Workload Identity"
-	case "confidential":
-		return "Confidential"
-	case "dataprotect":
-		return "DataProtect"
-	case "ekm":
-		return "EKM"
-	case "kmip":
-		return "KMIP"
-	case "certs":
-		return "Certs"
-	case "secrets":
-		return "Secrets"
-	case "qkd":
-		return "QKD"
-	case "mpc":
-		return "MPC"
-	case "cluster":
-		return "Cluster"
-	case "compliance":
-		return "Compliance"
-	case "reporting":
-		return "Reporting"
-	case "sbom":
-		return "SBOM"
-	case "pqc":
-		return "PQC"
-	case "discovery":
-		return "Discovery"
-	case "ai":
-		return "AI"
-	case "posture":
-		return "Posture"
-	case "qrng":
-		return "QRNG"
-	case "cloud":
-		return "Cloud"
-	default:
-		return strings.TrimSpace(component)
-	}
-}
-
 func defaultIfEmpty(v string, d string) string {
 	if strings.TrimSpace(v) == "" {
 		return d

@@ -427,29 +427,3 @@ func writeErr(w http.ResponseWriter, status int, code string, message string, re
 		},
 	})
 }
-
-func (h *Handler) publishClusterSync(r *http.Request, tenantID string, entityType string, entityID string, operation string, payload map[string]interface{}) {
-	if h == nil || h.cluster == nil {
-		return
-	}
-	tenantID = strings.TrimSpace(tenantID)
-	if tenantID == "" {
-		return
-	}
-	entityID = strings.TrimSpace(entityID)
-	if entityID == "" {
-		entityID = tenantID
-	}
-	operation = strings.TrimSpace(operation)
-	if operation == "" {
-		return
-	}
-	_ = h.cluster.Publish(r.Context(), clustersync.PublishRequest{
-		TenantID:   tenantID,
-		Component:  "audit",
-		EntityType: strings.TrimSpace(entityType),
-		EntityID:   entityID,
-		Operation:  operation,
-		Payload:    payload,
-	})
-}

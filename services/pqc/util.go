@@ -192,23 +192,6 @@ func parseMigrationSteps(v string) []MigrationStep {
 	return items
 }
 
-func uniqueStrings(in []string) []string {
-	seen := map[string]struct{}{}
-	out := make([]string, 0, len(in))
-	for _, item := range in {
-		v := strings.ToLower(strings.TrimSpace(item))
-		if v == "" {
-			continue
-		}
-		if _, ok := seen[v]; ok {
-			continue
-		}
-		seen[v] = struct{}{}
-		out = append(out, v)
-	}
-	return out
-}
-
 func round2(v float64) float64 {
 	if v < 0 {
 		return -round2(-v)

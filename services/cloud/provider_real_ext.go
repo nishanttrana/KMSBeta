@@ -9,7 +9,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -748,23 +747,6 @@ func boolValue(v interface{}) (bool, bool) {
 		return typed != 0, true
 	}
 	return false, false
-}
-
-func parseKeyBits(algorithm string, fallback int) int {
-	algorithm = strings.TrimSpace(algorithm)
-	if algorithm == "" {
-		return fallback
-	}
-	parts := strings.FieldsFunc(algorithm, func(r rune) bool { return r < '0' || r > '9' })
-	for _, p := range parts {
-		if p == "" {
-			continue
-		}
-		if val, err := strconv.Atoi(p); err == nil && val > 0 {
-			return val
-		}
-	}
-	return fallback
 }
 
 func ptrString(v *string) string {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -225,14 +224,6 @@ func loadOrGenerateSigningKey() (*pkgcrypto.KeyPair, error) {
 
 func devMTLSConfig() (*tls.Config, error) {
 	return pkgsvctls.Current().ServerConfig(), nil
-}
-
-func mustParseCert(der []byte) *x509.Certificate {
-	c, err := x509.ParseCertificate(der)
-	if err != nil {
-		panic(err)
-	}
-	return c
 }
 
 func envOr(k string, d string) string {

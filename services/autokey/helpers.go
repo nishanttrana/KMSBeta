@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -422,9 +421,4 @@ func publishAudit(ctx context.Context, events EventPublisher, subject string, te
 		return err
 	}
 	return events.Publish(ctx, subject, raw)
-}
-
-func sha256Hex(parts ...string) string {
-	sum := sha256.Sum256([]byte(strings.Join(parts, "|")))
-	return hex.EncodeToString(sum[:])
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -412,28 +411,6 @@ func (r *AgentRunner) postJSON(ctx context.Context, url string, payload interfac
 	return nil
 }
 
-func (r *AgentRunner) getJSON(ctx context.Context, url string, out interface{}) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-	if err := r.authorize(req); err != nil {
-		return fmt.Errorf("apply auth: %w", err)
-	}
-	resp, err := r.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close() //nolint:errcheck
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return fmt.Errorf("http GET %s failed: status=%d", url, resp.StatusCode)
-	}
-	if out != nil {
-		return json.NewDecoder(resp.Body).Decode(out)
-	}
-	return nil
-}
-
 func defaultConfigPath() string {
 	if strings.EqualFold(os.Getenv("OS"), "Windows_NT") {
 		base := strings.TrimSpace(os.Getenv("ProgramData"))
@@ -495,26 +472,4 @@ func firstNonEmpty(vals ...string) string {
 		}
 	}
 	return ""
-}
-
-func runWithSignal(ctx context.Context, fn func(context.Context) error) error {
-	sigCtx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
-	defer cancel()
-	errCh := make(chan error, 1)
-	go func() {
-		errCh <- fn(sigCtx)
-	}()
-	select {
-	case <-sigCtx.Done():
-		return sigCtx.Err()
-	case err := <-errCh:
-		return err
-	}
-}
-
-func errWrap(msg string, err error) error {
-	if err == nil {
-		return errors.New(msg)
-	}
-	return fmt.Errorf("%s: %w", msg, err)
 }

@@ -522,21 +522,6 @@ func (s *Service) resolveAccountProvider(ctx context.Context, tenantID string, p
 	return account, p, nil
 }
 
-func (s *Service) resolveRegion(ctx context.Context, tenantID string, provider CloudProvider, account CloudAccount, vectaRegion string, cloudRegion string) (string, error) {
-	if strings.TrimSpace(cloudRegion) != "" {
-		return strings.TrimSpace(cloudRegion), nil
-	}
-	if strings.TrimSpace(vectaRegion) != "" {
-		if mapping, err := s.store.GetRegionMapping(ctx, tenantID, provider.Name(), vectaRegion); err == nil && strings.TrimSpace(mapping.CloudRegion) != "" {
-			return strings.TrimSpace(mapping.CloudRegion), nil
-		}
-	}
-	if strings.TrimSpace(account.DefaultRegion) != "" {
-		return strings.TrimSpace(account.DefaultRegion), nil
-	}
-	return provider.DefaultRegion(), nil
-}
-
 func (s *Service) decryptAccountCredentials(account CloudAccount) (map[string]interface{}, error) {
 	env := &pkgcrypto.EnvelopeCiphertext{
 		WrappedDEK:   append([]byte{}, account.CredentialsWrappedDEK...),

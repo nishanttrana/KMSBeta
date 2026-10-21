@@ -120,26 +120,6 @@ func defaultString(v string, d string) string {
 	return strings.TrimSpace(v)
 }
 
-func extractInt(v interface{}) int {
-	switch x := v.(type) {
-	case int:
-		return x
-	case int32:
-		return int(x)
-	case int64:
-		return int(x)
-	case float64:
-		return int(x)
-	case float32:
-		return int(x)
-	case string:
-		n, _ := strconv.Atoi(strings.TrimSpace(x))
-		return n
-	default:
-		return 0
-	}
-}
-
 func extractBool(v interface{}) bool {
 	switch x := v.(type) {
 	case bool:
@@ -231,18 +211,6 @@ func uniqueStrings(in []string) []string {
 		}
 		seen[v] = struct{}{}
 		out = append(out, v)
-	}
-	return out
-}
-
-func splitCSV(raw string) []string {
-	parts := strings.Split(raw, ",")
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			out = append(out, p)
-		}
 	}
 	return out
 }

@@ -376,10 +376,3 @@ func newBackupID(prefix string) string {
 	_, _ = pkgcrypto.Reader.Read(b)
 	return prefix + "_" + hex.EncodeToString(b)
 }
-
-func nullableStr(v string) interface{} {
-	if strings.TrimSpace(v) == "" {
-		return nil
-	}
-	return strings.TrimSpace(v)
-}

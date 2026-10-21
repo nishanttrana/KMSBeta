@@ -1,7 +1,6 @@
 {
   "src/components/v3/legacyPrimitives.tsx": 769,
   "src/components/v3/tabs/AuditLogTab.tsx": 740,
-  "src/components/v3/tabs/AutokeyTab.tsx": 716,
   "src/components/v3/tabs/BYOKTab.tsx": 556,
   "src/components/v3/tabs/CertsTab.tsx": 2673,
   "src/components/v3/tabs/ClusterTabView.tsx": 595,

@@ -5,6 +5,33 @@ Newest entries on top.
 
 ## 2026-10-22
 
+### Dead code hid an unenforced control and a forgeable key (13.41.0-beta)
+- `deadcode -test ./...` listed `IsIPAllowed` in auth: the only check of a
+  REST client's `ip_whitelist`, which the REST API tab let an admin set.
+  The setting was stored and displayed, and nothing read it. **A security
+  check with no caller is a control that isn't enforced**: an unreachable
+  check is a finding, not tidying. The rule "a setting has code that
+  reads and applies it" existed; no tool found the setting that broke it.
+- In dataprotect, reading the code around another unreachable helper found
+  the wrapper token key fallback: HKDF over `tenant|wrapper|app`, used
+  whenever an environment variable was unset, and no deployment set it.
+  This is the same fault rule 6 was written for in 2026-09 (v1 working
+  keys), in a second copy nobody searched for. **A fix of a key-derivation
+  fault searches every `pkgcrypto.HKDFSHA256`/`Hash` call whose input is
+  built from IDs**, not just the one reported.
+- Two files nobody could account for were in the tree: a 27 MB Windows
+  binary added by a `git add -A` after a local cross-build (13.33.0-beta),
+  and a pg_dump of a development CA table from February under `backups/`.
+  `git add -A` stages whatever a build or a dump left in the checkout;
+  stage paths by name, and add build and dump outputs to `.gitignore` when
+  they first appear.
+- The gate now exists: `scripts/check-dead-code.sh` in CI. It skips
+  `node_modules`: a dashboard dependency (flatted) ships Go sources, and
+  `./...` reads them once `npm ci` has run.
+- Not fixed here: a client's `rate_limit` is stored and never applied
+  either. Enforcing it needs a limit shared by every service the token
+  reaches, which is a design decision, not a cleanup.
+
 ### A file we ship is built the way the customer builds it (13.40.0-beta)
 - The SDK's JCA provider pom named a Maven plugin
   (`net.nicholaswilliams…:maven-checksum-plugin:1.0.1`) that Maven Central

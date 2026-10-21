@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-21T18:52:20Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-21T19:02:11Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -23,7 +23,6 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/VectaDashboardV3Shell.tsx | 817 | - | Btn | selectTab("admin/cli")} style={cliEnabled ? : }> |  |
 | web/dashboard/src/components/VectaDashboardV3Shell.tsx | 854 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
 | web/dashboard/src/components/VectaDashboardV3Shell.tsx | 889 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
-| web/dashboard/src/components/primitives.tsx | 23 | - | button | (icon or dynamic label) | onClick |
 | web/dashboard/src/components/v3/SidebarSearch.tsx | 60 | - | button | onOpen(src.tab, h.label)} title= style={ }> |  |
 | web/dashboard/src/components/v3/SidebarSubNav.tsx | 143 | - | button | onSelect(item.id)} style={ } > |  |
 | web/dashboard/src/components/v3/chartDrill.tsx | 133 | - | Btn | Clear | onClear |
@@ -49,13 +48,6 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx | 128 | - | Btn | { const next = p.status === "active" ? "inactive" : "active"; // The server r... |  |
 | web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx | 212 | - | Btn | setPolicyModal(false)}>Cancel |  |
 | web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx | 213 | - | Btn | (icon or dynamic label) | savePolicy} disabled={policySaving \|\| !policyName.trim() |
-| web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 236 | - | Btn | void load(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 237 | - | Btn | void saveSettings()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 263 | - | Btn | void submitSign()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 304 | - | Btn | void saveProfile()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 342 | - | Btn | editProfile(item)}>Edit |  |
-| web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 343 | - | Btn | void removeProfile(item)}>Delete |  |
-| web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 366 | - | Btn | void verifyRecord(item)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/AuditAnalyticsPanel.tsx | 72 | - | Btn | void load()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 444 | audit | Btn | void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si... |  |
 | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 445 | audit | Btn | (icon or dynamic label) | verifyChain} disabled={chainVerifying |
@@ -66,18 +58,6 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 674 | audit | Btn | }> View Timeline ( ) |  |
 | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 679 | audit | Btn | }> View Session ( ) |  |
 | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 684 | audit | Btn | }> View Correlation ( ) |  |
-| web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 371 | - | Btn | refresh(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 372 | - | Btn | Save Settings | saveSettings} disabled={busy \|\| loading |
-| web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 476 | - | Btn | Save Settings | saveSettings} disabled={busy |
-| web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 517 | - | Btn | setTemplateDraft(DEFAULT_TEMPLATE)}>Reset |  |
-| web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 518 | - | Btn | Save Template | saveTemplate} disabled={busy |
-| web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 539 | - | Btn | setTemplateDraft( )}>Edit |  |
-| web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 545 | - | Btn | removeTemplate(String(item?.id \|\| ""))}>Delete |  |
-| web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 592 | - | Btn | setPolicyDraft(DEFAULT_POLICY)}>Reset |  |
-| web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 593 | - | Btn | Save Service Default | savePolicy} disabled={busy |
-| web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 615 | - | Btn | setPolicyDraft( )}>Edit |  |
-| web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 621 | - | Btn | removePolicy(String(item?.service_name \|\| ""))}>Delete |  |
-| web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 662 | - | Btn | Submit Request | submitRequest} disabled={busy |
 | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 317 | byok | Btn | setConnectorView("cards")} title="Card view"> |  |
 | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 318 | byok | Btn | setConnectorView("list")} title="List view"> |  |
 | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 319 | byok | Btn | void refresh()} disabled= > Refresh |  |
@@ -348,11 +328,6 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/KMIPTab.tsx | 914 | - | Btn | void saveClient()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/KMIPTab.tsx | 966 | - | Btn | setModal(null)}>Cancel |  |
 | web/dashboard/src/components/v3/tabs/KMIPTab.tsx | 967 | - | Btn | void saveInteropTarget()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/KeyAccessTab.tsx | 174 | - | Btn | void load(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/KeyAccessTab.tsx | 175 | - | Btn | void saveSettings()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/KeyAccessTab.tsx | 250 | - | Btn | void saveRule()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/KeyAccessTab.tsx | 288 | - | Btn | editRule(item)}>Edit |  |
-| web/dashboard/src/components/v3/tabs/KeyAccessTab.tsx | 289 | - | Btn | void removeRule(item)}>Delete |  |
 | web/dashboard/src/components/v3/tabs/KeyCreateMenu.tsx | 22 | - | Btn | Create Key | onCreate} style={{ ...btnStyle, padding: "0 20px", minWidth: 130 |
 | web/dashboard/src/components/v3/tabs/KeyCreateMenu.tsx | 25 | - | Btn | setOpen((v) => !v)} aria-haspopup="menu" aria-expanded= style={{ ...btnStyle,... |  |
 | web/dashboard/src/components/v3/tabs/KeyCreateMenu.tsx | 31 | - | button | } className="vk-nav-item" style={ }> |  |

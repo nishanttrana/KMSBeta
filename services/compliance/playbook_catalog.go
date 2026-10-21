@@ -353,11 +353,6 @@ type urlError struct{ err error }
 
 func (e urlError) Error() string { return e.err.Error() }
 
-// checkOutboundURL refuses endpoints a playbook may not call: anything but
-// HTTPS, a platform service host (the compliance service's mTLS client
-// certificate would be presented to it), and addresses ssrfguard blocks.
-func checkOutboundURL(raw string) error { return checkOutboundURLAllowing(raw, nil) }
-
 // checkOutboundURLAllowing is checkOutboundURL for a tenant whose approved
 // private networks are allow.
 func checkOutboundURLAllowing(raw string, allow ssrfguard.Allow) error {

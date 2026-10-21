@@ -819,11 +819,6 @@ type backupHSMBackend interface {
 	Decrypt(ctx context.Context, tenant, label string, iv, ciphertext, aad []byte) ([]byte, error)
 }
 
-// WithBackupHSM replaces the connector client (tests).
-func WithBackupHSM(b backupHSMBackend) ServiceOption {
-	return func(s *Service) { s.hsm = b }
-}
-
 func (s *Service) backupHSM() backupHSMBackend {
 	if s.hsm != nil {
 		return s.hsm

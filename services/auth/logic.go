@@ -334,6 +334,31 @@ func NewID(prefix string) string {
 	return fmt.Sprintf("%s_%s", prefix, hex.EncodeToString(b))
 }
 
+// normalizeIPAllowList refuses an entry that is neither an address nor a
+// CIDR, so a typo can't silently narrow or void a client's allow-list.
+func normalizeIPAllowList(entries []string) ([]string, error) {
+	out := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		if strings.Contains(entry, "/") {
+			if _, cidr, err := net.ParseCIDR(entry); err == nil {
+				out = append(out, cidr.String())
+				continue
+			}
+		} else if ip := net.ParseIP(entry); ip != nil {
+			out = append(out, ip.String())
+			continue
+		}
+		return nil, fmt.Errorf("ip_whitelist entry %q is not an IP address or CIDR", entry)
+	}
+	return out, nil
+}
+
+// IsIPAllowed reports whether ip may use a client whose allow-list is
+// whitelist; an empty list allows every address.
 func IsIPAllowed(ip string, whitelist []string) bool {
 	if len(whitelist) == 0 {
 		return true
@@ -571,13 +596,6 @@ func ValidatePasswordAgainstPolicy(policy PasswordPolicy, password string, usern
 		if local != "" && strings.Contains(passLower, local) {
 			return fmt.Errorf("password must not contain email local-part")
 		}
-	}
-	return nil
-}
-
-func assertRequired(v string, field string) error {
-	if strings.TrimSpace(v) == "" {
-		return fmt.Errorf("%s is required", field)
 	}
 	return nil
 }

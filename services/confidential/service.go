@@ -31,14 +31,6 @@ func NewService(store Store, events EventPublisher, clusterNodeID string) *Servi
 	}
 }
 
-var supportedProviders = []string{
-	"aws_nitro_enclaves",
-	"aws_nitro_tpm",
-	"azure_secure_key_release",
-	"gcp_confidential_space",
-	"generic",
-}
-
 func defaultAttestationPolicy(tenantID string) AttestationPolicy {
 	return AttestationPolicy{
 		TenantID:             strings.TrimSpace(tenantID),

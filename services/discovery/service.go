@@ -850,9 +850,3 @@ func (s *Service) publishAudit(ctx context.Context, subject string, tenantID str
 	}
 	return s.events.Publish(ctx, subject, raw)
 }
-
-func sortAssets(items []CryptoAsset) {
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].Source+"|"+items[i].AssetType+"|"+items[i].ID < items[j].Source+"|"+items[j].AssetType+"|"+items[j].ID
-	})
-}

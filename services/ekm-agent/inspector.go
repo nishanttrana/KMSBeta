@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"strings"
 	"time"
 
@@ -189,11 +188,4 @@ func nullString(v sql.NullString) string {
 		return ""
 	}
 	return strings.TrimSpace(v.String)
-}
-
-func inspectorError(engine string, mode string, err error) error {
-	if err == nil {
-		return nil
-	}
-	return fmt.Errorf("%s_%s: %w", engine, mode, err)
 }

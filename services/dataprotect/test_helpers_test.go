@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -104,6 +105,33 @@ func (f *fakeDataProtectKeyCore) MeterUsage(ctx context.Context, _ string, _ str
 	return nil
 }
 
+// fakeWrapperTokenSource stands in for keycore's wrapper-token system key:
+// a secret 32-byte key per version that no identifier reproduces.
+type fakeWrapperTokenSource struct {
+	mu      sync.Mutex
+	version int
+	fail    bool
+}
+
+func (f *fakeWrapperTokenSource) EnsureKey(context.Context) (string, int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.fail {
+		return "", 0, errors.New("keycore unreachable")
+	}
+	return "system-wrapper-token", f.version, nil
+}
+
+func (f *fakeWrapperTokenSource) Derive(_ context.Context, keyID string, version int) ([]byte, int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.fail {
+		return nil, 0, errors.New("keycore unreachable")
+	}
+	sum := sha256.Sum256([]byte(fmt.Sprintf("fake-keycore-secret|%s|v%d", keyID, version)))
+	return sum[:], version, nil
+}
+
 func newDataProtectService(t *testing.T) (*Service, *SQLStore, *nopDataProtectPublisher) {
 	t.Helper()
 	conn, err := pkgdb.Open(context.Background(), pkgdb.Config{
@@ -126,7 +154,7 @@ func newDataProtectService(t *testing.T) (*Service, *SQLStore, *nopDataProtectPu
 		"key-2":         {"id": "key-2", "kcv": "BBBB02", "algorithm": "AES-256", "key_type": "symmetric", "purpose": "encrypt-decrypt", "status": "active", "export_allowed": true},
 		"key-no-export": {"id": "key-no-export", "kcv": "DDDD04", "algorithm": "AES-256", "key_type": "symmetric", "purpose": "encrypt-decrypt", "status": "active", "export_allowed": false},
 		"key-rsa":       {"id": "key-rsa", "kcv": "CCCC03", "algorithm": "RSA-2048", "key_type": "asymmetric", "purpose": "sign-verify", "status": "active", "export_allowed": false},
-	}}, pub)
+	}}, pub, WithWrapperTokenKeys(&fakeWrapperTokenSource{version: 1}))
 	return svc, store, pub
 }
 

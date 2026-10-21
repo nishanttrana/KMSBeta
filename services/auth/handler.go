@@ -227,7 +227,7 @@ func (h *Handler) refuseRequest(r *http.Request, claims *pkgauth.Claims, reason,
 		"method": r.Method, "endpoint": r.URL.Path, "permission": permission,
 		"actor_id": actor, "actor_tenant_id": actorTenant,
 		"requested_tenant": strings.TrimSpace(r.URL.Query().Get("tenant_id")),
-		"source_ip": clientip.From(r), "reason": reason, "result": "refused", "severity": "warning",
+		"source_ip":        clientip.From(r), "reason": reason, "result": "refused", "severity": "warning",
 	})
 }
 
@@ -375,6 +375,10 @@ func (h *Handler) handleActivateRegistration(w http.ResponseWriter, r *http.Requ
 	if req.RateLimit <= 0 {
 		req.RateLimit = 1000
 	}
+	if req.IPWhitelist, err = normalizeIPAllowList(req.IPWhitelist); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
 	if err := h.store.UpdateClientRegistrationSettings(r.Context(), tenantID, r.PathValue("id"), req.IPWhitelist, req.RateLimit); err != nil && !errors.Is(err, errNotFound) {
 		writeErr(w, http.StatusBadRequest, "activation_failed", "failed to apply client settings", reqID, tenantID)
 		return
@@ -428,6 +432,20 @@ func (h *Handler) refuseClientActivation(r *http.Request, reqID string, claims *
 	})
 }
 
+// refuseClientToken audits a refused client token exchange and answers it.
+func (h *Handler) refuseClientToken(w http.ResponseWriter, r *http.Request, reqID, tenantID, clientID string, status int, code, reason string) {
+	_ = h.publishAudit(r.Context(), "audit.auth.client_token_refused", reqID, tenantID, map[string]any{
+		"client_id": clientID,
+		"source_ip": clientip.From(r),
+		"code":      code,
+		"status":    status,
+		"reason":    reason,
+		"result":    "refused",
+		"severity":  "warning",
+	})
+	writeErr(w, status, code, reason, reqID, tenantID)
+}
+
 func (h *Handler) handleClientToken(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	rawBody, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
@@ -466,14 +484,14 @@ func (h *Handler) handleClientToken(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if rawKey == "" {
-		writeErr(w, http.StatusUnauthorized, "unauthorized", "missing api key", reqID, tenantID)
+		h.refuseClientToken(w, r, reqID, tenantID, clientID, http.StatusUnauthorized, "unauthorized", "missing api key")
 		return
 	}
 
 	sum := sha256.Sum256([]byte(rawKey))
 	apiKey, err := h.store.GetAPIKeyByHash(r.Context(), tenantID, sum[:])
 	if errors.Is(err, errNotFound) {
-		writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid api key", reqID, tenantID)
+		h.refuseClientToken(w, r, reqID, tenantID, clientID, http.StatusUnauthorized, "unauthorized", "invalid api key")
 		return
 	}
 	if err != nil {
@@ -481,17 +499,17 @@ func (h *Handler) handleClientToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if apiKey.ExpiresAt != nil && time.Now().UTC().After(apiKey.ExpiresAt.UTC()) {
-		writeErr(w, http.StatusUnauthorized, "unauthorized", "api key is expired", reqID, tenantID)
+		h.refuseClientToken(w, r, reqID, tenantID, clientID, http.StatusUnauthorized, "unauthorized", "api key is expired")
 		return
 	}
 	if strings.TrimSpace(apiKey.ClientID) == "" || !strings.EqualFold(strings.TrimSpace(apiKey.ClientID), clientID) {
-		writeErr(w, http.StatusForbidden, "forbidden", "api key is not bound to requested client_id", reqID, tenantID)
+		h.refuseClientToken(w, r, reqID, tenantID, clientID, http.StatusForbidden, "forbidden", "api key is not bound to requested client_id")
 		return
 	}
 
 	reg, err := h.store.GetClientRegistration(r.Context(), tenantID, clientID)
 	if errors.Is(err, errNotFound) {
-		writeErr(w, http.StatusNotFound, "not_found", "client registration not found", reqID, tenantID)
+		h.refuseClientToken(w, r, reqID, tenantID, clientID, http.StatusNotFound, "not_found", "client registration not found")
 		return
 	}
 	if err != nil {
@@ -499,7 +517,13 @@ func (h *Handler) handleClientToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !strings.EqualFold(strings.TrimSpace(reg.Status), "approved") {
-		writeErr(w, http.StatusForbidden, "forbidden", "client registration is not approved", reqID, tenantID)
+		h.refuseClientToken(w, r, reqID, tenantID, clientID, http.StatusForbidden, "forbidden", "client registration is not approved")
+		return
+	}
+	// The client's allow-list bounds where its API key may be exchanged for
+	// a token. It was stored but never checked until 13.41.0-beta.
+	if !IsIPAllowed(clientip.From(r), reg.IPWhitelist) {
+		h.refuseClientToken(w, r, reqID, tenantID, clientID, http.StatusForbidden, "ip_not_allowed", "source address is not in the client's ip_whitelist")
 		return
 	}
 
@@ -509,7 +533,7 @@ func (h *Handler) handleClientToken(w http.ResponseWriter, r *http.Request) {
 	}
 	requestedSubject := strings.TrimSpace(req.SubjectID)
 	if requestedSubject != "" && !strings.EqualFold(boundSubject, requestedSubject) {
-		writeErr(w, http.StatusForbidden, "forbidden", "subject_id is immutable for this registration", reqID, tenantID)
+		h.refuseClientToken(w, r, reqID, tenantID, clientID, http.StatusForbidden, "forbidden", "subject_id is immutable for this registration")
 		return
 	}
 	interfaceName := strings.ToLower(strings.TrimSpace(reg.InterfaceName))
@@ -518,7 +542,7 @@ func (h *Handler) handleClientToken(w http.ResponseWriter, r *http.Request) {
 	}
 	requestedInterface := strings.ToLower(strings.TrimSpace(req.InterfaceName))
 	if requestedInterface != "" && requestedInterface != interfaceName {
-		writeErr(w, http.StatusForbidden, "forbidden", "interface_name is immutable for this registration", reqID, tenantID)
+		h.refuseClientToken(w, r, reqID, tenantID, clientID, http.StatusForbidden, "forbidden", "interface_name is immutable for this registration")
 		return
 	}
 	authMode := normalizeClientAuthMode(reg.AuthMode)
@@ -642,7 +666,7 @@ func (h *Handler) handleClientToken(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if len(effectivePerms) == 0 {
-		writeErr(w, http.StatusForbidden, "forbidden", "no permitted scopes for requested token", reqID, tenantID)
+		h.refuseClientToken(w, r, reqID, tenantID, clientID, http.StatusForbidden, "forbidden", "no permitted scopes for requested token")
 		return
 	}
 
@@ -2382,7 +2406,12 @@ func (h *Handler) handleUpdateClient(w http.ResponseWriter, r *http.Request) {
 	if req.RateLimit <= 0 {
 		req.RateLimit = 1000
 	}
-	if err := h.store.UpdateClientRegistrationSettings(r.Context(), claims.TenantID, r.PathValue("id"), req.IPWhitelist, req.RateLimit); err != nil {
+	allow, err := normalizeIPAllowList(req.IPWhitelist)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	if err := h.store.UpdateClientRegistrationSettings(r.Context(), claims.TenantID, r.PathValue("id"), allow, req.RateLimit); err != nil {
 		code := http.StatusInternalServerError
 		if errors.Is(err, errNotFound) {
 			code = http.StatusNotFound
@@ -3244,15 +3273,6 @@ func (h *Handler) enforcePasswordPolicy(ctx context.Context, tenantID string, pa
 		return err
 	}
 	return ValidatePasswordAgainstPolicy(policy, password, username, email)
-}
-
-func contains(values []string, target string) bool {
-	for _, v := range values {
-		if v == target {
-			return true
-		}
-	}
-	return false
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload map[string]any) {

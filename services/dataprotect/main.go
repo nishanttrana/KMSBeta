@@ -8,6 +8,7 @@ import (
 	"time"
 	"vecta-kms/pkg/clusterstate"
 	pkgjwtauth "vecta-kms/pkg/jwtauth"
+	"vecta-kms/pkg/mek"
 	"vecta-kms/pkg/servicetoken"
 
 	pkgplatform "vecta-kms/pkg/platform"
@@ -17,7 +18,7 @@ var logger = log.New(os.Stderr, "[kms-dataprotect] ", log.LstdFlags|log.Lmsgpref
 
 // main boots the platform spine and mounts the data protection service with
 // its missing-receipt reconciler loop. SkipJWT is set because the wrapper
-// runtime routes authenticate with wrapper JWTs (WithWrapperJWT) instead of a
+// runtime routes authenticate with wrapper JWTs (wrapper_token_key.go) instead of a
 // platform token; NewAuthenticatedHandler verifies the platform JWT on every
 // other route and refuses (and audits) anything unauthenticated.
 func main() {
@@ -48,8 +49,8 @@ func main() {
 		NewHTTPKeyCoreClient(envOr("KEYCORE_URL", "https://keycore:8010"), 5*time.Second),
 		publisher,
 		WithCertsClient(NewHTTPCertsClient(envOr("CERTS_URL", "https://certs:8030"), 5*time.Second)),
+		WithWrapperTokenKeys(mek.NewKeycorePurposeSource(envOr("KEYCORE_URL", "https://keycore:8010"), wrapperTokenPurpose)),
 		WithWrapperJWT(
-			firstNonEmptyEnv("DATAPROTECT_WRAPPER_JWT_SECRET", "JWT_SECRET"),
 			envOr("DATAPROTECT_WRAPPER_JWT_ISSUER", "vecta-dataprotect"),
 			envOr("DATAPROTECT_WRAPPER_JWT_AUDIENCE", "vecta-field-wrapper"),
 			time.Duration(mustAtoi(envOr("DATAPROTECT_WRAPPER_JWT_TTL_SEC", "3600")))*time.Second,
@@ -124,14 +125,4 @@ func mustAtoi(s string) int {
 		n = n*10 + int(s[i]-'0')
 	}
 	return n
-}
-
-func firstNonEmptyEnv(keys ...string) string {
-	for _, key := range keys {
-		v := strings.TrimSpace(os.Getenv(key))
-		if v != "" {
-			return v
-		}
-	}
-	return ""
 }

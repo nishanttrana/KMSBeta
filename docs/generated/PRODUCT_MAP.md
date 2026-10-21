@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-21T18:52:20Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-21T19:02:11Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -11,10 +11,10 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Sub-pane groups: `13`
 - Backend HTTP routes discovered: `916` across `28` services
 - Backend routes on the `pkg/route` kernel: `536` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `541`
-- Frontend call sites with exact backend route match: `510`
-- Frontend call sites needing review or dynamic/runtime confirmation: `31`
-- Clickable controls with static `onClick` handlers: `774`
+- Frontend API call sites discovered: `518`
+- Frontend call sites with exact backend route match: `488`
+- Frontend call sites needing review or dynamic/runtime confirmation: `30`
+- Clickable controls with static `onClick` handlers: `749`
 - Backend request flows with handler/service/package summaries: `916`
 
 ## How To Use This For Launch
@@ -202,14 +202,14 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 
 | Service | Routes | Frontend call sites |
 | --- | --- | --- |
-| audit | 34 | 21 |
+| audit | 34 | 20 |
 | auth | 90 | 47 |
 | autokey | 15 | 11 |
 | backup | 11 | 10 |
 | certs | 70 | 54 |
 | cloud | 28 | 15 |
 | cluster-manager | 28 | 12 |
-| compliance | 61 | 30 |
+| compliance | 61 | 27 |
 | confidential | 7 | 6 |
 | dataprotect | 49 | 28 |
 | discovery | 24 | 22 |
@@ -218,7 +218,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | hsm-connector | 14 | 0 |
 | hyok | 25 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 178 | 94 |
+| keycore | 178 | 75 |
 | kmip | 12 | 11 |
 | policy | 12 | 0 |
 | posture | 13 | 10 |
@@ -237,7 +237,6 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 
 | Service | Method | Path | Source | File | Line |
 | --- | --- | --- | --- | --- | --- |
-| audit | POST | /audit/events | serviceRequest | web/dashboard/src/lib/auditLogger.ts | 20 |
 | auth-edge | POST | /auth/logout | trackedFetch | web/dashboard/src/lib/auth.ts | 148 |
 | auth-edge | POST | /auth/login | trackedFetch | web/dashboard/src/lib/auth.ts | 190 |
 | auth-edge | POST | /auth/change-password | trackedFetch | web/dashboard/src/lib/auth.ts | 277 |
@@ -269,7 +268,7 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | secrets | GET | /secrets/database/leases/{param}/renew | serviceRequest | web/dashboard/src/lib/secretsDatabase.ts | 64 |
 | secrets | GET | /secrets/database/leases/{param}/revoke | serviceRequest | web/dashboard/src/lib/secretsDatabase.ts | 69 |
 
-Showing `31` of `31`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
+Showing `30` of `30`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
 
 ## Backend Routes Not Directly Called From Dashboard
 
@@ -398,7 +397,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/keys/expired | h.handleExpired |  | services/compliance/handler.go | 79 |
 | compliance | GET | /compliance/audit/correlations | h.handleAuditCorrelations |  | services/compliance/handler.go | 81 |
 
-Showing `120` of `402`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `422`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

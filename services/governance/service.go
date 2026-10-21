@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/fips140"
 	"crypto/sha256"
@@ -9,9 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"net/url"
 	"runtime"
 	"runtime/debug"
 	"runtime/trace"
@@ -129,14 +126,6 @@ type ServiceOption func(*Service)
 func WithCertsURL(raw string) ServiceOption {
 	return func(s *Service) {
 		s.certsURL = strings.TrimRight(strings.TrimSpace(raw), "/")
-	}
-}
-
-func WithHTTPClient(client *http.Client) ServiceOption {
-	return func(s *Service) {
-		if client != nil {
-			s.http = client
-		}
 	}
 }
 
@@ -717,60 +706,6 @@ func (s *Service) ApplyPostureControls(ctx context.Context, patch PostureControl
 		"posture_guardrail_policy_required":    out.PostureGuardrailPolicyRequired,
 	})
 	return out, nil
-}
-
-func (s *Service) certsJSONRequest(ctx context.Context, method string, path string, tenantID string, body interface{}, out interface{}) error {
-	base := strings.TrimRight(strings.TrimSpace(s.certsURL), "/")
-	if base == "" {
-		return errors.New("certs_url is empty")
-	}
-	target := base + path
-	if strings.TrimSpace(tenantID) != "" {
-		sep := "?"
-		if strings.Contains(target, "?") {
-			sep = "&"
-		}
-		target = target + sep + "tenant_id=" + url.QueryEscape(strings.TrimSpace(tenantID))
-	}
-	var payload io.Reader
-	if body != nil {
-		raw, err := json.Marshal(body)
-		if err != nil {
-			return err
-		}
-		payload = bytes.NewReader(raw)
-	}
-	req, err := http.NewRequestWithContext(ctx, method, target, payload)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Accept", "application/json")
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-	resp, err := s.http.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	respBody, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		var errResp map[string]interface{}
-		_ = json.Unmarshal(respBody, &errResp)
-		if msg := strings.TrimSpace(fmt.Sprintf("%v", errResp["error"])); msg != "" && msg != "<nil>" {
-			return fmt.Errorf("%s (%d)", msg, resp.StatusCode)
-		}
-		if msg := strings.TrimSpace(string(respBody)); msg != "" {
-			return fmt.Errorf("%s (%d)", msg, resp.StatusCode)
-		}
-		return fmt.Errorf("request failed (%d)", resp.StatusCode)
-	}
-	if out != nil && len(respBody) > 0 {
-		if err := json.Unmarshal(respBody, out); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // SystemIntegrity reports checks that are measured, not stated: SMTP
@@ -1368,22 +1303,6 @@ func newID(prefix string) string {
 	b := make([]byte, 8)
 	_, _ = pkgcrypto.Reader.Read(b)
 	return prefix + "_" + base64.RawURLEncoding.EncodeToString(b)
-}
-
-func intFromAny(v interface{}) int {
-	switch x := v.(type) {
-	case int:
-		return x
-	case int64:
-		return int(x)
-	case float64:
-		return int(x)
-	case string:
-		n, _ := strconv.Atoi(strings.TrimSpace(x))
-		return n
-	default:
-		return 0
-	}
 }
 
 func maxInt(a int, b int) int {

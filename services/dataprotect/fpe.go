@@ -108,10 +108,6 @@ func toLowerASCII(r rune) rune {
 	return r
 }
 
-func strtoupper(v string) string {
-	return strings.ToUpper(strings.TrimSpace(v))
-}
-
 func uppercase(r rune) rune {
 	if r >= 'a' && r <= 'z' {
 		return r - 32

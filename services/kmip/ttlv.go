@@ -55,37 +55,6 @@ type KMIPMessage struct {
 	Payload   []byte
 }
 
-func ReadTTLV(r io.Reader) (TTLV, int, error) {
-	header := make([]byte, 8)
-	if _, err := io.ReadFull(r, header); err != nil {
-		return TTLV{}, 0, err
-	}
-	tag := uint32(header[0])<<16 | uint32(header[1])<<8 | uint32(header[2])
-	typ := header[3]
-	length := binary.BigEndian.Uint32(header[4:8])
-	if length > 64*1024*1024 {
-		return TTLV{}, 0, errors.New("ttlv length too large")
-	}
-	padded := int(length) + pad8(int(length))
-	body := make([]byte, padded)
-	if _, err := io.ReadFull(r, body); err != nil {
-		return TTLV{}, 0, err
-	}
-	node, err := decodeTTLV(tag, typ, body[:length])
-	if err != nil {
-		return TTLV{}, 0, err
-	}
-	return node, 8 + padded, nil
-}
-
-func WriteTTLV(w io.Writer, t TTLV) (int, error) {
-	raw, err := EncodeTTLV(t)
-	if err != nil {
-		return 0, err
-	}
-	return w.Write(raw)
-}
-
 func EncodeTTLV(t TTLV) ([]byte, error) {
 	var payload []byte
 	if t.Type == ttlvTypeStructure {
@@ -176,15 +145,6 @@ func encodeChildren(children []TTLV) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (t TTLV) Child(tag uint32) (TTLV, bool) {
-	for _, c := range t.Children {
-		if c.Tag == tag {
-			return c, true
-		}
-	}
-	return TTLV{}, false
-}
-
 func (t TTLV) Find(tag uint32) (TTLV, bool) {
 	if t.Tag == tag {
 		return t, true
@@ -211,17 +171,6 @@ func (t TTLV) Int32() int32 {
 		return int32(binary.BigEndian.Uint32(t.Value))
 	case 8:
 		return int32(binary.BigEndian.Uint64(t.Value))
-	default:
-		return 0
-	}
-}
-
-func (t TTLV) Int64() int64 {
-	switch len(t.Value) {
-	case 8:
-		return int64(binary.BigEndian.Uint64(t.Value))
-	case 4:
-		return int64(binary.BigEndian.Uint32(t.Value))
 	default:
 		return 0
 	}
@@ -335,13 +284,6 @@ func BuildKMIPResponse(req KMIPMessage, status string, reason string, payload in
 		return TTLV{}, nil, err
 	}
 	return msg, raw, nil
-}
-
-func DecodePayload[T any](raw []byte, out *T) error {
-	if len(raw) == 0 {
-		return nil
-	}
-	return json.Unmarshal(raw, out)
 }
 
 func pad8(v int) int {

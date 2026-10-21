@@ -1,7 +1,6 @@
 package restauth
 
 import (
-	"crypto"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
@@ -130,14 +129,4 @@ func matchesCandidate(value string, candidates []string) bool {
 		}
 	}
 	return false
-}
-
-func ProofKey(publicKey crypto.PublicKey) string {
-	switch key := publicKey.(type) {
-	case []byte:
-		return base64.RawURLEncoding.EncodeToString(key)
-	default:
-		_ = key
-		return ""
-	}
 }

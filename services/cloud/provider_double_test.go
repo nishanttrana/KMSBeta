@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -114,14 +113,4 @@ func (m *mockProvider) buildRef(account CloudAccount, region string, cloudKeyID 
 func providerDigest(parts ...string) string {
 	h := sha256.Sum256([]byte(strings.Join(parts, "|")))
 	return hex.EncodeToString(h[:])
-}
-
-func cloneMap(in map[string]interface{}) map[string]interface{} {
-	if in == nil {
-		return map[string]interface{}{}
-	}
-	raw, _ := json.Marshal(in)
-	out := map[string]interface{}{}
-	_ = json.Unmarshal(raw, &out)
-	return out
 }

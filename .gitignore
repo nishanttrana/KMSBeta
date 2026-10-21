@@ -110,3 +110,9 @@ Claude outputs/
 
 # Settings for scripts/verify-byok-live.sh (real cloud credentials)
 .byok-live.env
+
+# Build outputs and database dumps never belong in the tree (13.41.0-beta)
+/ekm-agent
+*.exe
+/backups/
+*.dump

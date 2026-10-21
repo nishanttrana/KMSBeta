@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,12 +12,6 @@ import (
 type nopEventPublisher struct{}
 
 func (nopEventPublisher) Publish(_ context.Context, _ string, _ []byte) error { return nil }
-
-type failEventPublisher struct{}
-
-func (failEventPublisher) Publish(_ context.Context, _ string, _ []byte) error {
-	return errors.New("nats down")
-}
 
 func newPolicyHandler(t *testing.T) *Handler {
 	t.Helper()

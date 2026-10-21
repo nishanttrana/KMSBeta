@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/sha256"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
@@ -1737,14 +1736,6 @@ func roleCanOperate(role string, op kmip.Operation) bool {
 	default:
 		return false
 	}
-}
-
-func principalFromTLSState(state tls.ConnectionState) (Principal, error) {
-	if len(state.PeerCertificates) == 0 {
-		return Principal{}, errors.New("client certificate required")
-	}
-	cert := state.PeerCertificates[0]
-	return principalFromCert(cert)
 }
 
 func principalFromCert(cert *x509.Certificate) (Principal, error) {

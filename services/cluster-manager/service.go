@@ -17,11 +17,12 @@ import (
 	"vecta-kms/pkg/clusterstate"
 	pkgconsul "vecta-kms/pkg/consul"
 
+	pkgclustersync "vecta-kms/pkg/clustersync"
+
 	"github.com/hashicorp/consul/api"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/load"
 	"github.com/shirou/gopsutil/v4/mem"
-	pkgclustersync "vecta-kms/pkg/clustersync"
 )
 
 const defaultProfileName = "base-platform"
@@ -1416,73 +1417,6 @@ func sampleLocalRuntimeMetrics(ctx context.Context) (float64, float64, bool) {
 	}
 
 	return round1(cpuPercent), round1(ramGB), available
-}
-
-func parseLocalComponentHints() []string {
-	rawInputs := []string{
-		os.Getenv("CLUSTER_LOCAL_COMPONENTS"),
-		os.Getenv("VECTA_ENABLED_COMPONENTS"),
-		os.Getenv("COMPOSE_PROFILES"),
-	}
-	items := make([]string, 0, 16)
-	for _, raw := range rawInputs {
-		for _, token := range splitComponentTokens(raw) {
-			if mapped := componentFromHint(token); mapped != "" {
-				items = append(items, mapped)
-			}
-		}
-	}
-	return normalizeDisplayComponents(items)
-}
-
-func splitComponentTokens(raw string) []string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return nil
-	}
-	replacer := strings.NewReplacer(";", ",", "|", ",", " ", ",", "\n", ",", "\t", ",")
-	normalized := replacer.Replace(raw)
-	parts := strings.Split(normalized, ",")
-	out := make([]string, 0, len(parts))
-	for _, part := range parts {
-		v := strings.TrimSpace(part)
-		if v == "" {
-			continue
-		}
-		out = append(out, v)
-	}
-	return out
-}
-
-func componentFromHint(raw string) string {
-	v := strings.ToLower(strings.TrimSpace(raw))
-	switch v {
-	case "auth", "keycore", "policy", "governance", "audit", "workload", "confidential", "dataprotect", "byok", "hyok", "ekm", "kmip", "certs", "secrets", "qkd", "mpc", "cluster", "compliance", "reporting", "sbom", "pqc", "discovery", "ai", "keyaccess", "signing":
-		return v
-	case "key_access", "key_access_justifications", "key-access", "kaj":
-		return "keyaccess"
-	case "artifact_signing", "artifact-signing", "supply_chain_signing", "supply-chain-signing":
-		return "signing"
-	case "workload_identity", "spiffe", "spiffe_federation":
-		return "workload"
-	case "cloud", "cloud_control", "cloud-key-control":
-		return "byok"
-	case "data_protection", "data-protection", "field_encryption", "field-encryption":
-		return "dataprotect"
-	case "certificates", "pki":
-		return "certs"
-	case "vault":
-		return "secrets"
-	case "clustering":
-		return "cluster"
-	}
-	if mapped := componentFromServiceName(v); mapped != "" {
-		return mapped
-	}
-	if strings.HasPrefix(v, "kms-") {
-		return strings.TrimPrefix(v, "kms-")
-	}
-	return strings.ReplaceAll(v, "_", "-")
 }
 
 func componentFromServiceName(serviceName string) string {

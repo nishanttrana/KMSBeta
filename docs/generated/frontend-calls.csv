@@ -9,7 +9,6 @@ audit,audit,GET,/audit/correlation/{param}?{param},/audit/correlation/{param},Tr
 audit,audit,GET,/audit/chain/verify?{param},/audit/chain/verify,True,serviceRequest,web/dashboard/src/lib/audit.ts,232,audit|GET|/audit/chain/verify
 audit,audit,GET,/audit/config?{param},/audit/config,True,serviceRequest,web/dashboard/src/lib/audit.ts,248,audit|GET|/audit/config
 audit,audit,GET,/audit/checkpoints?{param}&limit={param},/audit/checkpoints,True,serviceRequest,web/dashboard/src/lib/audit.ts,278,audit|GET|/audit/checkpoints
-audit,audit,POST,/audit/events,/audit/events,False,serviceRequest,web/dashboard/src/lib/auditLogger.ts,20,audit|POST|/audit/events
 auth-edge,auth-edge,POST,/auth/logout,/auth/logout,False,trackedFetch,web/dashboard/src/lib/auth.ts,148,auth-edge|POST|/auth/logout
 auth-edge,auth-edge,POST,/auth/login,/auth/login,False,trackedFetch,web/dashboard/src/lib/auth.ts,190,auth-edge|POST|/auth/login
 auth-edge,auth-edge,POST,/auth/change-password,/auth/change-password,False,trackedFetch,web/dashboard/src/lib/auth.ts,277,auth-edge|POST|/auth/change-password
@@ -91,15 +90,6 @@ cloud,cloud,POST,/cloud/console/{param},/cloud/console/{param},True,serviceReque
 cloud,cloud,PUT,/cloud/byok/keys/{param}/automation,/cloud/byok/keys/{param}/automation,True,serviceRequest,web/dashboard/src/lib/byok.ts,207,cloud|PUT|/cloud/byok/keys/{param}/automation
 compliance,compliance,GET,/compliance/playbooks,/compliance/playbooks,False,serviceRequest,web/dashboard/src/lib/byok.ts,224,compliance|GET|/compliance/playbooks
 compliance,compliance,POST,/compliance/playbooks,/compliance/playbooks,False,serviceRequest,web/dashboard/src/lib/byok.ts,234,compliance|POST|/compliance/playbooks
-keycore,keycore,GET,/ceremony/guardians,/ceremony/guardians,False,serviceRequest,web/dashboard/src/lib/ceremony.ts,48,keycore|GET|/ceremony/guardians
-keycore,keycore,POST,/ceremony/guardians,/ceremony/guardians,False,serviceRequest,web/dashboard/src/lib/ceremony.ts,53,keycore|POST|/ceremony/guardians
-keycore,keycore,DELETE,/ceremony/guardians/{param},/ceremony/guardians/{param},True,serviceRequest,web/dashboard/src/lib/ceremony.ts,57,keycore|DELETE|/ceremony/guardians/{param}
-keycore,keycore,GET,/ceremony,/ceremony,False,serviceRequest,web/dashboard/src/lib/ceremony.ts,61,keycore|GET|/ceremony
-keycore,keycore,GET,/ceremony/{param},/ceremony/{param},True,serviceRequest,web/dashboard/src/lib/ceremony.ts,66,keycore|GET|/ceremony/{param}
-keycore,keycore,POST,/ceremony,/ceremony,False,serviceRequest,web/dashboard/src/lib/ceremony.ts,70,keycore|POST|/ceremony
-keycore,keycore,POST,/ceremony/{param}/shares,/ceremony/{param}/shares,True,serviceRequest,web/dashboard/src/lib/ceremony.ts,74,keycore|POST|/ceremony/{param}/shares
-keycore,keycore,POST,/ceremony/{param}/complete,/ceremony/{param}/complete,True,serviceRequest,web/dashboard/src/lib/ceremony.ts,81,keycore|POST|/ceremony/{param}/complete
-keycore,keycore,POST,/ceremony/{param}/abort,/ceremony/{param}/abort,True,serviceRequest,web/dashboard/src/lib/ceremony.ts,85,keycore|POST|/ceremony/{param}/abort
 certs,certs,GET,/certs/ca?{param},/certs/ca,True,serviceRequest,web/dashboard/src/lib/certs.ts,422,certs|GET|/certs/ca
 certs,certs,POST,/certs/ca,/certs/ca,False,serviceRequest,web/dashboard/src/lib/certs.ts,427,certs|POST|/certs/ca
 certs,certs,DELETE,/certs/ca/{param}?{param},/certs/ca/{param},True,serviceRequest,web/dashboard/src/lib/certs.ts,443,certs|DELETE|/certs/ca/{param}
@@ -264,9 +254,6 @@ discovery,discovery,GET,/discovery/buckets?{param},/discovery/buckets,True,servi
 discovery,discovery,POST,/discovery/buckets?{param},/discovery/buckets,True,serviceRequest,web/dashboard/src/lib/discovery.ts,433,discovery|POST|/discovery/buckets
 discovery,discovery,DELETE,/discovery/buckets/{param}?{param},/discovery/buckets/{param},True,serviceRequest,web/dashboard/src/lib/discovery.ts,443,discovery|DELETE|/discovery/buckets/{param}
 discovery,discovery,POST,/discovery/buckets/{param}/test?{param},/discovery/buckets/{param}/test,True,serviceRequest,web/dashboard/src/lib/discovery.ts,454,discovery|POST|/discovery/buckets/{param}/test
-compliance,compliance,GET,/compliance/risk/keys?{param}&limit={param},/compliance/risk/keys,True,serviceRequest,web/dashboard/src/lib/dri.ts,54,compliance|GET|/compliance/risk/keys
-compliance,compliance,GET,/compliance/risk/summary?{param},/compliance/risk/summary,True,serviceRequest,web/dashboard/src/lib/dri.ts,62,compliance|GET|/compliance/risk/summary
-compliance,compliance,GET,/compliance/risk/remediation?{param},/compliance/risk/remediation,True,serviceRequest,web/dashboard/src/lib/dri.ts,82,compliance|GET|/compliance/risk/remediation
 ekm,ekm,GET,/ekm/agents?{param},/ekm/agents,True,serviceRequest,web/dashboard/src/lib/ekm.ts,241,ekm|GET|/ekm/agents
 ekm,ekm,GET,/ekm/agents/{param}/logs?{param}&limit={param},/ekm/agents/{param}/logs,True,serviceRequest,web/dashboard/src/lib/ekm.ts,246,ekm|GET|/ekm/agents/{param}/logs
 ekm,ekm,POST,/ekm/agents/{param}/rotate,/ekm/agents/{param}/rotate,True,serviceRequest,web/dashboard/src/lib/ekm.ts,255,ekm|POST|/ekm/agents/{param}/rotate
@@ -332,12 +319,6 @@ hyok,hyok,GET,/hyok/v1/health?{param},/hyok/v1/health,True,serviceRequest,web/da
 hyok,hyok,POST,/hyok/{param}/v1/keys/{param}/{param}?{param},/hyok/{param}/v1/keys/{param}/{param},True,serviceRequest,web/dashboard/src/lib/hyok.ts,188,hyok|POST|/hyok/{param}/v1/keys/{param}/{param}
 hyok,hyok,GET,/hyok/dke/v1/keys/{param}/publickey?{param},/hyok/dke/v1/keys/{param}/publickey,True,serviceRequest,web/dashboard/src/lib/hyok.ts,213,hyok|GET|/hyok/dke/v1/keys/{param}/publickey
 keycore,keycore,GET,/keys/{param}/consumers?tenant_id={param},/keys/{param}/consumers,True,serviceRequest,web/dashboard/src/lib/keyConsumers.ts,35,keycore|GET|/keys/{param}/consumers
-keycore,keycore,GET,/scheduling/jobs,/scheduling/jobs,False,trackedFetch,web/dashboard/src/lib/keyScheduling.ts,7,keycore|GET|/scheduling/jobs
-keycore,keycore,POST,/scheduling/jobs,/scheduling/jobs,False,trackedFetch,web/dashboard/src/lib/keyScheduling.ts,15,keycore|POST|/scheduling/jobs
-keycore,keycore,PATCH,/scheduling/jobs/{param},/scheduling/jobs/{param},True,trackedFetch,web/dashboard/src/lib/keyScheduling.ts,27,keycore|PATCH|/scheduling/jobs/{param}
-keycore,keycore,DELETE,/scheduling/jobs/{param},/scheduling/jobs/{param},True,trackedFetch,web/dashboard/src/lib/keyScheduling.ts,37,keycore|DELETE|/scheduling/jobs/{param}
-keycore,keycore,POST,/keys/{param}/verify-material,/keys/{param}/verify-material,True,trackedFetch,web/dashboard/src/lib/keyVerification.ts,7,keycore|POST|/keys/{param}/verify-material
-keycore,keycore,GET,/keys,/keys,False,trackedFetch,web/dashboard/src/lib/keyVerification.ts,16,keycore|GET|/keys
 keyaccess,keyaccess,GET,/key-access/settings?tenant_id={param},/key-access/settings,True,serviceRequest,web/dashboard/src/lib/keyaccess.ts,77,keyaccess|GET|/key-access/settings
 keyaccess,keyaccess,PUT,/key-access/settings,/key-access/settings,False,serviceRequest,web/dashboard/src/lib/keyaccess.ts,82,keyaccess|PUT|/key-access/settings
 keyaccess,keyaccess,GET,/key-access/summary?tenant_id={param},/key-access/summary,True,serviceRequest,web/dashboard/src/lib/keyaccess.ts,90,keyaccess|GET|/key-access/summary
@@ -456,10 +437,6 @@ reporting,reporting,GET,/reports/jobs/{param}/download?{param},/reports/jobs/{pa
 reporting,reporting,DELETE,/reports/jobs/{param}?{param},/reports/jobs/{param},True,serviceRequest,web/dashboard/src/lib/reporting.ts,452,reporting|DELETE|/reports/jobs/{param}
 reporting,reporting,GET,/reports/scheduled?{param},/reports/scheduled,True,serviceRequest,web/dashboard/src/lib/reporting.ts,458,reporting|GET|/reports/scheduled
 reporting,reporting,POST,/reports/scheduled?{param},/reports/scheduled,True,serviceRequest,web/dashboard/src/lib/reporting.ts,472,reporting|POST|/reports/scheduled
-keycore,keycore,GET,/rotation/analytics,/rotation/analytics,False,trackedFetch,web/dashboard/src/lib/rotationAnalytics.ts,7,keycore|GET|/rotation/analytics
-keycore,keycore,GET,/rotation/runs,/rotation/runs,True,trackedFetch,web/dashboard/src/lib/rotationAnalytics.ts,16,keycore|GET|/rotation/runs
-keycore,keycore,GET,/rotation/analytics/overdue,/rotation/analytics/overdue,False,trackedFetch,web/dashboard/src/lib/rotationAnalytics.ts,22,keycore|GET|/rotation/analytics/overdue
-keycore,keycore,GET,/enterprise/summary,/enterprise/summary,False,trackedFetch,web/dashboard/src/lib/rotationAnalytics.ts,28,keycore|GET|/enterprise/summary
 keycore,keycore,GET,/rotation/policies,/rotation/policies,False,serviceRequest,web/dashboard/src/lib/rotationScheduler.ts,63,keycore|GET|/rotation/policies
 keycore,keycore,POST,/rotation/policies,/rotation/policies,False,serviceRequest,web/dashboard/src/lib/rotationScheduler.ts,68,keycore|POST|/rotation/policies
 keycore,keycore,PATCH,/rotation/policies/{param},/rotation/policies/{param},True,serviceRequest,web/dashboard/src/lib/rotationScheduler.ts,73,keycore|PATCH|/rotation/policies/{param}

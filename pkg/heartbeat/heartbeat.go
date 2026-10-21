@@ -49,14 +49,6 @@ func New(nc *nats.Conn, service, nodeID, version string) *Publisher {
 	}
 }
 
-// SetStateFunc lets the caller plug in a health check so a degraded
-// service can publish "degraded" without becoming silent.
-func (p *Publisher) SetStateFunc(fn func() string) {
-	if fn != nil {
-		p.stateFn = fn
-	}
-}
-
 // Start launches the publish goroutine. Returns immediately; callers
 // should defer Stop. If nc is nil the publisher is a no-op so service
 // code can call Start unconditionally even when NATS is disabled.

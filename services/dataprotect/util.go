@@ -525,20 +525,3 @@ var (
 	regexPAN   = regexp.MustCompile(`\b\d{13,19}\b`)
 	regexName  = regexp.MustCompile(`\b[A-Z][a-z]+ [A-Z][a-z]+\b`)
 )
-
-func sanitizeErrorMessage(v map[string]interface{}) string {
-	errAny, ok := v["error"]
-	if !ok {
-		return "request failed"
-	}
-	errMap, ok := errAny.(map[string]interface{})
-	if !ok {
-		return "request failed"
-	}
-	msg, _ := errMap["message"].(string)
-	msg = strings.TrimSpace(msg)
-	if msg == "" {
-		return "request failed"
-	}
-	return msg
-}

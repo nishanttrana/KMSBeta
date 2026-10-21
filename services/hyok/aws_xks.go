@@ -84,9 +84,6 @@ func parseAWSXKSMetadata(raw string) (AWSXKSMetadata, error) {
 	return m, nil
 }
 
-// xksURIPath is the XksProxyUriPath the customer gives AWS.
-func xksURIPath(prefix string) string { return xksExternalPrefix() + "/xks/" + prefix }
-
 // xksExternalPrefix is the edge path in front of this service (Envoy routes
 // /svc/hyok/ here and rewrites it to /); AWS signs the path it called.
 func xksExternalPrefix() string {

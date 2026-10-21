@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -81,17 +80,3 @@ func (e *GRPCCallbackExecutor) Execute(ctx context.Context, req ApprovalRequest)
 type NoopCallbackExecutor struct{}
 
 func (NoopCallbackExecutor) Execute(_ context.Context, _ ApprovalRequest) error { return nil }
-
-func callbackPayloadFromRaw(raw []byte) (map[string]interface{}, error) {
-	if len(raw) == 0 {
-		return map[string]interface{}{}, nil
-	}
-	var out map[string]interface{}
-	if err := json.Unmarshal(raw, &out); err != nil {
-		return nil, err
-	}
-	if out == nil {
-		return nil, errors.New("callback payload must be object")
-	}
-	return out, nil
-}

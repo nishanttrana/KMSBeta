@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 	pkgaudit "vecta-kms/pkg/audit"
 	"vecta-kms/pkg/route"
@@ -30,7 +29,6 @@ type Service struct {
 	hub                 *feedHub
 	telemetryRetention  time.Duration
 	telemetryPurgeBatch int
-	mu                  sync.Mutex
 }
 
 func NewService(store Store, audit AuditClient, compliance ComplianceClient, posture PostureClient, events route.Emitter) *Service {
@@ -474,41 +472,6 @@ func (s *Service) dispatchChannels(tenantID string, severity string, action stri
 // deliverableChannels keeps only channels reporting actually delivers to:
 // the screen feed.
 func deliverableChannels([]string) []string { return []string{"screen"} }
-
-func channelAllowsSeverity(cfg map[string]interface{}, severity string) bool {
-	if cfg == nil {
-		return true
-	}
-	if includeInfo, ok := cfg["include_info"]; ok && !extractBool(includeInfo) && severity == severityInfo {
-		return false
-	}
-	raw, ok := cfg["severity_filter"]
-	if !ok {
-		return true
-	}
-	switch x := raw.(type) {
-	case []interface{}:
-		allowed := []string{}
-		for _, v := range x {
-			allowed = append(allowed, strings.ToLower(firstString(v)))
-		}
-		for _, a := range allowed {
-			if a == severity {
-				return true
-			}
-		}
-		return false
-	case []string:
-		for _, a := range x {
-			if strings.ToLower(strings.TrimSpace(a)) == severity {
-				return true
-			}
-		}
-		return false
-	default:
-		return true
-	}
-}
 
 func (s *Service) attachIncident(ctx context.Context, tenantID string, title string, severity string, at time.Time) (string, error) {
 	incidents, err := s.store.ListIncidents(ctx, tenantID, 100, 0)

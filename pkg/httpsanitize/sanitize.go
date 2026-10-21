@@ -15,15 +15,6 @@ func HeaderValue(v string) string {
 	return v
 }
 
-// LogValue strips CR, LF, and null bytes and replaces them with a safe
-// placeholder to prevent log injection / log forgery attacks.
-func LogValue(v string) string {
-	v = strings.ReplaceAll(v, "\r", "\\r")
-	v = strings.ReplaceAll(v, "\n", "\\n")
-	v = strings.ReplaceAll(v, "\x00", "\\0")
-	return v
-}
-
 // ContentDispositionFilename sanitizes a filename for use in a
 // Content-Disposition header, removing path separators and control characters.
 func ContentDispositionFilename(name string) string {

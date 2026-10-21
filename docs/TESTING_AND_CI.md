@@ -16,7 +16,7 @@ pull request.
 | Go tests — FIPS mode off / on / only | the whole suite in each customer-selectable FIPS mode, on the certified module, with SoftHSM and a JDK required |
 | Go tests — FIPS mode off, JCA step | `mvn verify` on `services/jca-provider`, the pom the SDK ships, built as a customer builds it (13.40.0-beta) |
 | Go tests — race detector | the whole suite under `-race` (13.8.0-beta) |
-| Backend RuntimeCfg/Vet/Test/Security | runtime config validation, `scripts/conformance.sh`, `go vet`, every test run twice (`-count=2`), the suite with no network, `govulncheck` |
+| Backend RuntimeCfg/Vet/Test/Security | runtime config validation, `scripts/conformance.sh`, `go vet`, every test run twice (`-count=2`), the suite with no network, `govulncheck`, no unreachable code (`scripts/check-dead-code.sh`) |
 | Integration tests (Postgres) | storage behaviour SQLite cannot prove, a real NATS, an AWS KMS emulator (LocalStack) for BYOK, a real Envoy |
 | Cluster replication and failover (three-node Postgres) | joining, replication, election, re-subscription, switchover and fencing between three databases |
 | Helm chart | the chart matches docker-compose.yml, lints, and renders manifests valid for Kubernetes 1.31 (`scripts/check-helm-chart.sh`); the install itself is `scripts/test-helm-kind.sh`, run locally with built images |
@@ -29,7 +29,18 @@ pair kube-apiserver and real plugins use; no cluster is needed.
 
 Before pushing, run the backend job's steps in order: `check-runtimecfg.sh`,
 `scripts/conformance.sh`, `go vet ./...`, the tests, `scripts/test-hermetic.sh`
-and `govulncheck ./...` (13.35.0-beta: skipping the first turned CI red).
+and `govulncheck ./...` (13.35.0-beta: skipping the first turned CI red),
+then `scripts/check-dead-code.sh`.
+
+### No unreachable code
+
+`scripts/check-dead-code.sh` (13.41.0-beta) fails on any function that no
+main and no test reaches (`deadcode -test`) and on any unused type,
+variable, constant or field (`staticcheck -checks U1000`). Both tools are
+installed at pinned versions. It skips `node_modules`, where a dashboard
+dependency ships Go sources. Code with no caller is removed; a check with no
+caller is first read as a possible unenforced control (learning.md,
+2026-10-22).
 
 `tests/no-crash.spec.ts` (13.31.0-beta) opens every module and sidebar
 sub-option, read from `shellNav.ts` and `SUB_PANES`, twice: with every

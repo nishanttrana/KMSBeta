@@ -4,8 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
-	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -32,14 +30,6 @@ func newServiceError(status int, code string, message string) serviceError {
 		Message:    strings.TrimSpace(message),
 		HTTPStatus: status,
 	}
-}
-
-func httpStatusForErr(err error) int {
-	var svcErr serviceError
-	if errors.As(err, &svcErr) {
-		return svcErr.HTTPStatus
-	}
-	return http.StatusInternalServerError
 }
 
 func newID(prefix string) string {

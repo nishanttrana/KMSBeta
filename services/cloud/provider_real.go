@@ -32,27 +32,6 @@ func newRealProviderRegistry() *ProviderRegistry {
 	return r
 }
 
-type unsupportedProvider struct {
-	name   string
-	reason string
-}
-
-func newUnsupportedProvider(name string, reason string) *unsupportedProvider {
-	return &unsupportedProvider{name: normalizeProvider(name), reason: strings.TrimSpace(reason)}
-}
-
-func (p *unsupportedProvider) Name() string { return p.name }
-
-func (p *unsupportedProvider) DefaultRegion() string { return "global" }
-
-func (p *unsupportedProvider) SyncBinding(_ context.Context, _ SyncInput) (ImportResult, error) {
-	return ImportResult{}, errors.New(defaultString(p.reason, "provider is not available"))
-}
-
-func (p *unsupportedProvider) Inventory(_ context.Context, _ InventoryInput) ([]InventoryItem, error) {
-	return nil, errors.New(defaultString(p.reason, "provider is not available"))
-}
-
 type awsProvider struct{}
 
 func newAWSProvider() *awsProvider { return &awsProvider{} }

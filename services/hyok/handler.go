@@ -12,7 +12,6 @@ import (
 
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/route"
-	"vecta-kms/pkg/tenantcheck"
 )
 
 type JWTParser func(token string) (*pkgauth.Claims, error)
@@ -518,23 +517,6 @@ func requestID(r *http.Request) string {
 		return id
 	}
 	return newID("req")
-}
-
-func mustTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
-	tenantID := strings.TrimSpace(r.URL.Query().Get("tenant_id"))
-	if tenantID == "" {
-		tenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-	}
-	if tenantID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required (query or X-Tenant-ID)", reqID, "")
-		return ""
-	}
-	// A01 fix: verify the request tenant matches the authenticated JWT tenant
-	if err := tenantcheck.Enforce(r, tenantID); err != nil {
-		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
-		return ""
-	}
-	return tenantID
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload map[string]interface{}) {

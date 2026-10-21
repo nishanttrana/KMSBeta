@@ -81,13 +81,6 @@ func mustJSON(v interface{}, fallback string) string {
 	return string(raw)
 }
 
-func nullableTime(v time.Time) interface{} {
-	if v.IsZero() {
-		return nil
-	}
-	return v.UTC()
-}
-
 func firstNonEmpty(values ...string) string {
 	for _, v := range values {
 		if strings.TrimSpace(v) != "" {
@@ -119,26 +112,6 @@ func defaultString(v string, d string) string {
 		return d
 	}
 	return strings.TrimSpace(v)
-}
-
-func extractInt(v interface{}) int {
-	switch x := v.(type) {
-	case int:
-		return x
-	case int32:
-		return int(x)
-	case int64:
-		return int(x)
-	case float64:
-		return int(x)
-	case float32:
-		return int(x)
-	case string:
-		n, _ := strconv.Atoi(strings.TrimSpace(x))
-		return n
-	default:
-		return 0
-	}
 }
 
 func extractBool(v interface{}) bool {

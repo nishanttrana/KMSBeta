@@ -28,9 +28,16 @@ type KeycoreSource struct {
 // NewKeycoreSource returns the source for service (Catalog key) at keycore's
 // base URL. The keycore purpose is "<service>-mek".
 func NewKeycoreSource(baseURL string, st ServiceTables) *KeycoreSource {
+	return NewKeycorePurposeSource(baseURL, st.Service+"-mek")
+}
+
+// NewKeycorePurposeSource returns a source for the calling service's system
+// key of purpose: a service key that protects something other than stored
+// rows (dataprotect's wrapper token signing key).
+func NewKeycorePurposeSource(baseURL, purpose string) *KeycoreSource {
 	return &KeycoreSource{
 		baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
-		purpose: st.Service + "-mek",
+		purpose: purpose,
 		tenant:  tenantcheck.InternalServiceTenant(),
 		client:  &http.Client{Timeout: 10 * time.Second},
 	}

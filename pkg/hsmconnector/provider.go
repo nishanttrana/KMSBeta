@@ -23,11 +23,6 @@ import (
 
 var errExists = errors.New("an object with this label already exists in the HSM")
 
-type slotKey struct {
-	library string
-	slot    uint
-}
-
 type module struct {
 	ctx      *pkcs11.Ctx
 	mu       sync.Mutex

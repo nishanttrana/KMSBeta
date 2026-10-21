@@ -75,19 +75,6 @@ func normalizeSeverity(v string) string {
 	}
 }
 
-func severityRank(v string) int {
-	switch normalizeSeverity(v) {
-	case severityCritical:
-		return 4
-	case severityHigh:
-		return 3
-	case severityWarning:
-		return 2
-	default:
-		return 1
-	}
-}
-
 func statusToSeverity(result string) string {
 	switch strings.ToLower(strings.TrimSpace(result)) {
 	case "failure", "failed", "error":

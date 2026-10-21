@@ -1,11 +1,7 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"math"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -168,39 +164,3 @@ func (h *Handler) handleVerifyKeyMaterial(w http.ResponseWriter, r *http.Request
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"result": res, "request_id": reqID})
 }
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-func advParseInt(s string) int {
-	n, _ := strconv.Atoi(s)
-	return n
-}
-
-func advHashContext(s string) string {
-	h := sha256.Sum256([]byte(s))
-	return hex.EncodeToString(h[:])
-}
-
-func advPercentile95(values []int64) int64 {
-	if len(values) == 0 {
-		return 0
-	}
-	idx := int(math.Ceil(0.95*float64(len(values)))) - 1
-	if idx >= len(values) {
-		idx = len(values) - 1
-	}
-	return values[idx]
-}
-
-func coalesceStrSlice(s []string) []string {
-	if s == nil {
-		return []string{}
-	}
-	return s
-}
-
-// Store interface additions required by handler_advanced.go
-// These are implemented in store_advanced.go.
-var _ = (*SQLStore)(nil)
-var _ = advParseInt
-var _ = advPercentile95

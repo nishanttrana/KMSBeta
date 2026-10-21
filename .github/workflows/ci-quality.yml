@@ -340,3 +340,8 @@ jobs:
 
       - name: govulncheck
         run: govulncheck ./...
+
+      # No code that nothing calls, not even a test (13.41.0-beta): dead code
+      # hid a client IP allow-list that was stored and never checked.
+      - name: No unreachable code
+        run: scripts/check-dead-code.sh

@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"net/http"
 	"sort"
 	"strconv"
 	"strings"
@@ -30,17 +29,6 @@ func (e serviceError) Error() string {
 
 func newServiceError(status int, code string, message string) serviceError {
 	return serviceError{Code: strings.TrimSpace(code), Message: strings.TrimSpace(message), HTTPStatus: status}
-}
-
-func httpStatusForErr(err error) int {
-	var svcErr serviceError
-	if errors.As(err, &svcErr) {
-		return svcErr.HTTPStatus
-	}
-	if errors.Is(err, errNotFound) {
-		return http.StatusNotFound
-	}
-	return http.StatusInternalServerError
 }
 
 func newID(prefix string) string {
@@ -121,13 +109,6 @@ func parseTimeString(raw string) time.Time {
 		}
 	}
 	return time.Time{}
-}
-
-func nullableTime(v time.Time) interface{} {
-	if v.IsZero() {
-		return nil
-	}
-	return v.UTC()
 }
 
 func boolValue(v interface{}) bool {

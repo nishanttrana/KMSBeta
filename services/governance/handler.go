@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"vecta-kms/pkg/route"
 
@@ -993,11 +992,6 @@ func requestID(r *http.Request) string {
 		return id
 	}
 	return newID("req")
-}
-
-func atoi(v string) int {
-	n, _ := strconv.Atoi(strings.TrimSpace(v))
-	return n
 }
 
 func writeJSON(w http.ResponseWriter, code int, payload map[string]interface{}) {

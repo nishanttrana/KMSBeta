@@ -103,6 +103,27 @@ Audit events: `kdf_migration_started`, `kdf_vault_reprotected`,
 `kdf_migration_completed`, `kdf_migration_aborted` (all
 `audit.dataprotect.*`), plus keycore's `audit.key.service_derive`.
 
+## Wrapper token signing key (13.41.0-beta)
+
+The token a field-encryption wrapper receives at registration (scopes
+`field-encryption:lease`, `:receipt`, `:local-crypto`,
+`field-protection:resolve`) is an HS256 JWT. Until 13.41.0-beta its key was
+`DATAPROTECT_WRAPPER_JWT_SECRET` or `JWT_SECRET`, and when neither was set
+(every deployment) HKDF over `tenant|wrapper|app`: identifiers, so anyone
+who knew them could sign a token.
+
+The key now comes from keycore: dataprotect's system key for purpose
+`wrapper-token` (`POST /system-keys/ensure`), derived through
+`POST /keys/{id}/service-derive` bound to kms-dataprotect
+(`services/dataprotect/wrapper_token_key.go`). New tokens are signed with
+the current version and carry it as `kid`; a token is verified with the
+version it names, so tokens issued before a rotation stay valid until they
+expire. When keycore can't be reached, registration and every wrapper route
+answer 503 `keycore_unavailable`. Neither environment variable is read any
+more. Tests: `TestWrapperTokenSignedFromIdentifiersIsRefused`,
+`TestWrapperTokenOutlivesSigningKeyRotation`,
+`TestWrapperTokenFailsClosedWithoutKeycore`.
+
 ## Known limitations
 
 - **Vault rows unreadable before the migration:** under v1 the key followed

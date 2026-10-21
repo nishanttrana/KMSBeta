@@ -39,8 +39,6 @@ const (
 	mtlsFileInstance  = "certs-files"
 )
 
-var errMTLSNotFound = errors.New("not found")
-
 type mtlsPolicyRow struct {
 	Identity          string    `json:"identity"`
 	KeyAlgorithm      string    `json:"key_algorithm"`

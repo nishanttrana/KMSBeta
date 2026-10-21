@@ -60,11 +60,6 @@ func normalizeDBEngine(v string) string {
 	}
 }
 
-func isSQLServerEngine(v string) bool {
-	e := normalizeDBEngine(v)
-	return e == "mssql"
-}
-
 // isSupportedTDEEngine returns true for all database engines that support TDE key management.
 func isSupportedTDEEngine(v string) bool {
 	switch normalizeDBEngine(v) {
@@ -470,14 +465,6 @@ func mapFloatAny(m map[string]interface{}, keys ...string) float64 {
 		}
 	}
 	return 0
-}
-
-func intParam(v string, fallback int) int {
-	n, err := strconv.Atoi(strings.TrimSpace(v))
-	if err != nil || n <= 0 {
-		return fallback
-	}
-	return n
 }
 
 func mapInt64Any(m map[string]interface{}, keys ...string) int64 {

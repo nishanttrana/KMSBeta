@@ -175,16 +175,6 @@ func firstString(values ...interface{}) string {
 	return ""
 }
 
-func parseStringSliceJSON(raw string) []string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return nil
-	}
-	var out []string
-	_ = json.Unmarshal([]byte(raw), &out)
-	return out
-}
-
 func mustJSON(v interface{}, fallback string) string {
 	raw, err := json.Marshal(v)
 	if err != nil || len(raw) == 0 {

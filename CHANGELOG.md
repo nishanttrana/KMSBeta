@@ -4,6 +4,67 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.41.0-beta] — 2026-10-22
+
+### Security
+- **Field-encryption wrapper tokens are signed with a secret key.** When
+  `DATAPROTECT_WRAPPER_JWT_SECRET` (or `JWT_SECRET`) was unset, and no
+  installer or compose file ever set it, dataprotect signed a wrapper's
+  token with a key derived from the wrapper's tenant, wrapper and app IDs.
+  Anyone who knew those identifiers could sign a token for the wrapper's
+  lease, receipt and policy-resolve routes. The key now comes from a
+  keycore system key (`wrapper-token`, through `service-derive` bound to
+  kms-dataprotect), and a token names its key version in `kid`, so tokens
+  outlive a rotation. Without keycore, tokens are neither issued nor accepted
+  (503 `keycore_unavailable`). Both environment variables are no longer read.
+  Tokens issued before this release stop verifying; wrappers get a new one
+  when they next register, as they already do every hour
+  (`TestWrapperTokenSignedFromIdentifiersIsRefused`,
+  `TestWrapperTokenOutlivesSigningKeyRotation`,
+  `TestWrapperTokenFailsClosedWithoutKeycore`).
+- **A REST client's `ip_whitelist` is enforced.** It was accepted on
+  activation and `PUT /auth/clients/{id}`, stored and shown in the REST API
+  tab, but nothing checked it. `POST /auth/client-token` now refuses (403
+  `ip_not_allowed`) an exchange from an address outside the list, and an
+  entry that is neither an address nor a CIDR is refused when saved (400)
+  instead of being stored (`TestClientIPAllowListEnforcedAtTokenExchange`,
+  `TestClientIPAllowListRefusesMalformedEntries`). A token, once issued, is
+  not bound to the address; use a sender-constrained `auth_mode` for that.
+- **Every client-token refusal is audited** as
+  `audit.auth.client_token_refused` (`code`, `reason`, `source_ip`): missing,
+  wrong or expired API key, a key for another client, an unknown or
+  unapproved registration, a changed subject or interface, no permitted
+  scope, an address outside the allow-list (`TestClientTokenRefusalsAudited`).
+- **Removed from the repository:** a 27 MB prebuilt `ekm-agent.exe` committed
+  by mistake in 13.33.0-beta (an unsigned binary nobody can trace to a
+  commit; build it with `services/ekm-agent`), and
+  `backups/cert-migration-cleanup-20260223-114851.sql`, a pg_dump of a
+  development database's `cert_cas` (seven CAs with their wrapped signing
+  keys) and `cert_certificates`. Both are ignored from now on. They remain in
+  git history.
+
+### Removed
+- Code nothing called, not even a test: the packages `pkg/dbrotation`,
+  `pkg/health`, `pkg/otel`, `pkg/rotation`, `pkg/sshca` and
+  `pkg/logsanitize`; the payment primitives left behind when Payments moved
+  to KMS Extension (TDES, PIN blocks, CVV, PVV; `pkg/payment` keeps TR-31
+  parsing); the usage meter and its store in `pkg/metering`; the bulkhead
+  and breaker registry in `pkg/resilience`; a self-signed mTLS config in
+  `pkg/crypto`; KMIP's TLS-peer principal and unused TTLV codec; an
+  unrouted EKM file-download handler. In all, 163 functions (79 of them
+  in 24 services) and 40 types, variables and fields. 6,000 lines of Go and
+  seven direct modules (the Prometheus client and six OpenTelemetry modules) are
+  gone. The services' behaviour does not change: Go's linker already left
+  unreachable code out of the binaries.
+- Dashboard files nothing imported: the Artifact Signing, Autokey and Key
+  Access tabs (no module or route rendered them), `components/primitives.tsx`
+  and eight `lib/` helpers (1,877 lines).
+
+### CI
+- `scripts/check-dead-code.sh` (backend job): fails on any function, type,
+  variable or constant unreachable from every main and every test
+  (`deadcode -test`, `staticcheck -checks U1000`, both pinned).
+
 ## [13.40.0-beta] — 2026-10-22
 
 ### Security

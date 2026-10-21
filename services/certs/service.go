@@ -31,9 +31,10 @@ import (
 
 	pkgcrypto "vecta-kms/pkg/crypto"
 
+	"vecta-kms/pkg/mek"
+
 	"golang.org/x/crypto/ocsp"
 	pkcs12 "software.sslmate.com/src/go-pkcs12"
-	"vecta-kms/pkg/mek"
 )
 
 var (
@@ -2748,20 +2749,6 @@ func (s *Service) ensureRuntimeRootCA(ctx context.Context, tenantID string, name
 	return CA{}, err
 }
 
-func (s *Service) ensureRuntimeEndpointCert(ctx context.Context, tenantID string, ca CA, outDir string, algorithm string, certType string, cn string, sans []string, validityDays int64, renewBefore time.Duration, chainPEM string) error {
-	if err := os.MkdirAll(outDir, 0o700); err != nil {
-		return err
-	}
-	// Also reissued when the key on disk isn't the one asked for: until
-	// 1.16.0-beta an "RSA-3072" request got a 2048-bit key (generateKeyFor).
-	certPath := filepath.Join(outDir, "tls.crt")
-	if !runtimeCertNeedsRenew(certPath, filepath.Join(outDir, "tls.key"), renewBefore) && sameKeyLabel(fileKeyAlgorithm(certPath), algorithm) {
-		return nil
-	}
-	_, err := s.writeRuntimeEndpointCert(ctx, tenantID, ca, outDir, algorithm, certType, cn, sans, validityDays, chainPEM)
-	return err
-}
-
 // writeRuntimeEndpointCert issues a certificate with a server-generated key
 // and writes tls.crt (with chainPEM) and tls.key into outDir.
 func (s *Service) writeRuntimeEndpointCert(ctx context.Context, tenantID string, ca CA, outDir string, algorithm string, certType string, cn string, sans []string, validityDays int64, chainPEM string) (Certificate, error) {
@@ -2970,18 +2957,6 @@ func parseSignerPEM(raw []byte) (crypto.Signer, error) {
 		return key, nil
 	}
 	return nil, errors.New("unsupported private key type")
-}
-
-func normalizePrivateKeyToPKCS8PEM(raw string) (string, error) {
-	signer, err := parseSignerPEM([]byte(raw))
-	if err != nil {
-		return "", err
-	}
-	der, err := x509.MarshalPKCS8PrivateKey(signer)
-	if err != nil {
-		return "", err
-	}
-	return string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der})), nil
 }
 
 func parseAnyPrivateKeyPEM(raw string) (crypto.Signer, error) {

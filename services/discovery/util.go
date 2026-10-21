@@ -83,39 +83,6 @@ func extractInt(v interface{}) int {
 	}
 }
 
-func extractBool(v interface{}) bool {
-	switch x := v.(type) {
-	case bool:
-		return x
-	case int:
-		return x != 0
-	case float64:
-		return x != 0
-	case string:
-		s := strings.ToLower(strings.TrimSpace(x))
-		return s == "1" || s == "true" || s == "yes"
-	default:
-		return false
-	}
-}
-
-func extractFloat(v interface{}) float64 {
-	switch x := v.(type) {
-	case float64:
-		return x
-	case float32:
-		return float64(x)
-	case int:
-		return float64(x)
-	case int64:
-		return float64(x)
-	case string:
-		return float64(atoi(strings.TrimSpace(x)))
-	default:
-		return 0
-	}
-}
-
 func firstString(values ...interface{}) string {
 	for _, v := range values {
 		switch x := v.(type) {
@@ -188,23 +155,6 @@ func parseJSONObject(v string) map[string]interface{} {
 	return out
 }
 
-func uniqueStrings(in []string) []string {
-	seen := map[string]struct{}{}
-	out := make([]string, 0, len(in))
-	for _, s := range in {
-		s = strings.TrimSpace(strings.ToLower(s))
-		if s == "" {
-			continue
-		}
-		if _, ok := seen[s]; ok {
-			continue
-		}
-		seen[s] = struct{}{}
-		out = append(out, s)
-	}
-	return out
-}
-
 func pct(n int, d int) float64 {
 	if d <= 0 {
 		return 0
@@ -228,25 +178,6 @@ func normalizeAlgorithm(v string) string {
 // service kept its own lists: RSA-4096
 // and ECDSA were "strong", SLH-DSA was not post-quantum, and hybrids counted
 // as pure PQC.
-
-// isPQCAlgorithm: a post-quantum scheme (ML-KEM, ML-DSA, SLH-DSA, LMS/XMSS) that
-// is not a hybrid.
-func isPQCAlgorithm(alg string) bool {
-	e, ok := cryptocatalog.Lookup(alg)
-	return ok && e.PostQuantum && !e.Hybrid
-}
-
-func isHybridAlgorithm(alg string) bool {
-	e, ok := cryptocatalog.Lookup(alg)
-	return ok && e.Hybrid
-}
-
-// isDeprecatedAlgorithm: weak today (broken, below 112 bits, or an unsafe
-// mode).
-func isDeprecatedAlgorithm(alg string) bool {
-	e, ok := cryptocatalog.Lookup(alg)
-	return ok && e.Weak
-}
 
 // algorithmQSL is 100 when the algorithm is neither weak nor broken by a
 // quantum computer, else 0 (including when not assessed). It replaced
@@ -283,8 +214,7 @@ func assetDeterministicID(tenantID string, source string, assetType string, name
 }
 
 var (
-	reAKIA       = regexp.MustCompile(`\bAKIA[0-9A-Z]{16}\b`)
-	rePrivateKey = regexp.MustCompile(`(?i)-----BEGIN (RSA|EC|OPENSSH|PRIVATE) KEY-----`)
+	reAKIA = regexp.MustCompile(`\bAKIA[0-9A-Z]{16}\b`)
 	// reHexSecret: a long hex value assigned to a name that says it is a
 	// secret (SECRET_KEY=..., "api_token": "..."). Before 7.20.0-beta any
 	// 32+ hex characters matched, which called every digest and commit ID
