@@ -57,6 +57,19 @@ type Store interface {
 	ListAccessRules(ctx context.Context, tenantID string) ([]AccessRule, error)
 	CreateAccessRule(ctx context.Context, rule AccessRule) error
 	DeleteAccessRule(ctx context.Context, tenantID string, ruleID string) (AccessRule, error)
+
+	// Dynamic database credentials (dbengine.go).
+	PutDBRole(ctx context.Context, r DBRole) error
+	GetDBRole(ctx context.Context, tenantID, name string) (DBRole, error)
+	ListDBRoles(ctx context.Context, tenantID string) ([]DBRole, error)
+	DeleteDBRole(ctx context.Context, tenantID, name string) error
+	CreateDBLease(ctx context.Context, l DBLease) error
+	GetDBLease(ctx context.Context, tenantID, id string) (DBLease, error)
+	ListDBLeases(ctx context.Context, tenantID, role string, limit int) ([]DBLease, error)
+	CountActiveDBLeases(ctx context.Context, tenantID, role string) (int, error)
+	SetDBLeaseExpiry(ctx context.Context, tenantID, id string, expires time.Time) error
+	EndDBLease(ctx context.Context, tenantID, id, state, lastError string, endedAt *time.Time) error
+	DueDBLeases(ctx context.Context, now time.Time, limit int) ([]DBLease, error)
 }
 
 type SQLStore struct {

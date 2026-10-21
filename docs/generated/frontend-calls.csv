@@ -503,6 +503,13 @@ secrets,secrets,GET,/secrets/{param}/versions?tenant_id={param},/secrets/{param}
 secrets,secrets,GET,/secrets/{param}/audit?tenant_id={param}&limit={param},/secrets/{param}/audit,True,serviceRequest,web/dashboard/src/lib/secrets.ts,350,secrets|GET|/secrets/{param}/audit
 secrets,secrets,POST,/secrets/{param}/rotate?tenant_id={param},/secrets/{param}/rotate,True,serviceRequest,web/dashboard/src/lib/secrets.ts,360,secrets|POST|/secrets/{param}/rotate
 secrets,secrets,POST,/secrets/generate/keypair,/secrets/generate/keypair,False,serviceRequest,web/dashboard/src/lib/secrets.ts,381,secrets|POST|/secrets/generate/keypair
+secrets,secrets,GET,/secrets/database/roles?{param},/secrets/database/roles,True,serviceRequest,web/dashboard/src/lib/secretsDatabase.ts,39,secrets|GET|/secrets/database/roles
+secrets,secrets,GET,/secrets/database/roles/{param}?{param},/secrets/database/roles/{param},True,serviceRequest,web/dashboard/src/lib/secretsDatabase.ts,45,secrets|GET|/secrets/database/roles/{param}
+secrets,secrets,DELETE,/secrets/database/roles/{param}?{param},/secrets/database/roles/{param},True,serviceRequest,web/dashboard/src/lib/secretsDatabase.ts,50,secrets|DELETE|/secrets/database/roles/{param}
+secrets,secrets,GET,/secrets/database/roles/{param}/creds?{param},/secrets/database/roles/{param}/creds,True,serviceRequest,web/dashboard/src/lib/secretsDatabase.ts,54,secrets|GET|/secrets/database/roles/{param}/creds
+secrets,secrets,GET,/secrets/database/leases?{param},/secrets/database/leases,True,serviceRequest,web/dashboard/src/lib/secretsDatabase.ts,58,secrets|GET|/secrets/database/leases
+secrets,secrets,GET,/secrets/database/leases/{param}/renew?{param},/secrets/database/leases/{param}/renew,True,serviceRequest,web/dashboard/src/lib/secretsDatabase.ts,64,secrets|GET|/secrets/database/leases/{param}/renew
+secrets,secrets,GET,/secrets/database/leases/{param}/revoke?{param},/secrets/database/leases/{param}/revoke,True,serviceRequest,web/dashboard/src/lib/secretsDatabase.ts,69,secrets|GET|/secrets/database/leases/{param}/revoke
 signing,signing,GET,/signing/settings?tenant_id={param},/signing/settings,True,serviceRequest,web/dashboard/src/lib/signing.ts,84,signing|GET|/signing/settings
 signing,signing,PUT,/signing/settings,/signing/settings,False,serviceRequest,web/dashboard/src/lib/signing.ts,89,signing|PUT|/signing/settings
 signing,signing,GET,/signing/summary?tenant_id={param},/signing/summary,True,serviceRequest,web/dashboard/src/lib/signing.ts,97,signing|GET|/signing/summary

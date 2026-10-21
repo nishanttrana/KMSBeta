@@ -43,6 +43,11 @@ export const SUB_PANES: Record<string, SubPane[]> = {
     { id: "dataenc", label: "Data Encryption", hint: "Field-level, envelope, searchable and FPE crypto", icon: Database, feature: "data_protection" },
     { id: "hyok-test", label: "HYOK Live Test", hint: "Interactive HYOK crypto test console for all protocols", icon: Zap }
   ],
+  // Database credentials are short-lived logins (13.34.0-beta).
+  vault: [
+    { id: "secrets", label: "Secrets", hint: "Stored secrets, deleted secrets and access rules", icon: KeyRound },
+    { id: "database", label: "Database credentials", hint: "Short-lived PostgreSQL logins", icon: Database }
+  ],
   dataprotection: [
     { id: "fieldenc", label: "Field Encryption", hint: "Wrapper registration, challenge-response and local crypto lease control", icon: KeyRound, feature: "data_protection" },
     { id: "dataenc-policy", label: "Data Encryption Policy", hint: "Policy controls only for data encryption interfaces", icon: List, feature: "data_protection" },

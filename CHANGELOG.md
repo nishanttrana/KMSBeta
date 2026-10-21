@@ -4,6 +4,21 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.34.0-beta] — 2026-10-21
+
+### Added
+- **Dynamic database credentials.** The Secret Vault issues short-lived
+  PostgreSQL logins: a role names a database administrator credential
+  (Playbooks → Credentials, type `database`) and the SQL that creates and
+  drops a login; each request gets a new login and password valid for its
+  lease, returned once and never stored. Leases renew up to the role's
+  maximum, revoke on request, and expire through a sweep that drops the
+  login. Connections are TLS 1.3 with the server verified, through the
+  SSRF guard. Vault/OpenBao clients can use `GET /v1/database/creds/{role}`
+  and `/v1/sys/leases/renew|revoke`. Console: **Secret Vault → Database
+  credentials** (the vault's views are now sidebar sub-options). Tested
+  against a real PostgreSQL that checks passwords (docs/DATABASE_CREDENTIALS.md).
+
 ## [13.33.0-beta] — 2026-10-21
 
 ### Added

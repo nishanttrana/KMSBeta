@@ -5,6 +5,14 @@ Newest entries on top.
 
 ## 2026-10-21
 
+### A test server that accepts anything proves nothing (13.34.0-beta)
+- The disposable Postgres used elsewhere runs with trust authentication,
+  where any password logs in, so "the issued login works" would have passed
+  with a wrong password. The database credential test runs on a server with
+  a password (scram) and asserts that a wrong password is refused before it
+  trusts the right one. **A test of a credential first proves the server
+  checks it.**
+
 ### A shared client nobody had pointed at the real server (13.33.0-beta)
 - `pkg/agentauth` had a JWT exchange whose request and response matched no
   route in auth, and a fallback that sent the API key on every request to

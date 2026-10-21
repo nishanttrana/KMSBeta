@@ -23,6 +23,8 @@ const (
 	categoryCloud = "cloud"
 	// categoryMail: an SMTP relay (governance approval and alert mail).
 	categoryMail = "mail"
+	// categoryDatabase: a database the secret vault issues logins on.
+	categoryDatabase = "database"
 	// categoryHSM: a PKCS#11 HSM that holds keys (hsm-connector). The HSM
 	// that protects the KMS's own keys, its root of trust, is the tenant's
 	// profile in the HSM tab and is not a credential here.
@@ -59,6 +61,13 @@ var credentialTypes = []ConnectionSpec{
 	// in A-Z and 2-7, 20 to 30 characters, and a secret of 43 to 64.
 	{Type: "aws_xks", Label: "AWS KMS external key store (XKS proxy credential)", Category: categoryCloud, Use: "HYOK: AWS XKS",
 		Fields: []string{"access_key_id", "secret_access_key"}, Secrets: []string{"secret_access_key"}},
+	// A PostgreSQL administrator the secret vault creates short-lived logins
+	// with. The host is checked like any outbound address; the vault
+	// connects with TLS, verifying the server against ca_pem or the system
+	// roots.
+	{Type: "database", Label: "PostgreSQL administrator (dynamic credentials)", Category: categoryDatabase, Use: "Secret Vault: dynamic database credentials",
+		Fields: []string{"host", "database", "username", "password"}, Optional: []string{"port", "ca_pem"},
+		HostField: "host", Secrets: []string{"password"}},
 	// A mail relay speaks SMTP, not HTTPS: the host is checked like any
 	// outbound address and governance requires TLS before it authenticates.
 	{Type: "smtp", Label: "SMTP mail relay", Category: categoryMail, Use: "Governance mail",
@@ -77,9 +86,10 @@ var credentialTypes = []ConnectionSpec{
 // open (connectionUsers maps a service identity to its use). A type absent
 // from a use's list is refused with connection_use_unsupported.
 var credentialUseTypes = map[string][]string{
-	"cloud_account": {"aws", "azure", "gcp", "oci", "alibaba", "salesforce", "servicenow"},
-	"hsm_session":   {"pkcs11_hsm"},
-	"xks_proxy":     {"aws_xks"},
+	"cloud_account":   {"aws", "azure", "gcp", "oci", "alibaba", "salesforce", "servicenow"},
+	"hsm_session":     {"pkcs11_hsm"},
+	"xks_proxy":       {"aws_xks"},
+	"database_engine": {"database"},
 }
 
 // publicFields are returned as a credential's attributes.
@@ -90,6 +100,7 @@ var publicFields = map[string][]string{
 	"oci":        {"region"},
 	"alibaba":    {"region"},
 	"smtp":       {"port", "from"},
+	"database":   {"port", "database", "username"},
 	"pkcs11_hsm": {"slot_id", "token_label", "topology", "vendor"},
 }
 
@@ -124,6 +135,15 @@ func validateCredential(c Connection, allow ssrfguard.Allow) error {
 		}
 		if arn := f("role_arn"); arn != "" && !reIAMRole.MatchString(arn) {
 			return errors.New("role_arn must be an IAM role ARN (arn:aws:iam::123456789012:role/name)")
+		}
+	case "database":
+		if p := f("port"); p != "" {
+			if n, err := strconv.Atoi(p); err != nil || n < 1 || n > 65535 {
+				return errors.New("port must be a number between 1 and 65535")
+			}
+		}
+		if ca := f("ca_pem"); ca != "" && !strings.Contains(ca, "BEGIN CERTIFICATE") {
+			return errors.New("ca_pem must be a CA certificate in PEM")
 		}
 	case "aws_xks":
 		if !reXKSAccessKeyID.MatchString(f("access_key_id")) {

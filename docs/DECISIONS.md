@@ -7,6 +7,24 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-21 — Dynamic database credentials: templates of generated values, verified TLS only
+**Decision:** roles carry SQL templates whose placeholders are filled only
+with values the vault generates, quoted for their position; connections to
+customer databases are TLS 1.3 with the certificate and host verified and
+no plaintext fallback; the admin credential lives in the credential store.
+PostgreSQL first.
+**Why:** a template is the only way to fit each customer's grant model,
+and filling it only with generated values keeps it from being an injection
+path. `sslmode=require` would encrypt without proving who answers.
+**Rejected:** fixed built-in statements (too narrow); accepting `require`
+or plaintext for convenience; storing passwords so they can be shown again.
+**Enforced:** `TestRenderQuotesEveryValue`,
+`TestStatementTemplatesAreChecked`,
+`TestDatabaseConnectionsVerifyTLSAndRefuseBlockedAddresses`,
+`TestDynamicDatabaseCredentialsPostgres`.
+
+---
+
 ## 2026-10-21 — The Kubernetes KMS plugin is an API client of keycore
 **Decision:** the KMS v2 plugin runs on the customer's control-plane nodes
 and calls keycore's encrypt/decrypt through the edge with an API client's

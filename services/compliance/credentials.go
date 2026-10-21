@@ -187,6 +187,11 @@ func (p platformUsage) Credentials(ctx context.Context, tenantID string, conn Co
 			return nil, err
 		}
 	}
+	if usable("database_engine", conn.Type) && deployed.Has("secrets") {
+		if err := add(p.secretsURL, "/secrets/credential-usage", "database roles"); err != nil {
+			return nil, err
+		}
+	}
 	if usable("xks_proxy", conn.Type) && deployed.Has("hyok_proxy") {
 		if err := add(p.hyokURL, "/hyok/credential-usage", "AWS XKS endpoints"); err != nil {
 			return nil, err

@@ -1060,6 +1060,7 @@ services:
       # them test it; a service the deployment leaves out is not asked.
       CLOUD_URL: https://cloud:8080
       HYOK_URL: https://hyok:8120
+      SECRETS_URL: https://secrets:8020
       HSM_CONNECTOR_URL: https://hsm-connector:8430
       VECTA_DEPLOYED_PROFILES: ${COMPOSE_PROFILES:-}
       HTTP_PORT: "8110"

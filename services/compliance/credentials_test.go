@@ -73,10 +73,11 @@ func TestCredentialResolveAdmitsOnlyTheServiceThatUsesTheType(t *testing.T) {
 		"azure":      hs.conn(t, "azure", map[string]string{"tenant_id": "t", "client_id": "c", "client_secret": "azure-secret-value"}),
 		"pkcs11_hsm": hs.conn(t, "pkcs11_hsm", hsmFields()),
 		"smtp":       hs.conn(t, "smtp", map[string]string{"host": "1.1.1.1", "port": "587", "from": "kms@example.com"}),
+		"database":   hs.conn(t, "database", map[string]string{"host": "1.1.1.1", "database": "app", "username": "admin", "password": "db-secret-value"}),
 		"aws_xks":    hs.conn(t, "aws_xks", map[string]string{"access_key_id": "ABCDEFGHIJKLMNOPQRST234567", "secret_access_key": strings.Repeat("s", 43) + "-secret-value"}),
 	}
 	allowed := map[string][]string{
-		"kms-cloud": {"aws", "azure"}, "kms-hsm": {"pkcs11_hsm"}, "kms-governance": {"smtp"}, "kms-audit": {}, "kms-discovery": {}, "kms-hyok-proxy": {"aws_xks"},
+		"kms-cloud": {"aws", "azure"}, "kms-hsm": {"pkcs11_hsm"}, "kms-governance": {"smtp"}, "kms-audit": {}, "kms-discovery": {}, "kms-hyok-proxy": {"aws_xks"}, "kms-secrets": {"database"},
 	}
 	for client, types := range allowed {
 		for typ, id := range ids {
@@ -484,7 +485,7 @@ func TestEveryCredentialUserHasAServiceIdentity(t *testing.T) {
 	}
 	mains := map[string]string{
 		"kms-audit": "audit", "kms-governance": "governance", "kms-discovery": "discovery",
-		"kms-cloud": "cloud", "kms-hsm": "hsm-connector", "kms-hyok-proxy": "hyok",
+		"kms-cloud": "cloud", "kms-hsm": "hsm-connector", "kms-hyok-proxy": "hyok", "kms-secrets": "secrets",
 	}
 	for id := range connectionUsers {
 		if !strings.Contains(string(auth), `"`+id+`"`) {

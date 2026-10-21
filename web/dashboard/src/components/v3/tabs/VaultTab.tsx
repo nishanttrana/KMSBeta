@@ -23,6 +23,7 @@ import { C } from "../theme";
 import { AccessRules, VaultSettingsCard, VersionCaps } from "./vault/Access";
 import { SecretRow, TypeBadge, VaultApiCard, VaultCharts, VaultTiles } from "./vault/Charts";
 import { SecretDetail } from "./vault/Detail";
+import { DatabaseCredentials } from "./vault/DatabaseCredentials";
 import {
   CATEGORIES, GENERATE_TYPE_OPTIONS, SUPPORTED_TYPES, defaultFormatForType, expiryBucket, fmtAgo,
   getBadge, matchesCategory, safeFileName, secretPath, ttlLabel, ttlToSeconds
@@ -42,7 +43,12 @@ function expiryStatus(s, now) {
 }
 
 /* ── MAIN COMPONENT ── */
-export const VaultTab = ({ session, onToast, onNavigate, searchQuery }: { session: AuthSession | null; onToast?: (m: string) => void; onNavigate?: (tab: string) => void; searchQuery?: { text: string; n: number } | undefined }) => {
+export const VaultTab = (props: { session: AuthSession | null; onToast?: (m: string) => void; onNavigate?: (tab: string) => void; searchQuery?: { text: string; n: number } | undefined; subView?: string }) =>
+  props.subView === "database" && props.session
+    ? <DatabaseCredentials session={props.session} onToast={props.onToast} onNavigate={props.onNavigate} />
+    : <SecretsView {...props} />;
+
+const SecretsView = ({ session, onToast, onNavigate, searchQuery }: { session: AuthSession | null; onToast?: (m: string) => void; onNavigate?: (tab: string) => void; searchQuery?: { text: string; n: number } | undefined }) => {
   const [modal, setModal] = useState(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);

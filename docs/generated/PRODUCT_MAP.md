@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-21T04:22:52Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-21T04:38:05Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -8,14 +8,14 @@ This file is generated from source. Re-run the script after UI or API changes.
 
 - Dashboard navigation items: `25`
 - Tab/component mappings: `32`
-- Sub-pane groups: `12`
-- Backend HTTP routes discovered: `898` across `28` services
-- Backend routes on the `pkg/route` kernel: `525` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `533`
-- Frontend call sites with exact backend route match: `506`
-- Frontend call sites needing review or dynamic/runtime confirmation: `27`
-- Clickable controls with static `onClick` handlers: `759`
-- Backend request flows with handler/service/package summaries: `898`
+- Sub-pane groups: `13`
+- Backend HTTP routes discovered: `907` across `28` services
+- Backend routes on the `pkg/route` kernel: `534` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `540`
+- Frontend call sites with exact backend route match: `509`
+- Frontend call sites needing review or dynamic/runtime confirmation: `31`
+- Clickable controls with static `onClick` handlers: `768`
+- Backend request flows with handler/service/package summaries: `907`
 
 ## How To Use This For Launch
 
@@ -153,7 +153,7 @@ flowchart LR
   svc_pqc["pqc (14 routes)"]
   svc_reporting["reporting (34 routes)"]
   svc_sbom["sbom (14 routes)"]
-  svc_secrets["secrets (40 routes)"]
+  svc_secrets["secrets (49 routes)"]
   svc_signing["signing (11 routes)"]
   svc_tfe["tfe"]
   svc_workload["workload (20 routes)"]
@@ -226,7 +226,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | reconciler | 1 | 1 |
 | reporting | 34 | 24 |
 | sbom | 14 | 12 |
-| secrets | 40 | 22 |
+| secrets | 49 | 29 |
 | signing | 11 | 9 |
 | watchdog | 2 | 2 |
 | workload | 20 | 13 |
@@ -264,8 +264,12 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | keycore | GET | /rotation/runs{param} | serviceRequest | web/dashboard/src/lib/rotationScheduler.ts | 88 |
 | secrets | GET | /{param}&format={param}{param}` : ""} | serviceRequest | web/dashboard/src/lib/secrets.ts | 178 |
 | secrets | DELETE | /secretURL(session, secretId, `/versions/{param}`) | serviceRequest | web/dashboard/src/lib/secrets.ts | 207 |
+| secrets | GET | /secrets/database/roles/{param} | serviceRequest | web/dashboard/src/lib/secretsDatabase.ts | 45 |
+| secrets | GET | /secrets/database/roles/{param}/creds | serviceRequest | web/dashboard/src/lib/secretsDatabase.ts | 54 |
+| secrets | GET | /secrets/database/leases/{param}/renew | serviceRequest | web/dashboard/src/lib/secretsDatabase.ts | 64 |
+| secrets | GET | /secrets/database/leases/{param}/revoke | serviceRequest | web/dashboard/src/lib/secretsDatabase.ts | 69 |
 
-Showing `27` of `27`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
+Showing `31` of `31`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
 
 ## Backend Routes Not Directly Called From Dashboard
 
@@ -376,8 +380,8 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | cluster-manager | POST | /cluster/sync/events | h.handlePublishSyncEvent |  | services/cluster-manager/handler.go | 54 |
 | cluster-manager | POST | /cluster/sync/ack | h.handleSyncAck |  | services/cluster-manager/handler.go | 56 |
 | cluster-manager | GET | /cluster/replication/status | h.handleReplicationStatus |  | services/cluster-manager/handler.go | 59 |
-| compliance | POST | /compliance/connections/{id}/resolve | h.resolveConnection | authenticated | services/compliance/connections_service.go | 71 |
-| compliance | POST | /compliance/connections/import | h.importConnection | authenticated | services/compliance/connections_service.go | 72 |
+| compliance | POST | /compliance/connections/{id}/resolve | h.resolveConnection | authenticated | services/compliance/connections_service.go | 72 |
+| compliance | POST | /compliance/connections/import | h.importConnection | authenticated | services/compliance/connections_service.go | 73 |
 | compliance | GET | /compliance/connections/{id} | h.checkConnectionUse | compliance.connection.use | services/compliance/credentials.go | 36 |
 | compliance | POST | /compliance/connections/{id}/tested | h.reportConnectionTest | authenticated | services/compliance/credentials.go | 38 |
 | compliance | GET | /compliance/posture | h.handlePosture |  | services/compliance/handler.go | 59 |
@@ -394,7 +398,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/cbom/diff | h.handleCBOMDiff |  | services/compliance/handler.go | 88 |
 | compliance | GET | /compliance/playbooks/catalog | h.playbookCatalog | compliance.playbook.read | services/compliance/handler_playbooks.go | 135 |
 
-Showing `120` of `388`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `394`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

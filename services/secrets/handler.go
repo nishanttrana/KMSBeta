@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"vecta-kms/pkg/credstore"
 
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/mek"
@@ -37,6 +38,9 @@ type Handler struct {
 	spawn   func(func())    // nil: a goroutine
 	pruneMu sync.Mutex
 	prunes  map[string]*pruneStatus
+
+	// creds opens database credentials (dbengine.go); nil refuses them.
+	creds credstore.Store
 }
 
 // Permissions for the secrets domain. kms.read grants the *.read ones and
@@ -57,6 +61,7 @@ var vaultTenantHeaders = []string{"X-Vault-Namespace", "X-Namespace"}
 func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger, keyring *mek.Keyring) *Handler {
 	h := &Handler{svc: svc, router: route.New("secrets", audit, logger), keyring: keyring, audit: audit, logger: logger}
 	h.routes()
+	h.databaseRoutes()
 	if keyring != nil {
 		keyring.Routes(h.router, "secrets") // exposure register, backup re-wrap
 	}

@@ -115,6 +115,7 @@ func main() {
 		keycoreURL:   strings.TrimRight(keycoreURL, "/"),
 		hsmURL:       strings.TrimRight(envOr("HSM_CONNECTOR_URL", "https://hsm-connector:8430"), "/"),
 		hyokURL:      strings.TrimRight(envOr("HYOK_URL", "https://hyok:8120"), "/"),
+		secretsURL:   strings.TrimRight(envOr("SECRETS_URL", "https://secrets:8020"), "/"),
 		http:         executor.platform}
 	handler.usage, handler.sourceUsage = usage, usage.Sources
 	handler.credUsage, handler.credTest = usage.Credentials, usage.Test

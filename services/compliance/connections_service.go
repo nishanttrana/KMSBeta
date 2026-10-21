@@ -32,6 +32,7 @@ var connectionUsers = map[string]string{
 	"kms-cloud":      "cloud_account",
 	"kms-hsm":        "hsm_session",
 	"kms-hyok-proxy": "xks_proxy",
+	"kms-secrets":    "database_engine",
 }
 
 const (
@@ -200,9 +201,9 @@ type ConnectionUsage interface {
 // platformUsage asks the audit service and governance, as the compliance
 // service identity.
 type platformUsage struct {
-	auditURL, governanceURL, discoveryURL string
-	cloudURL, keycoreURL, hsmURL, hyokURL string
-	http                                  *http.Client
+	auditURL, governanceURL, discoveryURL             string
+	cloudURL, keycoreURL, hsmURL, hyokURL, secretsURL string
+	http                                              *http.Client
 }
 
 // Sources names discovery's repositories and buckets that read with the

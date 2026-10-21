@@ -3466,6 +3466,19 @@ Audit (member): `audit.<service>.cluster_write_forwarded` and
 
 ## Service 25: Secrets (`/svc/secrets/`)
 
+**Dynamic database credentials** (13.34.0-beta, docs/DATABASE_CREDENTIALS.md):
+`GET /secrets/database/roles` (`secrets.database.read`; items with
+`active_leases`, and the default templates), `PUT|DELETE
+/secrets/database/roles/{name}` (`secrets.database.admin`; body
+`connection_id`, `creation_statements`, `revocation_statements`,
+`default_ttl_seconds`, `max_ttl_seconds`; attaching needs
+`compliance.connection.use`; delete refused `409 role_has_leases`),
+`POST /secrets/database/roles/{name}/creds`, `GET /secrets/database/leases`,
+`POST /secrets/database/leases/{id}/renew|revoke` (`secrets.database.creds`),
+Vault-compatible `GET /v1/database/creds/{name}` and `PUT|POST
+/v1/sys/leases/renew|revoke`, and `GET /secrets/credential-usage`
+(`kms-compliance` only).
+
 Secret vault: typed secrets, envelope-encrypted, versioned, with expiry,
 per-path access rules, version read / rollback / recoverable delete
 (docs/SECURITY/SECRET_ACCESS.md) and a Vault / OpenBao KV-compatible subset.

@@ -1,16 +1,16 @@
 # Generated Request Flow Map
 
-Generated at `2026-10-21T04:22:52Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-21T04:38:05Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `898`
-- Routes with exact frontend call sites: `510`
+- Backend routes analyzed: `907`
+- Routes with exact frontend call sites: `513`
 - Routes whose handlers call `h.svc.*`: `537`
-- Routes with detected store calls: `635`
-- Routes with detected internal `pkg/*` calls: `196`
+- Routes with detected store calls: `641`
+- Routes with detected internal `pkg/*` calls: `198`
 
 ## How To Trace One Frontend Click
 
@@ -476,24 +476,27 @@ This file connects frontend requests to backend Go processing. It is static anal
 | sbom\|GET\|/cbom/pqc-readiness | GET /cbom/pqc-readiness | cbomPQCReadiness (services/sbom/handler.go:226) | CBOMPQCReadiness |  |  |  | web/dashboard/src/lib/sbom.ts:196 |
 | sbom\|GET\|/cbom/diff | GET /cbom/diff | cbomDiff (services/sbom/handler.go:235) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:167 |
 | sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | cbomExport (services/sbom/handler.go:206) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:158 |
-| secrets\|POST\|/secrets | POST /secrets | createSecret (services/secrets/handler.go:265) | GetSecretByName, CreateSecret | GetSecretByName, CreateSecret, GetSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:118 |
-| secrets\|GET\|/secrets | GET /secrets | listSecrets (services/secrets/handler.go:293) | ListVisible | ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:92, web/dashboard/src/lib/secrets.ts:100 |
-| secrets\|PUT\|/secrets/{param} | PUT /secrets/{id} | updateSecret (services/secrets/handler.go:363) | UpdateSecret | GetSecret, UpdateSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:157 |
-| secrets\|DELETE\|/secrets/{param} | DELETE /secrets/{id} | deleteSecret (services/secrets/handler.go:402) | DeleteSecret | SoftDeleteSecret |  |  | web/dashboard/src/lib/secrets.ts:165 |
-| secrets\|POST\|/secrets/generate/keypair | POST /secrets/generate/keypair | generateKeyPair (services/secrets/handler.go:478) | GenerateKeyPair |  |  |  | web/dashboard/src/lib/secrets.ts:381 |
-| secrets\|GET\|/secrets/{param}/versions | GET /secrets/{id}/versions | listVersions (services/secrets/handler.go:503) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/secrets.ts:342 |
-| secrets\|GET\|/secrets/{param}/audit | GET /secrets/{id}/audit | secretAuditLog (services/secrets/handler.go:517) | GetSecret, GetSecretAuditLog | GetSecret, GetSecretAuditLog |  |  | web/dashboard/src/lib/secrets.ts:350 |
-| secrets\|POST\|/secrets/{param}/rotate | POST /secrets/{id}/rotate | rotateSecret (services/secrets/handler.go:535) | RotateSecret |  |  |  | web/dashboard/src/lib/secrets.ts:360 |
-| secrets\|GET\|/secrets/stats | GET /secrets/stats | stats (services/secrets/handler.go:594) | GetStats | VersionCounts, ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:337 |
-| secrets\|GET\|/secrets/settings | GET /secrets/settings | getSettings (services/secrets/handler.go:661) | Settings | GetSettings |  |  | web/dashboard/src/lib/secrets.ts:224 |
-| secrets\|PUT\|/secrets/settings | PUT /secrets/settings | putSettings (services/secrets/handler.go:670) | Settings, PutSettings | GetSettings, PutSettings |  |  | web/dashboard/src/lib/secrets.ts:229 |
-| secrets\|GET\|/secrets/version-caps | GET /secrets/version-caps | listVersionCaps (services/secrets/handler.go:731) | VersionCaps | ListVersionCaps |  |  | web/dashboard/src/lib/secrets.ts:253 |
-| secrets\|GET\|/secrets/version-caps/prune | GET /secrets/version-caps/prune | pruneStatusRoute (services/secrets/handler.go:786) |  |  |  |  | web/dashboard/src/lib/secrets.ts:267 |
-| secrets\|PUT\|/secrets/version-caps | PUT /secrets/version-caps | putVersionCap (services/secrets/handler.go:741) | PutVersionCap | ListVersionCaps, PutVersionCap |  |  | web/dashboard/src/lib/secrets.ts:258 |
-| secrets\|DELETE\|/secrets/version-caps/{param} | DELETE /secrets/version-caps/{cap_id} | deleteVersionCap (services/secrets/handler.go:764) | DeleteVersionCap | DeleteVersionCap |  |  | web/dashboard/src/lib/secrets.ts:272 |
-| secrets\|GET\|/secrets/access/rules | GET /secrets/access/rules | listAccessRules (services/secrets/handler.go:640) | AccessRules | ListAccessRules |  |  | web/dashboard/src/lib/secrets.ts:286, web/dashboard/src/lib/secrets.ts:291 |
-| secrets\|GET\|/secrets/access/rules/{param}/impact | GET /secrets/access/rules/{rule_id}/impact | accessRuleImpact (services/secrets/handler.go:825) |  |  |  |  | web/dashboard/src/lib/secrets.ts:300 |
-| secrets\|DELETE\|/secrets/access/rules/{param} | DELETE /secrets/access/rules/{rule_id} | deleteAccessRule (services/secrets/handler.go:895) | DeleteAccessRule | DeleteAccessRule |  |  | web/dashboard/src/lib/secrets.ts:306 |
+| secrets\|GET\|/secrets/database/roles | GET /secrets/database/roles | listDBRoles (services/secrets/dbengine_routes.go:74) |  | ListDBRoles, CountActiveDBLeases |  |  | web/dashboard/src/lib/secretsDatabase.ts:39 |
+| secrets\|DELETE\|/secrets/database/roles/{param} | DELETE /secrets/database/roles/{name} | deleteDBRole (services/secrets/dbengine_routes.go:148) |  | CountActiveDBLeases, DeleteDBRole |  |  | web/dashboard/src/lib/secretsDatabase.ts:50 |
+| secrets\|GET\|/secrets/database/leases | GET /secrets/database/leases | listDBLeases (services/secrets/dbengine_routes.go:199) |  | ListDBLeases |  |  | web/dashboard/src/lib/secretsDatabase.ts:58 |
+| secrets\|POST\|/secrets | POST /secrets | createSecret (services/secrets/handler.go:270) | GetSecretByName, CreateSecret | GetSecretByName, CreateSecret, GetSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:118 |
+| secrets\|GET\|/secrets | GET /secrets | listSecrets (services/secrets/handler.go:298) | ListVisible | ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:92, web/dashboard/src/lib/secrets.ts:100 |
+| secrets\|PUT\|/secrets/{param} | PUT /secrets/{id} | updateSecret (services/secrets/handler.go:368) | UpdateSecret | GetSecret, UpdateSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:157 |
+| secrets\|DELETE\|/secrets/{param} | DELETE /secrets/{id} | deleteSecret (services/secrets/handler.go:407) | DeleteSecret | SoftDeleteSecret |  |  | web/dashboard/src/lib/secrets.ts:165 |
+| secrets\|POST\|/secrets/generate/keypair | POST /secrets/generate/keypair | generateKeyPair (services/secrets/handler.go:483) | GenerateKeyPair |  |  |  | web/dashboard/src/lib/secrets.ts:381 |
+| secrets\|GET\|/secrets/{param}/versions | GET /secrets/{id}/versions | listVersions (services/secrets/handler.go:508) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/secrets.ts:342 |
+| secrets\|GET\|/secrets/{param}/audit | GET /secrets/{id}/audit | secretAuditLog (services/secrets/handler.go:522) | GetSecret, GetSecretAuditLog | GetSecret, GetSecretAuditLog |  |  | web/dashboard/src/lib/secrets.ts:350 |
+| secrets\|POST\|/secrets/{param}/rotate | POST /secrets/{id}/rotate | rotateSecret (services/secrets/handler.go:540) | RotateSecret |  |  |  | web/dashboard/src/lib/secrets.ts:360 |
+| secrets\|GET\|/secrets/stats | GET /secrets/stats | stats (services/secrets/handler.go:599) | GetStats | VersionCounts, ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:337 |
+| secrets\|GET\|/secrets/settings | GET /secrets/settings | getSettings (services/secrets/handler.go:666) | Settings | GetSettings |  |  | web/dashboard/src/lib/secrets.ts:224 |
+| secrets\|PUT\|/secrets/settings | PUT /secrets/settings | putSettings (services/secrets/handler.go:675) | Settings, PutSettings | GetSettings, PutSettings |  |  | web/dashboard/src/lib/secrets.ts:229 |
+| secrets\|GET\|/secrets/version-caps | GET /secrets/version-caps | listVersionCaps (services/secrets/handler.go:736) | VersionCaps | ListVersionCaps |  |  | web/dashboard/src/lib/secrets.ts:253 |
+| secrets\|GET\|/secrets/version-caps/prune | GET /secrets/version-caps/prune | pruneStatusRoute (services/secrets/handler.go:791) |  |  |  |  | web/dashboard/src/lib/secrets.ts:267 |
+| secrets\|PUT\|/secrets/version-caps | PUT /secrets/version-caps | putVersionCap (services/secrets/handler.go:746) | PutVersionCap | ListVersionCaps, PutVersionCap |  |  | web/dashboard/src/lib/secrets.ts:258 |
+| secrets\|DELETE\|/secrets/version-caps/{param} | DELETE /secrets/version-caps/{cap_id} | deleteVersionCap (services/secrets/handler.go:769) | DeleteVersionCap | DeleteVersionCap |  |  | web/dashboard/src/lib/secrets.ts:272 |
+| secrets\|GET\|/secrets/access/rules | GET /secrets/access/rules | listAccessRules (services/secrets/handler.go:645) | AccessRules | ListAccessRules |  |  | web/dashboard/src/lib/secrets.ts:286, web/dashboard/src/lib/secrets.ts:291 |
+| secrets\|GET\|/secrets/access/rules/{param}/impact | GET /secrets/access/rules/{rule_id}/impact | accessRuleImpact (services/secrets/handler.go:830) |  |  |  |  | web/dashboard/src/lib/secrets.ts:300 |
+| secrets\|DELETE\|/secrets/access/rules/{param} | DELETE /secrets/access/rules/{rule_id} | deleteAccessRule (services/secrets/handler.go:900) | DeleteAccessRule | DeleteAccessRule |  |  | web/dashboard/src/lib/secrets.ts:306 |
 | signing\|GET\|/signing/settings | GET /signing/settings | handleGetSettings (services/signing/handler.go:90) | GetSettings |  |  |  | web/dashboard/src/lib/signing.ts:84 |
 | signing\|PUT\|/signing/settings | PUT /signing/settings | handlePutSettings (services/signing/handler.go:101) | UpdateSettings | UpsertSettings |  | pkg/tenantcheck.ActingFor | web/dashboard/src/lib/signing.ts:89 |
 | signing\|GET\|/signing/summary | GET /signing/summary | handleGetSummary (services/signing/handler.go:118) | GetSummary | ListProfiles, RecordCountsSince |  |  | web/dashboard/src/lib/signing.ts:97 |
@@ -796,12 +799,12 @@ This file connects frontend requests to backend Go processing. It is static anal
 | cluster-manager\|GET\|/cluster/sync/checkpoint | GET /cluster/sync/checkpoint | handleSyncCheckpoint (services/cluster-manager/handler.go:362) | GetSyncCheckpoint | GetSyncCheckpoint |  |  | web/dashboard/src/lib/cluster.ts:274 |
 | cluster-manager\|GET\|/cluster/logs | GET /cluster/logs | handleClusterLogs (services/cluster-manager/handler.go:378) | ListClusterLogs | ListClusterLogs |  |  | web/dashboard/src/lib/cluster.ts:288 |
 | cluster-manager\|GET\|/cluster/replication/status | GET /cluster/replication/status | handleReplicationStatus (services/cluster-manager/handler.go:530) | ReplicationStatus |  | s.replication.WALLevel, s.replication.Publications, s.replication.SubscriptionStatuses |  |  |
-| compliance\|POST\|/compliance/connections/{param}/resolve | POST /compliance/connections/{id}/resolve | resolveConnection (services/compliance/connections_service.go:87) |  | GetConnection | h.connVault.Open |  |  |
-| compliance\|POST\|/compliance/connections/import | POST /compliance/connections/import | importConnection (services/compliance/connections_service.go:142) |  | GetConnection, CreateConnection | h.connVault.current |  |  |
+| compliance\|POST\|/compliance/connections/{param}/resolve | POST /compliance/connections/{id}/resolve | resolveConnection (services/compliance/connections_service.go:88) |  | GetConnection | h.connVault.Open |  |  |
+| compliance\|POST\|/compliance/connections/import | POST /compliance/connections/import | importConnection (services/compliance/connections_service.go:143) |  | GetConnection, CreateConnection | h.connVault.current |  |  |
 | compliance\|GET\|/compliance/connections | GET /compliance/connections | listConnectionChoices (services/compliance/credentials.go:44) |  | ListConnections |  |  | web/dashboard/src/lib/credentials.ts:61 |
 | compliance\|GET\|/compliance/connections/{param} | GET /compliance/connections/{id} | checkConnectionUse (services/compliance/credentials.go:70) |  | GetConnection |  |  |  |
 | compliance\|GET\|/compliance/connections/{param}/usage | GET /compliance/connections/{id}/usage | connectionUsage (services/compliance/credentials.go:134) |  | GetConnection |  |  | web/dashboard/src/lib/credentials.ts:80 |
-| compliance\|POST\|/compliance/connections/{param}/tested | POST /compliance/connections/{id}/tested | reportConnectionTest (services/compliance/credentials.go:223) |  | GetConnection |  |  |  |
+| compliance\|POST\|/compliance/connections/{param}/tested | POST /compliance/connections/{id}/tested | reportConnectionTest (services/compliance/credentials.go:228) |  | GetConnection |  |  |  |
 | compliance\|GET\|/compliance/posture | GET /compliance/posture | handlePosture (services/compliance/handler.go:101) | GetPosture | GetLatestPosture |  |  |  |
 | compliance\|GET\|/compliance/posture/history | GET /compliance/posture/history | handlePostureHistory (services/compliance/handler.go:116) | GetPostureHistory | ListPostureHistory |  |  |  |
 | compliance\|GET\|/compliance/posture/breakdown | GET /compliance/posture/breakdown | handlePostureBreakdown (services/compliance/handler.go:131) | GetPostureBreakdown |  |  |  | web/dashboard/src/lib/compliance.ts:305 |
@@ -1332,43 +1335,52 @@ This file connects frontend requests to backend Go processing. It is static anal
 | sbom\|GET\|/cbom/diff | GET /cbom/diff | cbomDiff (services/sbom/handler.go:235) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:167 |
 | sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | cbomExport (services/sbom/handler.go:206) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:158 |
 | sbom\|GET\|/cbom/{param} | GET /cbom/{id} | cbomByID (services/sbom/handler.go:197) | GetCBOMByID | GetCBOMSnapshotByID |  |  |  |
-| secrets\|POST\|/secrets | POST /secrets | createSecret (services/secrets/handler.go:265) | GetSecretByName, CreateSecret | GetSecretByName, CreateSecret, GetSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:118 |
-| secrets\|GET\|/secrets | GET /secrets | listSecrets (services/secrets/handler.go:293) | ListVisible | ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:92, web/dashboard/src/lib/secrets.ts:100 |
-| secrets\|GET\|/secrets/{param} | GET /secrets/{id} | getSecret (services/secrets/handler.go:334) |  |  |  |  |  |
-| secrets\|GET\|/secrets/{param}/value | GET /secrets/{id}/value | getSecretValue (services/secrets/handler.go:342) | GetSecretValue | GetSecretWithValue |  | pkg/crypto.Zeroize |  |
-| secrets\|PUT\|/secrets/{param} | PUT /secrets/{id} | updateSecret (services/secrets/handler.go:363) | UpdateSecret | GetSecret, UpdateSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:157 |
-| secrets\|DELETE\|/secrets/{param} | DELETE /secrets/{id} | deleteSecret (services/secrets/handler.go:402) | DeleteSecret | SoftDeleteSecret |  |  | web/dashboard/src/lib/secrets.ts:165 |
-| secrets\|POST\|/secrets/{param}/restore | POST /secrets/{id}/restore | restoreSecret (services/secrets/handler.go:415) | RestoreSecret | RestoreSecret |  |  |  |
-| secrets\|POST\|/secrets/{param}/destroy | POST /secrets/{id}/destroy | destroySecret (services/secrets/handler.go:427) | DestroySecret | DestroySecret |  |  |  |
-| secrets\|POST\|/secrets/generate/ssh_key | POST /secrets/generate/ssh_key | generateSSHKey (services/secrets/handler.go:459) | GenerateSSHKey |  |  | pkg/crypto.GenerateKeyPair, pkg/crypto.MarshalPrivateKeyPEM |  |
-| secrets\|POST\|/secrets/generate/keypair | POST /secrets/generate/keypair | generateKeyPair (services/secrets/handler.go:478) | GenerateKeyPair |  |  |  | web/dashboard/src/lib/secrets.ts:381 |
-| secrets\|GET\|/secrets/{param}/versions | GET /secrets/{id}/versions | listVersions (services/secrets/handler.go:503) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/secrets.ts:342 |
-| secrets\|DELETE\|/secrets/{param}/versions/{param} | DELETE /secrets/{id}/versions/{version} | destroyVersion (services/secrets/handler.go:441) | DestroyVersion | DestroyVersion |  |  |  |
-| secrets\|GET\|/secrets/{param}/audit | GET /secrets/{id}/audit | secretAuditLog (services/secrets/handler.go:517) | GetSecret, GetSecretAuditLog | GetSecret, GetSecretAuditLog |  |  | web/dashboard/src/lib/secrets.ts:350 |
-| secrets\|POST\|/secrets/{param}/rotate | POST /secrets/{id}/rotate | rotateSecret (services/secrets/handler.go:535) | RotateSecret |  |  |  | web/dashboard/src/lib/secrets.ts:360 |
-| secrets\|POST\|/secrets/{param}/rollback | POST /secrets/{id}/rollback | rollbackSecret (services/secrets/handler.go:564) | Rollback | GetSecretWithValue, UpdateSecret |  | pkg/crypto.Zeroize |  |
-| secrets\|GET\|/secrets/{param}/access | GET /secrets/{id}/access | secretAccess (services/secrets/handler.go:609) | VersionCapFor | GetSettings, ListVersionCaps |  |  |  |
-| secrets\|GET\|/secrets/stats | GET /secrets/stats | stats (services/secrets/handler.go:594) | GetStats | VersionCounts, ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:337 |
-| secrets\|GET\|/secrets/settings | GET /secrets/settings | getSettings (services/secrets/handler.go:661) | Settings | GetSettings |  |  | web/dashboard/src/lib/secrets.ts:224 |
-| secrets\|PUT\|/secrets/settings | PUT /secrets/settings | putSettings (services/secrets/handler.go:670) | Settings, PutSettings | GetSettings, PutSettings |  |  | web/dashboard/src/lib/secrets.ts:229 |
-| secrets\|GET\|/secrets/version-caps | GET /secrets/version-caps | listVersionCaps (services/secrets/handler.go:731) | VersionCaps | ListVersionCaps |  |  | web/dashboard/src/lib/secrets.ts:253 |
-| secrets\|GET\|/secrets/version-caps/prune | GET /secrets/version-caps/prune | pruneStatusRoute (services/secrets/handler.go:786) |  |  |  |  | web/dashboard/src/lib/secrets.ts:267 |
-| secrets\|PUT\|/secrets/version-caps | PUT /secrets/version-caps | putVersionCap (services/secrets/handler.go:741) | PutVersionCap | ListVersionCaps, PutVersionCap |  |  | web/dashboard/src/lib/secrets.ts:258 |
-| secrets\|DELETE\|/secrets/version-caps/{param} | DELETE /secrets/version-caps/{cap_id} | deleteVersionCap (services/secrets/handler.go:764) | DeleteVersionCap | DeleteVersionCap |  |  | web/dashboard/src/lib/secrets.ts:272 |
-| secrets\|GET\|/secrets/access/rules | GET /secrets/access/rules | listAccessRules (services/secrets/handler.go:640) | AccessRules | ListAccessRules |  |  | web/dashboard/src/lib/secrets.ts:286, web/dashboard/src/lib/secrets.ts:291 |
-| secrets\|POST\|/secrets/access/rules | POST /secrets/access/rules | createAccessRule (services/secrets/handler.go:843) | CreateAccessRule | ListAccessRules, CreateAccessRule | h.directory.Lookup |  |  |
-| secrets\|GET\|/secrets/access/rules/{param}/impact | GET /secrets/access/rules/{rule_id}/impact | accessRuleImpact (services/secrets/handler.go:825) |  |  |  |  | web/dashboard/src/lib/secrets.ts:300 |
-| secrets\|DELETE\|/secrets/access/rules/{param} | DELETE /secrets/access/rules/{rule_id} | deleteAccessRule (services/secrets/handler.go:895) | DeleteAccessRule | DeleteAccessRule |  |  | web/dashboard/src/lib/secrets.ts:306 |
-| secrets\|GET\|/v1/sys/health | GET /v1/sys/health | vaultSysHealth (services/secrets/handler.go:922) |  |  |  |  |  |
-| secrets\|GET\|/v1/sys/seal-status | GET /v1/sys/seal-status | vaultSealStatus (services/secrets/handler.go:932) |  |  |  |  |  |
-| secrets\|POST\|/v1/auth/token/lookup-self | POST /v1/auth/token/lookup-self | vaultTokenLookupSelf (services/secrets/handler.go:943) |  |  |  | pkg/auth.ClaimsFromContext |  |
-| secrets\|GET\|/v1/{param}/data/{param} | GET /v1/{mount}/data/{path...} | vaultKVRead (services/secrets/handler.go:1004) | GetSecretValue | GetSecretWithValue |  | pkg/crypto.Zeroize |  |
-| secrets\|POST\|/v1/{param}/data/{param} | POST /v1/{mount}/data/{path...} | vaultKVWrite (services/secrets/handler.go:1038) | GetSecretByName, CreateSecret, RestoreSecret, UpdateSecret | GetSecretByName, CreateSecret, GetSecret, RestoreSecret, UpdateSecret |  | pkg/crypto.Zeroize |  |
-| secrets\|DELETE\|/v1/{param}/data/{param} | DELETE /v1/{mount}/data/{path...} | vaultKVDelete (services/secrets/handler.go:1112) | DeleteSecret | SoftDeleteSecret |  |  |  |
-| secrets\|GET\|/v1/{param}/metadata/{param} | GET /v1/{mount}/metadata/{path...} | vaultKV2Metadata (services/secrets/handler.go:1125) |  |  |  |  |  |
-| secrets\|GET\|/v1/{param}/{param} | GET /v1/{mount}/{path...} | vaultKVRead (services/secrets/handler.go:1004) | GetSecretValue | GetSecretWithValue |  | pkg/crypto.Zeroize |  |
-| secrets\|POST\|/v1/{param}/{param} | POST /v1/{mount}/{path...} | vaultKVWrite (services/secrets/handler.go:1038) | GetSecretByName, CreateSecret, RestoreSecret, UpdateSecret | GetSecretByName, CreateSecret, GetSecret, RestoreSecret, UpdateSecret |  | pkg/crypto.Zeroize |  |
-| secrets\|DELETE\|/v1/{param}/{param} | DELETE /v1/{mount}/{path...} | vaultKVDelete (services/secrets/handler.go:1112) | DeleteSecret | SoftDeleteSecret |  |  |  |
+| secrets\|GET\|/secrets/database/roles | GET /secrets/database/roles | listDBRoles (services/secrets/dbengine_routes.go:74) |  | ListDBRoles, CountActiveDBLeases |  |  | web/dashboard/src/lib/secretsDatabase.ts:39 |
+| secrets\|PUT\|/secrets/database/roles/{param} | PUT /secrets/database/roles/{name} | putDBRole (services/secrets/dbengine_routes.go:92) |  | PutDBRole, CountActiveDBLeases, DeleteDBRole, GetDBRole, ListDBLeases, GetDBLease, ListDBRoles, DueDBLeases |  | pkg/clusterstate.RunsPrimaryJobs, pkg/credstore.MayAttach, pkg/tenantcheck.IsServicePrincipal |  |
+| secrets\|DELETE\|/secrets/database/roles/{param} | DELETE /secrets/database/roles/{name} | deleteDBRole (services/secrets/dbengine_routes.go:148) |  | CountActiveDBLeases, DeleteDBRole |  |  | web/dashboard/src/lib/secretsDatabase.ts:50 |
+| secrets\|POST\|/secrets/database/roles/{param}/creds | POST /secrets/database/roles/{name}/creds | issueDBCreds (services/secrets/dbengine_routes.go:184) |  |  |  |  |  |
+| secrets\|GET\|/secrets/database/leases | GET /secrets/database/leases | listDBLeases (services/secrets/dbengine_routes.go:199) |  | ListDBLeases |  |  | web/dashboard/src/lib/secretsDatabase.ts:58 |
+| secrets\|POST\|/secrets/database/leases/{param}/renew | POST /secrets/database/leases/{id}/renew | renewDBLease (services/secrets/dbengine_routes.go:208) |  |  |  |  |  |
+| secrets\|POST\|/secrets/database/leases/{param}/revoke | POST /secrets/database/leases/{id}/revoke | revokeDBLease (services/secrets/dbengine_routes.go:225) |  | GetDBLease |  |  |  |
+| secrets\|GET\|/v1/database/creds/{param} | GET /v1/database/creds/{name} | vaultDBCreds (services/secrets/dbengine_routes.go:254) |  |  |  |  |  |
+| secrets\|GET\|/secrets/credential-usage | GET /secrets/credential-usage | credentialUsage (services/secrets/dbengine_routes.go:306) |  | ListDBRoles |  | pkg/tenantcheck.IsServicePrincipal |  |
+| secrets\|POST\|/secrets | POST /secrets | createSecret (services/secrets/handler.go:270) | GetSecretByName, CreateSecret | GetSecretByName, CreateSecret, GetSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:118 |
+| secrets\|GET\|/secrets | GET /secrets | listSecrets (services/secrets/handler.go:298) | ListVisible | ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:92, web/dashboard/src/lib/secrets.ts:100 |
+| secrets\|GET\|/secrets/{param} | GET /secrets/{id} | getSecret (services/secrets/handler.go:339) |  |  |  |  |  |
+| secrets\|GET\|/secrets/{param}/value | GET /secrets/{id}/value | getSecretValue (services/secrets/handler.go:347) | GetSecretValue | GetSecretWithValue |  | pkg/crypto.Zeroize |  |
+| secrets\|PUT\|/secrets/{param} | PUT /secrets/{id} | updateSecret (services/secrets/handler.go:368) | UpdateSecret | GetSecret, UpdateSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:157 |
+| secrets\|DELETE\|/secrets/{param} | DELETE /secrets/{id} | deleteSecret (services/secrets/handler.go:407) | DeleteSecret | SoftDeleteSecret |  |  | web/dashboard/src/lib/secrets.ts:165 |
+| secrets\|POST\|/secrets/{param}/restore | POST /secrets/{id}/restore | restoreSecret (services/secrets/handler.go:420) | RestoreSecret | RestoreSecret |  |  |  |
+| secrets\|POST\|/secrets/{param}/destroy | POST /secrets/{id}/destroy | destroySecret (services/secrets/handler.go:432) | DestroySecret | DestroySecret |  |  |  |
+| secrets\|POST\|/secrets/generate/ssh_key | POST /secrets/generate/ssh_key | generateSSHKey (services/secrets/handler.go:464) | GenerateSSHKey |  |  | pkg/crypto.GenerateKeyPair, pkg/crypto.MarshalPrivateKeyPEM |  |
+| secrets\|POST\|/secrets/generate/keypair | POST /secrets/generate/keypair | generateKeyPair (services/secrets/handler.go:483) | GenerateKeyPair |  |  |  | web/dashboard/src/lib/secrets.ts:381 |
+| secrets\|GET\|/secrets/{param}/versions | GET /secrets/{id}/versions | listVersions (services/secrets/handler.go:508) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/secrets.ts:342 |
+| secrets\|DELETE\|/secrets/{param}/versions/{param} | DELETE /secrets/{id}/versions/{version} | destroyVersion (services/secrets/handler.go:446) | DestroyVersion | DestroyVersion |  |  |  |
+| secrets\|GET\|/secrets/{param}/audit | GET /secrets/{id}/audit | secretAuditLog (services/secrets/handler.go:522) | GetSecret, GetSecretAuditLog | GetSecret, GetSecretAuditLog |  |  | web/dashboard/src/lib/secrets.ts:350 |
+| secrets\|POST\|/secrets/{param}/rotate | POST /secrets/{id}/rotate | rotateSecret (services/secrets/handler.go:540) | RotateSecret |  |  |  | web/dashboard/src/lib/secrets.ts:360 |
+| secrets\|POST\|/secrets/{param}/rollback | POST /secrets/{id}/rollback | rollbackSecret (services/secrets/handler.go:569) | Rollback | GetSecretWithValue, UpdateSecret |  | pkg/crypto.Zeroize |  |
+| secrets\|GET\|/secrets/{param}/access | GET /secrets/{id}/access | secretAccess (services/secrets/handler.go:614) | VersionCapFor | GetSettings, ListVersionCaps |  |  |  |
+| secrets\|GET\|/secrets/stats | GET /secrets/stats | stats (services/secrets/handler.go:599) | GetStats | VersionCounts, ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:337 |
+| secrets\|GET\|/secrets/settings | GET /secrets/settings | getSettings (services/secrets/handler.go:666) | Settings | GetSettings |  |  | web/dashboard/src/lib/secrets.ts:224 |
+| secrets\|PUT\|/secrets/settings | PUT /secrets/settings | putSettings (services/secrets/handler.go:675) | Settings, PutSettings | GetSettings, PutSettings |  |  | web/dashboard/src/lib/secrets.ts:229 |
+| secrets\|GET\|/secrets/version-caps | GET /secrets/version-caps | listVersionCaps (services/secrets/handler.go:736) | VersionCaps | ListVersionCaps |  |  | web/dashboard/src/lib/secrets.ts:253 |
+| secrets\|GET\|/secrets/version-caps/prune | GET /secrets/version-caps/prune | pruneStatusRoute (services/secrets/handler.go:791) |  |  |  |  | web/dashboard/src/lib/secrets.ts:267 |
+| secrets\|PUT\|/secrets/version-caps | PUT /secrets/version-caps | putVersionCap (services/secrets/handler.go:746) | PutVersionCap | ListVersionCaps, PutVersionCap |  |  | web/dashboard/src/lib/secrets.ts:258 |
+| secrets\|DELETE\|/secrets/version-caps/{param} | DELETE /secrets/version-caps/{cap_id} | deleteVersionCap (services/secrets/handler.go:769) | DeleteVersionCap | DeleteVersionCap |  |  | web/dashboard/src/lib/secrets.ts:272 |
+| secrets\|GET\|/secrets/access/rules | GET /secrets/access/rules | listAccessRules (services/secrets/handler.go:645) | AccessRules | ListAccessRules |  |  | web/dashboard/src/lib/secrets.ts:286, web/dashboard/src/lib/secrets.ts:291 |
+| secrets\|POST\|/secrets/access/rules | POST /secrets/access/rules | createAccessRule (services/secrets/handler.go:848) | CreateAccessRule | ListAccessRules, CreateAccessRule | h.directory.Lookup |  |  |
+| secrets\|GET\|/secrets/access/rules/{param}/impact | GET /secrets/access/rules/{rule_id}/impact | accessRuleImpact (services/secrets/handler.go:830) |  |  |  |  | web/dashboard/src/lib/secrets.ts:300 |
+| secrets\|DELETE\|/secrets/access/rules/{param} | DELETE /secrets/access/rules/{rule_id} | deleteAccessRule (services/secrets/handler.go:900) | DeleteAccessRule | DeleteAccessRule |  |  | web/dashboard/src/lib/secrets.ts:306 |
+| secrets\|GET\|/v1/sys/health | GET /v1/sys/health | vaultSysHealth (services/secrets/handler.go:927) |  |  |  |  |  |
+| secrets\|GET\|/v1/sys/seal-status | GET /v1/sys/seal-status | vaultSealStatus (services/secrets/handler.go:937) |  |  |  |  |  |
+| secrets\|POST\|/v1/auth/token/lookup-self | POST /v1/auth/token/lookup-self | vaultTokenLookupSelf (services/secrets/handler.go:948) |  |  |  | pkg/auth.ClaimsFromContext |  |
+| secrets\|GET\|/v1/{param}/data/{param} | GET /v1/{mount}/data/{path...} | vaultKVRead (services/secrets/handler.go:1009) | GetSecretValue | GetSecretWithValue |  | pkg/crypto.Zeroize |  |
+| secrets\|POST\|/v1/{param}/data/{param} | POST /v1/{mount}/data/{path...} | vaultKVWrite (services/secrets/handler.go:1043) | GetSecretByName, CreateSecret, RestoreSecret, UpdateSecret | GetSecretByName, CreateSecret, GetSecret, RestoreSecret, UpdateSecret |  | pkg/crypto.Zeroize |  |
+| secrets\|DELETE\|/v1/{param}/data/{param} | DELETE /v1/{mount}/data/{path...} | vaultKVDelete (services/secrets/handler.go:1117) | DeleteSecret | SoftDeleteSecret |  |  |  |
+| secrets\|GET\|/v1/{param}/metadata/{param} | GET /v1/{mount}/metadata/{path...} | vaultKV2Metadata (services/secrets/handler.go:1130) |  |  |  |  |  |
+| secrets\|GET\|/v1/{param}/{param} | GET /v1/{mount}/{path...} | vaultKVRead (services/secrets/handler.go:1009) | GetSecretValue | GetSecretWithValue |  | pkg/crypto.Zeroize |  |
+| secrets\|POST\|/v1/{param}/{param} | POST /v1/{mount}/{path...} | vaultKVWrite (services/secrets/handler.go:1043) | GetSecretByName, CreateSecret, RestoreSecret, UpdateSecret | GetSecretByName, CreateSecret, GetSecret, RestoreSecret, UpdateSecret |  | pkg/crypto.Zeroize |  |
+| secrets\|DELETE\|/v1/{param}/{param} | DELETE /v1/{mount}/{path...} | vaultKVDelete (services/secrets/handler.go:1117) | DeleteSecret | SoftDeleteSecret |  |  |  |
 | signing\|GET\|/signing/settings | GET /signing/settings | handleGetSettings (services/signing/handler.go:90) | GetSettings |  |  |  | web/dashboard/src/lib/signing.ts:84 |
 | signing\|PUT\|/signing/settings | PUT /signing/settings | handlePutSettings (services/signing/handler.go:101) | UpdateSettings | UpsertSettings |  | pkg/tenantcheck.ActingFor | web/dashboard/src/lib/signing.ts:89 |
 | signing\|GET\|/signing/summary | GET /signing/summary | handleGetSummary (services/signing/handler.go:118) | GetSummary | ListProfiles, RecordCountsSince |  |  | web/dashboard/src/lib/signing.ts:97 |

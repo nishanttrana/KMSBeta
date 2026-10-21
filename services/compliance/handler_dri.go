@@ -14,8 +14,8 @@ type KeyRiskItem struct {
 	KeyName        string   `json:"key_name"`
 	Algorithm      string   `json:"algorithm"`
 	Status         string   `json:"status"`
-	RiskScore      int      `json:"risk_score"`     // 0-100
-	RiskLevel      string   `json:"risk_level"`     // low, medium, high, critical
+	RiskScore      int      `json:"risk_score"` // 0-100
+	RiskLevel      string   `json:"risk_level"` // low, medium, high, critical
 	RiskFactors    []string `json:"risk_factors"`
 	OpsTotal       int64    `json:"ops_total"`
 	ExportAllowed  bool     `json:"export_allowed"`
@@ -42,8 +42,8 @@ type DataRiskSummary struct {
 // RemediationItem represents a single guided remediation action.
 type RemediationItem struct {
 	ID            string   `json:"id"`
-	Priority      int      `json:"priority"`     // 1 = highest
-	Category      string   `json:"category"`     // rotation, algorithm, access, export
+	Priority      int      `json:"priority"` // 1 = highest
+	Category      string   `json:"category"` // rotation, algorithm, access, export
 	Title         string   `json:"title"`
 	Description   string   `json:"description"`
 	AffectedCount int      `json:"affected_count"`

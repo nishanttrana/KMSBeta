@@ -723,6 +723,9 @@ Security rules are explained in
   outbound address is checked where it is dialled (`pkg/ssrfguard`), not by
   hostname. A URL that carries a credential is a secret, and errors name
   only its host.
+- A test of a credential first proves the server checks it (a wrong one
+  is refused), or a server that accepts anything makes it pass
+  (13.34.0-beta, dynamic database credentials).
 - A client for another service's route is tested once against that
   route's real handler, and a credential fallback no server accepts is an
   error, never a quiet unauthenticated call (`pkg/agentauth`, 13.33.0-beta).

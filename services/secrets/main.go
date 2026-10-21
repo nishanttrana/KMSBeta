@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"vecta-kms/pkg/clusterstate"
+	"vecta-kms/pkg/credstore"
 	"vecta-kms/pkg/mek"
 	pkgplatform "vecta-kms/pkg/platform"
 	"vecta-kms/pkg/route"
@@ -64,6 +65,10 @@ func main() {
 		}
 	}
 	go h.runRetention(rt.Ctx, time.Hour)
+	// Dynamic database credentials: admin credentials come from the
+	// credential store; expired leases are revoked every minute.
+	h.creds = credstore.FromEnv()
+	go h.runDBLeaseSweep(rt.Ctx, time.Minute)
 	if err := rt.Serve(h); err != nil {
 		rt.Logger.Fatalf("serve failed: %v", err)
 	}
