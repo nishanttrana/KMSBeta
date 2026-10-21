@@ -231,12 +231,6 @@ type UpsertNodeInput struct {
 	SeedSync        bool     `json:"seed_sync"`
 }
 
-type UpdateNodeRoleInput struct {
-	TenantID    string `json:"tenant_id"`
-	Role        string `json:"role"`
-	RequestedBy string `json:"requested_by"`
-}
-
 type RemoveNodeInput struct {
 	TenantID        string `json:"tenant_id"`
 	RequestedBy     string `json:"requested_by"`
@@ -245,11 +239,10 @@ type RemoveNodeInput struct {
 }
 
 type RemoveNodeResult struct {
-	NodeID             string  `json:"node_id"`
-	TenantID           string  `json:"tenant_id"`
-	Standalone         bool    `json:"standalone"`
-	PurgeSyncedData    bool    `json:"purge_synced_data"`
-	PurgeEventIDs      []int64 `json:"purge_event_ids"`
-	PreviousRole       string  `json:"previous_role"`
-	PromotedLeaderNode string  `json:"promoted_leader_node,omitempty"`
+	NodeID          string  `json:"node_id"`
+	TenantID        string  `json:"tenant_id"`
+	Standalone      bool    `json:"standalone"`
+	PurgeSyncedData bool    `json:"purge_synced_data"`
+	PurgeEventIDs   []int64 `json:"purge_event_ids"`
+	PreviousRole    string  `json:"previous_role"`
 }

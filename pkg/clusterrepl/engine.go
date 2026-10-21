@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -444,4 +445,110 @@ func (e *Engine) WALLevel(ctx context.Context) (string, error) {
 	var v string
 	err := e.db.QueryRowContext(ctx, `SHOW wal_level`).Scan(&v)
 	return v, err
+}
+
+// subscriptionPrefix is the name prefix of nodeID's subscriptions.
+func subscriptionPrefix(nodeID string) string { return "vecta_sub_" + clustercatalog.Ident(nodeID) + "_" }
+
+// Detach drops every subscription of nodeID without contacting the
+// publisher, which is the point during failover: the old primary may be
+// gone. Its replication slots stay on it until it is reset or rejoins
+// (DropMemberSlots).
+func (e *Engine) Detach(ctx context.Context, nodeID string) ([]string, error) {
+	rows, err := e.db.QueryContext(ctx, `SELECT subname FROM pg_subscription WHERE starts_with(subname, $1)`, subscriptionPrefix(nodeID))
+	if err != nil {
+		return nil, err
+	}
+	subs := []string{}
+	for rows.Next() {
+		var s string
+		if err := rows.Scan(&s); err != nil {
+			rows.Close() //nolint:errcheck
+			return nil, err
+		}
+		subs = append(subs, s)
+	}
+	rows.Close() //nolint:errcheck
+	for _, s := range subs {
+		for _, stmt := range []string{
+			"ALTER SUBSCRIPTION " + quoteIdent(s) + " DISABLE",
+			"ALTER SUBSCRIPTION " + quoteIdent(s) + " SET (slot_name = NONE)",
+			"DROP SUBSCRIPTION " + quoteIdent(s),
+		} {
+			if _, err := e.db.ExecContext(ctx, stmt); err != nil {
+				return nil, fmt.Errorf("detach %s: %w", s, err)
+			}
+		}
+	}
+	return subs, nil
+}
+
+// DropMemberSlots drops the replication slots members held on this node
+// while it was primary (vecta_sub_*). A node that rejoins as a member
+// would otherwise keep their WAL forever.
+func (e *Engine) DropMemberSlots(ctx context.Context) error {
+	_, err := e.db.ExecContext(ctx, `
+SELECT pg_terminate_backend(active_pid) FROM pg_replication_slots WHERE starts_with(slot_name, 'vecta_sub_') AND active_pid IS NOT NULL`)
+	if err != nil {
+		return err
+	}
+	_, err = e.db.ExecContext(ctx, `SELECT pg_drop_replication_slot(slot_name) FROM pg_replication_slots WHERE starts_with(slot_name, 'vecta_sub_') AND NOT active`)
+	return err
+}
+
+// AppliedLSN is how far nodeID has applied its primary's changes: the
+// least remote LSN over its subscriptions, from the replication origins,
+// which persist while the primary is down. "" when it has none.
+func (e *Engine) AppliedLSN(ctx context.Context, nodeID string) (string, error) {
+	var lsn sql.NullString
+	err := e.db.QueryRowContext(ctx, `
+SELECT min(os.remote_lsn)::text
+FROM pg_subscription s JOIN pg_replication_origin_status os ON os.external_id = 'pg_' || s.oid::text
+WHERE starts_with(s.subname, $1)`, subscriptionPrefix(nodeID)).Scan(&lsn)
+	if err != nil {
+		return "", err
+	}
+	return lsn.String, nil
+}
+
+// CurrentWALLSN is this server's current write position.
+func (e *Engine) CurrentWALLSN(ctx context.Context) (string, error) {
+	var lsn string
+	err := e.db.QueryRowContext(ctx, `SELECT pg_current_wal_lsn()::text`).Scan(&lsn)
+	return lsn, err
+}
+
+// ParseLSN reads a Postgres LSN ("16/B374D848"). An empty string is 0.
+func ParseLSN(s string) (uint64, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0, nil
+	}
+	hi, lo, ok := strings.Cut(s, "/")
+	if !ok {
+		return 0, fmt.Errorf("lsn %q", s)
+	}
+	h, err1 := strconv.ParseUint(hi, 16, 32)
+	l, err2 := strconv.ParseUint(lo, 16, 32)
+	if err1 != nil || err2 != nil {
+		return 0, fmt.Errorf("lsn %q", s)
+	}
+	return h<<32 | l, nil
+}
+
+// ReceivedLSN is the least WAL position nodeID's running subscriptions have
+// confirmed to their publisher (pg_stat_subscription.latest_end_lsn), which
+// advances with the publisher's keepalives even when nothing it sends
+// applies here. ok is false while any subscription has no running worker.
+func (e *Engine) ReceivedLSN(ctx context.Context, nodeID string) (lsn string, ok bool, err error) {
+	var n, running int
+	var least sql.NullString
+	err = e.db.QueryRowContext(ctx, `
+SELECT count(*), count(st.latest_end_lsn), min(st.latest_end_lsn)::text
+FROM pg_subscription s LEFT JOIN pg_stat_subscription st ON st.subid = s.oid AND st.relid IS NULL
+WHERE starts_with(s.subname, $1)`, subscriptionPrefix(nodeID)).Scan(&n, &running, &least)
+	if err != nil {
+		return "", false, err
+	}
+	return least.String, n > 0 && running == n, nil
 }

@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-21T05:28:02Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-21T05:53:28Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -25,7 +25,7 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/VectaDashboardV3Shell.tsx | 889 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
 | web/dashboard/src/components/primitives.tsx | 23 | - | button | (icon or dynamic label) | onClick |
 | web/dashboard/src/components/v3/SidebarSearch.tsx | 60 | - | button | onOpen(src.tab, h.label)} title= style={ }> |  |
-| web/dashboard/src/components/v3/SidebarSubNav.tsx | 142 | - | button | onSelect(item.id)} style={ } > |  |
+| web/dashboard/src/components/v3/SidebarSubNav.tsx | 143 | - | button | onSelect(item.id)} style={ } > |  |
 | web/dashboard/src/components/v3/chartDrill.tsx | 133 | - | Btn | Clear | onClear |
 | web/dashboard/src/components/v3/chartDrill.tsx | 141 | - | Btn | (icon or dynamic label) | onMore} disabled={loading |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 56 | - | button | Close | onClose} aria-label="Close" style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", pa... |
@@ -177,22 +177,23 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | 31 | cloudctl | Btn | selectSubtab("byok")}>BYOK |  |
 | web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | 32 | cloudctl | Btn | selectSubtab("hyok")}>HYOK |  |
 | web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | 33 | cloudctl | Btn | selectSubtab("google-cse")}>Google CSE |  |
+| web/dashboard/src/components/v3/tabs/ClusterFailoverPanel.tsx | 74 | - | Btn | void load()}>Refresh |  |
+| web/dashboard/src/components/v3/tabs/ClusterFailoverPanel.tsx | 99 | - | Btn | void promote(false)}> |  |
 | web/dashboard/src/components/v3/tabs/ClusterJoinPanel.tsx | 53 | - | Btn | setMode("issue")}>On this primary: add a node |  |
 | web/dashboard/src/components/v3/tabs/ClusterJoinPanel.tsx | 54 | - | Btn | setMode("join")}>On a new node: join a cluster |  |
 | web/dashboard/src/components/v3/tabs/ClusterJoinPanel.tsx | 65 | - | Btn | void issue()}> |  |
 | web/dashboard/src/components/v3/tabs/ClusterJoinPanel.tsx | 79 | - | Btn | void join()}> |  |
-| web/dashboard/src/components/v3/tabs/ClusterTab.tsx | 384 | cluster | Btn | void refresh(false)} disabled= >Retry |  |
-| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 121 | - | Btn | void refresh(false)}>Refresh |  |
-| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 271 | - | Btn | setAddNodeModalOpen(true)}>Add Instance |  |
-| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 272 | - | Btn | void refresh(false)}>Refresh |  |
-| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 333 | - | Btn | void updateNodeRoleAction(node)} > |  |
-| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 338 | - | Btn | void removeNodeAction(node)}> |  |
-| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 349 | - | Btn | setAddNodeModalOpen(true)}>Add First Instance |  |
-| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 424 | - | Btn | void saveProfile()}> |  |
-| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 442 | - | Btn | void removeProfile(profile)}>Delete |  |
-| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 473 | - | Btn | void refreshSyncEvents()}>Refresh |  |
-| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 563 | - | Btn | void refreshClusterLogs()}>Refresh |  |
-| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 576 | - | Btn | void refreshClusterLogs()}>Apply |  |
+| web/dashboard/src/components/v3/tabs/ClusterTab.tsx | 363 | cluster | Btn | void refresh(false)} disabled= >Retry |  |
+| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 117 | - | Btn | void refresh(false)}>Refresh |  |
+| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 267 | - | Btn | setAddNodeModalOpen(true)}>Add Instance |  |
+| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 268 | - | Btn | void refresh(false)}>Refresh |  |
+| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 323 | - | Btn | void removeNodeAction(node)}> |  |
+| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 334 | - | Btn | setAddNodeModalOpen(true)}>Add First Instance |  |
+| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 409 | - | Btn | void saveProfile()}> |  |
+| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 427 | - | Btn | void removeProfile(profile)}>Delete |  |
+| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 458 | - | Btn | void refreshSyncEvents()}>Refresh |  |
+| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 548 | - | Btn | void refreshClusterLogs()}>Refresh |  |
+| web/dashboard/src/components/v3/tabs/ClusterTabView.tsx | 561 | - | Btn | void refreshClusterLogs()}>Apply |  |
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 168 | home | button | setOpen((v) => !v)} aria-expanded= style={ } > |  |
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 181 | home | button | onNavigate(r.action.tab)} style={ } > |  |
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 188 | home | button | setOpen((v) => !v)} aria-label="Details" style={ }> |  |

@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-21T05:28:02Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-21T05:53:28Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `25`
 - Tab/component mappings: `32`
 - Sub-pane groups: `13`
-- Backend HTTP routes discovered: `909` across `28` services
+- Backend HTTP routes discovered: `916` across `28` services
 - Backend routes on the `pkg/route` kernel: `536` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `540`
-- Frontend call sites with exact backend route match: `509`
+- Frontend API call sites discovered: `541`
+- Frontend call sites with exact backend route match: `510`
 - Frontend call sites needing review or dynamic/runtime confirmation: `31`
-- Clickable controls with static `onClick` handlers: `773`
-- Backend request flows with handler/service/package summaries: `909`
+- Clickable controls with static `onClick` handlers: `774`
+- Backend request flows with handler/service/package summaries: `916`
 
 ## How To Use This For Launch
 
@@ -140,7 +140,7 @@ flowchart LR
   svc_autokey["autokey (15 routes)"]
   svc_certs["certs (70 routes)"]
   svc_cloud["cloud (28 routes)"]
-  svc_cluster_manager["cluster-manager (21 routes)"]
+  svc_cluster_manager["cluster-manager (28 routes)"]
   svc_compliance["compliance (61 routes)"]
   svc_confidential["confidential (7 routes)"]
   svc_discovery["discovery (24 routes)"]
@@ -166,7 +166,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Group | UI item | Tab id | Component | Service dependencies | Static call sites |
 | --- | --- | --- | --- | --- | --- |
 | Home | Command Center | home | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
-| Home | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 208 |
+| Home | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 209 |
 | Home | Workbench | workbench | web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx | - | 0 |
 | Keys & certificates | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 98 |
 | Keys & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 105 |
@@ -187,7 +187,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Monitor | SBOM / CBOM | sbom | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | sbom | 12 |
 | Respond | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | compliance, governance | 24 |
 | Respond | Playbooks | playbooks | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | compliance, keycore | 6 |
-| Platform | Cluster | cluster | web/dashboard/src/components/v3/tabs/ClusterTab.tsx | auth-edge, cluster-manager | 15 |
+| Platform | Cluster | cluster | web/dashboard/src/components/v3/tabs/ClusterTab.tsx | auth-edge, cluster-manager | 16 |
 | Platform | Backup & Restore | backup | web/dashboard/src/modules/backup/BackupModule.tsx | auth-edge | 4 |
 | Platform | Administration | admin | web/dashboard/src/components/v3/tabs/AdminTab.tsx | - | 0 |
 | UNLISTED | byok | byok | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | cloud | 8 |
@@ -208,7 +208,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | backup | 11 | 10 |
 | certs | 70 | 54 |
 | cloud | 28 | 15 |
-| cluster-manager | 21 | 11 |
+| cluster-manager | 28 | 12 |
 | compliance | 61 | 30 |
 | confidential | 7 | 6 |
 | dataprotect | 49 | 28 |
@@ -377,9 +377,15 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | cluster-manager | POST | /cluster/join/complete | h.handleJoinComplete |  | services/cluster-manager/handler.go | 44 |
 | cluster-manager | POST | /cluster/join/exchange | h.handleJoinExchange |  | services/cluster-manager/handler.go | 45 |
 | cluster-manager | POST | /cluster/nodes/{id}/heartbeat | h.handleNodeHeartbeat |  | services/cluster-manager/handler.go | 50 |
-| cluster-manager | POST | /cluster/sync/events | h.handlePublishSyncEvent |  | services/cluster-manager/handler.go | 54 |
-| cluster-manager | POST | /cluster/sync/ack | h.handleSyncAck |  | services/cluster-manager/handler.go | 56 |
-| cluster-manager | GET | /cluster/replication/status | h.handleReplicationStatus |  | services/cluster-manager/handler.go | 59 |
+| cluster-manager | POST | /cluster/sync/events | h.handlePublishSyncEvent |  | services/cluster-manager/handler.go | 53 |
+| cluster-manager | POST | /cluster/sync/ack | h.handleSyncAck |  | services/cluster-manager/handler.go | 55 |
+| cluster-manager | GET | /cluster/replication/status | h.handleReplicationStatus |  | services/cluster-manager/handler.go | 58 |
+| cluster-manager | POST | /cluster/peer/heartbeat | h.handlePeerHeartbeat |  | services/cluster-manager/handler.go | 62 |
+| cluster-manager | POST | /cluster/peer/resubscribe | h.handlePeerResubscribe |  | services/cluster-manager/handler.go | 63 |
+| cluster-manager | GET | /cluster/peer/status | h.handlePeerStatus |  | services/cluster-manager/handler.go | 64 |
+| cluster-manager | POST | /cluster/peer/vote | h.handlePeerVote |  | services/cluster-manager/handler.go | 65 |
+| cluster-manager | POST | /cluster/peer/announce | h.handlePeerAnnounce |  | services/cluster-manager/handler.go | 66 |
+| cluster-manager | POST | /cluster/peer/fence | h.handlePeerFence |  | services/cluster-manager/handler.go | 67 |
 | compliance | POST | /compliance/connections/{id}/resolve | h.resolveConnection | authenticated | services/compliance/connections_service.go | 72 |
 | compliance | POST | /compliance/connections/import | h.importConnection | authenticated | services/compliance/connections_service.go | 73 |
 | compliance | GET | /compliance/connections/{id} | h.checkConnectionUse | compliance.connection.use | services/compliance/credentials.go | 36 |
@@ -391,14 +397,8 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/keys/orphaned | h.handleOrphaned |  | services/compliance/handler.go | 78 |
 | compliance | GET | /compliance/keys/expired | h.handleExpired |  | services/compliance/handler.go | 79 |
 | compliance | GET | /compliance/audit/correlations | h.handleAuditCorrelations |  | services/compliance/handler.go | 81 |
-| compliance | GET | /compliance/cbom | h.handleCBOM |  | services/compliance/handler.go | 84 |
-| compliance | GET | /compliance/cbom/summary | h.handleCBOMSummary |  | services/compliance/handler.go | 85 |
-| compliance | GET | /compliance/cbom/export | h.handleCBOMExport |  | services/compliance/handler.go | 86 |
-| compliance | GET | /compliance/cbom/pqc-readiness | h.handleCBOMPQCReadiness |  | services/compliance/handler.go | 87 |
-| compliance | GET | /compliance/cbom/diff | h.handleCBOMDiff |  | services/compliance/handler.go | 88 |
-| compliance | GET | /compliance/playbooks/catalog | h.playbookCatalog | compliance.playbook.read | services/compliance/handler_playbooks.go | 135 |
 
-Showing `120` of `396`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `402`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

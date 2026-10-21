@@ -20,8 +20,12 @@ import (
 
 const (
 	RoleFollower = "follower"
-	// RolePrimary is recorded when the first member joins this node.
+	// RolePrimary is recorded when the first member joins this node, and
+	// when a member is promoted (docs/CLUSTERING.md, failover).
 	RolePrimary = "primary"
+	// RoleFenced is a former primary that learned of a newer one: it makes
+	// no lifecycle write and runs no primary job until it rejoins.
+	RoleFenced = "fenced"
 )
 
 type State struct {
@@ -31,6 +35,13 @@ type State struct {
 	PrimaryURL         string
 	PrimaryFingerprint string
 	ForwardCredential  string
+	// Epoch counts promotions; a node that sees a higher one than its own
+	// follows it, and a primary that does is fenced.
+	Epoch int64
+	// WritableUntil is a primary's lease in a cluster of three or more
+	// voters: lifecycle writes stop when it passes without a majority
+	// renewing it. Zero means no lease is needed (standalone, two nodes).
+	WritableUntil time.Time
 }
 
 // IsMember reports whether lifecycle writes must go to a primary.
@@ -38,11 +49,24 @@ func (s State) IsMember() bool {
 	return s.Role == RoleFollower && s.PrimaryURL != "" && s.ForwardCredential != ""
 }
 
+// WritesAllowed reports whether this node, not being a member, may make
+// lifecycle writes itself: refused on a fenced node and on a primary whose
+// lease has passed. reason is "node_fenced" or "primary_lease_lost".
+func (s State) WritesAllowed(now time.Time) (bool, string) {
+	switch {
+	case s.Role == RoleFenced:
+		return false, "node_fenced"
+	case s.Role == RolePrimary && !s.WritableUntil.IsZero() && !now.Before(s.WritableUntil):
+		return false, "primary_lease_lost"
+	}
+	return true, ""
+}
+
 // ChainNode is the id under which this node writes shared-append rows (its
 // audit chain, login attempts): its cluster node id once it is a primary or a
 // member, "" while standalone. "" rows never replicate.
 func (s State) ChainNode() string {
-	if s.Role == RoleFollower || s.Role == RolePrimary {
+	if s.Role == RoleFollower || s.Role == RolePrimary || s.Role == RoleFenced {
 		return s.NodeID
 	}
 	return ""
@@ -61,13 +85,16 @@ type Reader struct {
 	tableSeen bool
 }
 
-func NewReader(db *sql.DB) *Reader { return &Reader{db: db, ttl: 10 * time.Second} }
+// stateTTL is short because a primary's lease is renewed every two seconds.
+const stateTTL = 2 * time.Second
+
+func NewReader(db *sql.DB) *Reader { return &Reader{db: db, ttl: stateTTL} }
 
 // NewPendingReader is a reader whose database arrives later (Attach): the
 // platform database is reachable only over internal mTLS, once the process
 // has enrolled. Until then RunsPrimaryJobs is false, so a cluster member
 // never runs primary-only jobs while its role is still unknown.
-func NewPendingReader() *Reader { return &Reader{ttl: 10 * time.Second, pending: true} }
+func NewPendingReader() *Reader { return &Reader{ttl: stateTTL, pending: true} }
 
 // Attach supplies the database of a pending reader.
 func (r *Reader) Attach(db *sql.DB) {
@@ -121,9 +148,21 @@ WHERE table_schema = current_schema() AND table_name = 'cluster_local_state'`).S
 		r.tableSeen = err == nil
 	}
 	var s State
+	var until sql.NullTime
 	err := r.db.QueryRowContext(ctx, `
+SELECT node_id, role, primary_node_id, primary_url, primary_fingerprint, forward_credential, epoch, writable_until
+FROM cluster_local_state WHERE id = 1`).Scan(&s.NodeID, &s.Role, &s.PrimaryNodeID, &s.PrimaryURL, &s.PrimaryFingerprint, &s.ForwardCredential, &s.Epoch, &until)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		// The table as it was before failover (cluster-manager adds the
+		// columns when it starts).
+		s = State{}
+		err = r.db.QueryRowContext(ctx, `
 SELECT node_id, role, primary_node_id, primary_url, primary_fingerprint, forward_credential
 FROM cluster_local_state WHERE id = 1`).Scan(&s.NodeID, &s.Role, &s.PrimaryNodeID, &s.PrimaryURL, &s.PrimaryFingerprint, &s.ForwardCredential)
+	}
+	if until.Valid {
+		s.WritableUntil = until.Time
+	}
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		// Keep the last known state, and ask again only after the TTL: where
 		// the table doesn't exist (no cluster manager deployed) every call
@@ -137,14 +176,20 @@ FROM cluster_local_state WHERE id = 1`).Scan(&s.NodeID, &s.Role, &s.PrimaryNodeI
 
 // RunsPrimaryJobs reports whether this node runs background jobs that write
 // replicated state (schedulers, sweeps, reconcilers): true on a standalone
-// node or the primary. A member receives the results through replication;
-// running them there too would diverge its copy or halt replication.
+// node or a primary that may write. A member receives the results through
+// replication; running them there too would diverge its copy or halt
+// replication. A fenced node, or a primary without its lease, runs none.
 func RunsPrimaryJobs(ctx context.Context) bool {
 	r := Default()
 	if r.isPending() {
 		return false
 	}
-	return !r.Get(ctx).IsMember()
+	st := r.Get(ctx)
+	if st.IsMember() || st.Role == RoleFollower {
+		return false
+	}
+	ok, _ := st.WritesAllowed(time.Now())
+	return ok
 }
 
 var (

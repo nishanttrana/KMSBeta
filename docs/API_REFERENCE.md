@@ -4694,12 +4694,14 @@ from the code; do not edit by hand.
 - `POST /svc/cluster/cluster/nodes`
 - `DELETE /svc/cluster/cluster/nodes/{id}`
 - `POST /svc/cluster/cluster/nodes/{id}/heartbeat`
-- `POST /svc/cluster/cluster/nodes/{id}/role`
 - `GET /svc/cluster/cluster/overview`
 - `GET /svc/cluster/cluster/profiles`
 - `POST /svc/cluster/cluster/profiles`
 - `DELETE /svc/cluster/cluster/profiles/{id}`
 - `GET /svc/cluster/cluster/replication/status`
+- `GET /svc/cluster/cluster/failover/status`: this node's role, epoch, lease and the peers it knows (13.37.0-beta)
+- `POST /svc/cluster/cluster/failover/promote`: body `{"confirm": true, "force": false, "reason"}`; promotes the node it is sent to. `409 primary_reachable_check_failed` when the primary does not answer and `force` is not set, `409 not_promotable` without `CLUSTER_ADVERTISE_URL` / `CLUSTER_PG_ADVERTISE_HOST`, `409 not_a_member`
+- `POST /cluster/peer/heartbeat`, `POST /cluster/peer/resubscribe` (member's forwarding credential), `GET /cluster/peer/status`, `POST /cluster/peer/vote`, `POST /cluster/peer/announce`, `POST /cluster/peer/fence` (peer-secret signature: `X-Vecta-Peer-Node`, `X-Vecta-Peer-Time`, `X-Vecta-Peer-Signature`): node to node on the cluster-manager port, not through the edge
 - `POST /svc/cluster/cluster/sync/ack`
 - `GET /svc/cluster/cluster/sync/checkpoint`
 - `GET /svc/cluster/cluster/sync/events`

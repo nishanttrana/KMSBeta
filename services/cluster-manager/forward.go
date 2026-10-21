@@ -135,6 +135,10 @@ func (h *Handler) handleForward(w http.ResponseWriter, r *http.Request) {
 		refuse(http.StatusUnauthorized, "member_unauthorized", errForwardCredential.Error())
 		return
 	}
+	if err := s.refuseUnlessPrimary(r.Context()); err != nil {
+		refuse(http.StatusConflict, "not_primary", err.Error())
+		return
+	}
 	if clusterroute.Decide(svc, r.Method, path) != clusterroute.Forward {
 		refuse(http.StatusForbidden, "not_forwardable", "only lifecycle writes of known services are forwarded")
 		return

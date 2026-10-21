@@ -261,6 +261,8 @@ var NodeLocal = map[string]string{
 	"key_op_counters":                     "per-key operation counters of a cluster member (written during crypto operations)",
 	"cluster_local_state":                 "this node's cluster role and its primary; the forwarding credential authenticates this node only",
 	"cluster_member_credentials":          "credentials a primary issued to its members",
+	"cluster_peers":                       "the cluster as this node last heard it from its primary (failover)",
+	"cluster_votes":                       "this node's vote in each failover epoch",
 	"auth_hsm_provider_configs":           "HSM hardware configuration of this node",
 	"auth_request_nonce_cache":            "anti-replay nonces are checked where the request lands",
 	"auth_sessions":                       "sessions are bound to the node that issued them",

@@ -151,3 +151,40 @@ func TestClusterForwarding(t *testing.T) {
 		t.Fatal("a standalone node must handle writes itself")
 	}
 }
+
+// A fenced former primary and a primary past its lease refuse lifecycle
+// writes (audited) and still serve crypto and reads; a primary within its
+// lease writes.
+func TestFencedOrLeaselessPrimaryRefusesWrites(t *testing.T) {
+	for _, c := range []struct {
+		st     clusterstate.State
+		reason string
+	}{
+		{clusterstate.State{NodeID: "node-1", Role: clusterstate.RoleFenced, Epoch: 2}, "node_fenced"},
+		{clusterstate.State{NodeID: "node-1", Role: clusterstate.RolePrimary, WritableUntil: time.Now().Add(-time.Second)}, "primary_lease_lost"},
+		{clusterstate.State{NodeID: "node-1", Role: clusterstate.RolePrimary, WritableUntil: time.Now().Add(time.Minute)}, ""},
+	} {
+		audited = nil
+		f, local := newTestForwarder(t, "kms-keycore", c.st)
+		do := func(method, path string) int {
+			rr := httptest.NewRecorder()
+			f.ServeHTTP(rr, httptest.NewRequest(method, path, strings.NewReader("{}")))
+			return rr.Code
+		}
+		write := do(http.MethodPost, "/keys")
+		crypto := do(http.MethodPost, "/keys/k1/encrypt")
+		read := do(http.MethodGet, "/keys")
+		if c.reason == "" {
+			if write != 200 || len(*local) != 3 {
+				t.Fatalf("leased primary: write %d, local %v", write, *local)
+			}
+			continue
+		}
+		if write != http.StatusServiceUnavailable || crypto != 200 || read != 200 || len(*local) != 2 {
+			t.Fatalf("%s: write %d crypto %d read %d local %v", c.reason, write, crypto, read, *local)
+		}
+		if len(audited) != 1 || audited[0] != "cluster_write_refused "+c.reason {
+			t.Fatalf("%s: audit %v", c.reason, audited)
+		}
+	}
+}

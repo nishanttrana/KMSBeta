@@ -23,15 +23,16 @@ only what the database actually does.
 | Certs root wrapping key and audit signing key transfer | Not yet: until then, CA signing and OCSP run on the primary, via forwarding |
 | Write forwarding from members to the primary | **Done** (slice 3a). Every service forwards by construction. Proven end to end on real Postgres and TLS (`TestSecureJoinEndToEnd`, `TestClusterForwarding`) |
 | Members never write replicated tables: node-local operation counters, primary-only background jobs, dataprotect working-key state | **Done** (slice 3a) |
-| Failover: manual promotion, and a majority vote at 3+ nodes, with fencing | Slice 4, not yet |
+| Failover: manual promotion, and a majority vote at 3+ nodes, with fencing | **Done** (slice 4, 13.37.0-beta). Election, re-subscription to the new primary, a planned switchover and fencing proven on three real Postgres servers (`TestFailoverEndToEnd`) |
 | Audit chains replicated from every node (shared-append) | Slice 3/4, not yet |
 | Helm chart | Slice 5, not yet |
 
 A second node can join through the UI (Platform → Cluster → Add Instance).
 Any node serves crypto operations, reads and logins, and a lifecycle write
-sent to a member is forwarded to the primary. Still open: if the primary is
-down, lifecycle writes fail with `502 primary_unreachable` until failover
-(slice 4). Crypto operations keep working. The
+sent to a member is forwarded to the primary. If the primary is down,
+lifecycle writes fail with `502 primary_unreachable` until a member is
+promoted: automatically with three or more voters, by an administrator with
+two. Crypto operations keep working throughout. The
 earlier overview text ("Nodes sync only the state for their enabled
 components…") described a design that was never implemented: sync events were
 recorded but never applied on another node. It was removed on 2026-09-25.
@@ -195,8 +196,71 @@ Also open: the login lockout counter is per node (in memory), so an
 attacker spreading password guesses across N nodes gets N times the
 configured attempts before lockout. Per-node rate limits still apply.
 
+## Failover (slice 4)
+
+Platform → Cluster → **Failover** shows this node's role, the epoch, the
+voters and, on a member, **Promote this node**.
+
+- **Heartbeats.** Every member calls its primary's
+  `/cluster/peer/heartbeat` every two seconds with its forwarding
+  credential. The answer is the cluster as the primary knows it (each
+  node's cluster-manager URL and certificate fingerprint, its components,
+  each member's credential hash) and the peer secret that signs node-to-node
+  calls. Every node keeps this in the node-local `cluster_peers`.
+- **Epoch.** Each promotion raises the epoch. A node that sees a higher one
+  follows its primary; a primary that sees one is **fenced**: its services
+  make no lifecycle write (`503 node_fenced`) and it runs no primary job
+  until it rejoins. A lost election raises nothing, so it can't fence a
+  running primary.
+- **Lease (three or more voters).** The primary may write while a majority
+  of voters, itself included, heartbeated within ten seconds
+  (`cluster_local_state.writable_until`, checked by every service through
+  `pkg/clusterstate`). Without it: `503 primary_lease_lost`. Members start
+  an election only after twenty seconds without the primary (plus up to
+  five of jitter), so an isolated primary has stopped writing before
+  another can be elected. Crypto operations and reads are never stopped.
+- **Election (three or more voters).** A member that lost the primary asks
+  every peer for its vote in the next epoch. A voter grants one vote per
+  epoch (kept in `cluster_votes` across restarts), only if it has also lost
+  the primary for twenty seconds and the candidate has applied at least as
+  much of the primary's changes (the replication origins' LSN). A majority
+  of all voters, the lost primary counted, promotes the candidate. A
+  member cut off on its own can't win.
+- **Manual promotion (any size).** On the member to promote. If the primary
+  answers, it is fenced first and returns its WAL position; the member waits
+  (up to 45 s) until its subscriptions confirm that position, then promotes:
+  a switchover that loses nothing. If the primary doesn't answer, the
+  administrator must confirm again (`force`): writes the primary made that
+  had not replicated are lost, and if it is still serving clients it accepts
+  writes until it learns of the promotion (its next contact with any peer).
+  With two nodes there is no majority to stop that; three nodes close it.
+- **Promotion.** The node detaches from the old primary (its subscriptions
+  are dropped without contacting it), publishes every component, accepts
+  the members' forwarding credentials, and tells every peer. Each member
+  then asks it for replication access (`/cluster/peer/resubscribe`, sealed
+  with ML-KEM like the join) and copies its components afresh
+  (`ResetLocalData`). Data the old primary had not replicated to the new
+  one is not recovered.
+- **A fenced node rejoins** as any node joins: a join bundle from the
+  current primary, pasted on it. The join drops the replication slots its
+  members held, so it doesn't keep their WAL.
+- **Promotable nodes** need `CLUSTER_ADVERTISE_URL`, the cluster-manager
+  TLS certificate (`CLUSTER_HTTP_TLS_*`) and `CLUSTER_PG_ADVERTISE_HOST`,
+  like a primary. A node without an address doesn't vote.
+- **The registry follows.** Which node leads in the node list is set by
+  promotion; it can no longer be relabelled by hand (the old
+  Leader/Follower control changed only that label and was removed), and
+  the primary can't be removed: promote another node first.
+- **Upgrading.** A primary that took members before 13.37.0-beta never
+  recorded its role (so its audit chain and login attempts were not tagged
+  for the cluster); it records it, and its members, when cluster-manager
+  starts.
+
 ## Rules for development
 
+- **A replicated table takes no IDs from a sequence** (SERIAL, IDENTITY,
+  nextval): logical replication doesn't carry sequences, so a promoted
+  node would reuse IDs. `TestReplicatedTablesUseNoSequence`.
 - **Every new table is classified.** Add it to `Replicated[<component>]`,
   `NodeLocal` (with a reason) or `SharedAppend` in
   `pkg/clustercatalog/tables.go`. `TestEveryTableIsClassified` fails the build
@@ -224,7 +288,8 @@ configured attempts before lockout. Per-node rate limits still apply.
   default of 4 logical workers, every component but one stays stuck in its
   initial copy; the join test found this. Changing these settings needs a
   Postgres restart.
-- To run the two-node test: `./scripts/test-cluster-replication.sh` (Docker
+- To run the cluster tests (replication, join, failover on three
+  Postgres servers): `./scripts/test-cluster-replication.sh` (Docker
   required). CI runs it too (`cluster-replication` job).
 - **Service master keys need nothing per node.** secrets, certs, cloud and
   ekm derive their master key from a keycore system key. The join ships

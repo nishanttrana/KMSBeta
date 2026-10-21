@@ -4,6 +4,39 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.37.0-beta] — 2026-10-21
+
+### Added
+- **Cluster failover.** Platform → Cluster → **Failover**. With three or
+  more nodes a member that loses the primary for 20 seconds is elected by a
+  majority (one vote per epoch, never for a node with less of the primary's
+  data) and promoted; the old primary's lease, renewed by a majority's
+  heartbeats every 2 seconds, has already stopped its writes. At any size an
+  administrator can promote a member: if the primary answers, it is fenced
+  first and the member waits for its last write (switchover); if not, a
+  second confirmation says what forcing costs. A promoted node detaches from
+  the old primary and the other members copy from it; a former primary that
+  learns of a newer epoch is fenced (`503 node_fenced`) until it rejoins.
+  Proven on three real Postgres servers (`TestFailoverEndToEnd`, in CI).
+
+### Removed
+- **The Leader/Follower control on Node Management** and
+  `POST /cluster/nodes/{id}/role`: they changed a label in the node list,
+  never which node was primary. Removing the node labelled leader now
+  refuses (`409 node_is_primary`) instead of relabelling another.
+- **docs/INFRASTRUCTURE.md's cluster chapter** (Raft, witnesses, read
+  replicas, consistency modes, ports 5173-5175): never true. It now
+  summarises CLUSTERING.md.
+
+### Fixed
+- **The primary never recorded its role.** `cluster_local_state` was
+  written only on members, so a primary's audit chain and login attempts
+  were never tagged for the cluster (shared-append). The first join records
+  it now, and an existing primary records it at start.
+- **Cluster administration was granted by role name** ("admin",
+  "super-admin" in the root tenant). It now needs the `*` permission a root
+  administrator's token carries, or a service identity.
+
 ## [13.36.0-beta] — 2026-10-21
 
 ### Added

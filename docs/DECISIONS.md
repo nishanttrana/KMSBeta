@@ -7,6 +7,31 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-21 — Failover: majority leases at three nodes, an administrator at two
+**Decision:** with three or more voters, members elect a new primary by
+majority vote (one vote per epoch, only for a candidate with at least the
+voter's data, only from voters that also lost the primary), and a primary
+writes only while a majority renewed its lease within 10 s, shorter than
+the 20 s election timeout. With two nodes, promotion is an administrator's
+act: a switchover when the primary answers, `force` with its cost stated
+when it doesn't. A promoted node's members re-copy their components from
+it; a former primary is fenced until it rejoins.
+**Why:** two nodes can't tell a dead primary from a partition, so no
+automatic choice there is safe; three can, and the lease makes an isolated
+primary stop before anyone else can start. Logical replication has no
+promotion of its own, and a member's tables can't be trusted to match the
+new primary's after an asynchronous loss, so they are copied afresh.
+**Rejected:** automatic failover at two nodes (split brain); an external
+coordinator (etcd/Consul) as the source of truth (another system to run and
+secure on every customer install); keeping a member's data and re-attaching
+without a copy (silent divergence).
+**Enforced:** `TestThreeNodeElectionFencesTheOldPrimary`,
+`TestPartitionedMemberCannotDisruptAHealthyPrimary`,
+`TestPeerCallsAndVotesAreChecked`, `TestTwoNodeManualPromotion`,
+`TestFailoverEndToEnd`, `TestFencedOrLeaselessPrimaryRefusesWrites`.
+
+---
+
 ## 2026-10-21 — OCI External KMS: identity domain tokens, Vecta's own nonces
 **Decision:** the OCI vendor API is served through the edge like XKS. A
 call is trusted only for an identity domain access token whose signature,

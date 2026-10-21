@@ -7,13 +7,13 @@ import {
   listClusterSyncEvents,
   getClusterSyncCheckpoint,
   removeClusterNode,
-  updateClusterNodeRole,
   upsertClusterProfile,
   type ClusterSyncEvent,
   type ClusterLogEntry,
   type ClusterSyncCheckpoint
 } from "../../../lib/cluster";
 import { Btn, Card, usePromptDialog } from "../legacyPrimitives";
+import { ClusterFailoverPanel } from "./ClusterFailoverPanel";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 import { ClusterTabView } from "./ClusterTabView";
@@ -136,8 +136,6 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
   const [addNodeModalOpen, setAddNodeModalOpen] = useState(false);
 
   // Node management state
-  const [roleDrafts, setRoleDrafts] = useState<Record<string, string>>({});
-  const [roleUpdatingNode, setRoleUpdatingNode] = useState("");
   const [removeBusyNode, setRemoveBusyNode] = useState("");
 
   // Sync state
@@ -266,24 +264,6 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
     });
   };
 
-  const updateNodeRoleAction = async (node: any) => {
-    const nodeID = String(node?.id || "").trim();
-    if (!session?.token || !nodeID) return;
-    const requestedRole = String(roleDrafts[nodeID] || node?.role || "follower").trim().toLowerCase() === "leader" ? "leader" : "follower";
-    const currentRole = String(node?.role || "follower").trim().toLowerCase() === "leader" ? "leader" : "follower";
-    if (requestedRole === currentRole) return;
-    setRoleUpdatingNode(nodeID);
-    try {
-      await updateClusterNodeRole(session, nodeID, requestedRole);
-      await refresh(true);
-      onToast?.(`Node role updated: ${nodeID} -> ${requestedRole}.`);
-    } catch (error) {
-      onToast?.(`Role update failed: ${errMsg(error)}`);
-    } finally {
-      setRoleUpdatingNode("");
-    }
-  };
-
   const removeNodeAction = async (node: any) => {
     const nodeID = String(node?.id || "").trim();
     const nodeName = String(node?.name || nodeID).trim();
@@ -296,10 +276,9 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
     if (!confirmed) return;
     setRemoveBusyNode(nodeID);
     try {
-      const result = await removeClusterNode(session, nodeID, { reason: "removed_from_cluster", purge_synced_data: true });
+      await removeClusterNode(session, nodeID, { reason: "removed_from_cluster", purge_synced_data: true });
       await refresh(true);
-      const promoted = String(result?.promoted_leader_node || "").trim();
-      onToast?.(promoted ? `Node removed. New leader: ${promoted}.` : "Node removed from cluster.");
+      onToast?.("Node removed from cluster.");
     } catch (error) {
       onToast?.(`Remove node failed: ${errMsg(error)}`);
     } finally {
@@ -385,6 +364,8 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
     </Card>;
   }
 
+  if (clusterView === "failover" && session) return <ClusterFailoverPanel session={session} onToast={onToast} />;
+
   return <>
     <ClusterTabView
       clusterView={clusterView}
@@ -399,10 +380,6 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
       clusterComponentLabel={clusterComponentLabel}
       componentCategoryColor={componentCategoryColor}
       // Node management
-      roleDrafts={roleDrafts}
-      setRoleDrafts={setRoleDrafts}
-      roleUpdatingNode={roleUpdatingNode}
-      updateNodeRoleAction={updateNodeRoleAction}
       removeBusyNode={removeBusyNode}
       removeNodeAction={removeNodeAction}
       // Add node

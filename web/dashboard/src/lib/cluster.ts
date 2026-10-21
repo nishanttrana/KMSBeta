@@ -88,7 +88,6 @@ export type RemoveClusterNodeResult = {
   purge_synced_data: boolean;
   purge_event_ids: number[];
   previous_role: string;
-  promoted_leader_node?: string;
 };
 
 export type ClusterSyncEvent = {
@@ -211,22 +210,6 @@ export async function upsertClusterNode(
   return out.node;
 }
 
-export async function updateClusterNodeRole(
-  session: AuthSession,
-  nodeID: string,
-  role: "leader" | "follower" | string
-): Promise<ClusterNode> {
-  const out = await serviceRequest<NodeResponse>(session, "cluster", `/cluster/nodes/${encodeURIComponent(nodeID)}/role`, {
-    method: "POST",
-    body: JSON.stringify({
-      tenant_id: session.tenantId,
-      role,
-      requested_by: session.username || "admin"
-    })
-  });
-  return out.node;
-}
-
 export async function removeClusterNode(
   session: AuthSession,
   nodeID: string,
@@ -315,5 +298,37 @@ export async function connectToCluster(
     method: "POST",
     body: JSON.stringify(input)
   });
+  return out.result;
+}
+
+// Failover (services/cluster-manager/failover.go).
+export type FailoverPeer = { node_id: string; url: string; is_primary: boolean; voter: boolean; last_heartbeat_ago_ms?: number };
+export type FailoverStatus = {
+  configured: boolean;
+  node?: { node_id: string; role: string; epoch: number; primary_node_id: string; writable_until?: string; last_primary_contact_ago_ms: number; primary_contact_ok: boolean; resubscribe_pending: boolean };
+  peers?: FailoverPeer[];
+  voters?: number;
+  majority?: number;
+  failover_mode?: "manual" | "automatic";
+  lease_required?: boolean;
+  promotable?: boolean;
+};
+
+export async function getFailoverStatus(session: AuthSession): Promise<FailoverStatus> {
+  const out = await serviceRequest<{ failover?: FailoverStatus }>(session, "cluster", `/cluster/failover/status?${tenantQuery(session)}`);
+  if (!out || typeof out.failover !== "object" || out.failover === null || typeof out.failover.configured !== "boolean") {
+    throw new Error("failover status response has no failover state");
+  }
+  return out.failover;
+}
+
+export type PromoteResult = { node_id: string; epoch: number; previous_primary_node_id: string; previous_primary_fenced: boolean; caught_up: boolean; announced?: string[] };
+
+export async function promoteThisNode(session: AuthSession, input: { force: boolean; reason: string }): Promise<PromoteResult> {
+  const out = await serviceRequest<{ result?: PromoteResult }>(session, "cluster", `/cluster/failover/promote?${tenantQuery(session)}`, {
+    method: "POST",
+    body: JSON.stringify({ confirm: true, force: input.force, reason: input.reason })
+  });
+  if (!out?.result || typeof out.result.epoch !== "number") throw new Error("promotion response has no result");
   return out.result;
 }

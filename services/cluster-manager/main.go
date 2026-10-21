@@ -100,6 +100,11 @@ func main() {
 			}
 		}
 	}()
+	svc.WithFailover(NewSQLStore(dbConn), replEngine)
+	if err := svc.AdoptExistingCluster(ctx); err != nil {
+		logger.Printf("cluster failover: recording an existing primary: %v", err)
+	}
+	go svc.RunFailover(ctx)
 	handler := NewHandler(svc)
 
 	httpPort := envOr("HTTP_PORT", "8210")

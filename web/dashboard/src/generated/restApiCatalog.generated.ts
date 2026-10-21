@@ -4203,6 +4203,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "cluster-get-cluster-failover-status",
+    "group": "Cluster Management (cluster)",
+    "title": "GET /cluster/failover/status",
+    "service": "cluster",
+    "method": "GET",
+    "pathTemplate": "/cluster/failover/status?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Cluster service.",
+    "requestExample": "GET /svc/cluster/cluster/failover/status?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "cluster-get-cluster-logs",
     "group": "Cluster Management (cluster)",
     "title": "GET /cluster/logs",
@@ -4296,6 +4324,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Cluster service.",
     "requestExample": "GET /svc/cluster/cluster/overview?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cluster-get-cluster-peer-status",
+    "group": "Cluster Management (cluster)",
+    "title": "GET /cluster/peer/status",
+    "service": "cluster",
+    "method": "GET",
+    "pathTemplate": "/cluster/peer/status?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Cluster service.",
+    "requestExample": "GET /svc/cluster/cluster/peer/status?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4436,6 +4492,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Cluster service.",
     "requestExample": "GET /svc/cluster/healthz?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cluster-post-cluster-failover-promote",
+    "group": "Cluster Management (cluster)",
+    "title": "POST /cluster/failover/promote",
+    "service": "cluster",
+    "method": "POST",
+    "pathTemplate": "/cluster/failover/promote?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Cluster service.",
+    "requestExample": "POST /svc/cluster/cluster/failover/promote?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4623,15 +4707,127 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "cluster-post-cluster-nodes-id-role",
+    "id": "cluster-post-cluster-peer-announce",
     "group": "Cluster Management (cluster)",
-    "title": "POST /cluster/nodes/{id}/role",
+    "title": "POST /cluster/peer/announce",
     "service": "cluster",
     "method": "POST",
-    "pathTemplate": "/cluster/nodes/{id}/role?tenant_id={{tenant_id}}",
+    "pathTemplate": "/cluster/peer/announce?tenant_id={{tenant_id}}",
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Cluster service.",
-    "requestExample": "POST /svc/cluster/cluster/nodes/{id}/role?tenant_id={{tenant_id}}",
+    "requestExample": "POST /svc/cluster/cluster/peer/announce?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cluster-post-cluster-peer-fence",
+    "group": "Cluster Management (cluster)",
+    "title": "POST /cluster/peer/fence",
+    "service": "cluster",
+    "method": "POST",
+    "pathTemplate": "/cluster/peer/fence?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Cluster service.",
+    "requestExample": "POST /svc/cluster/cluster/peer/fence?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cluster-post-cluster-peer-heartbeat",
+    "group": "Cluster Management (cluster)",
+    "title": "POST /cluster/peer/heartbeat",
+    "service": "cluster",
+    "method": "POST",
+    "pathTemplate": "/cluster/peer/heartbeat?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Cluster service.",
+    "requestExample": "POST /svc/cluster/cluster/peer/heartbeat?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cluster-post-cluster-peer-resubscribe",
+    "group": "Cluster Management (cluster)",
+    "title": "POST /cluster/peer/resubscribe",
+    "service": "cluster",
+    "method": "POST",
+    "pathTemplate": "/cluster/peer/resubscribe?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Cluster service.",
+    "requestExample": "POST /svc/cluster/cluster/peer/resubscribe?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cluster-post-cluster-peer-vote",
+    "group": "Cluster Management (cluster)",
+    "title": "POST /cluster/peer/vote",
+    "service": "cluster",
+    "method": "POST",
+    "pathTemplate": "/cluster/peer/vote?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Cluster service.",
+    "requestExample": "POST /svc/cluster/cluster/peer/vote?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

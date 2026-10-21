@@ -136,6 +136,9 @@ type ExchangeJoinInput struct {
 	Endpoint              string `json:"endpoint"`
 	KeycoreJoinKey        string `json:"keycore_join_key"`
 	ClusterManagerJoinKey string `json:"cluster_manager_join_key"`
+	// TLSFingerprint is the joining node's cluster-manager certificate, so
+	// peers can reach it during failover.
+	TLSFingerprint string `json:"tls_fingerprint,omitempty"`
 }
 
 type ExchangeJoinResult struct {
@@ -180,6 +183,13 @@ func (s *Service) ExchangeJoin(ctx context.Context, in ExchangeJoinInput) (Excha
 	if in.KeycoreJoinKey == "" || in.ClusterManagerJoinKey == "" || strings.TrimSpace(in.NodeID) == "" {
 		return ExchangeJoinResult{}, newServiceError(400, "bad_request", "node_id, keycore_join_key and cluster_manager_join_key are required")
 	}
+	if s.fo != nil {
+		// The first member makes this node the primary (a fenced node is
+		// refused: it must rejoin first).
+		if _, err := s.becomePrimary(ctx); err != nil {
+			return ExchangeJoinResult{}, err
+		}
+	}
 	node, err := s.CompleteJoin(ctx, CompleteJoinInput{
 		TenantID: "root", TokenID: in.TokenID, JoinSecret: in.JoinSecret,
 		NodeID: in.NodeID, NodeName: in.NodeName, Endpoint: in.Endpoint,
@@ -214,6 +224,12 @@ func (s *Service) ExchangeJoin(ctx context.Context, in ExchangeJoinInput) (Excha
 	forwardCredential := hex.EncodeToString(fwdRaw)
 	if err := s.store.SetMemberCredential(ctx, node.ID, credentialHash(forwardCredential)); err != nil {
 		return ExchangeJoinResult{}, err
+	}
+	if s.fo != nil {
+		if err := s.fo.store.UpsertPeer(ctx, peer{NodeID: node.ID, URL: node.Endpoint, Fingerprint: strings.TrimSpace(in.TLSFingerprint),
+			CredentialHash: credentialHash(forwardCredential), Components: components}); err != nil {
+			return ExchangeJoinResult{}, err
+		}
 	}
 	credsJSON, _ := json.Marshal(replicationCreds{Host: cfg.pgHost, Port: cfg.pgPort, DB: cfg.pgDB, User: role, Password: password, SSLMode: cfg.pgSSLMode, ForwardCredential: forwardCredential})
 	cmKey, err := base64.StdEncoding.DecodeString(in.ClusterManagerJoinKey)
@@ -291,6 +307,7 @@ func (s *Service) ConnectToCluster(ctx context.Context, in ConnectInput) (Connec
 		TokenID: b.TokenID, JoinSecret: b.JoinSecret, NodeID: s.bootstrapNodeID,
 		NodeName: firstNonEmpty(in.NodeName, s.bootstrapNodeName), Endpoint: firstNonEmpty(in.Endpoint, s.joinCfg.advertiseURL),
 		KeycoreJoinKey: keycoreKey, ClusterManagerJoinKey: base64.StdEncoding.EncodeToString(recipient.EncapsulationKey()),
+		TLSFingerprint: s.joinCfg.tlsFingerprint,
 	})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(b.PrimaryURL, "/")+"/cluster/join/exchange", bytes.NewReader(payload))
 	if err != nil {
@@ -336,6 +353,20 @@ func (s *Service) ConnectToCluster(ctx context.Context, in ConnectInput) (Connec
 		return ConnectResult{}, fmt.Errorf("keycore master-key import: %w", err)
 	}
 	out := ConnectResult{PrimaryNodeID: res.PrimaryNodeID, Components: res.Components, Subscribed: []string{}}
+	if s.fo != nil {
+		// A former primary rejoining: drop the slots its members held, or it
+		// keeps their WAL forever, and forget its old cluster.
+		if prev, err := s.fo.store.LoadNode(ctx); err == nil && (prev.Role == clusterstate.RolePrimary || prev.Role == clusterstate.RoleFenced) {
+			if err := s.fo.repl.DropMemberSlots(ctx); err != nil {
+				return out, fmt.Errorf("drop former members' slots: %w", err)
+			}
+			if peers, err := s.fo.store.Peers(ctx); err == nil {
+				for _, p := range peers {
+					_ = s.fo.store.DeletePeer(ctx, p.NodeID)
+				}
+			}
+		}
+	}
 	for _, c := range res.Components {
 		if _, ok := clustercatalog.Replicated[c]; !ok {
 			continue // component owns no tables
@@ -346,6 +377,7 @@ func (s *Service) ConnectToCluster(ctx context.Context, in ConnectInput) (Connec
 		out.Subscribed = append(out.Subscribed, c)
 	}
 	// From here this node's services forward lifecycle writes to the primary.
+	// Its epoch and the peer secret come with the first heartbeat.
 	if err := s.store.SetLocalState(ctx, clusterstate.State{
 		NodeID: s.bootstrapNodeID, Role: clusterstate.RoleFollower, PrimaryNodeID: res.PrimaryNodeID,
 		PrimaryURL: b.PrimaryURL, PrimaryFingerprint: b.TLSFingerprint, ForwardCredential: creds.ForwardCredential,

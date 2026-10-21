@@ -35,6 +35,39 @@ func TestMemberDetectionAndPrimaryJobs(t *testing.T) {
 	}
 }
 
+// A fenced node and a primary past its lease make no lifecycle write and
+// run no primary job; a primary within its lease, or without one, does.
+func TestFencingAndLease(t *testing.T) {
+	ctx := context.Background()
+	t.Cleanup(func() { SetDefault(nil) })
+	now := time.Now()
+	for _, c := range []struct {
+		st     State
+		ok     bool
+		reason string
+	}{
+		{State{}, true, ""},
+		{State{Role: RolePrimary}, true, ""},
+		{State{Role: RolePrimary, WritableUntil: now.Add(5 * time.Second)}, true, ""},
+		{State{Role: RolePrimary, WritableUntil: now.Add(-time.Millisecond)}, false, "primary_lease_lost"},
+		{State{Role: RoleFenced, NodeID: "n1"}, false, "node_fenced"},
+	} {
+		ok, reason := c.st.WritesAllowed(now)
+		if ok != c.ok || reason != c.reason {
+			t.Fatalf("%+v: %v %q", c.st, ok, reason)
+		}
+		SetDefault(Static(c.st))
+		if RunsPrimaryJobs(ctx) != c.ok {
+			t.Fatalf("%+v: primary jobs %v", c.st, !c.ok)
+		}
+	}
+	// A follower whose primary is not yet known runs no primary job either.
+	SetDefault(Static(State{Role: RoleFollower, NodeID: "n2"}))
+	if RunsPrimaryJobs(ctx) {
+		t.Fatal("a follower ran primary jobs")
+	}
+}
+
 func TestChainNode(t *testing.T) {
 	for _, c := range []struct {
 		st   State
@@ -44,6 +77,7 @@ func TestChainNode(t *testing.T) {
 		{State{NodeID: "n1"}, ""}, // standalone: nothing replicates
 		{State{NodeID: "n1", Role: RolePrimary}, "n1"},
 		{State{NodeID: "n2", Role: RoleFollower}, "n2"},
+		{State{NodeID: "n3", Role: RoleFenced}, "n3"},
 	} {
 		if got := c.st.ChainNode(); got != c.want {
 			t.Fatalf("%+v: chain node %q, want %q", c.st, got, c.want)
@@ -106,9 +140,10 @@ func TestMissingTableIsCachedAsStandalone(t *testing.T) {
 			t.Fatal("a node without the table was treated as a member")
 		}
 	}
-	// One catalogue probe and one read of the table, then the cache.
-	if n := queries.Load(); n != 2 {
-		t.Fatalf("%d queries for 50 lookups inside the TTL, want 2", n)
+	// One catalogue probe and one read of the table (and of its form before
+	// failover), then the cache.
+	if n := queries.Load(); n != 3 {
+		t.Fatalf("%d queries for 50 lookups inside the TTL, want 3", n)
 	}
 }
 

@@ -66,6 +66,7 @@ var builtinClusterProfilePresets = []clusterProfilePreset{
 }
 
 type Service struct {
+	fo                     *failover
 	minter                 TokenMinter
 	forwardClient          *http.Client
 	forwardTargets         func(string) (string, bool)
@@ -559,7 +560,10 @@ func (s *Service) UpsertNode(ctx context.Context, in UpsertNodeInput) (ClusterNo
 		}
 	}
 	node.Name = defaultIfEmpty(in.NodeName, defaultIfEmpty(node.Name, nodeID))
-	node.Role = normalizeRole(defaultIfEmpty(in.Role, defaultIfEmpty(node.Role, "follower")))
+	// Which node leads is decided by promotion (failover.go), not by
+	// editing the registry: a new entry is a follower, an existing one
+	// keeps its role.
+	node.Role = normalizeRole(defaultIfEmpty(node.Role, "follower"))
 	node.Endpoint = defaultIfEmpty(in.Endpoint, defaultIfEmpty(node.Endpoint, "unknown"))
 	node.Status = normalizeNodeStatus(defaultIfEmpty(in.Status, defaultIfEmpty(node.Status, "unknown")))
 	node.CPUPercent = round1(clampFloat(in.CPUPercent, 0, 100))
@@ -572,11 +576,6 @@ func (s *Service) UpsertNode(ctx context.Context, in UpsertNodeInput) (ClusterNo
 	node.LastHeartbeatAt = s.now()
 	if err := s.store.UpsertNode(ctx, node); err != nil {
 		return ClusterNode{}, err
-	}
-	if node.Role == "leader" {
-		if err := s.demoteOtherLeaders(ctx, in.TenantID, node.ID); err != nil {
-			return ClusterNode{}, err
-		}
 	}
 	out, err := s.store.GetNode(ctx, in.TenantID, node.ID)
 	if err != nil {
@@ -607,56 +606,6 @@ func (s *Service) UpsertNode(ctx context.Context, in UpsertNodeInput) (ClusterNo
 	return out, nil
 }
 
-func (s *Service) UpdateNodeRole(ctx context.Context, nodeID string, in UpdateNodeRoleInput) (ClusterNode, error) {
-	in.TenantID = strings.TrimSpace(in.TenantID)
-	if in.TenantID == "" {
-		return ClusterNode{}, newServiceError(400, "bad_request", "tenant_id is required")
-	}
-	nodeID = strings.TrimSpace(nodeID)
-	if nodeID == "" {
-		return ClusterNode{}, newServiceError(400, "bad_request", "node_id is required")
-	}
-	targetRole := normalizeRole(in.Role)
-	node, err := s.store.GetNode(ctx, in.TenantID, nodeID)
-	if err != nil {
-		return ClusterNode{}, err
-	}
-	if node.Role == targetRole {
-		return node, nil
-	}
-	node.Role = targetRole
-	node.UpdatedAt = s.now()
-	if err := s.store.UpsertNode(ctx, node); err != nil {
-		return ClusterNode{}, err
-	}
-	if targetRole == "leader" {
-		if err := s.demoteOtherLeaders(ctx, in.TenantID, nodeID); err != nil {
-			return ClusterNode{}, err
-		}
-	}
-	out, err := s.store.GetNode(ctx, in.TenantID, nodeID)
-	if err != nil {
-		return ClusterNode{}, err
-	}
-	s.appendClusterLog(ctx, ClusterLogEntry{
-		TenantID:  in.TenantID,
-		NodeID:    out.ID,
-		Level:     "info",
-		EventType: "node_role_updated",
-		Message:   "cluster node role updated",
-		Details: map[string]interface{}{
-			"role":       out.Role,
-			"updated_by": defaultIfEmpty(strings.TrimSpace(in.RequestedBy), "system"),
-		},
-	})
-	_ = s.publishAudit(ctx, "audit.cluster.node_role_updated", in.TenantID, map[string]interface{}{
-		"node_id":    out.ID,
-		"role":       out.Role,
-		"updated_by": defaultIfEmpty(strings.TrimSpace(in.RequestedBy), "system"),
-	})
-	return out, nil
-}
-
 func (s *Service) RemoveNode(ctx context.Context, nodeID string, in RemoveNodeInput) (RemoveNodeResult, error) {
 	in.TenantID = strings.TrimSpace(in.TenantID)
 	if in.TenantID == "" {
@@ -676,6 +625,10 @@ func (s *Service) RemoveNode(ctx context.Context, nodeID string, in RemoveNodeIn
 	if strings.EqualFold(strings.TrimSpace(node.ID), strings.TrimSpace(s.bootstrapNodeID)) {
 		return RemoveNodeResult{}, newServiceError(409, "node_locked", "local bootstrap node cannot be removed from itself")
 	}
+	if normalizeRole(node.Role) == "leader" {
+		// Relabelling another node would not make it primary.
+		return RemoveNodeResult{}, newServiceError(409, "node_is_primary", "this node is the primary: promote another node first (Cluster → Failover)")
+	}
 	profile, err := s.store.GetProfile(ctx, in.TenantID, node.ProfileID)
 	if err != nil {
 		return RemoveNodeResult{}, err
@@ -689,29 +642,26 @@ func (s *Service) RemoveNode(ctx context.Context, nodeID string, in RemoveNodeIn
 	if seedErr != nil {
 		return RemoveNodeResult{}, seedErr
 	}
-	promotedLeaderNode := ""
-	if normalizeRole(node.Role) == "leader" {
-		candidateID, promoteErr := s.promoteReplacementLeader(ctx, in.TenantID, node.ID)
-		if promoteErr != nil {
-			return RemoveNodeResult{}, promoteErr
-		}
-		promotedLeaderNode = candidateID
-	}
 	// Fail closed: a removed node must not keep forwarding writes here.
 	if err := s.store.RevokeMemberCredential(ctx, node.ID); err != nil {
 		return RemoveNodeResult{}, err
+	}
+	if s.fo != nil {
+		// Nor count as a voter.
+		if err := s.fo.store.DeletePeer(ctx, node.ID); err != nil {
+			return RemoveNodeResult{}, err
+		}
 	}
 	if err := s.store.DeleteNode(ctx, in.TenantID, node.ID); err != nil {
 		return RemoveNodeResult{}, err
 	}
 	result := RemoveNodeResult{
-		NodeID:             node.ID,
-		TenantID:           in.TenantID,
-		Standalone:         true,
-		PurgeSyncedData:    purgeSyncedData,
-		PurgeEventIDs:      purgeEventIDs,
-		PreviousRole:       normalizeRole(node.Role),
-		PromotedLeaderNode: promotedLeaderNode,
+		NodeID:          node.ID,
+		TenantID:        in.TenantID,
+		Standalone:      true,
+		PurgeSyncedData: purgeSyncedData,
+		PurgeEventIDs:   purgeEventIDs,
+		PreviousRole:    normalizeRole(node.Role),
 	}
 	s.appendClusterLog(ctx, ClusterLogEntry{
 		TenantID:  in.TenantID,
@@ -720,18 +670,16 @@ func (s *Service) RemoveNode(ctx context.Context, nodeID string, in RemoveNodeIn
 		EventType: "node_removed",
 		Message:   "cluster node removed and decommissioned",
 		Details: map[string]interface{}{
-			"purge_synced_data":  purgeSyncedData,
-			"purge_event_ids":    purgeEventIDs,
-			"promoted_leader_id": promotedLeaderNode,
-			"requested_by":       defaultIfEmpty(strings.TrimSpace(in.RequestedBy), "system"),
-			"reason":             reason,
+			"purge_synced_data": purgeSyncedData,
+			"purge_event_ids":   purgeEventIDs,
+			"requested_by":      defaultIfEmpty(strings.TrimSpace(in.RequestedBy), "system"),
+			"reason":            reason,
 		},
 	})
 	_ = s.publishAudit(ctx, "audit.cluster.node_removed", in.TenantID, map[string]interface{}{
 		"node_id":            node.ID,
 		"purge_synced_data":  purgeSyncedData,
 		"purge_event_ids":    purgeEventIDs,
-		"promoted_leader_id": promotedLeaderNode,
 		"requested_by":       defaultIfEmpty(strings.TrimSpace(in.RequestedBy), "system"),
 		"reason":             reason,
 		"forward_credential": "revoked",
@@ -1836,39 +1784,6 @@ func ensureProfileComponents(in []string) []string {
 	return disallowAuditComponent(normalizeComponents(merged))
 }
 
-func (s *Service) demoteOtherLeaders(ctx context.Context, tenantID string, selectedNodeID string) error {
-	nodes, err := s.store.ListNodes(ctx, tenantID)
-	if err != nil {
-		return err
-	}
-	for _, node := range nodes {
-		if strings.TrimSpace(node.ID) == "" {
-			continue
-		}
-		if strings.TrimSpace(node.ID) == strings.TrimSpace(selectedNodeID) {
-			continue
-		}
-		if normalizeRole(node.Role) != "leader" {
-			continue
-		}
-		node.Role = "follower"
-		if err := s.store.UpsertNode(ctx, node); err != nil {
-			return err
-		}
-		s.appendClusterLog(ctx, ClusterLogEntry{
-			TenantID:  tenantID,
-			NodeID:    node.ID,
-			Level:     "info",
-			EventType: "leader_demoted",
-			Message:   "existing leader demoted because another node was promoted",
-			Details: map[string]interface{}{
-				"promoted_node_id": selectedNodeID,
-			},
-		})
-	}
-	return nil
-}
-
 func builtinClusterProfiles(tenantID string, defaultProfileID string) []ClusterProfile {
 	out := make([]ClusterProfile, 0, len(builtinClusterProfilePresets))
 	for _, preset := range builtinClusterProfilePresets {
@@ -1977,38 +1892,6 @@ func (s *Service) emitNodeDecommissionEvents(ctx context.Context, node ClusterNo
 		eventIDs = append(eventIDs, created.ID)
 	}
 	return eventIDs, nil
-}
-
-func (s *Service) promoteReplacementLeader(ctx context.Context, tenantID string, removingNodeID string) (string, error) {
-	nodes, err := s.store.ListNodes(ctx, tenantID)
-	if err != nil {
-		return "", err
-	}
-	candidates := make([]ClusterNode, 0, len(nodes))
-	for _, node := range nodes {
-		if strings.TrimSpace(node.ID) == "" || strings.TrimSpace(node.ID) == strings.TrimSpace(removingNodeID) {
-			continue
-		}
-		if strings.EqualFold(strings.TrimSpace(node.JoinState), "revoked") {
-			continue
-		}
-		candidates = append(candidates, node)
-	}
-	if len(candidates) == 0 {
-		return "", nil
-	}
-	sort.Slice(candidates, func(i, j int) bool {
-		return strings.ToLower(strings.TrimSpace(candidates[i].Name)) < strings.ToLower(strings.TrimSpace(candidates[j].Name))
-	})
-	candidate := candidates[0]
-	candidate.Role = "leader"
-	if err := s.store.UpsertNode(ctx, candidate); err != nil {
-		return "", err
-	}
-	if err := s.demoteOtherLeaders(ctx, tenantID, candidate.ID); err != nil {
-		return "", err
-	}
-	return candidate.ID, nil
 }
 
 func (s *Service) resolvePushTargets(ctx context.Context, tenantID string, profileID string, sourceNodeID string, component string) []string {

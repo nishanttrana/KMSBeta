@@ -98,9 +98,9 @@ jobs:
         run: scripts/ci-go-test.sh -race ./pkg/... ./services/...
 
   cluster-replication:
-    # Two real Postgres 17 servers: selective per-component logical replication
-    # (docs/CLUSTERING.md).
-    name: Cluster replication (two-node Postgres)
+    # Three real Postgres 17 servers: selective per-component logical
+    # replication, the secure join and failover (docs/CLUSTERING.md).
+    name: Cluster replication and failover (three-node Postgres)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -111,7 +111,7 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Two-node replication test
+      - name: Replication, join and failover tests
         run: ./scripts/test-cluster-replication.sh
 
   volume-repair:

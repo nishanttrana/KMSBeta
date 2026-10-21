@@ -3739,23 +3739,8 @@
       "action": "",
       "code_scope": "cluster-manager",
       "file": "services/cluster-manager/handler.go",
-      "handler": "h.handleNodeRoleUpdate",
-      "line": 51,
-      "match_key": "cluster-manager|POST|/cluster/nodes/{param}/role",
-      "method": "POST",
-      "normalized_path": "/cluster/nodes/{param}/role",
-      "path": "/cluster/nodes/{id}/role",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "cluster-manager"
-    },
-    {
-      "action": "",
-      "code_scope": "cluster-manager",
-      "file": "services/cluster-manager/handler.go",
       "handler": "h.handleRemoveNode",
-      "line": 52,
+      "line": 51,
       "match_key": "cluster-manager|DELETE|/cluster/nodes/{param}",
       "method": "DELETE",
       "normalized_path": "/cluster/nodes/{param}",
@@ -3770,7 +3755,7 @@
       "code_scope": "cluster-manager",
       "file": "services/cluster-manager/handler.go",
       "handler": "h.handlePublishSyncEvent",
-      "line": 54,
+      "line": 53,
       "match_key": "cluster-manager|POST|/cluster/sync/events",
       "method": "POST",
       "normalized_path": "/cluster/sync/events",
@@ -3785,7 +3770,7 @@
       "code_scope": "cluster-manager",
       "file": "services/cluster-manager/handler.go",
       "handler": "h.handleListSyncEvents",
-      "line": 55,
+      "line": 54,
       "match_key": "cluster-manager|GET|/cluster/sync/events",
       "method": "GET",
       "normalized_path": "/cluster/sync/events",
@@ -3800,7 +3785,7 @@
       "code_scope": "cluster-manager",
       "file": "services/cluster-manager/handler.go",
       "handler": "h.handleSyncAck",
-      "line": 56,
+      "line": 55,
       "match_key": "cluster-manager|POST|/cluster/sync/ack",
       "method": "POST",
       "normalized_path": "/cluster/sync/ack",
@@ -3815,7 +3800,7 @@
       "code_scope": "cluster-manager",
       "file": "services/cluster-manager/handler.go",
       "handler": "h.handleSyncCheckpoint",
-      "line": 57,
+      "line": 56,
       "match_key": "cluster-manager|GET|/cluster/sync/checkpoint",
       "method": "GET",
       "normalized_path": "/cluster/sync/checkpoint",
@@ -3830,7 +3815,7 @@
       "code_scope": "cluster-manager",
       "file": "services/cluster-manager/handler.go",
       "handler": "h.handleClusterLogs",
-      "line": 58,
+      "line": 57,
       "match_key": "cluster-manager|GET|/cluster/logs",
       "method": "GET",
       "normalized_path": "/cluster/logs",
@@ -3845,11 +3830,131 @@
       "code_scope": "cluster-manager",
       "file": "services/cluster-manager/handler.go",
       "handler": "h.handleReplicationStatus",
-      "line": 59,
+      "line": 58,
       "match_key": "cluster-manager|GET|/cluster/replication/status",
       "method": "GET",
       "normalized_path": "/cluster/replication/status",
       "path": "/cluster/replication/status",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "cluster-manager"
+    },
+    {
+      "action": "",
+      "code_scope": "cluster-manager",
+      "file": "services/cluster-manager/handler.go",
+      "handler": "h.handleFailoverStatus",
+      "line": 60,
+      "match_key": "cluster-manager|GET|/cluster/failover/status",
+      "method": "GET",
+      "normalized_path": "/cluster/failover/status",
+      "path": "/cluster/failover/status",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "cluster-manager"
+    },
+    {
+      "action": "",
+      "code_scope": "cluster-manager",
+      "file": "services/cluster-manager/handler.go",
+      "handler": "h.handleFailoverPromote",
+      "line": 61,
+      "match_key": "cluster-manager|POST|/cluster/failover/promote",
+      "method": "POST",
+      "normalized_path": "/cluster/failover/promote",
+      "path": "/cluster/failover/promote",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "cluster-manager"
+    },
+    {
+      "action": "",
+      "code_scope": "cluster-manager",
+      "file": "services/cluster-manager/handler.go",
+      "handler": "h.handlePeerHeartbeat",
+      "line": 62,
+      "match_key": "cluster-manager|POST|/cluster/peer/heartbeat",
+      "method": "POST",
+      "normalized_path": "/cluster/peer/heartbeat",
+      "path": "/cluster/peer/heartbeat",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "cluster-manager"
+    },
+    {
+      "action": "",
+      "code_scope": "cluster-manager",
+      "file": "services/cluster-manager/handler.go",
+      "handler": "h.handlePeerResubscribe",
+      "line": 63,
+      "match_key": "cluster-manager|POST|/cluster/peer/resubscribe",
+      "method": "POST",
+      "normalized_path": "/cluster/peer/resubscribe",
+      "path": "/cluster/peer/resubscribe",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "cluster-manager"
+    },
+    {
+      "action": "",
+      "code_scope": "cluster-manager",
+      "file": "services/cluster-manager/handler.go",
+      "handler": "h.handlePeerStatus",
+      "line": 64,
+      "match_key": "cluster-manager|GET|/cluster/peer/status",
+      "method": "GET",
+      "normalized_path": "/cluster/peer/status",
+      "path": "/cluster/peer/status",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "cluster-manager"
+    },
+    {
+      "action": "",
+      "code_scope": "cluster-manager",
+      "file": "services/cluster-manager/handler.go",
+      "handler": "h.handlePeerVote",
+      "line": 65,
+      "match_key": "cluster-manager|POST|/cluster/peer/vote",
+      "method": "POST",
+      "normalized_path": "/cluster/peer/vote",
+      "path": "/cluster/peer/vote",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "cluster-manager"
+    },
+    {
+      "action": "",
+      "code_scope": "cluster-manager",
+      "file": "services/cluster-manager/handler.go",
+      "handler": "h.handlePeerAnnounce",
+      "line": 66,
+      "match_key": "cluster-manager|POST|/cluster/peer/announce",
+      "method": "POST",
+      "normalized_path": "/cluster/peer/announce",
+      "path": "/cluster/peer/announce",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "cluster-manager"
+    },
+    {
+      "action": "",
+      "code_scope": "cluster-manager",
+      "file": "services/cluster-manager/handler.go",
+      "handler": "h.handlePeerFence",
+      "line": 67,
+      "match_key": "cluster-manager|POST|/cluster/peer/fence",
+      "method": "POST",
+      "normalized_path": "/cluster/peer/fence",
+      "path": "/cluster/peer/fence",
       "permission": "",
       "registration": "mux",
       "resource": "",
@@ -15142,7 +15247,7 @@
       "code_scope": "cluster-manager",
       "file": "services/cluster-manager/handler.go",
       "handler": "h.handlePublishSyncEvent",
-      "line": 54,
+      "line": 53,
       "match_key": "cluster-manager|POST|/cluster/sync/events",
       "method": "POST",
       "normalized_path": "/cluster/sync/events",
@@ -15157,7 +15262,7 @@
       "code_scope": "cluster-manager",
       "file": "services/cluster-manager/handler.go",
       "handler": "h.handleSyncAck",
-      "line": 56,
+      "line": 55,
       "match_key": "cluster-manager|POST|/cluster/sync/ack",
       "method": "POST",
       "normalized_path": "/cluster/sync/ack",
@@ -15172,11 +15277,101 @@
       "code_scope": "cluster-manager",
       "file": "services/cluster-manager/handler.go",
       "handler": "h.handleReplicationStatus",
-      "line": 59,
+      "line": 58,
       "match_key": "cluster-manager|GET|/cluster/replication/status",
       "method": "GET",
       "normalized_path": "/cluster/replication/status",
       "path": "/cluster/replication/status",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "cluster-manager"
+    },
+    {
+      "action": "",
+      "code_scope": "cluster-manager",
+      "file": "services/cluster-manager/handler.go",
+      "handler": "h.handlePeerHeartbeat",
+      "line": 62,
+      "match_key": "cluster-manager|POST|/cluster/peer/heartbeat",
+      "method": "POST",
+      "normalized_path": "/cluster/peer/heartbeat",
+      "path": "/cluster/peer/heartbeat",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "cluster-manager"
+    },
+    {
+      "action": "",
+      "code_scope": "cluster-manager",
+      "file": "services/cluster-manager/handler.go",
+      "handler": "h.handlePeerResubscribe",
+      "line": 63,
+      "match_key": "cluster-manager|POST|/cluster/peer/resubscribe",
+      "method": "POST",
+      "normalized_path": "/cluster/peer/resubscribe",
+      "path": "/cluster/peer/resubscribe",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "cluster-manager"
+    },
+    {
+      "action": "",
+      "code_scope": "cluster-manager",
+      "file": "services/cluster-manager/handler.go",
+      "handler": "h.handlePeerStatus",
+      "line": 64,
+      "match_key": "cluster-manager|GET|/cluster/peer/status",
+      "method": "GET",
+      "normalized_path": "/cluster/peer/status",
+      "path": "/cluster/peer/status",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "cluster-manager"
+    },
+    {
+      "action": "",
+      "code_scope": "cluster-manager",
+      "file": "services/cluster-manager/handler.go",
+      "handler": "h.handlePeerVote",
+      "line": 65,
+      "match_key": "cluster-manager|POST|/cluster/peer/vote",
+      "method": "POST",
+      "normalized_path": "/cluster/peer/vote",
+      "path": "/cluster/peer/vote",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "cluster-manager"
+    },
+    {
+      "action": "",
+      "code_scope": "cluster-manager",
+      "file": "services/cluster-manager/handler.go",
+      "handler": "h.handlePeerAnnounce",
+      "line": 66,
+      "match_key": "cluster-manager|POST|/cluster/peer/announce",
+      "method": "POST",
+      "normalized_path": "/cluster/peer/announce",
+      "path": "/cluster/peer/announce",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "cluster-manager"
+    },
+    {
+      "action": "",
+      "code_scope": "cluster-manager",
+      "file": "services/cluster-manager/handler.go",
+      "handler": "h.handlePeerFence",
+      "line": 67,
+      "match_key": "cluster-manager|POST|/cluster/peer/fence",
+      "method": "POST",
+      "normalized_path": "/cluster/peer/fence",
+      "path": "/cluster/peer/fence",
       "permission": "",
       "registration": "mux",
       "resource": "",
@@ -19735,7 +19930,7 @@
       "file": "web/dashboard/src/components/v3/SidebarSubNav.tsx",
       "handler": "",
       "label": "onSelect(item.id)} style={ } >",
-      "line": 142,
+      "line": 143,
       "tabs": [],
       "tag": "button"
     },
@@ -21156,6 +21351,22 @@
       "tag": "Btn"
     },
     {
+      "file": "web/dashboard/src/components/v3/tabs/ClusterFailoverPanel.tsx",
+      "handler": "",
+      "label": "void load()}>Refresh",
+      "line": 74,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ClusterFailoverPanel.tsx",
+      "handler": "",
+      "label": "void promote(false)}>",
+      "line": 99,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
       "file": "web/dashboard/src/components/v3/tabs/ClusterJoinPanel.tsx",
       "handler": "",
       "label": "setMode(\"issue\")}>On this primary: add a node",
@@ -21191,7 +21402,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTab.tsx",
       "handler": "",
       "label": "void refresh(false)} disabled= >Retry",
-      "line": 384,
+      "line": 363,
       "tabs": [
         "cluster"
       ],
@@ -21201,7 +21412,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "void refresh(false)}>Refresh",
-      "line": 121,
+      "line": 117,
       "tabs": [],
       "tag": "Btn"
     },
@@ -21209,7 +21420,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "setAddNodeModalOpen(true)}>Add Instance",
-      "line": 271,
+      "line": 267,
       "tabs": [],
       "tag": "Btn"
     },
@@ -21217,15 +21428,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "void refresh(false)}>Refresh",
-      "line": 272,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
-      "handler": "",
-      "label": "void updateNodeRoleAction(node)} >",
-      "line": 333,
+      "line": 268,
       "tabs": [],
       "tag": "Btn"
     },
@@ -21233,7 +21436,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "void removeNodeAction(node)}>",
-      "line": 338,
+      "line": 323,
       "tabs": [],
       "tag": "Btn"
     },
@@ -21241,7 +21444,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "setAddNodeModalOpen(true)}>Add First Instance",
-      "line": 349,
+      "line": 334,
       "tabs": [],
       "tag": "Btn"
     },
@@ -21249,7 +21452,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "void saveProfile()}>",
-      "line": 424,
+      "line": 409,
       "tabs": [],
       "tag": "Btn"
     },
@@ -21257,7 +21460,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "void removeProfile(profile)}>Delete",
-      "line": 442,
+      "line": 427,
       "tabs": [],
       "tag": "Btn"
     },
@@ -21265,7 +21468,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "void refreshSyncEvents()}>Refresh",
-      "line": 473,
+      "line": 458,
       "tabs": [],
       "tag": "Btn"
     },
@@ -21273,7 +21476,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "void refreshClusterLogs()}>Refresh",
-      "line": 563,
+      "line": 548,
       "tabs": [],
       "tag": "Btn"
     },
@@ -21281,7 +21484,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ClusterTabView.tsx",
       "handler": "",
       "label": "void refreshClusterLogs()}>Apply",
-      "line": 576,
+      "line": 561,
       "tabs": [],
       "tag": "Btn"
     },
@@ -28566,7 +28769,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"cluster\", `/cluster/overview?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/cluster.ts",
-      "line": 141,
+      "line": 140,
       "match_key": "cluster-manager|GET|/cluster/overview",
       "method": "GET",
       "normalized_path": "/cluster/overview",
@@ -28579,7 +28782,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"cluster\", \"/cluster/profiles\")",
       "file": "web/dashboard/src/lib/cluster.ts",
-      "line": 155,
+      "line": 154,
       "match_key": "cluster-manager|POST|/cluster/profiles",
       "method": "POST",
       "normalized_path": "/cluster/profiles",
@@ -28592,7 +28795,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"cluster\", `/cluster/profiles/${encodeURIComponent(profileID)}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/cluster.ts",
-      "line": 170,
+      "line": 169,
       "match_key": "cluster-manager|DELETE|/cluster/profiles/{param}",
       "method": "DELETE",
       "normalized_path": "/cluster/profiles/{param}",
@@ -28605,7 +28808,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"cluster\", \"/cluster/nodes\")",
       "file": "web/dashboard/src/lib/cluster.ts",
-      "line": 192,
+      "line": 191,
       "match_key": "cluster-manager|POST|/cluster/nodes",
       "method": "POST",
       "normalized_path": "/cluster/nodes",
@@ -28616,22 +28819,9 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"cluster\", `/cluster/nodes/${encodeURIComponent(nodeID)}/role`)",
-      "file": "web/dashboard/src/lib/cluster.ts",
-      "line": 219,
-      "match_key": "cluster-manager|POST|/cluster/nodes/{param}/role",
-      "method": "POST",
-      "normalized_path": "/cluster/nodes/{param}/role",
-      "path": "/cluster/nodes/{param}/role",
-      "service": "cluster",
-      "service_key": "cluster-manager",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
       "expression": "serviceRequest(\"cluster\", `/cluster/nodes/${encodeURIComponent(nodeID)}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/cluster.ts",
-      "line": 235,
+      "line": 218,
       "match_key": "cluster-manager|DELETE|/cluster/nodes/{param}",
       "method": "DELETE",
       "normalized_path": "/cluster/nodes/{param}",
@@ -28644,7 +28834,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"cluster\", `/cluster/sync/events?${params}`)",
       "file": "web/dashboard/src/lib/cluster.ts",
-      "line": 264,
+      "line": 247,
       "match_key": "cluster-manager|GET|/cluster/sync/events",
       "method": "GET",
       "normalized_path": "/cluster/sync/events",
@@ -28657,7 +28847,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"cluster\", `/cluster/sync/checkpoint?${params}`)",
       "file": "web/dashboard/src/lib/cluster.ts",
-      "line": 274,
+      "line": 257,
       "match_key": "cluster-manager|GET|/cluster/sync/checkpoint",
       "method": "GET",
       "normalized_path": "/cluster/sync/checkpoint",
@@ -28670,7 +28860,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"cluster\", `/cluster/logs?${params}`)",
       "file": "web/dashboard/src/lib/cluster.ts",
-      "line": 288,
+      "line": 271,
       "match_key": "cluster-manager|GET|/cluster/logs",
       "method": "GET",
       "normalized_path": "/cluster/logs",
@@ -28683,7 +28873,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"cluster\", \"/cluster/join/request\")",
       "file": "web/dashboard/src/lib/cluster.ts",
-      "line": 301,
+      "line": 284,
       "match_key": "cluster-manager|POST|/cluster/join/request",
       "method": "POST",
       "normalized_path": "/cluster/join/request",
@@ -28696,11 +28886,37 @@
       "dynamic": true,
       "expression": "serviceRequest(\"cluster\", `/cluster/join/connect?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/cluster.ts",
-      "line": 314,
+      "line": 297,
       "match_key": "cluster-manager|POST|/cluster/join/connect",
       "method": "POST",
       "normalized_path": "/cluster/join/connect",
       "path": "/cluster/join/connect?tenant_id={param}",
+      "service": "cluster",
+      "service_key": "cluster-manager",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"cluster\", `/cluster/failover/status?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/cluster.ts",
+      "line": 318,
+      "match_key": "cluster-manager|GET|/cluster/failover/status",
+      "method": "GET",
+      "normalized_path": "/cluster/failover/status",
+      "path": "/cluster/failover/status?{param}",
+      "service": "cluster",
+      "service_key": "cluster-manager",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"cluster\", `/cluster/failover/promote?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/cluster.ts",
+      "line": 328,
+      "match_key": "cluster-manager|POST|/cluster/failover/promote",
+      "method": "POST",
+      "normalized_path": "/cluster/failover/promote",
+      "path": "/cluster/failover/promote?{param}",
       "service": "cluster",
       "service_key": "cluster-manager",
       "source": "serviceRequest"
@@ -33464,7 +33680,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-21T05:28:02Z",
+  "generated_at": "2026-10-21T05:53:28Z",
   "navigation": [
     {
       "group": "Home",
@@ -47825,7 +48041,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 64,
+      "handler_line": 72,
       "handler_name": "handleHealth",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -47848,7 +48064,7 @@
         {
           "expression": "serviceRequest(\"cluster\", `/cluster/overview?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/cluster.ts",
-          "line": 141,
+          "line": 140,
           "source": "serviceRequest"
         }
       ],
@@ -47863,7 +48079,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 68,
+      "handler_line": 76,
       "handler_name": "handleOverview",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -47913,7 +48129,7 @@
             "replicationNote"
           ],
           "internal_package_calls": [],
-          "line": 135,
+          "line": 136,
           "name": "GetOverview",
           "receiver_calls": [],
           "store_calls": [
@@ -47943,7 +48159,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 82,
+      "handler_line": 90,
       "handler_name": "handleMembers",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -47987,7 +48203,7 @@
             "normalizeDisplayComponents"
           ],
           "internal_package_calls": [],
-          "line": 185,
+          "line": 186,
           "name": "ListMembers",
           "receiver_calls": [],
           "store_calls": [
@@ -48013,7 +48229,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 96,
+      "handler_line": 104,
       "handler_name": "handleNodes",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48063,7 +48279,7 @@
             "replicationNote"
           ],
           "internal_package_calls": [],
-          "line": 135,
+          "line": 136,
           "name": "GetOverview",
           "receiver_calls": [],
           "store_calls": [
@@ -48093,7 +48309,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 110,
+      "handler_line": 118,
       "handler_name": "handleListProfiles",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48125,7 +48341,7 @@
             "ensureBootstrap"
           ],
           "internal_package_calls": [],
-          "line": 216,
+          "line": 217,
           "name": "ListProfiles",
           "receiver_calls": [],
           "store_calls": [
@@ -48143,7 +48359,7 @@
         {
           "expression": "serviceRequest(\"cluster\", \"/cluster/profiles\")",
           "file": "web/dashboard/src/lib/cluster.ts",
-          "line": 155,
+          "line": 154,
           "source": "serviceRequest"
         }
       ],
@@ -48162,7 +48378,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 124,
+      "handler_line": 132,
       "handler_name": "handleUpsertProfile",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48204,7 +48420,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 227,
+          "line": 228,
           "name": "UpsertProfile",
           "receiver_calls": [],
           "store_calls": [
@@ -48226,7 +48442,7 @@
         {
           "expression": "serviceRequest(\"cluster\", `/cluster/profiles/${encodeURIComponent(profileID)}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/cluster.ts",
-          "line": 170,
+          "line": 169,
           "source": "serviceRequest"
         }
       ],
@@ -48244,7 +48460,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 140,
+      "handler_line": 148,
       "handler_name": "handleDeleteProfile",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48278,7 +48494,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 274,
+          "line": 275,
           "name": "DeleteProfile",
           "receiver_calls": [],
           "store_calls": [
@@ -48298,7 +48514,7 @@
         {
           "expression": "serviceRequest(\"cluster\", \"/cluster/join/request\")",
           "file": "web/dashboard/src/lib/cluster.ts",
-          "line": 301,
+          "line": 284,
           "source": "serviceRequest"
         }
       ],
@@ -48319,7 +48535,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 158,
+      "handler_line": 166,
       "handler_name": "handleJoinRequest",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48345,6 +48561,7 @@
         "newID",
         "defaultIfEmpty",
         "sha256Hex",
+        "Add",
         "PurgeExpiredJoinTokens",
         "publishAudit"
       ],
@@ -48365,11 +48582,12 @@
             "newID",
             "defaultIfEmpty",
             "sha256Hex",
+            "Add",
             "PurgeExpiredJoinTokens",
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 294,
+          "line": 295,
           "name": "CreateJoinToken",
           "receiver_calls": [],
           "store_calls": [
@@ -48405,7 +48623,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 180,
+      "handler_line": 188,
       "handler_name": "handleJoinComplete",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48455,7 +48673,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 362,
+          "line": 363,
           "name": "CompleteJoin",
           "receiver_calls": [],
           "store_calls": [
@@ -48491,7 +48709,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 537,
+      "handler_line": 523,
       "handler_name": "handleJoinExchange",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48512,12 +48730,16 @@
       ],
       "service_helper_calls": [
         "newServiceError",
+        "becomePrimary",
         "CompleteJoin",
+        "EnsurePublications",
         "AuditPublicationChanges",
+        "EnsureReplicationRole",
         "joinContext",
         "ExportMEK",
         "SetMemberCredential",
         "credentialHash",
+        "UpsertPeer",
         "publishAudit"
       ],
       "service_internal_package_calls": [
@@ -48538,12 +48760,16 @@
           "file": "services/cluster-manager/join.go",
           "helper_calls": [
             "newServiceError",
+            "becomePrimary",
             "CompleteJoin",
+            "EnsurePublications",
             "AuditPublicationChanges",
+            "EnsureReplicationRole",
             "joinContext",
             "ExportMEK",
             "SetMemberCredential",
             "credentialHash",
+            "UpsertPeer",
             "publishAudit"
           ],
           "internal_package_calls": [
@@ -48553,7 +48779,7 @@
             "pkg/crypto.KEMSeal",
             "pkg/crypto.Zeroize"
           ],
-          "line": 172,
+          "line": 175,
           "name": "ExchangeJoin",
           "receiver_calls": [
             "s.replication.EnsurePublications",
@@ -48579,7 +48805,7 @@
         {
           "expression": "serviceRequest(\"cluster\", `/cluster/join/connect?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/cluster.ts",
-          "line": 314,
+          "line": 297,
           "source": "serviceRequest"
         }
       ],
@@ -48597,7 +48823,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 553,
+      "handler_line": 539,
       "handler_name": "handleJoinConnect",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48632,6 +48858,11 @@
         "firstNonEmpty",
         "joinHTTPClient",
         "ImportMEK",
+        "LoadNode",
+        "DropMemberSlots",
+        "Peers",
+        "DeletePeer",
+        "Subscribe",
         "conninfo",
         "SetLocalState",
         "publishAudit",
@@ -48669,6 +48900,11 @@
             "firstNonEmpty",
             "joinHTTPClient",
             "ImportMEK",
+            "LoadNode",
+            "DropMemberSlots",
+            "Peers",
+            "DeletePeer",
+            "Subscribe",
             "conninfo",
             "SetLocalState",
             "publishAudit",
@@ -48681,7 +48917,7 @@
             "pkg/crypto.Zeroize",
             "pkg/servicetoken.Authorize"
           ],
-          "line": 264,
+          "line": 280,
           "name": "ConnectToCluster",
           "receiver_calls": [
             "s.keycore.CreateJoinKey",
@@ -48707,7 +48943,7 @@
         {
           "expression": "serviceRequest(\"cluster\", \"/cluster/nodes\")",
           "file": "web/dashboard/src/lib/cluster.ts",
-          "line": 192,
+          "line": 191,
           "source": "serviceRequest"
         }
       ],
@@ -48727,7 +48963,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 213,
+      "handler_line": 221,
       "handler_name": "handleUpsertNode",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48760,7 +48996,6 @@
         "clampFloat",
         "normalizeDisplayComponents",
         "enforceActiveCPUFloor",
-        "demoteOtherLeaders",
         "seedNodeSyncEvents",
         "appendClusterLog",
         "publishAudit"
@@ -48789,13 +49024,12 @@
             "clampFloat",
             "normalizeDisplayComponents",
             "enforceActiveCPUFloor",
-            "demoteOtherLeaders",
             "seedNodeSyncEvents",
             "appendClusterLog",
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 506,
+          "line": 507,
           "name": "UpsertNode",
           "receiver_calls": [],
           "store_calls": [
@@ -48833,7 +49067,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 196,
+      "handler_line": 204,
       "handler_name": "handleNodeHeartbeat",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48889,7 +49123,7 @@
             "UpsertNode"
           ],
           "internal_package_calls": [],
-          "line": 430,
+          "line": 431,
           "name": "UpdateHeartbeat",
           "receiver_calls": [],
           "store_calls": [
@@ -48909,95 +49143,9 @@
     {
       "frontend_call_sites": [
         {
-          "expression": "serviceRequest(\"cluster\", `/cluster/nodes/${encodeURIComponent(nodeID)}/role`)",
-          "file": "web/dashboard/src/lib/cluster.ts",
-          "line": 219,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleNodeRoleUpdate",
-      "handler_external_package_calls": [
-        "strings.TrimSpace"
-      ],
-      "handler_file": "services/cluster-manager/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "writeErr",
-        "decodeJSON",
-        "Error",
-        "firstTenant",
-        "tenantFromRequest",
-        "firstActor",
-        "UpdateNodeRole",
-        "writeServiceError",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 230,
-      "handler_name": "handleNodeRoleUpdate",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "UpdateNodeRole"
-      ],
-      "handler_store_calls": [],
-      "method": "POST",
-      "normalized_path": "/cluster/nodes/{param}/role",
-      "path": "/cluster/nodes/{id}/role",
-      "route_file": "services/cluster-manager/handler.go",
-      "route_line": 51,
-      "service": "cluster-manager",
-      "service_external_package_calls": [
-        "strings.TrimSpace"
-      ],
-      "service_helper_calls": [
-        "newServiceError",
-        "normalizeRole",
-        "GetNode",
-        "UpsertNode",
-        "demoteOtherLeaders",
-        "appendClusterLog",
-        "defaultIfEmpty",
-        "publishAudit"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [
-            "strings.TrimSpace"
-          ],
-          "file": "services/cluster-manager/service.go",
-          "helper_calls": [
-            "newServiceError",
-            "normalizeRole",
-            "GetNode",
-            "UpsertNode",
-            "demoteOtherLeaders",
-            "appendClusterLog",
-            "defaultIfEmpty",
-            "publishAudit"
-          ],
-          "internal_package_calls": [],
-          "line": 610,
-          "name": "UpdateNodeRole",
-          "receiver_calls": [],
-          "store_calls": [
-            "GetNode",
-            "UpsertNode"
-          ]
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": [
-        "GetNode",
-        "UpsertNode"
-      ]
-    },
-    {
-      "frontend_call_sites": [
-        {
           "expression": "serviceRequest(\"cluster\", `/cluster/nodes/${encodeURIComponent(nodeID)}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/cluster.ts",
-          "line": 235,
+          "line": 218,
           "source": "serviceRequest"
         }
       ],
@@ -49019,7 +49167,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 252,
+      "handler_line": 238,
       "handler_name": "handleRemoveNode",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -49030,7 +49178,7 @@
       "normalized_path": "/cluster/nodes/{param}",
       "path": "/cluster/nodes/{id}",
       "route_file": "services/cluster-manager/handler.go",
-      "route_line": 52,
+      "route_line": 51,
       "service": "cluster-manager",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -49040,11 +49188,11 @@
         "newServiceError",
         "ensureBootstrap",
         "GetNode",
+        "normalizeRole",
         "GetProfile",
         "emitNodeDecommissionEvents",
-        "normalizeRole",
-        "promoteReplacementLeader",
         "RevokeMemberCredential",
+        "DeletePeer",
         "DeleteNode",
         "appendClusterLog",
         "defaultIfEmpty",
@@ -49062,18 +49210,18 @@
             "newServiceError",
             "ensureBootstrap",
             "GetNode",
+            "normalizeRole",
             "GetProfile",
             "emitNodeDecommissionEvents",
-            "normalizeRole",
-            "promoteReplacementLeader",
             "RevokeMemberCredential",
+            "DeletePeer",
             "DeleteNode",
             "appendClusterLog",
             "defaultIfEmpty",
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 660,
+          "line": 609,
           "name": "RemoveNode",
           "receiver_calls": [],
           "store_calls": [
@@ -49113,7 +49261,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 274,
+      "handler_line": 260,
       "handler_name": "handlePublishSyncEvent",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -49125,7 +49273,7 @@
       "normalized_path": "/cluster/sync/events",
       "path": "/cluster/sync/events",
       "route_file": "services/cluster-manager/handler.go",
-      "route_line": 54,
+      "route_line": 53,
       "service": "cluster-manager",
       "service_external_package_calls": [
         "strconv.ParseInt",
@@ -49138,6 +49286,7 @@
         "newServiceError",
         "abs64",
         "ConsumeSyncNonce",
+        "Add",
         "GetProfile",
         "normalizeComponentName",
         "componentAllowedForProfile",
@@ -49165,12 +49314,13 @@
             "appendClusterLog",
             "newServiceError",
             "abs64",
-            "ConsumeSyncNonce"
+            "ConsumeSyncNonce",
+            "Add"
           ],
           "internal_package_calls": [
             "pkg/clustersync.VerifySignature"
           ],
-          "line": 949,
+          "line": 897,
           "name": "ValidateSignedSyncRequest",
           "receiver_calls": [],
           "store_calls": [
@@ -49199,7 +49349,7 @@
             "natsSubjectToken"
           ],
           "internal_package_calls": [],
-          "line": 742,
+          "line": 690,
           "name": "PublishSyncEvent",
           "receiver_calls": [
             "s.events.Publish"
@@ -49224,7 +49374,7 @@
         {
           "expression": "serviceRequest(\"cluster\", `/cluster/sync/events?${params}`)",
           "file": "web/dashboard/src/lib/cluster.ts",
-          "line": 264,
+          "line": 247,
           "source": "serviceRequest"
         }
       ],
@@ -49243,7 +49393,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 318,
+      "handler_line": 304,
       "handler_name": "handleListSyncEvents",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -49254,7 +49404,7 @@
       "normalized_path": "/cluster/sync/events",
       "path": "/cluster/sync/events",
       "route_file": "services/cluster-manager/handler.go",
-      "route_line": 55,
+      "route_line": 54,
       "service": "cluster-manager",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -49275,7 +49425,7 @@
             "GetNode"
           ],
           "internal_package_calls": [],
-          "line": 870,
+          "line": 818,
           "name": "ListSyncEvents",
           "receiver_calls": [],
           "store_calls": [
@@ -49307,7 +49457,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 346,
+      "handler_line": 332,
       "handler_name": "handleSyncAck",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -49318,7 +49468,7 @@
       "normalized_path": "/cluster/sync/ack",
       "path": "/cluster/sync/ack",
       "route_file": "services/cluster-manager/handler.go",
-      "route_line": 56,
+      "route_line": 55,
       "service": "cluster-manager",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -49343,7 +49493,7 @@
             "GetSyncCheckpoint"
           ],
           "internal_package_calls": [],
-          "line": 894,
+          "line": 842,
           "name": "AckSync",
           "receiver_calls": [],
           "store_calls": [
@@ -49363,7 +49513,7 @@
         {
           "expression": "serviceRequest(\"cluster\", `/cluster/sync/checkpoint?${params}`)",
           "file": "web/dashboard/src/lib/cluster.ts",
-          "line": 274,
+          "line": 257,
           "source": "serviceRequest"
         }
       ],
@@ -49380,7 +49530,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 362,
+      "handler_line": 348,
       "handler_name": "handleSyncCheckpoint",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -49391,7 +49541,7 @@
       "normalized_path": "/cluster/sync/checkpoint",
       "path": "/cluster/sync/checkpoint",
       "route_file": "services/cluster-manager/handler.go",
-      "route_line": 57,
+      "route_line": 56,
       "service": "cluster-manager",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -49412,7 +49562,7 @@
             "errorsIsNotFound"
           ],
           "internal_package_calls": [],
-          "line": 924,
+          "line": 872,
           "name": "GetSyncCheckpoint",
           "receiver_calls": [],
           "store_calls": [
@@ -49430,7 +49580,7 @@
         {
           "expression": "serviceRequest(\"cluster\", `/cluster/logs?${params}`)",
           "file": "web/dashboard/src/lib/cluster.ts",
-          "line": 288,
+          "line": 271,
           "source": "serviceRequest"
         }
       ],
@@ -49448,7 +49598,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 378,
+      "handler_line": 364,
       "handler_name": "handleClusterLogs",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -49459,7 +49609,7 @@
       "normalized_path": "/cluster/logs",
       "path": "/cluster/logs",
       "route_file": "services/cluster-manager/handler.go",
-      "route_line": 58,
+      "route_line": 57,
       "service": "cluster-manager",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -49478,7 +49628,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 941,
+          "line": 889,
           "name": "ListClusterLogs",
           "receiver_calls": [],
           "store_calls": [
@@ -49502,7 +49652,7 @@
         "ReplicationStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 530,
+      "handler_line": 516,
       "handler_name": "handleReplicationStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -49513,7 +49663,7 @@
       "normalized_path": "/cluster/replication/status",
       "path": "/cluster/replication/status",
       "route_file": "services/cluster-manager/handler.go",
-      "route_line": 59,
+      "route_line": 58,
       "service": "cluster-manager",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -49530,7 +49680,7 @@
             "localState"
           ],
           "internal_package_calls": [],
-          "line": 2169,
+          "line": 2052,
           "name": "ReplicationStatus",
           "receiver_calls": [
             "s.replication.WALLevel",
@@ -49545,6 +49695,651 @@
         "s.replication.Publications",
         "s.replication.SubscriptionStatuses"
       ],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"cluster\", `/cluster/failover/status?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/cluster.ts",
+          "line": 318,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.handleFailoverStatus",
+      "handler_external_package_calls": [],
+      "handler_file": "services/cluster-manager/failover_handler.go",
+      "handler_helper_calls": [
+        "FailoverStatus",
+        "writeServiceError",
+        "requestID",
+        "writeJSON"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 165,
+      "handler_name": "handleFailoverStatus",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "FailoverStatus"
+      ],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/cluster/failover/status",
+      "path": "/cluster/failover/status",
+      "route_file": "services/cluster-manager/handler.go",
+      "route_line": 60,
+      "service": "cluster-manager",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [],
+          "file": "services/cluster-manager/failover.go",
+          "helper_calls": [],
+          "internal_package_calls": [],
+          "line": 1134,
+          "name": "FailoverStatus",
+          "receiver_calls": [],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"cluster\", `/cluster/failover/promote?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/cluster.ts",
+          "line": 328,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.handleFailoverPromote",
+      "handler_external_package_calls": [],
+      "handler_file": "services/cluster-manager/failover_handler.go",
+      "handler_helper_calls": [
+        "requestID",
+        "decodeJSON",
+        "writeErr",
+        "Error",
+        "firstActor",
+        "PromoteManually",
+        "publishAudit",
+        "writeServiceError",
+        "writeJSON"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 174,
+      "handler_name": "handleFailoverPromote",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "PromoteManually",
+        "publishAudit"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/cluster/failover/promote",
+      "path": "/cluster/failover/promote",
+      "route_file": "services/cluster-manager/handler.go",
+      "route_line": 61,
+      "service": "cluster-manager",
+      "service_external_package_calls": [
+        "bytes.NewReader",
+        "encoding/hex.EncodeToString",
+        "encoding/json.Marshal",
+        "encoding/json.Unmarshal",
+        "errors.New",
+        "fmt.Sprintf",
+        "fmt.Errorf",
+        "net/http.NewRequestWithContext",
+        "strings.TrimRight",
+        "time.Now",
+        "time.After"
+      ],
+      "service_helper_calls": [
+        "newServiceError",
+        "LoadNode",
+        "nextEpoch",
+        "Error",
+        "peerCall",
+        "Now",
+        "Add",
+        "ReceivedLSN",
+        "promote",
+        "publishAudit",
+        "Resubscribe",
+        "Peers",
+        "EnsureReplicationRole",
+        "resubscribeToPrimary",
+        "doJSON",
+        "Detach",
+        "Subscribe",
+        "conninfo",
+        "FailoverTick",
+        "pollPeers",
+        "renewLease",
+        "jitteredDeadline",
+        "heartbeatPrimary",
+        "voter",
+        "runElection",
+        "RunFailover",
+        "FailoverStatus",
+        "PeerStatus",
+        "majority",
+        "AdoptExistingCluster",
+        "ActiveMemberCredentials",
+        "becomePrimary"
+      ],
+      "service_internal_package_calls": [
+        "pkg/clustercatalog.WithCore",
+        "pkg/clusterrepl.ParseLSN",
+        "pkg/crypto.RandomBytes",
+        "pkg/crypto.Zeroize",
+        "pkg/crypto.KEMSeal",
+        "pkg/crypto.NewKEMRecipient"
+      ],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "bytes.NewReader",
+            "encoding/hex.EncodeToString",
+            "encoding/json.Marshal",
+            "encoding/json.Unmarshal",
+            "errors.New",
+            "fmt.Sprintf",
+            "fmt.Errorf",
+            "net/http.NewRequestWithContext",
+            "strings.TrimRight",
+            "time.Now",
+            "time.After"
+          ],
+          "file": "services/cluster-manager/failover.go",
+          "helper_calls": [
+            "newServiceError",
+            "LoadNode",
+            "nextEpoch",
+            "Error",
+            "peerCall",
+            "Now",
+            "Add",
+            "ReceivedLSN",
+            "promote",
+            "publishAudit",
+            "Resubscribe",
+            "Peers",
+            "EnsureReplicationRole",
+            "resubscribeToPrimary",
+            "doJSON",
+            "Detach",
+            "Subscribe",
+            "conninfo",
+            "FailoverTick",
+            "pollPeers",
+            "renewLease",
+            "jitteredDeadline",
+            "heartbeatPrimary",
+            "voter",
+            "runElection",
+            "RunFailover",
+            "FailoverStatus",
+            "PeerStatus",
+            "majority",
+            "AdoptExistingCluster",
+            "ActiveMemberCredentials",
+            "becomePrimary",
+            "GetNode",
+            "UpsertPeer",
+            "refuseUnlessPrimary"
+          ],
+          "internal_package_calls": [
+            "pkg/clustercatalog.WithCore",
+            "pkg/clusterrepl.ParseLSN",
+            "pkg/crypto.RandomBytes",
+            "pkg/crypto.Zeroize",
+            "pkg/crypto.KEMSeal",
+            "pkg/crypto.NewKEMRecipient"
+          ],
+          "line": 872,
+          "name": "PromoteManually",
+          "receiver_calls": [
+            "s.fo.jitteredDeadline"
+          ],
+          "store_calls": [
+            "GetNode"
+          ]
+        },
+        {
+          "external_package_calls": [],
+          "file": "services/cluster-manager/service.go",
+          "helper_calls": [],
+          "internal_package_calls": [],
+          "line": 2027,
+          "name": "publishAudit",
+          "receiver_calls": [],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [
+        "s.fo.jitteredDeadline"
+      ],
+      "service_store_calls": [
+        "GetNode"
+      ]
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.handlePeerHeartbeat",
+      "handler_external_package_calls": [],
+      "handler_file": "services/cluster-manager/failover_handler.go",
+      "handler_helper_calls": [
+        "failoverReady",
+        "memberFromCredential",
+        "peerRefused",
+        "decodeJSON",
+        "writeErr",
+        "Error",
+        "requestID",
+        "Heartbeat",
+        "writeServiceError",
+        "writeJSON"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 30,
+      "handler_name": "handlePeerHeartbeat",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "memberFromCredential",
+        "Heartbeat"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/cluster/peer/heartbeat",
+      "path": "/cluster/peer/heartbeat",
+      "route_file": "services/cluster-manager/handler.go",
+      "route_line": 62,
+      "service": "cluster-manager",
+      "service_external_package_calls": [
+        "crypto/subtle.ConstantTimeCompare",
+        "strings.TrimSpace"
+      ],
+      "service_helper_calls": [
+        "MemberCredentialHash",
+        "credentialHash",
+        "LoadNode",
+        "newServiceError",
+        "fence",
+        "Peers",
+        "UpsertPeer",
+        "secretFingerprint"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "crypto/subtle.ConstantTimeCompare",
+            "strings.TrimSpace"
+          ],
+          "file": "services/cluster-manager/failover.go",
+          "helper_calls": [
+            "MemberCredentialHash",
+            "credentialHash"
+          ],
+          "internal_package_calls": [],
+          "line": 287,
+          "name": "memberFromCredential",
+          "receiver_calls": [],
+          "store_calls": []
+        },
+        {
+          "external_package_calls": [],
+          "file": "services/cluster-manager/failover.go",
+          "helper_calls": [
+            "LoadNode",
+            "newServiceError",
+            "fence",
+            "Peers",
+            "UpsertPeer",
+            "secretFingerprint"
+          ],
+          "internal_package_calls": [],
+          "line": 298,
+          "name": "Heartbeat",
+          "receiver_calls": [],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.handlePeerResubscribe",
+      "handler_external_package_calls": [],
+      "handler_file": "services/cluster-manager/failover_handler.go",
+      "handler_helper_calls": [
+        "failoverReady",
+        "memberFromCredential",
+        "peerRefused",
+        "decodeJSON",
+        "writeErr",
+        "Error",
+        "requestID",
+        "Resubscribe",
+        "writeServiceError",
+        "writeJSON"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 52,
+      "handler_name": "handlePeerResubscribe",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "memberFromCredential",
+        "Resubscribe"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/cluster/peer/resubscribe",
+      "path": "/cluster/peer/resubscribe",
+      "route_file": "services/cluster-manager/handler.go",
+      "route_line": 63,
+      "service": "cluster-manager",
+      "service_external_package_calls": [
+        "crypto/subtle.ConstantTimeCompare",
+        "strings.TrimSpace",
+        "encoding/hex.EncodeToString",
+        "encoding/json.Marshal",
+        "fmt.Sprintf"
+      ],
+      "service_helper_calls": [
+        "MemberCredentialHash",
+        "credentialHash",
+        "LoadNode",
+        "newServiceError",
+        "Peers",
+        "EnsureReplicationRole",
+        "publishAudit"
+      ],
+      "service_internal_package_calls": [
+        "pkg/clustercatalog.WithCore",
+        "pkg/crypto.RandomBytes",
+        "pkg/crypto.Zeroize",
+        "pkg/crypto.KEMSeal"
+      ],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "crypto/subtle.ConstantTimeCompare",
+            "strings.TrimSpace"
+          ],
+          "file": "services/cluster-manager/failover.go",
+          "helper_calls": [
+            "MemberCredentialHash",
+            "credentialHash"
+          ],
+          "internal_package_calls": [],
+          "line": 287,
+          "name": "memberFromCredential",
+          "receiver_calls": [],
+          "store_calls": []
+        },
+        {
+          "external_package_calls": [
+            "encoding/hex.EncodeToString",
+            "encoding/json.Marshal",
+            "fmt.Sprintf"
+          ],
+          "file": "services/cluster-manager/failover.go",
+          "helper_calls": [
+            "LoadNode",
+            "newServiceError",
+            "Peers",
+            "EnsureReplicationRole",
+            "publishAudit"
+          ],
+          "internal_package_calls": [
+            "pkg/clustercatalog.WithCore",
+            "pkg/crypto.RandomBytes",
+            "pkg/crypto.Zeroize",
+            "pkg/crypto.KEMSeal"
+          ],
+          "line": 949,
+          "name": "Resubscribe",
+          "receiver_calls": [],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.handlePeerStatus",
+      "handler_external_package_calls": [],
+      "handler_file": "services/cluster-manager/failover_handler.go",
+      "handler_helper_calls": [
+        "signedPeer",
+        "PeerStatus",
+        "writeServiceError",
+        "requestID",
+        "writeJSON"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 95,
+      "handler_name": "handlePeerStatus",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "PeerStatus"
+      ],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/cluster/peer/status",
+      "path": "/cluster/peer/status",
+      "route_file": "services/cluster-manager/handler.go",
+      "route_line": 64,
+      "service": "cluster-manager",
+      "service_external_package_calls": [],
+      "service_helper_calls": [
+        "LoadNode",
+        "AppliedLSN"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [],
+          "file": "services/cluster-manager/failover.go",
+          "helper_calls": [
+            "LoadNode",
+            "AppliedLSN"
+          ],
+          "internal_package_calls": [],
+          "line": 484,
+          "name": "PeerStatus",
+          "receiver_calls": [],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.handlePeerVote",
+      "handler_external_package_calls": [],
+      "handler_file": "services/cluster-manager/failover_handler.go",
+      "handler_helper_calls": [
+        "signedPeer",
+        "decodeJSONBytes",
+        "writeErr",
+        "Error",
+        "requestID",
+        "GrantVote",
+        "writeServiceError",
+        "writeJSON"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 109,
+      "handler_name": "handlePeerVote",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "GrantVote"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/cluster/peer/vote",
+      "path": "/cluster/peer/vote",
+      "route_file": "services/cluster-manager/handler.go",
+      "route_line": 65,
+      "service": "cluster-manager",
+      "service_external_package_calls": [],
+      "service_helper_calls": [
+        "LoadNode",
+        "publishAudit",
+        "AppliedLSN",
+        "Vote",
+        "jitteredDeadline"
+      ],
+      "service_internal_package_calls": [
+        "pkg/clusterrepl.ParseLSN"
+      ],
+      "service_method_details": [
+        {
+          "external_package_calls": [],
+          "file": "services/cluster-manager/failover.go",
+          "helper_calls": [
+            "LoadNode",
+            "publishAudit",
+            "AppliedLSN",
+            "Vote",
+            "jitteredDeadline"
+          ],
+          "internal_package_calls": [
+            "pkg/clusterrepl.ParseLSN"
+          ],
+          "line": 576,
+          "name": "GrantVote",
+          "receiver_calls": [
+            "s.fo.jitteredDeadline"
+          ],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [
+        "s.fo.jitteredDeadline"
+      ],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.handlePeerAnnounce",
+      "handler_external_package_calls": [],
+      "handler_file": "services/cluster-manager/failover_handler.go",
+      "handler_helper_calls": [
+        "signedPeer",
+        "decodeJSONBytes",
+        "writeErr",
+        "Error",
+        "requestID",
+        "Announce",
+        "writeServiceError",
+        "writeJSON"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 127,
+      "handler_name": "handlePeerAnnounce",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "Announce"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/cluster/peer/announce",
+      "path": "/cluster/peer/announce",
+      "route_file": "services/cluster-manager/handler.go",
+      "route_line": 66,
+      "service": "cluster-manager",
+      "service_external_package_calls": [],
+      "service_helper_calls": [
+        "newServiceError",
+        "LoadNode",
+        "followNewer"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [],
+          "file": "services/cluster-manager/failover.go",
+          "helper_calls": [
+            "newServiceError",
+            "LoadNode",
+            "followNewer"
+          ],
+          "internal_package_calls": [],
+          "line": 835,
+          "name": "Announce",
+          "receiver_calls": [],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.handlePeerFence",
+      "handler_external_package_calls": [],
+      "handler_file": "services/cluster-manager/failover_handler.go",
+      "handler_helper_calls": [
+        "signedPeer",
+        "decodeJSONBytes",
+        "writeErr",
+        "Error",
+        "requestID",
+        "Fence",
+        "writeServiceError",
+        "writeJSON"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 145,
+      "handler_name": "handlePeerFence",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "Fence"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/cluster/peer/fence",
+      "path": "/cluster/peer/fence",
+      "route_file": "services/cluster-manager/handler.go",
+      "route_line": 67,
+      "service": "cluster-manager",
+      "service_external_package_calls": [],
+      "service_helper_calls": [
+        "LoadNode",
+        "newServiceError",
+        "fence",
+        "CurrentWALLSN"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [],
+          "file": "services/cluster-manager/failover.go",
+          "helper_calls": [
+            "LoadNode",
+            "newServiceError",
+            "fence",
+            "CurrentWALLSN"
+          ],
+          "internal_package_calls": [],
+          "line": 851,
+          "name": "Fence",
+          "receiver_calls": [],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [],
       "service_store_calls": []
     },
     {
@@ -90897,7 +91692,7 @@
       "backup": 11,
       "certs": 70,
       "cloud": 28,
-      "cluster-manager": 21,
+      "cluster-manager": 28,
       "compliance": 61,
       "confidential": 7,
       "dataprotect": 49,
@@ -90929,7 +91724,7 @@
       "backup": 10,
       "certs": 54,
       "cloud": 15,
-      "cluster-manager": 11,
+      "cluster-manager": 12,
       "compliance": 30,
       "confidential": 6,
       "dataprotect": 28,
@@ -91090,6 +91885,10 @@
         "label": "Node Management"
       },
       {
+        "id": "failover",
+        "label": "Failover"
+      },
+      {
         "id": "profiles",
         "label": "Deploy Profiles"
       },
@@ -91234,16 +92033,16 @@
     ]
   },
   "summary": {
-    "backend_routes": 909,
+    "backend_routes": 916,
     "backend_services": 28,
-    "button_inventory": 773,
-    "frontend_call_sites": 540,
-    "matched_frontend_call_sites": 509,
+    "button_inventory": 774,
+    "frontend_call_sites": 541,
+    "matched_frontend_call_sites": 510,
     "nav_items": 25,
-    "request_flows": 909,
-    "request_flows_with_frontend": 513,
-    "request_flows_with_internal_package_calls": 198,
-    "request_flows_with_service_calls": 539,
+    "request_flows": 916,
+    "request_flows_with_frontend": 514,
+    "request_flows_with_internal_package_calls": 201,
+    "request_flows_with_service_calls": 546,
     "request_flows_with_store_calls": 643,
     "subpane_groups": 13,
     "tab_components": 32,
@@ -91266,7 +92065,7 @@
       ]
     },
     {
-      "call_count": 208,
+      "call_count": 209,
       "component": "web/dashboard/src/components/v3/tabs/DashboardTab.tsx",
       "group": "Home",
       "id": "ops",
@@ -91580,7 +92379,7 @@
       ]
     },
     {
-      "call_count": 15,
+      "call_count": 16,
       "component": "web/dashboard/src/components/v3/tabs/ClusterTab.tsx",
       "group": "Platform",
       "id": "cluster",
@@ -100534,7 +101333,7 @@
         "frontendSites": [],
         "handler": "handleHealth",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 64,
+        "handlerLine": 72,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -100560,13 +101359,13 @@
           {
             "expression": "serviceRequest(\"cluster\", `/cluster/overview?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/cluster.ts",
-            "line": 141,
+            "line": 140,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleOverview",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 68,
+        "handlerLine": 76,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -100600,7 +101399,7 @@
         "frontendSites": [],
         "handler": "handleMembers",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 82,
+        "handlerLine": 90,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -100629,7 +101428,7 @@
         "frontendSites": [],
         "handler": "handleNodes",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 96,
+        "handlerLine": 104,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -100660,7 +101459,7 @@
         "frontendSites": [],
         "handler": "handleListProfiles",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 110,
+        "handlerLine": 118,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -100690,13 +101489,13 @@
           {
             "expression": "serviceRequest(\"cluster\", \"/cluster/profiles\")",
             "file": "web/dashboard/src/lib/cluster.ts",
-            "line": 155,
+            "line": 154,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleUpsertProfile",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 124,
+        "handlerLine": 132,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -100729,13 +101528,13 @@
           {
             "expression": "serviceRequest(\"cluster\", `/cluster/profiles/${encodeURIComponent(profileID)}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/cluster.ts",
-            "line": 170,
+            "line": 169,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleDeleteProfile",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 140,
+        "handlerLine": 148,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -100768,13 +101567,13 @@
           {
             "expression": "serviceRequest(\"cluster\", \"/cluster/join/request\")",
             "file": "web/dashboard/src/lib/cluster.ts",
-            "line": 301,
+            "line": 284,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleJoinRequest",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 158,
+        "handlerLine": 166,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -100807,7 +101606,7 @@
         "frontendSites": [],
         "handler": "handleJoinComplete",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 180,
+        "handlerLine": 188,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -100843,7 +101642,7 @@
         "frontendSites": [],
         "handler": "handleJoinExchange",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 537,
+        "handlerLine": 523,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/clustercatalog.WithCore",
@@ -100894,13 +101693,13 @@
           {
             "expression": "serviceRequest(\"cluster\", `/cluster/join/connect?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/cluster.ts",
-            "line": 314,
+            "line": 297,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleJoinConnect",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 553,
+        "handlerLine": 539,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.NewKEMRecipient",
@@ -100939,13 +101738,13 @@
           {
             "expression": "serviceRequest(\"cluster\", \"/cluster/nodes\")",
             "file": "web/dashboard/src/lib/cluster.ts",
-            "line": 192,
+            "line": 191,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleUpsertNode",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 213,
+        "handlerLine": 221,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -100978,7 +101777,7 @@
         "frontendSites": [],
         "handler": "handleNodeHeartbeat",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 196,
+        "handlerLine": 204,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -101002,44 +101801,6 @@
         ]
       },
       {
-        "complexity": 2,
-        "externalPackages": [
-          "strings.TrimSpace"
-        ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"cluster\", `/cluster/nodes/${encodeURIComponent(nodeID)}/role`)",
-            "file": "web/dashboard/src/lib/cluster.ts",
-            "line": 219,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleNodeRoleUpdate",
-        "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 230,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "POST",
-        "normalizedPath": "/cluster/nodes/{param}/role",
-        "path": "/cluster/nodes/{id}/role",
-        "receiverCalls": [],
-        "risk": "medium",
-        "routeKey": "cluster-manager|POST|/cluster/nodes/{param}/role",
-        "sensitive": false,
-        "service": "cluster-manager",
-        "serviceCalls": [
-          "UpdateNodeRole"
-        ],
-        "storeCalls": [
-          "GetNode",
-          "UpsertNode"
-        ],
-        "uiLabels": [
-          "Operations",
-          "Cluster"
-        ]
-      },
-      {
         "complexity": 4,
         "externalPackages": [
           "strings.TrimSpace",
@@ -101049,13 +101810,13 @@
           {
             "expression": "serviceRequest(\"cluster\", `/cluster/nodes/${encodeURIComponent(nodeID)}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/cluster.ts",
-            "line": 235,
+            "line": 218,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleRemoveNode",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 252,
+        "handlerLine": 238,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -101091,7 +101852,7 @@
         "frontendSites": [],
         "handler": "handlePublishSyncEvent",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 274,
+        "handlerLine": 260,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/clustersync.VerifySignature"
@@ -101130,13 +101891,13 @@
           {
             "expression": "serviceRequest(\"cluster\", `/cluster/sync/events?${params}`)",
             "file": "web/dashboard/src/lib/cluster.ts",
-            "line": 264,
+            "line": 247,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleListSyncEvents",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 318,
+        "handlerLine": 304,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -101167,7 +101928,7 @@
         "frontendSites": [],
         "handler": "handleSyncAck",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 346,
+        "handlerLine": 332,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -101198,13 +101959,13 @@
           {
             "expression": "serviceRequest(\"cluster\", `/cluster/sync/checkpoint?${params}`)",
             "file": "web/dashboard/src/lib/cluster.ts",
-            "line": 274,
+            "line": 257,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleSyncCheckpoint",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 362,
+        "handlerLine": 348,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -101236,13 +101997,13 @@
           {
             "expression": "serviceRequest(\"cluster\", `/cluster/logs?${params}`)",
             "file": "web/dashboard/src/lib/cluster.ts",
-            "line": 288,
+            "line": 271,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleClusterLogs",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 378,
+        "handlerLine": 364,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -101270,7 +102031,7 @@
         "frontendSites": [],
         "handler": "handleReplicationStatus",
         "handlerFile": "services/cluster-manager/handler.go",
-        "handlerLine": 530,
+        "handlerLine": 516,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -101287,6 +102048,266 @@
         "service": "cluster-manager",
         "serviceCalls": [
           "ReplicationStatus"
+        ],
+        "storeCalls": [],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"cluster\", `/cluster/failover/status?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/cluster.ts",
+            "line": 318,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "handleFailoverStatus",
+        "handlerFile": "services/cluster-manager/failover_handler.go",
+        "handlerLine": 165,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/cluster/failover/status",
+        "path": "/cluster/failover/status",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "cluster-manager|GET|/cluster/failover/status",
+        "sensitive": false,
+        "service": "cluster-manager",
+        "serviceCalls": [
+          "FailoverStatus"
+        ],
+        "storeCalls": [],
+        "uiLabels": [
+          "Operations",
+          "Cluster"
+        ]
+      },
+      {
+        "complexity": 8,
+        "externalPackages": [
+          "bytes.NewReader",
+          "encoding/hex.EncodeToString",
+          "encoding/json.Marshal",
+          "encoding/json.Unmarshal",
+          "errors.New",
+          "fmt.Sprintf",
+          "fmt.Errorf",
+          "net/http.NewRequestWithContext",
+          "strings.TrimRight",
+          "time.Now",
+          "time.After"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"cluster\", `/cluster/failover/promote?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/cluster.ts",
+            "line": 328,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "handleFailoverPromote",
+        "handlerFile": "services/cluster-manager/failover_handler.go",
+        "handlerLine": 174,
+        "hasFrontend": true,
+        "internalPackages": [
+          "pkg/clustercatalog.WithCore",
+          "pkg/clusterrepl.ParseLSN",
+          "pkg/crypto.RandomBytes",
+          "pkg/crypto.Zeroize",
+          "pkg/crypto.KEMSeal",
+          "pkg/crypto.NewKEMRecipient"
+        ],
+        "method": "POST",
+        "normalizedPath": "/cluster/failover/promote",
+        "path": "/cluster/failover/promote",
+        "receiverCalls": [
+          "s.fo.jitteredDeadline"
+        ],
+        "risk": "medium",
+        "routeKey": "cluster-manager|POST|/cluster/failover/promote",
+        "sensitive": false,
+        "service": "cluster-manager",
+        "serviceCalls": [
+          "PromoteManually",
+          "publishAudit"
+        ],
+        "storeCalls": [
+          "GetNode"
+        ],
+        "uiLabels": [
+          "Operations",
+          "Cluster"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [
+          "crypto/subtle.ConstantTimeCompare",
+          "strings.TrimSpace"
+        ],
+        "frontendSites": [],
+        "handler": "handlePeerHeartbeat",
+        "handlerFile": "services/cluster-manager/failover_handler.go",
+        "handlerLine": 30,
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/cluster/peer/heartbeat",
+        "path": "/cluster/peer/heartbeat",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "cluster-manager|POST|/cluster/peer/heartbeat",
+        "sensitive": false,
+        "service": "cluster-manager",
+        "serviceCalls": [
+          "memberFromCredential",
+          "Heartbeat"
+        ],
+        "storeCalls": [],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 4,
+        "externalPackages": [
+          "crypto/subtle.ConstantTimeCompare",
+          "strings.TrimSpace",
+          "encoding/hex.EncodeToString",
+          "encoding/json.Marshal",
+          "fmt.Sprintf"
+        ],
+        "frontendSites": [],
+        "handler": "handlePeerResubscribe",
+        "handlerFile": "services/cluster-manager/failover_handler.go",
+        "handlerLine": 52,
+        "hasFrontend": false,
+        "internalPackages": [
+          "pkg/clustercatalog.WithCore",
+          "pkg/crypto.RandomBytes",
+          "pkg/crypto.Zeroize",
+          "pkg/crypto.KEMSeal"
+        ],
+        "method": "POST",
+        "normalizedPath": "/cluster/peer/resubscribe",
+        "path": "/cluster/peer/resubscribe",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "cluster-manager|POST|/cluster/peer/resubscribe",
+        "sensitive": false,
+        "service": "cluster-manager",
+        "serviceCalls": [
+          "memberFromCredential",
+          "Resubscribe"
+        ],
+        "storeCalls": [],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [],
+        "frontendSites": [],
+        "handler": "handlePeerStatus",
+        "handlerFile": "services/cluster-manager/failover_handler.go",
+        "handlerLine": 95,
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/cluster/peer/status",
+        "path": "/cluster/peer/status",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "cluster-manager|GET|/cluster/peer/status",
+        "sensitive": false,
+        "service": "cluster-manager",
+        "serviceCalls": [
+          "PeerStatus"
+        ],
+        "storeCalls": [],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [],
+        "frontendSites": [],
+        "handler": "handlePeerVote",
+        "handlerFile": "services/cluster-manager/failover_handler.go",
+        "handlerLine": 109,
+        "hasFrontend": false,
+        "internalPackages": [
+          "pkg/clusterrepl.ParseLSN"
+        ],
+        "method": "POST",
+        "normalizedPath": "/cluster/peer/vote",
+        "path": "/cluster/peer/vote",
+        "receiverCalls": [
+          "s.fo.jitteredDeadline"
+        ],
+        "risk": "medium",
+        "routeKey": "cluster-manager|POST|/cluster/peer/vote",
+        "sensitive": false,
+        "service": "cluster-manager",
+        "serviceCalls": [
+          "GrantVote"
+        ],
+        "storeCalls": [],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [],
+        "frontendSites": [],
+        "handler": "handlePeerAnnounce",
+        "handlerFile": "services/cluster-manager/failover_handler.go",
+        "handlerLine": 127,
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/cluster/peer/announce",
+        "path": "/cluster/peer/announce",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "cluster-manager|POST|/cluster/peer/announce",
+        "sensitive": false,
+        "service": "cluster-manager",
+        "serviceCalls": [
+          "Announce"
+        ],
+        "storeCalls": [],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [],
+        "frontendSites": [],
+        "handler": "handlePeerFence",
+        "handlerFile": "services/cluster-manager/failover_handler.go",
+        "handlerLine": 145,
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/cluster/peer/fence",
+        "path": "/cluster/peer/fence",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "cluster-manager|POST|/cluster/peer/fence",
+        "sensitive": false,
+        "service": "cluster-manager",
+        "serviceCalls": [
+          "Fence"
         ],
         "storeCalls": [],
         "uiLabels": [
@@ -123466,7 +124487,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-21T05:28:02Z",
+    "generatedAt": "2026-10-21T05:53:28Z",
     "methods": [
       "DELETE",
       "GET",
@@ -123506,8 +124527,8 @@
       "workload"
     ],
     "summary": {
-      "flows": 909,
-      "frontendBacked": 513,
+      "flows": 916,
+      "frontendBacked": 514,
       "highRisk": 346,
       "services": 28
     }

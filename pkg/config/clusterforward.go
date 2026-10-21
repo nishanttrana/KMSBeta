@@ -131,6 +131,17 @@ func writeForwardErr(w http.ResponseWriter, status int, code, msg string) {
 func (f *clusterForwarder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	st := f.state(r)
 	if !st.IsMember() {
+		// A fenced former primary, or a primary that lost its majority,
+		// makes no lifecycle write: another node may be primary now.
+		if ok, reason := st.WritesAllowed(time.Now()); !ok && clusterroute.Decide(f.service, r.Method, r.URL.Path) == clusterroute.Forward {
+			f.audit(r, st, nil, "cluster_write_refused", http.StatusServiceUnavailable, reason)
+			msg := "this node was primary and another node has been promoted; it makes no changes until it rejoins"
+			if reason == "primary_lease_lost" {
+				msg = "this primary cannot reach a majority of the cluster, so it makes no changes until it does"
+			}
+			writeForwardErr(w, http.StatusServiceUnavailable, reason, msg)
+			return
+		}
 		f.next.ServeHTTP(w, r)
 		return
 	}

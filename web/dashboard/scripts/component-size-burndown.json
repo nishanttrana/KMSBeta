@@ -4,7 +4,7 @@
   "src/components/v3/tabs/AutokeyTab.tsx": 716,
   "src/components/v3/tabs/BYOKTab.tsx": 556,
   "src/components/v3/tabs/CertsTab.tsx": 2673,
-  "src/components/v3/tabs/ClusterTabView.tsx": 610,
+  "src/components/v3/tabs/ClusterTabView.tsx": 595,
   "src/components/v3/tabs/ComplianceTab.tsx": 1177,
   "src/components/v3/tabs/ConfidentialComputeTab.tsx": 656,
   "src/components/v3/tabs/CryptoAgilityTab.tsx": 518,

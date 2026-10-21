@@ -5,6 +5,35 @@ Newest entries on top.
 
 ## 2026-10-21
 
+### A control that changes a label is not failover (13.37.0-beta)
+- Node Management had a Leader/Follower select whose Apply changed
+  `cluster_nodes.role` and nothing else: no node stopped or started
+  writing. It read as failover. Building the real thing also showed the
+  primary had never recorded its own role, which the shared-append audit
+  replication depended on. **Before building on cluster state, read where
+  it is written, not only where it is read.**
+- docs/INFRASTRUCTURE.md described Raft, witness nodes, consistency modes
+  and cluster ports 5173-5175, none of which ever existed, with curl
+  examples against the label route. The doc-route gate found it only when
+  the route was removed. **A design doc written before the code is checked
+  against the code when the feature lands, or it is deleted.**
+
+### A lost election must not leave a trace that fences (13.37.0-beta)
+- The first design raised a candidate's epoch when it stood. A member cut
+  off alone would lose, keep the higher epoch, and fence the healthy primary
+  with its next heartbeat. The epoch now changes only on a promotion; the
+  vote table alone remembers the epochs a node stood or voted in. Caught by
+  `TestPartitionedMemberCannotDisruptAHealthyPrimary`, written as an attack
+  on the design before trusting it.
+
+### Wait for the position the primary reports, not the one it applied (13.37.0-beta)
+- For a switchover the member must hold the primary's last write. The
+  replication origin's LSN is the last *applied* commit and stays behind
+  `pg_current_wal_lsn()` forever when the tail of the WAL is other tables;
+  `pg_stat_subscription.latest_end_lsn` follows the publisher's keepalives
+  and reaches it. The three-Postgres test proved which one completes.
+
+
 ### Two bearer tokens on one service (13.36.0-beta)
 - hyok's kernel wrapper parses every `Bearer` token as a Vecta JWT and marks
   a failure invalid, which XKS never hit (SigV4 isn't Bearer). OCI's

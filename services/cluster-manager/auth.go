@@ -24,6 +24,14 @@ var publicClusterRoutes = map[string]bool{
 	"GET /healthz":                true,
 	"POST /cluster/join/exchange": true,
 	"POST /cluster/sync/events":   true,
+	// Failover (failover.go): the member's forwarding credential or the
+	// peer secret's signature.
+	"POST /cluster/peer/heartbeat":   true,
+	"POST /cluster/peer/resubscribe": true,
+	"GET /cluster/peer/status":       true,
+	"POST /cluster/peer/vote":        true,
+	"POST /cluster/peer/announce":    true,
+	"POST /cluster/peer/fence":       true,
 }
 
 func clusterRouteKey(r *http.Request) string { return r.Method + " " + r.URL.Path }
@@ -39,10 +47,7 @@ func claimsAreClusterAdmin(c *pkgauth.Claims) bool {
 	if tenant != "" && !strings.EqualFold(tenant, "root") {
 		return false
 	}
-	role := strings.ToLower(strings.TrimSpace(c.Role))
-	if role == "admin" || role == "super-admin" {
-		return true
-	}
+	// A role name grants nothing: a root administrator's token carries "*".
 	for _, p := range c.Permissions {
 		if strings.TrimSpace(p) == "*" {
 			return true

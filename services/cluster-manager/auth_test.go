@@ -14,8 +14,9 @@ import (
 // a verified root administrator; node-to-node routes authenticate themselves.
 func TestClusterRoutesRequireRootAdmin(t *testing.T) {
 	tokens := map[string]*pkgauth.Claims{
-		"root-admin":   {TenantID: "root", Role: "admin"},
-		"tenant-admin": {TenantID: "tenant-a", Role: "admin"},
+		"root-admin":   {TenantID: "root", Role: "admin", Permissions: []string{"*"}},
+		"root-named":   {TenantID: "root", Role: "super-admin"},
+		"tenant-admin": {TenantID: "tenant-a", Role: "admin", Permissions: []string{"*"}},
 		"root-viewer":  {TenantID: "root", Role: "readonly"},
 		"service":      {TenantID: "root", Role: "client-service", ClientID: "kms-governance", Permissions: []string{"service.internal"}},
 	}
@@ -47,6 +48,11 @@ func TestClusterRoutesRequireRootAdmin(t *testing.T) {
 		{"POST", "/cluster/join/request", "bogus", http.StatusUnauthorized},
 		{"POST", "/cluster/join/request", "tenant-admin", http.StatusForbidden},
 		{"POST", "/cluster/join/request", "root-viewer", http.StatusForbidden},
+		// A role name without the permission grants nothing.
+		{"POST", "/cluster/join/request", "root-named", http.StatusForbidden},
+		{"POST", "/cluster/failover/promote", "root-named", http.StatusForbidden},
+		{"POST", "/cluster/failover/promote", "", http.StatusUnauthorized},
+		{"POST", "/cluster/peer/vote", "", http.StatusOK},
 		{"DELETE", "/cluster/nodes/n1", "tenant-admin", http.StatusForbidden},
 		{"POST", "/cluster/join/request", "root-admin", http.StatusOK},
 		{"GET", "/cluster/overview", "service", http.StatusOK},

@@ -20,16 +20,12 @@
    - 1.11 Vendor-Specific Notes
 
 2. [Cluster Management](#2-cluster-management)
-   - 2.1 Clustering Architecture
-   - 2.2 Node Roles and Raft Consensus
-   - 2.3 Adding a Node
-   - 2.4 Replication Profiles
-   - 2.5 Sync Monitoring
-   - 2.6 Role Changes and Failover
-   - 2.7 Disaster Recovery
-   - 2.8 Cluster Networking Requirements
-   - 2.9 Cluster Upgrade Procedures
-   - 2.10 Split-Brain Prevention
+   - 2.1 How a cluster works
+   - 2.2 Adding a node
+   - 2.3 Failover
+   - 2.4 Networking
+   - 2.5 Upgrades
+   - 2.6 Disaster recovery
 
 3. [Security Considerations](#3-security-considerations)
 4. [Full API Reference](#4-full-api-reference)
@@ -674,341 +670,83 @@ CloudHSM uses its own user model separate from IAM. Vecta uses a Crypto User (CU
 
 ## 2. Cluster Management
 
-### 2.1 Clustering Architecture
+This section is the operator's summary; [CLUSTERING.md](CLUSTERING.md) is
+the reference and states what is done and what isn't. (An earlier version
+of this section described Raft consensus, witness nodes, read replicas,
+consistency modes and dedicated cluster ports. None of that exists; it was
+replaced in 13.37.0-beta.)
 
-Vecta KMS uses a leader-follower cluster model with Raft-based consensus for distributed coordination. This provides:
+### 2.1 How a cluster works
 
-- **Strong consistency**: All writes go through the leader and are replicated to a quorum before acknowledgment
-- **Automatic failover**: Leader election completes within 300-600ms of leader failure
-- **Linear scalability for reads**: Followers can serve reads with configurable consistency guarantees
-- **Horizontal scale**: Add up to 9 voting nodes; beyond that, add non-voting read replicas
+- **One primary writes.** Key and policy lifecycle writes run on the
+  primary. A member forwards them to the primary's cluster-manager
+  (pinned TLS, per-member credential); crypto operations, reads and logins
+  run on every node.
+- **Postgres logical replication** carries each feature's tables from the
+  primary to the members assigned that feature (replication profiles:
+  base, standard, security, full, or custom). Node-local tables (sessions,
+  this node's settings, logs) never replicate.
+- **Nodes:** primary, member, or fenced (a former primary that learned of a
+  newer one). There are no witnesses or read replicas.
 
-**Node types:**
+### 2.2 Adding a node
 
-| Role | Votes | Accepts Writes | Serves Reads | Data Stored |
-|---|---|---|---|---|
-| **Leader** | Yes | Yes | Yes | Full |
-| **Follower** | Yes | No (proxies to leader) | Yes | Full |
-| **Witness** | Yes | No | No | None |
-| **Read Replica** | No | No | Yes | Full |
-
-**Quorum calculation:**
-
-For N voting nodes, quorum requires ⌊N/2⌋ + 1 nodes to be online and reachable:
-
-| N nodes | Quorum | Max failures tolerated |
-|---|---|---|
-| 1 | 1 | 0 |
-| 3 | 2 | 1 |
-| 5 | 3 | 2 |
-| 7 | 4 | 3 |
-
-**Cluster topology recommendations:**
-
-| Environment | Recommended Topology | Rationale |
-|---|---|---|
-| Development / Test | 1 node | Simplicity; no HA |
-| Small production | 3 nodes (2 data + 1 witness) | Tolerates 1 failure; minimal resource overhead |
-| Enterprise HA | 5 nodes (3 data + 2 witness) | Tolerates 2 concurrent failures |
-| Geo-distributed | 6 nodes (2 per region) + 1 witness in 3rd region | Tolerates single region failure |
-
----
-
-### 2.2 Node Roles and Raft Consensus
-
-Vecta's clustering layer uses the Raft distributed consensus algorithm. Key Raft properties:
-
-**Leader Election:**
-- Each node tracks the current term (monotonically increasing integer)
-- If a follower does not receive a heartbeat within the election timeout (150–300ms, randomized to prevent split votes), it becomes a candidate
-- Candidate increments its term, votes for itself, sends RequestVote RPCs to all peers
-- Node wins election if it receives votes from a majority of voting nodes
-- The node with the highest log index and greatest term wins ties
-- Election safety: only one leader per term
-
-**Log Replication:**
-- Leader receives write request, appends to its local WAL (Write-Ahead Log)
-- Leader sends AppendEntries RPCs to all followers in parallel
-- Entry committed once a quorum acknowledges
-- Followers apply committed entries to their state machines
-- Client receives success acknowledgment after commit, not after disk write on leader
-
-**Heartbeat:**
-- Leader sends AppendEntries (empty = heartbeat) to all followers every 50ms
-- If heartbeat interval elapses without receipt, follower starts election timeout countdown
-
-**Log compaction:**
-- Vecta takes snapshots of the state machine periodically
-- Old WAL entries before snapshot can be truncated
-- New nodes joining the cluster receive snapshot + subsequent log entries (not entire log history)
-
----
-
-### 2.3 Adding a Node
+Platform → Cluster → Node Management → **Add Instance**. On the primary,
+create a join bundle for the new node and choose its profile; on the new
+node, paste the bundle and confirm. The join transfers the master key
+sealed with ML-KEM-768 and subscribes the node to its components
+([CLUSTERING.md](CLUSTERING.md#joining-a-node-slice-2) lists the settings
+the primary needs first).
 
 ```bash
-
-# Step 2: Start Vecta on the new node with cluster mode enabled
-# (Set in vecta.yaml or env vars before starting the service)
-# cluster:
-#   enabled: true
-#   mode: join
-
-# Step 4: Verify the node appears in the cluster
-curl "https://localhost/svc/cluster/cluster/nodes" \
-  -H "Authorization: Bearer $TOKEN"
-# Response:
-# {
-#   "nodes": [
-#     {"node_id": "node-abc", "role": "leader", "address": "vecta-leader.internal:5173", "healthy": true, "lag_ms": 0},
-#     {"node_id": "node-def", "role": "follower", "address": "vecta-node2.internal:5173", "healthy": true, "lag_ms": 12},
-#     {"node_id": "node-ghi", "role": "follower", "address": "new-node.internal:5173", "healthy": true, "lag_ms": 150}
-#   ],
-#   "leader_id": "node-abc",
-#   "quorum_size": 2,
-#   "quorum_met": true
-# }
-
+curl "https://localhost/svc/cluster/cluster/replication/status" -H "Authorization: Bearer $TOKEN"
 ```
 
----
+### 2.3 Failover
 
-### 2.4 Replication Profiles
+Platform → Cluster → **Failover**.
 
-Replication profiles define how reads are served from the cluster. They allow trading latency for consistency based on use case.
-
-**Consistency modes:**
-
-| Mode | Read Target | Staleness | Latency | Use Case |
-|---|---|---|---|---|
-| `strong` | Always leader | Zero | Highest (cross-region) | Financial transactions, key operations |
-| `bounded_staleness` | Nearest follower with lag < max_lag_ms | At most max_lag_ms | Medium | Audit reads, reporting |
-| `eventual` | Nearest node | Unbounded | Lowest | Monitoring dashboards, metrics |
-
-```bash
-# Create a geo-routing profile for EU reads
-curl -X POST "https://localhost/svc/cluster/cluster/profiles" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "eu-west-reads",
-    "node_ids": ["node-eu-west-1", "node-eu-west-2"],
-    "consistency_mode": "bounded_staleness",
-    "read_preference": "nearest",
-    "max_lag_ms": 500,
-    "routing_tags": {"region": "eu-west-1", "compliance": "gdpr"}
-  }'
-
-# Create a strong-consistency profile for payment operations
-curl -X POST "https://localhost/svc/cluster/cluster/profiles" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "name": "payment-strong",
-    "consistency_mode": "strong",
-    "routing_tags": {"tier": "payment"}
-  }'
-
-# List all profiles
-curl "https://localhost/svc/cluster/cluster/profiles" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Delete a profile
-curl -X DELETE "https://localhost/svc/cluster/cluster/profiles/PROFILE_ID" \
-  -H "Authorization: Bearer $TOKEN"
-```
-
----
-
-### 2.5 Sync Monitoring
-
-Replication lag monitoring is critical for detecting network partitions or overloaded followers.
-
-```bash
-
-# List sync events (filter by type)
-curl "https://localhost/svc/cluster/cluster/sync/events?event_type=error&limit=50" \
-  -H "Authorization: Bearer $TOKEN"
-
-curl "https://localhost/svc/cluster/cluster/sync/events?event_type=election&limit=10" \
-  -H "Authorization: Bearer $TOKEN"
-
-curl "https://localhost/svc/cluster/cluster/sync/events?node_id=node-eu-2&limit=100" \
-  -H "Authorization: Bearer $TOKEN"
-
-```
-
-**Alerting thresholds:**
-
-| Metric | Warning | Critical |
-|---|---|---|
-| Replication lag | > 500ms | > 5000ms |
-| Unhealthy nodes | 1 | ≥ quorum size |
-| Election frequency | > 1/hour | > 3/hour |
-| WAL apply errors | > 0 | > 5 |
-
----
-
-### 2.6 Role Changes and Failover
-
-**Planned leader step-down (for maintenance):**
-
-```bash
-# Gracefully transfer leadership to a specific follower
-curl -X POST "https://localhost/svc/cluster/cluster/nodes/LEADER_NODE_ID/role" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "new_role": "follower",
-    "preferred_successor_id": "node-def",
-    "reason": "planned-maintenance-window-2025-03-22"
-  }'
-
-# Promote a follower to leader (emergency — forces election)
-curl -X POST "https://localhost/svc/cluster/cluster/nodes/NODE_ID/role" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"new_role": "leader", "reason": "emergency-failover"}'
-```
-
-**Removing a failed node:**
-
-```bash
-# Mark node as permanently removed (quorum recalculated)
-curl -X DELETE "https://localhost/svc/cluster/nodes/FAILED_NODE_ID" \
-  -H "Authorization: Bearer $TOKEN"
-
-```
-
-**Changing a node's role:**
-
-```bash
-# Promote witness to follower (begins data replication)
-curl -X POST "https://localhost/svc/cluster/cluster/nodes/WITNESS_NODE_ID/role" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"new_role": "follower"}'
-
-# Demote follower to witness (stops data replication — frees storage)
-curl -X POST "https://localhost/svc/cluster/cluster/nodes/FOLLOWER_NODE_ID/role" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"new_role": "witness"}'
-```
-
----
-
-### 2.7 Disaster Recovery
-
-**Backup before any cluster topology change:**
-
-```bash
-# Create a backup
-curl -X POST "https://localhost/svc/governance/governance/backups?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"label": "pre-maintenance-2025-03-22", "include_keys": true}'
-
-# List backups
-curl "https://localhost/svc/governance/governance/backups?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
-
-```
-
-**Geo-redundant DR scenarios:**
-
-| Scenario | Impact | Recovery Procedure |
-|---|---|---|
-| Single node failure | No outage if quorum met | Failed node auto-removed; add replacement; rejoin |
-| Single AZ failure (3-node cluster, 1 per AZ) | No outage (2 nodes = quorum) | Replace failed AZ node; rejoin |
-| Single region failure (6-node, 2/region) | No outage if 3rd region witness tips quorum | Remaining nodes form quorum; provision new region nodes |
-| Total cluster loss | Full outage | Restore leader from backup; rejoin followers from snapshot |
-| Data corruption (all nodes) | Full outage | Restore from off-cluster backup; verify key integrity |
-
-**RPO and RTO targets:**
-
-| Failure Type | Target RPO | Target RTO |
-|---|---|---|
-| Single node | 0 (no data loss) | < 1 min (auto election) |
-| Single region | 0 | < 5 min |
-| Full DR restore | Last backup | 15–60 min depending on backup size |
-
-**Minimum backup interval recommendations:**
-
-- Root KEKs: continuous replication (no RPO acceptable)
-- Key metadata: hourly
-- Audit logs: every 15 minutes
-- Full backup: daily
-
----
-
-### 2.8 Cluster Networking Requirements
-
-All inter-node communication uses mTLS (mutual TLS). Vecta generates cluster node certificates from its internal CA during bootstrap.
-
-**Required ports:**
-
-| Port | Protocol | Purpose | Direction |
-|---|---|---|---|
-| 5173 | TCP (HTTPS) | Vecta API / Raft RPC | Node ↔ Node, Client → Node |
-| 5174 | TCP | Cluster gossip / membership | Node ↔ Node |
-| 5175 | TCP | WAL replication stream | Follower ← Leader |
-
-**Firewall rules:**
-
-All Vecta nodes must be able to reach each other on ports 5173–5175. Client traffic only needs to reach port 5173. No inbound connections from outside the cluster are required for internal replication.
-
-**Latency requirements:**
-
-| Cluster Type | Max Round-Trip Latency |
+| Voters | What happens when the primary is lost |
 |---|---|
-| Single-region | < 2ms (same datacenter) |
-| Multi-AZ (same region) | < 10ms |
-| Multi-region | < 100ms recommended; up to 200ms tolerated |
+| 1 or 2 | Lifecycle writes fail (`502 primary_unreachable`) until an administrator promotes a member. Crypto operations continue. |
+| 3 or more | After 20 s without the primary, the members elect one by majority; the old primary's lease has already stopped its writes. |
 
-High inter-node latency increases election timeouts and may cause false leader elections. Vecta automatically adjusts heartbeat and election timeout intervals based on measured latency.
+```bash
+# On the member to promote. If the primary answers, it is fenced first and
+# this node waits for its last write (a switchover).
+curl -X POST "https://member.example/svc/cluster/cluster/failover/promote?tenant_id=root" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"confirm": true, "reason": "maintenance"}'
 
----
+# If the primary is down: add "force": true. Its writes that had not reached
+# this node are lost, and if it still serves clients it accepts writes until
+# it learns of the promotion.
+curl "https://member.example/svc/cluster/cluster/failover/status?tenant_id=root" -H "Authorization: Bearer $TOKEN"
+```
 
-### 2.9 Cluster Upgrade Procedures
+A fenced node rejoins with a join bundle from the current primary.
 
-**Rolling upgrade (zero downtime):**
+### 2.4 Networking
 
-1. Upgrade followers one at a time (start with the last follower in the ring):
-   ```bash
+| From | To | Port | Purpose |
+|---|---|---|---|
+| Members | Primary | cluster-manager (`HTTP_PORT`, TLS) | join, forwarded writes, heartbeats |
+| Every node | Every node | cluster-manager | votes, status, announcements (signed with the cluster's peer secret) |
+| Members | Primary | Postgres (`CLUSTER_PG_ADVERTISE_PORT`, TLS) | logical replication |
 
-   # Stop Vecta on the node
-   systemctl stop vecta
+A node that may become primary needs `CLUSTER_ADVERTISE_URL`,
+`CLUSTER_HTTP_TLS_*` and `CLUSTER_PG_ADVERTISE_HOST`.
 
-   # Upgrade the binary
-   dpkg -i vecta_new_version.deb
+### 2.5 Upgrades
 
-   # Start Vecta
-   systemctl start vecta
+Upgrade members one at a time, then promote an upgraded member (a
+switchover loses nothing), upgrade the old primary, and rejoin it.
 
-   # Verify it rejoined the cluster as follower
-   curl "https://localhost/svc/cluster/cluster/nodes" -H "Authorization: Bearer $TOKEN"
-   ```
+### 2.6 Disaster recovery
 
-2. Repeat for each follower.
-
-3. Step down the leader (triggers election to a now-upgraded follower):
-   ```bash
-   curl -X POST "https://localhost/svc/cluster/cluster/nodes/LEADER_ID/role" \
-     -H "Authorization: Bearer $TOKEN" \
-     -d '{"new_role": "follower"}'
-   ```
-
-4. Upgrade the old leader (now a follower).
-
----
-
-### 2.10 Split-Brain Prevention
-
-Vecta uses strict quorum enforcement to prevent split-brain:
-
-- A minority partition (fewer than quorum nodes) refuses to accept writes.
-- The API returns `503 Service Unavailable` with `{"error": "quorum_unavailable"}` on write operations.
-- Reads may still be served from minority partitions if `consistency_mode: eventual`.
-
-**Network partition detection:**
-
-If `quorum_met: false`, investigate network connectivity between nodes immediately. The cluster will remain consistent but unavailable for writes until the partition heals.
+Replication is asynchronous: a primary lost without a switchover loses its
+writes that had not reached the promoted member. Keep backups
+(Backup & Restore) off the cluster.
 
 ---
 
@@ -1025,11 +763,13 @@ If `quorum_met: false`, investigate network connectivity between nodes immediate
 
 ### Cluster Security
 
-- **Minimum 3 nodes for any production deployment**: 1 or 2 nodes offer no HA — a single node failure causes complete unavailability.
-- **Take backups before topology changes**: Adding, removing, or changing roles on nodes can cause quorum instability. Always back up before these operations.
-- **mTLS enforcement**: Vecta enforces mTLS for all inter-node connections. Do not disable certificate verification in any configuration.
-- **Node certificate expiry**: Monitor cluster certificate expiry. Expired node certificates cause inter-node connection failures and cluster unavailability. Default validity: 1 year; rotate at 90 days before expiry.
-- **Network segmentation**: Cluster replication ports (5174, 5175) should not be accessible from outside the cluster network. Use a dedicated cluster VLAN.
+- **Three nodes for automatic failover.** With two, a lost primary needs an
+  administrator, and a forced promotion can leave both nodes writing until
+  they reach each other.
+- **Node-to-node traffic is TLS** (cluster-manager pinned by certificate
+  fingerprint, Postgres with `CLUSTER_PG_SSLMODE`, default `verify-full`).
+- **Keep the cluster-manager and Postgres ports** on a network only the
+  nodes reach.
 
 ## 4. Full API Reference
 
@@ -1047,7 +787,8 @@ If `quorum_met: false`, investigate network connectivity between nodes immediate
 |---|---|---|
 | `GET` | `/svc/cluster/cluster/nodes` | List all cluster nodes and their status |
 | `DELETE` | `/svc/cluster/cluster/nodes/{node_id}` | Remove a node from the cluster |
-| `POST` | `/svc/cluster/cluster/nodes/{node_id}/role` | Change node role |
+| `GET` | `/svc/cluster/cluster/failover/status` | This node's role, epoch, lease and peers |
+| `POST` | `/svc/cluster/cluster/failover/promote` | Promote this node |
 | `GET` | `/svc/cluster/cluster/sync/events` | Sync event log |
 | `POST` | `/svc/cluster/cluster/profiles` | Create replication profile |
 | `GET` | `/svc/cluster/cluster/profiles` | List replication profiles |

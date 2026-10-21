@@ -82,7 +82,8 @@ export const SUB_PANES: Record<string, SubPane[]> = {
   ],
   cluster: [
     { id: "topology", label: "Topology", hint: "Visual cluster map with node connections and health", icon: GitBranch, feature: "clustering" },
-    { id: "nodes", label: "Node Management", hint: "Detailed node metrics, role changes, and components", icon: Server, feature: "clustering" },
+    { id: "nodes", label: "Node Management", hint: "Detailed node metrics and components", icon: Server, feature: "clustering" },
+    { id: "failover", label: "Failover", hint: "This node's role, the voters, and promotion", icon: ShieldCheck, feature: "clustering" },
     { id: "profiles", label: "Deploy Profiles", hint: "Replication profiles with deployment tier presets", icon: Layers, feature: "clustering" },
     { id: "sync", label: "Sync Monitor", hint: "Real-time sync events, checkpoints, and replication lag", icon: RefreshCw, feature: "clustering" }
   ],

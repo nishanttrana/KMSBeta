@@ -98,3 +98,40 @@ func TestCoreComponentsAlwaysIncluded(t *testing.T) {
 		t.Fatal("unexpected publication/subscription naming")
 	}
 }
+
+// createWithBodyRE captures a CREATE TABLE statement up to the end of its
+// column list.
+var createWithBodyRE = regexp.MustCompile(`(?is)CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-z0-9_]+)\s*\((.*?)\)\s*;`)
+var sequenceRE = regexp.MustCompile(`(?i)\b[a-z_][a-z0-9_]*\s+(BIG|SMALL)?SERIAL\b|\bGENERATED\s+(ALWAYS|BY\s+DEFAULT)\s+AS\s+IDENTITY\b|\bnextval\s*\(`)
+
+// Logical replication does not carry sequences, so after a failover the new
+// primary's would restart below the IDs it already holds and reuse them. A
+// replicated table takes its IDs from the application instead.
+func TestReplicatedTablesUseNoSequence(t *testing.T) {
+	root := filepath.Join("..", "..", "services")
+	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".sql") || !strings.Contains(path, string(filepath.Separator)+"migrations"+string(filepath.Separator)) {
+			return err
+		}
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		for _, m := range createWithBodyRE.FindAllStringSubmatch(string(raw), -1) {
+			if class, _ := Classify(m[1]); class == ClassReplicated && sequenceRE.MatchString(m[2]) {
+				t.Errorf("replicated table %s (%s) takes IDs from a sequence", m[1], path)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The check sees a sequence where there is one.
+	if !sequenceRE.MatchString("id BIGSERIAL PRIMARY KEY") || !sequenceRE.MatchString("id BIGINT GENERATED ALWAYS AS IDENTITY") {
+		t.Fatal("sequence pattern misses a sequence")
+	}
+	if sequenceRE.MatchString("fingerprint TEXT NOT NULL DEFAULT '',\n    serial TEXT NOT NULL") {
+		t.Fatal("a column named serial is not a sequence")
+	}
+}

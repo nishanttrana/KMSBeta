@@ -15,10 +15,6 @@ type ClusterTabViewProps = {
   statusMeta: (status: string) => { label: string; color: string; bg: string; dotClass: string };
   clusterComponentLabel: (value: string) => string;
   componentCategoryColor: (componentId: string) => string;
-  roleDrafts: Record<string, string>;
-  setRoleDrafts: (updater: any) => void;
-  roleUpdatingNode: string;
-  updateNodeRoleAction: (node: any) => Promise<void>;
   removeBusyNode: string;
   removeNodeAction: (node: any) => Promise<void>;
   session: any;
@@ -96,7 +92,7 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
   const {
     clusterView, loading, refresh, nodes, profiles, summary, selectiveNote, replication,
     statusMeta, clusterComponentLabel, componentCategoryColor,
-    roleDrafts, setRoleDrafts, roleUpdatingNode, updateNodeRoleAction,
+
     removeBusyNode, removeNodeAction,
     session, onToast, addNodeModalOpen, setAddNodeModalOpen,
     directNodeForm, setDirectNodeForm, profileComponentScope, toggleDirectComponent,
@@ -322,18 +318,7 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
               </div>
 
               <div style={{ display: "flex", gap: 6, alignItems: "center", borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
-                <Sel
-                  value={String(roleDrafts[nodeID] || node?.role || "follower").trim().toLowerCase() === "leader" ? "leader" : "follower"}
-                  onChange={(e) => setRoleDrafts((prev: any) => ({ ...prev, [nodeID]: e.target.value }))}
-                  w="120px"
-                >
-                  <option value="follower">Follower</option>
-                  <option value="leader">Leader</option>
-                </Sel>
-                <Btn small
-                  disabled={roleUpdatingNode === nodeID || String(roleDrafts[nodeID] || node?.role || "follower").trim().toLowerCase() === String(node?.role || "follower").trim().toLowerCase()}
-                  onClick={() => void updateNodeRoleAction(node)}
-                >{roleUpdatingNode === nodeID ? "Applying..." : "Apply"}</Btn>
+                <span style={{ fontSize: 11, color: C.muted }}>Primary changes by promotion (Failover, above).</span>
                 <div style={{ flex: 1 }} />
                 <Btn small danger disabled={removeBusyNode === nodeID} onClick={() => void removeNodeAction(node)}>
                   {removeBusyNode === nodeID ? "Removing..." : "Remove"}

@@ -48,7 +48,6 @@ func (h *Handler) routes() *http.ServeMux {
 
 	mux.HandleFunc("POST /cluster/nodes", h.handleUpsertNode)
 	mux.HandleFunc("POST /cluster/nodes/{id}/heartbeat", h.handleNodeHeartbeat)
-	mux.HandleFunc("POST /cluster/nodes/{id}/role", h.handleNodeRoleUpdate)
 	mux.HandleFunc("DELETE /cluster/nodes/{id}", h.handleRemoveNode)
 
 	mux.HandleFunc("POST /cluster/sync/events", h.handlePublishSyncEvent)
@@ -57,6 +56,15 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /cluster/sync/checkpoint", h.handleSyncCheckpoint)
 	mux.HandleFunc("GET /cluster/logs", h.handleClusterLogs)
 	mux.HandleFunc("GET /cluster/replication/status", h.handleReplicationStatus)
+
+	mux.HandleFunc("GET /cluster/failover/status", h.handleFailoverStatus)
+	mux.HandleFunc("POST /cluster/failover/promote", h.handleFailoverPromote)
+	mux.HandleFunc("POST /cluster/peer/heartbeat", h.handlePeerHeartbeat)
+	mux.HandleFunc("POST /cluster/peer/resubscribe", h.handlePeerResubscribe)
+	mux.HandleFunc("GET /cluster/peer/status", h.handlePeerStatus)
+	mux.HandleFunc("POST /cluster/peer/vote", h.handlePeerVote)
+	mux.HandleFunc("POST /cluster/peer/announce", h.handlePeerAnnounce)
+	mux.HandleFunc("POST /cluster/peer/fence", h.handlePeerFence)
 
 	return mux
 }
@@ -220,28 +228,6 @@ func (h *Handler) handleUpsertNode(w http.ResponseWriter, r *http.Request) {
 	in.TenantID = firstTenant(in.TenantID, tenantFromRequest(r))
 	in.RequestedBy = firstActor(r)
 	node, err := h.svc.UpsertNode(r.Context(), in)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, in.TenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"node": node, "request_id": reqID})
-}
-
-func (h *Handler) handleNodeRoleUpdate(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	nodeID := strings.TrimSpace(r.PathValue("id"))
-	if nodeID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "node id is required", reqID, "")
-		return
-	}
-	var in UpdateNodeRoleInput
-	if err := decodeJSON(r, &in); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
-		return
-	}
-	in.TenantID = firstTenant(in.TenantID, tenantFromRequest(r))
-	in.RequestedBy = firstActor(r)
-	node, err := h.svc.UpdateNodeRole(r.Context(), nodeID, in)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, in.TenantID)
 		return

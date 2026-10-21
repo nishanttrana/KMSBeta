@@ -1,16 +1,16 @@
 # Generated Request Flow Map
 
-Generated at `2026-10-21T05:28:02Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-21T05:53:28Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `909`
-- Routes with exact frontend call sites: `513`
-- Routes whose handlers call `h.svc.*`: `539`
+- Backend routes analyzed: `916`
+- Routes with exact frontend call sites: `514`
+- Routes whose handlers call `h.svc.*`: `546`
 - Routes with detected store calls: `643`
-- Routes with detected internal `pkg/*` calls: `198`
+- Routes with detected internal `pkg/*` calls: `201`
 
 ## How To Trace One Frontend Click
 
@@ -167,17 +167,18 @@ This file connects frontend requests to backend Go processing. It is static anal
 | cloud\|DELETE\|/cloud/accounts/{param} | DELETE /cloud/accounts/{id} | handleDeleteAccount (services/cloud/handler.go:74) | DeleteAccount | DeleteAccountCascade | s.exposure.Retire |  | web/dashboard/src/lib/cloud.ts:146 |
 | cloud\|POST\|/cloud/region-mappings | POST /cloud/region-mappings | handleSetRegionMapping (services/cloud/handler.go:93) | SetRegionMapping | SetRegionMapping, GetRegionMapping |  |  | web/dashboard/src/lib/cloud.ts:165 |
 | cloud\|POST\|/cloud/sync | POST /cloud/sync | handleSync (services/cloud/handler.go:125) | SyncCloudKeys | CreateSyncJob, ListBindings, CompleteSyncJob, GetAccount, UpdateBinding, GetSyncJob | s.providers.Get | pkg/tenantcheck.Requester | web/dashboard/src/lib/cloud.ts:178 |
-| cluster-manager\|GET\|/cluster/overview | GET /cluster/overview | handleOverview (services/cluster-manager/handler.go:68) | GetOverview | ListProfiles, ListNodes, UpsertNode |  |  | web/dashboard/src/lib/cluster.ts:141 |
-| cluster-manager\|POST\|/cluster/profiles | POST /cluster/profiles | handleUpsertProfile (services/cluster-manager/handler.go:124) | UpsertProfile | UpsertProfile, SetDefaultProfile, GetProfile |  |  | web/dashboard/src/lib/cluster.ts:155 |
-| cluster-manager\|DELETE\|/cluster/profiles/{param} | DELETE /cluster/profiles/{id} | handleDeleteProfile (services/cluster-manager/handler.go:140) | DeleteProfile | GetProfile, DeleteProfile |  |  | web/dashboard/src/lib/cluster.ts:170 |
-| cluster-manager\|POST\|/cluster/join/request | POST /cluster/join/request | handleJoinRequest (services/cluster-manager/handler.go:158) | CreateJoinToken | ListProfiles, GetProfile, CreateJoinToken, PurgeExpiredJoinTokens |  |  | web/dashboard/src/lib/cluster.ts:301 |
-| cluster-manager\|POST\|/cluster/join/connect | POST /cluster/join/connect | handleJoinConnect (services/cluster-manager/handler.go:553) | ConnectToCluster | SetLocalState | s.keycore.CreateJoinKey, s.keycore.ImportMEK, s.replication.Subscribe | pkg/crypto.NewKEMRecipient, pkg/crypto.Zeroize, pkg/servicetoken.Authorize | web/dashboard/src/lib/cluster.ts:314 |
-| cluster-manager\|POST\|/cluster/nodes | POST /cluster/nodes | handleUpsertNode (services/cluster-manager/handler.go:213) | UpsertNode | ListProfiles, GetProfile, GetNode, UpsertNode |  |  | web/dashboard/src/lib/cluster.ts:192 |
-| cluster-manager\|POST\|/cluster/nodes/{param}/role | POST /cluster/nodes/{id}/role | handleNodeRoleUpdate (services/cluster-manager/handler.go:230) | UpdateNodeRole | GetNode, UpsertNode |  |  | web/dashboard/src/lib/cluster.ts:219 |
-| cluster-manager\|DELETE\|/cluster/nodes/{param} | DELETE /cluster/nodes/{id} | handleRemoveNode (services/cluster-manager/handler.go:252) | RemoveNode | GetNode, GetProfile, RevokeMemberCredential, DeleteNode |  |  | web/dashboard/src/lib/cluster.ts:235 |
-| cluster-manager\|GET\|/cluster/sync/events | GET /cluster/sync/events | handleListSyncEvents (services/cluster-manager/handler.go:318) | ListSyncEvents | GetNode, ListSyncEvents |  |  | web/dashboard/src/lib/cluster.ts:264 |
-| cluster-manager\|GET\|/cluster/sync/checkpoint | GET /cluster/sync/checkpoint | handleSyncCheckpoint (services/cluster-manager/handler.go:362) | GetSyncCheckpoint | GetSyncCheckpoint |  |  | web/dashboard/src/lib/cluster.ts:274 |
-| cluster-manager\|GET\|/cluster/logs | GET /cluster/logs | handleClusterLogs (services/cluster-manager/handler.go:378) | ListClusterLogs | ListClusterLogs |  |  | web/dashboard/src/lib/cluster.ts:288 |
+| cluster-manager\|GET\|/cluster/overview | GET /cluster/overview | handleOverview (services/cluster-manager/handler.go:76) | GetOverview | ListProfiles, ListNodes, UpsertNode |  |  | web/dashboard/src/lib/cluster.ts:140 |
+| cluster-manager\|POST\|/cluster/profiles | POST /cluster/profiles | handleUpsertProfile (services/cluster-manager/handler.go:132) | UpsertProfile | UpsertProfile, SetDefaultProfile, GetProfile |  |  | web/dashboard/src/lib/cluster.ts:154 |
+| cluster-manager\|DELETE\|/cluster/profiles/{param} | DELETE /cluster/profiles/{id} | handleDeleteProfile (services/cluster-manager/handler.go:148) | DeleteProfile | GetProfile, DeleteProfile |  |  | web/dashboard/src/lib/cluster.ts:169 |
+| cluster-manager\|POST\|/cluster/join/request | POST /cluster/join/request | handleJoinRequest (services/cluster-manager/handler.go:166) | CreateJoinToken | ListProfiles, GetProfile, CreateJoinToken, PurgeExpiredJoinTokens |  |  | web/dashboard/src/lib/cluster.ts:284 |
+| cluster-manager\|POST\|/cluster/join/connect | POST /cluster/join/connect | handleJoinConnect (services/cluster-manager/handler.go:539) | ConnectToCluster | SetLocalState | s.keycore.CreateJoinKey, s.keycore.ImportMEK, s.replication.Subscribe | pkg/crypto.NewKEMRecipient, pkg/crypto.Zeroize, pkg/servicetoken.Authorize | web/dashboard/src/lib/cluster.ts:297 |
+| cluster-manager\|POST\|/cluster/nodes | POST /cluster/nodes | handleUpsertNode (services/cluster-manager/handler.go:221) | UpsertNode | ListProfiles, GetProfile, GetNode, UpsertNode |  |  | web/dashboard/src/lib/cluster.ts:191 |
+| cluster-manager\|DELETE\|/cluster/nodes/{param} | DELETE /cluster/nodes/{id} | handleRemoveNode (services/cluster-manager/handler.go:238) | RemoveNode | GetNode, GetProfile, RevokeMemberCredential, DeleteNode |  |  | web/dashboard/src/lib/cluster.ts:218 |
+| cluster-manager\|GET\|/cluster/sync/events | GET /cluster/sync/events | handleListSyncEvents (services/cluster-manager/handler.go:304) | ListSyncEvents | GetNode, ListSyncEvents |  |  | web/dashboard/src/lib/cluster.ts:247 |
+| cluster-manager\|GET\|/cluster/sync/checkpoint | GET /cluster/sync/checkpoint | handleSyncCheckpoint (services/cluster-manager/handler.go:348) | GetSyncCheckpoint | GetSyncCheckpoint |  |  | web/dashboard/src/lib/cluster.ts:257 |
+| cluster-manager\|GET\|/cluster/logs | GET /cluster/logs | handleClusterLogs (services/cluster-manager/handler.go:364) | ListClusterLogs | ListClusterLogs |  |  | web/dashboard/src/lib/cluster.ts:271 |
+| cluster-manager\|GET\|/cluster/failover/status | GET /cluster/failover/status | handleFailoverStatus (services/cluster-manager/failover_handler.go:165) | FailoverStatus |  |  |  | web/dashboard/src/lib/cluster.ts:318 |
+| cluster-manager\|POST\|/cluster/failover/promote | POST /cluster/failover/promote | handleFailoverPromote (services/cluster-manager/failover_handler.go:174) | PromoteManually, publishAudit | GetNode | s.fo.jitteredDeadline | pkg/clustercatalog.WithCore, pkg/clusterrepl.ParseLSN, pkg/crypto.RandomBytes, pkg/crypto.Zeroize, pkg/crypto.KEMSeal, pkg/crypto.NewKEMRecipient | web/dashboard/src/lib/cluster.ts:328 |
 | compliance\|GET\|/compliance/connections | GET /compliance/connections | listConnectionChoices (services/compliance/credentials.go:44) |  | ListConnections |  |  | web/dashboard/src/lib/credentials.ts:61 |
 | compliance\|GET\|/compliance/connections/{param}/usage | GET /compliance/connections/{id}/usage | connectionUsage (services/compliance/credentials.go:134) |  | GetConnection |  |  | web/dashboard/src/lib/credentials.ts:80 |
 | compliance\|GET\|/compliance/posture/breakdown | GET /compliance/posture/breakdown | handlePostureBreakdown (services/compliance/handler.go:131) | GetPostureBreakdown |  |  |  | web/dashboard/src/lib/compliance.ts:305 |
@@ -778,27 +779,34 @@ This file connects frontend requests to backend Go processing. It is static anal
 | cloud\|GET\|/cloud/inventory | GET /cloud/inventory | handleInventory (services/cloud/handler.go:150) | DiscoverInventory | UpdateAccountStatus, ListBindings |  |  |  |
 | cloud\|GET\|/cloud/bindings | GET /cloud/bindings | handleListBindings (services/cloud/handler.go:169) | ListBindings | ListBindings |  |  |  |
 | cloud\|GET\|/cloud/bindings/{param} | GET /cloud/bindings/{id} | handleGetBinding (services/cloud/handler.go:185) | GetBinding | GetBinding |  |  |  |
-| cluster-manager\|GET\|/healthz | GET /healthz | handleHealth (services/cluster-manager/handler.go:64) |  |  |  |  |  |
-| cluster-manager\|GET\|/cluster/overview | GET /cluster/overview | handleOverview (services/cluster-manager/handler.go:68) | GetOverview | ListProfiles, ListNodes, UpsertNode |  |  | web/dashboard/src/lib/cluster.ts:141 |
-| cluster-manager\|GET\|/cluster/members | GET /cluster/members | handleMembers (services/cluster-manager/handler.go:82) | ListMembers | ListNodes |  |  |  |
-| cluster-manager\|GET\|/cluster/nodes | GET /cluster/nodes | handleNodes (services/cluster-manager/handler.go:96) | GetOverview | ListProfiles, ListNodes, UpsertNode |  |  |  |
-| cluster-manager\|GET\|/cluster/profiles | GET /cluster/profiles | handleListProfiles (services/cluster-manager/handler.go:110) | ListProfiles | ListProfiles |  |  |  |
-| cluster-manager\|POST\|/cluster/profiles | POST /cluster/profiles | handleUpsertProfile (services/cluster-manager/handler.go:124) | UpsertProfile | UpsertProfile, SetDefaultProfile, GetProfile |  |  | web/dashboard/src/lib/cluster.ts:155 |
-| cluster-manager\|DELETE\|/cluster/profiles/{param} | DELETE /cluster/profiles/{id} | handleDeleteProfile (services/cluster-manager/handler.go:140) | DeleteProfile | GetProfile, DeleteProfile |  |  | web/dashboard/src/lib/cluster.ts:170 |
-| cluster-manager\|POST\|/cluster/join/request | POST /cluster/join/request | handleJoinRequest (services/cluster-manager/handler.go:158) | CreateJoinToken | ListProfiles, GetProfile, CreateJoinToken, PurgeExpiredJoinTokens |  |  | web/dashboard/src/lib/cluster.ts:301 |
-| cluster-manager\|POST\|/cluster/join/complete | POST /cluster/join/complete | handleJoinComplete (services/cluster-manager/handler.go:180) | CompleteJoin | GetJoinToken, GetProfile, UpsertNode, MarkJoinTokenConsumed, GetNode |  |  |  |
-| cluster-manager\|POST\|/cluster/join/exchange | POST /cluster/join/exchange | handleJoinExchange (services/cluster-manager/handler.go:537) | ExchangeJoin | SetMemberCredential | s.replication.EnsurePublications, s.replication.EnsureReplicationRole, s.keycore.ExportMEK | pkg/clustercatalog.WithCore, pkg/clustercatalog.Components, pkg/crypto.RandomBytes, pkg/crypto.KEMSeal, pkg/crypto.Zeroize |  |
-| cluster-manager\|POST\|/cluster/join/connect | POST /cluster/join/connect | handleJoinConnect (services/cluster-manager/handler.go:553) | ConnectToCluster | SetLocalState | s.keycore.CreateJoinKey, s.keycore.ImportMEK, s.replication.Subscribe | pkg/crypto.NewKEMRecipient, pkg/crypto.Zeroize, pkg/servicetoken.Authorize | web/dashboard/src/lib/cluster.ts:314 |
-| cluster-manager\|POST\|/cluster/nodes | POST /cluster/nodes | handleUpsertNode (services/cluster-manager/handler.go:213) | UpsertNode | ListProfiles, GetProfile, GetNode, UpsertNode |  |  | web/dashboard/src/lib/cluster.ts:192 |
-| cluster-manager\|POST\|/cluster/nodes/{param}/heartbeat | POST /cluster/nodes/{id}/heartbeat | handleNodeHeartbeat (services/cluster-manager/handler.go:196) | UpdateHeartbeat | GetNode, ListProfiles, UpsertNode |  |  |  |
-| cluster-manager\|POST\|/cluster/nodes/{param}/role | POST /cluster/nodes/{id}/role | handleNodeRoleUpdate (services/cluster-manager/handler.go:230) | UpdateNodeRole | GetNode, UpsertNode |  |  | web/dashboard/src/lib/cluster.ts:219 |
-| cluster-manager\|DELETE\|/cluster/nodes/{param} | DELETE /cluster/nodes/{id} | handleRemoveNode (services/cluster-manager/handler.go:252) | RemoveNode | GetNode, GetProfile, RevokeMemberCredential, DeleteNode |  |  | web/dashboard/src/lib/cluster.ts:235 |
-| cluster-manager\|POST\|/cluster/sync/events | POST /cluster/sync/events | handlePublishSyncEvent (services/cluster-manager/handler.go:274) | ValidateSignedSyncRequest, PublishSyncEvent | ConsumeSyncNonce, GetProfile, CreateSyncEvent | s.events.Publish | pkg/clustersync.VerifySignature |  |
-| cluster-manager\|GET\|/cluster/sync/events | GET /cluster/sync/events | handleListSyncEvents (services/cluster-manager/handler.go:318) | ListSyncEvents | GetNode, ListSyncEvents |  |  | web/dashboard/src/lib/cluster.ts:264 |
-| cluster-manager\|POST\|/cluster/sync/ack | POST /cluster/sync/ack | handleSyncAck (services/cluster-manager/handler.go:346) | AckSync | UpsertSyncCheckpoint, GetSyncCheckpoint |  |  |  |
-| cluster-manager\|GET\|/cluster/sync/checkpoint | GET /cluster/sync/checkpoint | handleSyncCheckpoint (services/cluster-manager/handler.go:362) | GetSyncCheckpoint | GetSyncCheckpoint |  |  | web/dashboard/src/lib/cluster.ts:274 |
-| cluster-manager\|GET\|/cluster/logs | GET /cluster/logs | handleClusterLogs (services/cluster-manager/handler.go:378) | ListClusterLogs | ListClusterLogs |  |  | web/dashboard/src/lib/cluster.ts:288 |
-| cluster-manager\|GET\|/cluster/replication/status | GET /cluster/replication/status | handleReplicationStatus (services/cluster-manager/handler.go:530) | ReplicationStatus |  | s.replication.WALLevel, s.replication.Publications, s.replication.SubscriptionStatuses |  |  |
+| cluster-manager\|GET\|/healthz | GET /healthz | handleHealth (services/cluster-manager/handler.go:72) |  |  |  |  |  |
+| cluster-manager\|GET\|/cluster/overview | GET /cluster/overview | handleOverview (services/cluster-manager/handler.go:76) | GetOverview | ListProfiles, ListNodes, UpsertNode |  |  | web/dashboard/src/lib/cluster.ts:140 |
+| cluster-manager\|GET\|/cluster/members | GET /cluster/members | handleMembers (services/cluster-manager/handler.go:90) | ListMembers | ListNodes |  |  |  |
+| cluster-manager\|GET\|/cluster/nodes | GET /cluster/nodes | handleNodes (services/cluster-manager/handler.go:104) | GetOverview | ListProfiles, ListNodes, UpsertNode |  |  |  |
+| cluster-manager\|GET\|/cluster/profiles | GET /cluster/profiles | handleListProfiles (services/cluster-manager/handler.go:118) | ListProfiles | ListProfiles |  |  |  |
+| cluster-manager\|POST\|/cluster/profiles | POST /cluster/profiles | handleUpsertProfile (services/cluster-manager/handler.go:132) | UpsertProfile | UpsertProfile, SetDefaultProfile, GetProfile |  |  | web/dashboard/src/lib/cluster.ts:154 |
+| cluster-manager\|DELETE\|/cluster/profiles/{param} | DELETE /cluster/profiles/{id} | handleDeleteProfile (services/cluster-manager/handler.go:148) | DeleteProfile | GetProfile, DeleteProfile |  |  | web/dashboard/src/lib/cluster.ts:169 |
+| cluster-manager\|POST\|/cluster/join/request | POST /cluster/join/request | handleJoinRequest (services/cluster-manager/handler.go:166) | CreateJoinToken | ListProfiles, GetProfile, CreateJoinToken, PurgeExpiredJoinTokens |  |  | web/dashboard/src/lib/cluster.ts:284 |
+| cluster-manager\|POST\|/cluster/join/complete | POST /cluster/join/complete | handleJoinComplete (services/cluster-manager/handler.go:188) | CompleteJoin | GetJoinToken, GetProfile, UpsertNode, MarkJoinTokenConsumed, GetNode |  |  |  |
+| cluster-manager\|POST\|/cluster/join/exchange | POST /cluster/join/exchange | handleJoinExchange (services/cluster-manager/handler.go:523) | ExchangeJoin | SetMemberCredential | s.replication.EnsurePublications, s.replication.EnsureReplicationRole, s.keycore.ExportMEK | pkg/clustercatalog.WithCore, pkg/clustercatalog.Components, pkg/crypto.RandomBytes, pkg/crypto.KEMSeal, pkg/crypto.Zeroize |  |
+| cluster-manager\|POST\|/cluster/join/connect | POST /cluster/join/connect | handleJoinConnect (services/cluster-manager/handler.go:539) | ConnectToCluster | SetLocalState | s.keycore.CreateJoinKey, s.keycore.ImportMEK, s.replication.Subscribe | pkg/crypto.NewKEMRecipient, pkg/crypto.Zeroize, pkg/servicetoken.Authorize | web/dashboard/src/lib/cluster.ts:297 |
+| cluster-manager\|POST\|/cluster/nodes | POST /cluster/nodes | handleUpsertNode (services/cluster-manager/handler.go:221) | UpsertNode | ListProfiles, GetProfile, GetNode, UpsertNode |  |  | web/dashboard/src/lib/cluster.ts:191 |
+| cluster-manager\|POST\|/cluster/nodes/{param}/heartbeat | POST /cluster/nodes/{id}/heartbeat | handleNodeHeartbeat (services/cluster-manager/handler.go:204) | UpdateHeartbeat | GetNode, ListProfiles, UpsertNode |  |  |  |
+| cluster-manager\|DELETE\|/cluster/nodes/{param} | DELETE /cluster/nodes/{id} | handleRemoveNode (services/cluster-manager/handler.go:238) | RemoveNode | GetNode, GetProfile, RevokeMemberCredential, DeleteNode |  |  | web/dashboard/src/lib/cluster.ts:218 |
+| cluster-manager\|POST\|/cluster/sync/events | POST /cluster/sync/events | handlePublishSyncEvent (services/cluster-manager/handler.go:260) | ValidateSignedSyncRequest, PublishSyncEvent | ConsumeSyncNonce, GetProfile, CreateSyncEvent | s.events.Publish | pkg/clustersync.VerifySignature |  |
+| cluster-manager\|GET\|/cluster/sync/events | GET /cluster/sync/events | handleListSyncEvents (services/cluster-manager/handler.go:304) | ListSyncEvents | GetNode, ListSyncEvents |  |  | web/dashboard/src/lib/cluster.ts:247 |
+| cluster-manager\|POST\|/cluster/sync/ack | POST /cluster/sync/ack | handleSyncAck (services/cluster-manager/handler.go:332) | AckSync | UpsertSyncCheckpoint, GetSyncCheckpoint |  |  |  |
+| cluster-manager\|GET\|/cluster/sync/checkpoint | GET /cluster/sync/checkpoint | handleSyncCheckpoint (services/cluster-manager/handler.go:348) | GetSyncCheckpoint | GetSyncCheckpoint |  |  | web/dashboard/src/lib/cluster.ts:257 |
+| cluster-manager\|GET\|/cluster/logs | GET /cluster/logs | handleClusterLogs (services/cluster-manager/handler.go:364) | ListClusterLogs | ListClusterLogs |  |  | web/dashboard/src/lib/cluster.ts:271 |
+| cluster-manager\|GET\|/cluster/replication/status | GET /cluster/replication/status | handleReplicationStatus (services/cluster-manager/handler.go:516) | ReplicationStatus |  | s.replication.WALLevel, s.replication.Publications, s.replication.SubscriptionStatuses |  |  |
+| cluster-manager\|GET\|/cluster/failover/status | GET /cluster/failover/status | handleFailoverStatus (services/cluster-manager/failover_handler.go:165) | FailoverStatus |  |  |  | web/dashboard/src/lib/cluster.ts:318 |
+| cluster-manager\|POST\|/cluster/failover/promote | POST /cluster/failover/promote | handleFailoverPromote (services/cluster-manager/failover_handler.go:174) | PromoteManually, publishAudit | GetNode | s.fo.jitteredDeadline | pkg/clustercatalog.WithCore, pkg/clusterrepl.ParseLSN, pkg/crypto.RandomBytes, pkg/crypto.Zeroize, pkg/crypto.KEMSeal, pkg/crypto.NewKEMRecipient | web/dashboard/src/lib/cluster.ts:328 |
+| cluster-manager\|POST\|/cluster/peer/heartbeat | POST /cluster/peer/heartbeat | handlePeerHeartbeat (services/cluster-manager/failover_handler.go:30) | memberFromCredential, Heartbeat |  |  |  |  |
+| cluster-manager\|POST\|/cluster/peer/resubscribe | POST /cluster/peer/resubscribe | handlePeerResubscribe (services/cluster-manager/failover_handler.go:52) | memberFromCredential, Resubscribe |  |  | pkg/clustercatalog.WithCore, pkg/crypto.RandomBytes, pkg/crypto.Zeroize, pkg/crypto.KEMSeal |  |
+| cluster-manager\|GET\|/cluster/peer/status | GET /cluster/peer/status | handlePeerStatus (services/cluster-manager/failover_handler.go:95) | PeerStatus |  |  |  |  |
+| cluster-manager\|POST\|/cluster/peer/vote | POST /cluster/peer/vote | handlePeerVote (services/cluster-manager/failover_handler.go:109) | GrantVote |  | s.fo.jitteredDeadline | pkg/clusterrepl.ParseLSN |  |
+| cluster-manager\|POST\|/cluster/peer/announce | POST /cluster/peer/announce | handlePeerAnnounce (services/cluster-manager/failover_handler.go:127) | Announce |  |  |  |  |
+| cluster-manager\|POST\|/cluster/peer/fence | POST /cluster/peer/fence | handlePeerFence (services/cluster-manager/failover_handler.go:145) | Fence |  |  |  |  |
 | compliance\|POST\|/compliance/connections/{param}/resolve | POST /compliance/connections/{id}/resolve | resolveConnection (services/compliance/connections_service.go:88) |  | GetConnection | h.connVault.Open |  |  |
 | compliance\|POST\|/compliance/connections/import | POST /compliance/connections/import | importConnection (services/compliance/connections_service.go:143) |  | GetConnection, CreateConnection | h.connVault.current |  |  |
 | compliance\|GET\|/compliance/connections | GET /compliance/connections | listConnectionChoices (services/compliance/credentials.go:44) |  | ListConnections |  |  | web/dashboard/src/lib/credentials.ts:61 |
