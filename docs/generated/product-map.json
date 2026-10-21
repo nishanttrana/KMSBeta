@@ -49,53 +49,8 @@
       "action": "",
       "code_scope": "audit",
       "file": "services/audit/handler.go",
-      "handler": "h.handleTimeline",
-      "line": 75,
-      "match_key": "audit|GET|/audit/timeline/{param}",
-      "method": "GET",
-      "normalized_path": "/audit/timeline/{param}",
-      "path": "/audit/timeline/{target_id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
-      "handler": "h.handleSession",
-      "line": 76,
-      "match_key": "audit|GET|/audit/session/{param}",
-      "method": "GET",
-      "normalized_path": "/audit/session/{param}",
-      "path": "/audit/session/{session_id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
-      "handler": "h.handleCorrelation",
-      "line": 77,
-      "match_key": "audit|GET|/audit/correlation/{param}",
-      "method": "GET",
-      "normalized_path": "/audit/correlation/{param}",
-      "path": "/audit/correlation/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
       "handler": "h.handleSearch",
-      "line": 78,
+      "line": 75,
       "match_key": "audit|POST|/audit/search",
       "method": "POST",
       "normalized_path": "/audit/search",
@@ -110,7 +65,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleChainVerify",
-      "line": 79,
+      "line": 76,
       "match_key": "audit|GET|/audit/chain/verify",
       "method": "GET",
       "normalized_path": "/audit/chain/verify",
@@ -125,7 +80,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleStream",
-      "line": 80,
+      "line": 77,
       "match_key": "audit|GET|/audit/stream",
       "method": "GET",
       "normalized_path": "/audit/stream",
@@ -140,7 +95,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleAuditConfig",
-      "line": 81,
+      "line": 78,
       "match_key": "audit|GET|/audit/config",
       "method": "GET",
       "normalized_path": "/audit/config",
@@ -155,7 +110,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyJoinKey",
-      "line": 89,
+      "line": 88,
       "match_key": "audit|POST|/audit/cluster/signing-key/join-key",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/join-key",
@@ -170,7 +125,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyExport",
-      "line": 90,
+      "line": 89,
       "match_key": "audit|POST|/audit/cluster/signing-key/export",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/export",
@@ -185,7 +140,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyImport",
-      "line": 91,
+      "line": 90,
       "match_key": "audit|POST|/audit/cluster/signing-key/import",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/import",
@@ -200,7 +155,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetOpsOverview",
-      "line": 97,
+      "line": 96,
       "match_key": "audit|GET|/ops-metrics/overview",
       "method": "GET",
       "normalized_path": "/ops-metrics/overview",
@@ -215,7 +170,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetOpsTimeSeries",
-      "line": 98,
+      "line": 97,
       "match_key": "audit|GET|/ops-metrics/timeseries",
       "method": "GET",
       "normalized_path": "/ops-metrics/timeseries",
@@ -230,7 +185,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetLatencyPercentiles",
-      "line": 99,
+      "line": 98,
       "match_key": "audit|GET|/ops-metrics/latency",
       "method": "GET",
       "normalized_path": "/ops-metrics/latency",
@@ -245,7 +200,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetServiceStats",
-      "line": 100,
+      "line": 99,
       "match_key": "audit|GET|/ops-metrics/by-service",
       "method": "GET",
       "normalized_path": "/ops-metrics/by-service",
@@ -260,7 +215,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetErrorBreakdown",
-      "line": 101,
+      "line": 100,
       "match_key": "audit|GET|/ops-metrics/errors",
       "method": "GET",
       "normalized_path": "/ops-metrics/errors",
@@ -275,7 +230,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleFIPSBoundary",
-      "line": 104,
+      "line": 103,
       "match_key": "audit|GET|/audit/fips/boundary",
       "method": "GET",
       "normalized_path": "/audit/fips/boundary",
@@ -290,7 +245,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMInventory",
-      "line": 107,
+      "line": 106,
       "match_key": "audit|GET|/audit/cbom/inventory",
       "method": "GET",
       "normalized_path": "/audit/cbom/inventory",
@@ -305,7 +260,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMDiff",
-      "line": 108,
+      "line": 107,
       "match_key": "audit|GET|/audit/cbom/diff",
       "method": "GET",
       "normalized_path": "/audit/cbom/diff",
@@ -320,7 +275,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handlePrometheusMetrics",
-      "line": 111,
+      "line": 110,
       "match_key": "audit|GET|/metrics",
       "method": "GET",
       "normalized_path": "/metrics",
@@ -418,6 +373,21 @@
       "permission": "audit.webhook.read",
       "registration": "kernel",
       "resource": "webhook",
+      "service": "audit"
+    },
+    {
+      "action": "investigation_read",
+      "code_scope": "audit",
+      "file": "services/audit/investigate.go",
+      "handler": "h.investigate",
+      "line": 191,
+      "match_key": "audit|GET|/audit/investigate",
+      "method": "GET",
+      "normalized_path": "/audit/investigate",
+      "path": "/audit/investigate",
+      "permission": "audit.events.read",
+      "registration": "kernel",
+      "resource": "audit_trail",
       "service": "audit"
     },
     {
@@ -4339,23 +4309,8 @@
       "action": "",
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
-      "handler": "h.handleAuditCorrelations",
-      "line": 81,
-      "match_key": "compliance|GET|/compliance/audit/correlations",
-      "method": "GET",
-      "normalized_path": "/compliance/audit/correlations",
-      "path": "/compliance/audit/correlations",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "compliance"
-    },
-    {
-      "action": "",
-      "code_scope": "compliance",
-      "file": "services/compliance/handler.go",
       "handler": "h.handleAuditAnomalies",
-      "line": 82,
+      "line": 81,
       "match_key": "compliance|GET|/compliance/audit/anomalies",
       "method": "GET",
       "normalized_path": "/compliance/audit/anomalies",
@@ -4370,7 +4325,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOM",
-      "line": 84,
+      "line": 83,
       "match_key": "compliance|GET|/compliance/cbom",
       "method": "GET",
       "normalized_path": "/compliance/cbom",
@@ -4385,7 +4340,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMSummary",
-      "line": 85,
+      "line": 84,
       "match_key": "compliance|GET|/compliance/cbom/summary",
       "method": "GET",
       "normalized_path": "/compliance/cbom/summary",
@@ -4400,7 +4355,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMExport",
-      "line": 86,
+      "line": 85,
       "match_key": "compliance|GET|/compliance/cbom/export",
       "method": "GET",
       "normalized_path": "/compliance/cbom/export",
@@ -4415,7 +4370,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMPQCReadiness",
-      "line": 87,
+      "line": 86,
       "match_key": "compliance|GET|/compliance/cbom/pqc-readiness",
       "method": "GET",
       "normalized_path": "/compliance/cbom/pqc-readiness",
@@ -4430,7 +4385,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMDiff",
-      "line": 88,
+      "line": 87,
       "match_key": "compliance|GET|/compliance/cbom/diff",
       "method": "GET",
       "normalized_path": "/compliance/cbom/diff",
@@ -4445,7 +4400,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleEvidenceExport",
-      "line": 91,
+      "line": 90,
       "match_key": "compliance|GET|/compliance/evidence/export",
       "method": "GET",
       "normalized_path": "/compliance/evidence/export",
@@ -4460,7 +4415,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleGetKeyRiskRanking",
-      "line": 94,
+      "line": 93,
       "match_key": "compliance|GET|/compliance/risk/keys",
       "method": "GET",
       "normalized_path": "/compliance/risk/keys",
@@ -4475,7 +4430,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleGetDataRiskSummary",
-      "line": 95,
+      "line": 94,
       "match_key": "compliance|GET|/compliance/risk/summary",
       "method": "GET",
       "normalized_path": "/compliance/risk/summary",
@@ -4490,7 +4445,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleGetRiskRemediation",
-      "line": 96,
+      "line": 95,
       "match_key": "compliance|GET|/compliance/risk/remediation",
       "method": "GET",
       "normalized_path": "/compliance/risk/remediation",
@@ -13762,7 +13717,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleSearch",
-      "line": 78,
+      "line": 75,
       "match_key": "audit|POST|/audit/search",
       "method": "POST",
       "normalized_path": "/audit/search",
@@ -13777,7 +13732,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleStream",
-      "line": 80,
+      "line": 77,
       "match_key": "audit|GET|/audit/stream",
       "method": "GET",
       "normalized_path": "/audit/stream",
@@ -13792,7 +13747,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyJoinKey",
-      "line": 89,
+      "line": 88,
       "match_key": "audit|POST|/audit/cluster/signing-key/join-key",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/join-key",
@@ -13807,7 +13762,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyExport",
-      "line": 90,
+      "line": 89,
       "match_key": "audit|POST|/audit/cluster/signing-key/export",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/export",
@@ -13822,7 +13777,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyImport",
-      "line": 91,
+      "line": 90,
       "match_key": "audit|POST|/audit/cluster/signing-key/import",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/import",
@@ -13837,7 +13792,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetOpsTimeSeries",
-      "line": 98,
+      "line": 97,
       "match_key": "audit|GET|/ops-metrics/timeseries",
       "method": "GET",
       "normalized_path": "/ops-metrics/timeseries",
@@ -13852,7 +13807,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleFIPSBoundary",
-      "line": 104,
+      "line": 103,
       "match_key": "audit|GET|/audit/fips/boundary",
       "method": "GET",
       "normalized_path": "/audit/fips/boundary",
@@ -13867,7 +13822,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMInventory",
-      "line": 107,
+      "line": 106,
       "match_key": "audit|GET|/audit/cbom/inventory",
       "method": "GET",
       "normalized_path": "/audit/cbom/inventory",
@@ -13882,7 +13837,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMDiff",
-      "line": 108,
+      "line": 107,
       "match_key": "audit|GET|/audit/cbom/diff",
       "method": "GET",
       "normalized_path": "/audit/cbom/diff",
@@ -13897,7 +13852,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handlePrometheusMetrics",
-      "line": 111,
+      "line": 110,
       "match_key": "audit|GET|/metrics",
       "method": "GET",
       "normalized_path": "/metrics",
@@ -15531,23 +15486,8 @@
       "action": "",
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
-      "handler": "h.handleAuditCorrelations",
-      "line": 81,
-      "match_key": "compliance|GET|/compliance/audit/correlations",
-      "method": "GET",
-      "normalized_path": "/compliance/audit/correlations",
-      "path": "/compliance/audit/correlations",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "compliance"
-    },
-    {
-      "action": "",
-      "code_scope": "compliance",
-      "file": "services/compliance/handler.go",
       "handler": "h.handleCBOM",
-      "line": 84,
+      "line": 83,
       "match_key": "compliance|GET|/compliance/cbom",
       "method": "GET",
       "normalized_path": "/compliance/cbom",
@@ -15562,7 +15502,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMSummary",
-      "line": 85,
+      "line": 84,
       "match_key": "compliance|GET|/compliance/cbom/summary",
       "method": "GET",
       "normalized_path": "/compliance/cbom/summary",
@@ -15577,7 +15517,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMExport",
-      "line": 86,
+      "line": 85,
       "match_key": "compliance|GET|/compliance/cbom/export",
       "method": "GET",
       "normalized_path": "/compliance/cbom/export",
@@ -15592,7 +15532,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMPQCReadiness",
-      "line": 87,
+      "line": 86,
       "match_key": "compliance|GET|/compliance/cbom/pqc-readiness",
       "method": "GET",
       "normalized_path": "/compliance/cbom/pqc-readiness",
@@ -15607,7 +15547,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMDiff",
-      "line": 88,
+      "line": 87,
       "match_key": "compliance|GET|/compliance/cbom/diff",
       "method": "GET",
       "normalized_path": "/compliance/cbom/diff",
@@ -15622,7 +15562,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleGetKeyRiskRanking",
-      "line": 94,
+      "line": 93,
       "match_key": "compliance|GET|/compliance/risk/keys",
       "method": "GET",
       "normalized_path": "/compliance/risk/keys",
@@ -15637,7 +15577,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleGetDataRiskSummary",
-      "line": 95,
+      "line": 94,
       "match_key": "compliance|GET|/compliance/risk/summary",
       "method": "GET",
       "normalized_path": "/compliance/risk/summary",
@@ -15652,7 +15592,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleGetRiskRemediation",
-      "line": 96,
+      "line": 95,
       "match_key": "compliance|GET|/compliance/risk/remediation",
       "method": "GET",
       "normalized_path": "/compliance/risk/remediation",
@@ -20222,7 +20162,7 @@
       "file": "web/dashboard/src/components/v3/SidebarSubNav.tsx",
       "handler": "",
       "label": "onSelect(item.id)} style={ } >",
-      "line": 143,
+      "line": 151,
       "tabs": [],
       "tag": "button"
     },
@@ -20433,10 +20373,50 @@
       "tag": "Btn"
     },
     {
+      "file": "web/dashboard/src/components/v3/tabs/AuditEventDetail.tsx",
+      "handler": "",
+      "label": "{ onClose(); onInvestigate( ); }}>",
+      "line": 87,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/AuditInvestigate.tsx",
+      "handler": "add} disabled={!text.trim()",
+      "label": "Investigate",
+      "line": 86,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/AuditInvestigate.tsx",
+      "handler": "",
+      "label": "void load()} disabled= >",
+      "line": 88,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/AuditInvestigate.tsx",
+      "handler": "",
+      "label": "drop(d)} style={ }>\u00d7",
+      "line": 96,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/AuditInvestigate.tsx",
+      "handler": "",
+      "label": "onPivotsChange( )}>Clear all",
+      "line": 100,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si...",
-      "line": 444,
+      "line": 337,
       "tabs": [
         "audit"
       ],
@@ -20446,7 +20426,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "verifyChain} disabled={chainVerifying",
       "label": "(icon or dynamic label)",
-      "line": 445,
+      "line": 338,
       "tabs": [
         "audit"
       ],
@@ -20456,7 +20436,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "load()} disabled= >Refresh",
-      "line": 448,
+      "line": 341,
       "tabs": [
         "audit"
       ],
@@ -20466,7 +20446,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "setOffset(Math.max(0, offset - PAGE_SIZE))}>Previous",
-      "line": 539,
+      "line": 432,
       "tabs": [
         "audit"
       ],
@@ -20476,47 +20456,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "setOffset(offset + PAGE_SIZE)}>Next",
-      "line": 540,
-      "tabs": [
-        "audit"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
-      "handler": "loadForensic} disabled={forensicLoading",
-      "label": "(icon or dynamic label)",
-      "line": 566,
-      "tabs": [
-        "audit"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
-      "handler": "",
-      "label": "}> View Timeline ( )",
-      "line": 674,
-      "tabs": [
-        "audit"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
-      "handler": "",
-      "label": "}> View Session ( )",
-      "line": 679,
-      "tabs": [
-        "audit"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
-      "handler": "",
-      "label": "}> View Correlation ( )",
-      "line": 684,
+      "line": 433,
       "tabs": [
         "audit"
       ],
@@ -26750,7 +26690,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/activity/stats?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 82,
+      "line": 85,
       "match_key": "audit|GET|/audit/activity/stats",
       "method": "GET",
       "normalized_path": "/audit/activity/stats",
@@ -26763,7 +26703,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/events?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 129,
+      "line": 134,
       "match_key": "audit|GET|/audit/events",
       "method": "GET",
       "normalized_path": "/audit/events",
@@ -26774,9 +26714,22 @@
     },
     {
       "dynamic": true,
+      "expression": "serviceRequest(\"audit\", `/audit/investigate?${q.toString()}`)",
+      "file": "web/dashboard/src/lib/audit.ts",
+      "line": 173,
+      "match_key": "audit|GET|/audit/investigate",
+      "method": "GET",
+      "normalized_path": "/audit/investigate",
+      "path": "/audit/investigate?{param}",
+      "service": "audit",
+      "service_key": "audit",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 134,
+      "line": 182,
       "match_key": "audit|GET|/audit/events/{param}",
       "method": "GET",
       "normalized_path": "/audit/events/{param}",
@@ -26787,22 +26740,9 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"audit\", `/audit/timeline/${encodeURIComponent(String(targetId || \"\").trim())}?${q.toString()}`)",
-      "file": "web/dashboard/src/lib/audit.ts",
-      "line": 151,
-      "match_key": "audit|GET|/audit/timeline/{param}",
-      "method": "GET",
-      "normalized_path": "/audit/timeline/{param}",
-      "path": "/audit/timeline/{param}?{param}",
-      "service": "audit",
-      "service_key": "audit",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 192,
+      "line": 221,
       "match_key": "audit|GET|/audit/targets/{param}/integrity",
       "method": "GET",
       "normalized_path": "/audit/targets/{param}/integrity",
@@ -26813,35 +26753,9 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"audit\", `/audit/session/${encodeURIComponent(String(sessionId || \"\").trim())}?${q.toString()}`)",
-      "file": "web/dashboard/src/lib/audit.ts",
-      "line": 208,
-      "match_key": "audit|GET|/audit/session/{param}",
-      "method": "GET",
-      "normalized_path": "/audit/session/{param}",
-      "path": "/audit/session/{param}?{param}",
-      "service": "audit",
-      "service_key": "audit",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"audit\", `/audit/correlation/${encodeURIComponent(String(correlationId || \"\").trim())}?${q.toString()}`)",
-      "file": "web/dashboard/src/lib/audit.ts",
-      "line": 224,
-      "match_key": "audit|GET|/audit/correlation/{param}",
-      "method": "GET",
-      "normalized_path": "/audit/correlation/{param}",
-      "path": "/audit/correlation/{param}?{param}",
-      "service": "audit",
-      "service_key": "audit",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 232,
+      "line": 229,
       "match_key": "audit|GET|/audit/chain/verify",
       "method": "GET",
       "normalized_path": "/audit/chain/verify",
@@ -26854,7 +26768,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 248,
+      "line": 245,
       "match_key": "audit|GET|/audit/config",
       "method": "GET",
       "normalized_path": "/audit/config",
@@ -26867,7 +26781,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/checkpoints?${tenantQuery(session)}&limit=${limit}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 278,
+      "line": 275,
       "match_key": "audit|GET|/audit/checkpoints",
       "method": "GET",
       "normalized_path": "/audit/checkpoints",
@@ -33481,7 +33395,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-21T19:02:11Z",
+  "generated_at": "2026-10-21T19:48:10Z",
   "navigation": [
     {
       "group": "Home",
@@ -33631,15 +33545,11 @@
         "writeJSON",
         "handleEvents",
         "mustTenant",
-        "atoi",
-        "parseTS",
+        "eventQueryFrom",
         "QueryEvents",
         "Error",
         "handleEvent",
         "GetEvent",
-        "handleTimeline",
-        "handleSession",
-        "handleCorrelation",
         "handleSearch",
         "handleChainVerify",
         "VerifyChainWalk",
@@ -33647,13 +33557,15 @@
         "handleAuditConfig",
         "handleFIPSBoundary",
         "signing",
-        "newID"
+        "newID",
+        "parseTS",
+        "atoi"
       ],
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext",
         "pkg/tenantcheck.Enforce"
       ],
-      "handler_line": 116,
+      "handler_line": 115,
       "handler_name": "handlePublish",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -33731,27 +33643,24 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/events?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 129,
+          "line": 134,
           "source": "serviceRequest"
         }
       ],
       "handler": "h.handleEvents",
-      "handler_external_package_calls": [
-        "strings.TrimSpace"
-      ],
+      "handler_external_package_calls": [],
       "handler_file": "services/audit/handler.go",
       "handler_helper_calls": [
         "requestID",
         "mustTenant",
-        "atoi",
-        "parseTS",
-        "QueryEvents",
+        "eventQueryFrom",
         "writeErr",
+        "QueryEvents",
         "Error",
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 180,
+      "handler_line": 179,
       "handler_name": "handleEvents",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -33776,7 +33685,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 134,
+          "line": 182,
           "source": "serviceRequest"
         }
       ],
@@ -33794,7 +33703,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 212,
+      "handler_line": 198,
       "handler_name": "handleEvent",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -33815,37 +33724,22 @@
       "service_store_calls": []
     },
     {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"audit\", `/audit/timeline/${encodeURIComponent(String(targetId || \"\").trim())}?${q.toString()}`)",
-          "file": "web/dashboard/src/lib/audit.ts",
-          "line": 151,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleTimeline",
+      "frontend_call_sites": [],
+      "handler": "h.handleSearch",
       "handler_external_package_calls": [],
       "handler_file": "services/audit/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "QueryEvents",
-        "atoi",
-        "writeErr",
-        "Error",
-        "writeJSON"
+        "handleEvents"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 230,
-      "handler_name": "handleTimeline",
+      "handler_line": 216,
+      "handler_name": "handleSearch",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
-      "handler_store_calls": [
-        "QueryEvents"
-      ],
-      "method": "GET",
-      "normalized_path": "/audit/timeline/{param}",
-      "path": "/audit/timeline/{target_id}",
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/audit/search",
+      "path": "/audit/search",
       "route_file": "services/audit/handler.go",
       "route_line": 75,
       "service": "audit",
@@ -33859,120 +33753,9 @@
     {
       "frontend_call_sites": [
         {
-          "expression": "serviceRequest(\"audit\", `/audit/session/${encodeURIComponent(String(sessionId || \"\").trim())}?${q.toString()}`)",
-          "file": "web/dashboard/src/lib/audit.ts",
-          "line": 208,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleSession",
-      "handler_external_package_calls": [],
-      "handler_file": "services/audit/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "QueryEvents",
-        "atoi",
-        "writeErr",
-        "Error",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 248,
-      "handler_name": "handleSession",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "QueryEvents"
-      ],
-      "method": "GET",
-      "normalized_path": "/audit/session/{param}",
-      "path": "/audit/session/{session_id}",
-      "route_file": "services/audit/handler.go",
-      "route_line": 76,
-      "service": "audit",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"audit\", `/audit/correlation/${encodeURIComponent(String(correlationId || \"\").trim())}?${q.toString()}`)",
-          "file": "web/dashboard/src/lib/audit.ts",
-          "line": 224,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleCorrelation",
-      "handler_external_package_calls": [],
-      "handler_file": "services/audit/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "QueryEvents",
-        "atoi",
-        "writeErr",
-        "Error",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 266,
-      "handler_name": "handleCorrelation",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "QueryEvents"
-      ],
-      "method": "GET",
-      "normalized_path": "/audit/correlation/{param}",
-      "path": "/audit/correlation/{id}",
-      "route_file": "services/audit/handler.go",
-      "route_line": 77,
-      "service": "audit",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleSearch",
-      "handler_external_package_calls": [],
-      "handler_file": "services/audit/handler.go",
-      "handler_helper_calls": [
-        "handleEvents"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 284,
-      "handler_name": "handleSearch",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [],
-      "method": "POST",
-      "normalized_path": "/audit/search",
-      "path": "/audit/search",
-      "route_file": "services/audit/handler.go",
-      "route_line": 78,
-      "service": "audit",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
           "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 232,
+          "line": 229,
           "source": "serviceRequest"
         }
       ],
@@ -34005,7 +33788,7 @@
       "handler_internal_package_calls": [
         "pkg/tenantcheck.Enforce"
       ],
-      "handler_line": 289,
+      "handler_line": 221,
       "handler_name": "handleChainVerify",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -34018,7 +33801,7 @@
       "normalized_path": "/audit/chain/verify",
       "path": "/audit/chain/verify",
       "route_file": "services/audit/handler.go",
-      "route_line": 79,
+      "route_line": 76,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -34066,7 +33849,7 @@
       "normalized_path": "/audit/stream",
       "path": "/audit/stream",
       "route_file": "services/audit/handler.go",
-      "route_line": 80,
+      "route_line": 77,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -34080,7 +33863,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 248,
+          "line": 245,
           "source": "serviceRequest"
         }
       ],
@@ -34094,7 +33877,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 314,
+      "handler_line": 246,
       "handler_name": "handleAuditConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -34103,7 +33886,7 @@
       "normalized_path": "/audit/config",
       "path": "/audit/config",
       "route_file": "services/audit/handler.go",
-      "route_line": 81,
+      "route_line": 78,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -34137,7 +33920,7 @@
       "normalized_path": "/audit/cluster/signing-key/join-key",
       "path": "/audit/cluster/signing-key/join-key",
       "route_file": "services/audit/handler.go",
-      "route_line": 89,
+      "route_line": 88,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -34191,7 +33974,7 @@
       "normalized_path": "/audit/cluster/signing-key/export",
       "path": "/audit/cluster/signing-key/export",
       "route_file": "services/audit/handler.go",
-      "route_line": 90,
+      "route_line": 89,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -34254,7 +34037,7 @@
       "normalized_path": "/audit/cluster/signing-key/import",
       "path": "/audit/cluster/signing-key/import",
       "route_file": "services/audit/handler.go",
-      "route_line": 91,
+      "route_line": 90,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -34316,7 +34099,7 @@
       "normalized_path": "/ops-metrics/overview",
       "path": "/ops-metrics/overview",
       "route_file": "services/audit/handler.go",
-      "route_line": 97,
+      "route_line": 96,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -34350,7 +34133,7 @@
       "normalized_path": "/ops-metrics/timeseries",
       "path": "/ops-metrics/timeseries",
       "route_file": "services/audit/handler.go",
-      "route_line": 98,
+      "route_line": 97,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -34391,7 +34174,7 @@
       "normalized_path": "/ops-metrics/latency",
       "path": "/ops-metrics/latency",
       "route_file": "services/audit/handler.go",
-      "route_line": 99,
+      "route_line": 98,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -34432,7 +34215,7 @@
       "normalized_path": "/ops-metrics/by-service",
       "path": "/ops-metrics/by-service",
       "route_file": "services/audit/handler.go",
-      "route_line": 100,
+      "route_line": 99,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -34473,7 +34256,7 @@
       "normalized_path": "/ops-metrics/errors",
       "path": "/ops-metrics/errors",
       "route_file": "services/audit/handler.go",
-      "route_line": 101,
+      "route_line": 100,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -34493,7 +34276,7 @@
         "signing"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 329,
+      "handler_line": 261,
       "handler_name": "handleFIPSBoundary",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -34502,7 +34285,7 @@
       "normalized_path": "/audit/fips/boundary",
       "path": "/audit/fips/boundary",
       "route_file": "services/audit/handler.go",
-      "route_line": 104,
+      "route_line": 103,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -34541,7 +34324,7 @@
       "normalized_path": "/audit/cbom/inventory",
       "path": "/audit/cbom/inventory",
       "route_file": "services/audit/handler.go",
-      "route_line": 107,
+      "route_line": 106,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -34580,7 +34363,7 @@
       "normalized_path": "/audit/cbom/diff",
       "path": "/audit/cbom/diff",
       "route_file": "services/audit/handler.go",
-      "route_line": 108,
+      "route_line": 107,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -34613,7 +34396,7 @@
       "normalized_path": "/metrics",
       "path": "/metrics",
       "route_file": "services/audit/handler.go",
-      "route_line": 111,
+      "route_line": 110,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -34876,9 +34659,49 @@
     {
       "frontend_call_sites": [
         {
+          "expression": "serviceRequest(\"audit\", `/audit/investigate?${q.toString()}`)",
+          "file": "web/dashboard/src/lib/audit.ts",
+          "line": 173,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.investigate",
+      "handler_external_package_calls": [
+        "strings.TrimSpace"
+      ],
+      "handler_file": "services/audit/investigate.go",
+      "handler_helper_calls": [
+        "eventQueryFrom",
+        "Investigate",
+        "Error"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 197,
+      "handler_name": "investigate",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "Investigate"
+      ],
+      "method": "GET",
+      "normalized_path": "/audit/investigate",
+      "path": "/audit/investigate",
+      "route_file": "services/audit/investigate.go",
+      "route_line": 191,
+      "service": "audit",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
           "expression": "serviceRequest(\"audit\", `/audit/activity/stats?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 82,
+          "line": 85,
           "source": "serviceRequest"
         }
       ],
@@ -34916,7 +34739,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 192,
+          "line": 221,
           "source": "serviceRequest"
         }
       ],
@@ -34975,7 +34798,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/checkpoints?${tenantQuery(session)}&limit=${limit}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 278,
+          "line": 275,
           "source": "serviceRequest"
         }
       ],
@@ -35418,10 +35241,10 @@
         "normalizeUserStatus",
         "ValidateTOTP",
         "resolveEffectivePermissions",
+        "NewID",
         "IssueJWT",
         "tokenHash",
         "CreateSession",
-        "NewID",
         "Reset"
       ],
       "handler_internal_package_calls": [
@@ -35504,13 +35327,14 @@
         "normalizeUserStatus",
         "ValidateTOTP",
         "resolveEffectivePermissions",
+        "NewID",
         "IssueJWT",
         "tokenHash",
         "CreateSession",
-        "NewID",
         "Reset",
         "handleRefresh",
         "GetUserByID",
+        "TouchSession",
         "handleChangePassword",
         "enforcePasswordPolicy",
         "HashPassword",
@@ -35617,6 +35441,7 @@
         "GetUserByUsername",
         "CreateSession",
         "GetUserByID",
+        "TouchSession",
         "UpdateUserPassword",
         "DeleteUserSessions",
         "DeleteSession",
@@ -35633,8 +35458,7 @@
         "ListUsers",
         "CreateUser",
         "UpdateUserRole",
-        "UpdateUserStatus",
-        "ListGroupRoleBindings"
+        "UpdateUserStatus"
       ],
       "method": "POST",
       "normalized_path": "/auth/client-token",
@@ -35788,20 +35612,24 @@
         "resolveEffectivePermissions",
         "Error",
         "IssueJWT",
+        "tokenHash",
+        "TouchSession",
         "publishAudit",
         "writeJSON"
       ],
       "handler_internal_package_calls": [
-        "pkg/auth.ClaimsFromContext"
+        "pkg/auth.ClaimsFromContext",
+        "pkg/crypto.Zeroize"
       ],
-      "handler_line": 869,
+      "handler_line": 870,
       "handler_name": "handleRefresh",
       "handler_receiver_calls": [
         "h.logic.IssueJWT"
       ],
       "handler_service_calls": [],
       "handler_store_calls": [
-        "GetUserByID"
+        "GetUserByID",
+        "TouchSession"
       ],
       "method": "POST",
       "normalized_path": "/auth/refresh",
@@ -35836,10 +35664,10 @@
         "UpdateUserPassword",
         "DeleteUserSessions",
         "resolveEffectivePermissions",
+        "NewID",
         "IssueJWT",
         "tokenHash",
         "CreateSession",
-        "NewID",
         "writeJSON"
       ],
       "handler_internal_package_calls": [
@@ -35847,7 +35675,7 @@
         "pkg/auth.ClaimsFromContext",
         "pkg/crypto.Zeroize"
       ],
-      "handler_line": 902,
+      "handler_line": 923,
       "handler_name": "handleChangePassword",
       "handler_receiver_calls": [
         "h.logic.IssueJWT"
@@ -35938,17 +35766,15 @@
       "handler_file": "services/auth/handler.go",
       "handler_helper_calls": [
         "requestID",
-        "decodeJSON",
-        "writeErr",
-        "Error",
         "DeleteSession",
+        "writeErr",
         "publishAudit",
         "writeJSON"
       ],
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 989,
+      "handler_line": 1011,
       "handler_name": "handleLogout",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35980,7 +35806,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1010,
+      "handler_line": 1030,
       "handler_name": "handleMe",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36014,7 +35840,7 @@
         "tenantWrite"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1023,
+      "handler_line": 1043,
       "handler_name": "handleCreateTenant",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36051,7 +35877,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1036,
+      "handler_line": 1056,
       "handler_name": "handleListTenants",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36085,7 +35911,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1046,
+      "handler_line": 1066,
       "handler_name": "handleGetTenant",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36130,7 +35956,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1060,
+      "handler_line": 1080,
       "handler_name": "handleGetTenantDeleteReadiness",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36180,7 +36006,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1092,
+      "handler_line": 1112,
       "handler_name": "handleDisableTenant",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36217,7 +36043,7 @@
         "tenantWrite"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1026,
+      "handler_line": 1046,
       "handler_name": "handleUpdateTenant",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36268,7 +36094,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1197,
+      "handler_line": 1217,
       "handler_name": "handleDeleteTenant",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36299,7 +36125,7 @@
         "roleWrite"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1029,
+      "handler_line": 1049,
       "handler_name": "handleCreateTenantRole",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36326,7 +36152,7 @@
         "roleWrite"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1032,
+      "handler_line": 1052,
       "handler_name": "handleUpdateTenantRole",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36359,7 +36185,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1479,
+      "handler_line": 1499,
       "handler_name": "handleDeleteTenantRole",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36395,7 +36221,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1498,
+      "handler_line": 1518,
       "handler_name": "handleListUsers",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36451,7 +36277,7 @@
         "pkg/auth.ClaimsFromContext",
         "pkg/crypto.Zeroize"
       ],
-      "handler_line": 1514,
+      "handler_line": 1534,
       "handler_name": "handleCreateUser",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36932,7 +36758,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1593,
+      "handler_line": 1613,
       "handler_name": "handleUpdateUserRole",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36983,7 +36809,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1657,
+      "handler_line": 1677,
       "handler_name": "handleUpdateUserStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37038,7 +36864,7 @@
         "pkg/auth.ClaimsFromContext",
         "pkg/crypto.Zeroize"
       ],
-      "handler_line": 1699,
+      "handler_line": 1719,
       "handler_name": "handleResetUserPassword",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37082,7 +36908,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1768,
+      "handler_line": 1788,
       "handler_name": "handleListGroupRoleBindings",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37131,7 +36957,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1784,
+      "handler_line": 1804,
       "handler_name": "handleUpsertGroupRoleBinding",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37178,7 +37004,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1834,
+      "handler_line": 1854,
       "handler_name": "handleDeleteGroupRoleBinding",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37485,7 +37311,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1866,
+      "handler_line": 1886,
       "handler_name": "handleGetPasswordPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37523,7 +37349,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1882,
+      "handler_line": 1902,
       "handler_name": "handleUpdatePasswordPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37559,7 +37385,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1973,
+      "handler_line": 1993,
       "handler_name": "handleGetSecurityPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37597,7 +37423,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1989,
+      "handler_line": 2009,
       "handler_name": "handleUpdateSecurityPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37644,7 +37470,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 2177,
+      "handler_line": 2197,
       "handler_name": "handleCLIStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37779,7 +37605,7 @@
         "pkg/restauth.FingerprintHexToThumbprintB64URL",
         "pkg/tenantcheck.ServicePermissionReserved"
       ],
-      "handler_line": 2204,
+      "handler_line": 2224,
       "handler_name": "handleCLISession",
       "handler_receiver_calls": [
         "h.events.Publish",
@@ -37845,7 +37671,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 2039,
+      "handler_line": 2059,
       "handler_name": "handleGetCLIHSMConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37904,7 +37730,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 2069,
+      "handler_line": 2089,
       "handler_name": "handleUpdateCLIHSMConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37958,7 +37784,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 2295,
+      "handler_line": 2315,
       "handler_name": "handleCLIHSMPartitions",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -38086,10 +37912,10 @@
         "identityProviderConfigMapString",
         "findOrCreateSSOUser",
         "resolveEffectivePermissions",
+        "NewID",
         "IssueJWT",
         "tokenHash",
-        "CreateSession",
-        "NewID"
+        "CreateSession"
       ],
       "handler_internal_package_calls": [
         "pkg/clientip.From",
@@ -38143,10 +37969,10 @@
         "identityProviderConfigMapString",
         "findOrCreateSSOUser",
         "resolveEffectivePermissions",
+        "NewID",
         "IssueJWT",
         "tokenHash",
-        "CreateSession",
-        "NewID"
+        "CreateSession"
       ],
       "handler_internal_package_calls": [
         "pkg/clientip.From",
@@ -38191,7 +38017,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 256,
+      "handler_line": 259,
       "handler_name": "handleSAMLMetadata",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -38232,7 +38058,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 2361,
+      "handler_line": 2381,
       "handler_name": "handleListClients",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -38275,7 +38101,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 2372,
+      "handler_line": 2392,
       "handler_name": "handleGetClient",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -38328,7 +38154,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 2387,
+      "handler_line": 2407,
       "handler_name": "handleUpdateClient",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -38373,7 +38199,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 2470,
+      "handler_line": 2490,
       "handler_name": "handleRESTClientSecuritySummary",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -50543,7 +50369,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 101,
+      "handler_line": 100,
       "handler_name": "handlePosture",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -50604,7 +50430,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 116,
+      "handler_line": 115,
       "handler_name": "handlePostureHistory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -50671,7 +50497,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 131,
+      "handler_line": 130,
       "handler_name": "handlePostureBreakdown",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -50724,7 +50550,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 145,
+      "handler_line": 144,
       "handler_name": "handleAssessment",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -50795,7 +50621,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 160,
+      "handler_line": 159,
       "handler_name": "handleAssessmentDelta",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -50878,7 +50704,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 175,
+      "handler_line": 174,
       "handler_name": "handleRunAssessment",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -50976,7 +50802,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 205,
+      "handler_line": 204,
       "handler_name": "handleAssessmentHistory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51041,7 +50867,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 282,
+      "handler_line": 281,
       "handler_name": "handleAssessmentSchedule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51111,7 +50937,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 296,
+      "handler_line": 295,
       "handler_name": "handleUpsertAssessmentSchedule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51186,7 +51012,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 221,
+      "handler_line": 220,
       "handler_name": "handleListComplianceTemplates",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51254,7 +51080,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 249,
+      "handler_line": 248,
       "handler_name": "handleUpsertComplianceTemplate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51322,7 +51148,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 235,
+      "handler_line": 234,
       "handler_name": "handleGetComplianceTemplate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51391,7 +51217,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 269,
+      "handler_line": 268,
       "handler_name": "handleDeleteComplianceTemplate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51456,7 +51282,7 @@
         "ListFrameworks"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 324,
+      "handler_line": 323,
       "handler_name": "handleFrameworks",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51505,7 +51331,7 @@
         "normalizeFrameworkID"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 329,
+      "handler_line": 328,
       "handler_name": "handleFrameworkControls",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51576,7 +51402,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 349,
+      "handler_line": 348,
       "handler_name": "handleFrameworkGaps",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51645,7 +51471,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 363,
+      "handler_line": 362,
       "handler_name": "handleKeyHygiene",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51697,7 +51523,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 377,
+      "handler_line": 376,
       "handler_name": "handleOrphaned",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51741,7 +51567,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 391,
+      "handler_line": 390,
       "handler_name": "handleExpired",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51773,65 +51599,6 @@
       "service_store_calls": []
     },
     {
-      "frontend_call_sites": [],
-      "handler": "h.handleAuditCorrelations",
-      "handler_external_package_calls": [],
-      "handler_file": "services/compliance/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "atoi",
-        "GetAuditCorrelations",
-        "writeServiceError",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 405,
-      "handler_name": "handleAuditCorrelations",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "GetAuditCorrelations"
-      ],
-      "handler_store_calls": [],
-      "method": "GET",
-      "normalized_path": "/compliance/audit/correlations",
-      "path": "/compliance/audit/correlations",
-      "route_file": "services/compliance/handler.go",
-      "route_line": 81,
-      "service": "compliance",
-      "service_external_package_calls": [
-        "sort.Slice"
-      ],
-      "service_helper_calls": [
-        "fetchEvents",
-        "firstString",
-        "parseTimeString",
-        "topActions"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [
-            "sort.Slice"
-          ],
-          "file": "services/compliance/service.go",
-          "helper_calls": [
-            "fetchEvents",
-            "firstString",
-            "parseTimeString",
-            "topActions"
-          ],
-          "internal_package_calls": [],
-          "line": 814,
-          "name": "GetAuditCorrelations",
-          "receiver_calls": [],
-          "store_calls": []
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
       "frontend_call_sites": [
         {
           "expression": "serviceRequest(\"compliance\", `/compliance/audit/anomalies?${tenantQuery(session)}`)",
@@ -51851,7 +51618,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 420,
+      "handler_line": 404,
       "handler_name": "handleAuditAnomalies",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51862,7 +51629,7 @@
       "normalized_path": "/compliance/audit/anomalies",
       "path": "/compliance/audit/anomalies",
       "route_file": "services/compliance/handler.go",
-      "route_line": 82,
+      "route_line": 81,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.ToLower",
@@ -51893,7 +51660,7 @@
             "extractInt"
           ],
           "internal_package_calls": [],
-          "line": 860,
+          "line": 814,
           "name": "GetAuditAnomalies",
           "receiver_calls": [],
           "store_calls": []
@@ -51915,7 +51682,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 434,
+      "handler_line": 418,
       "handler_name": "handleCBOM",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51926,7 +51693,7 @@
       "normalized_path": "/compliance/cbom",
       "path": "/compliance/cbom",
       "route_file": "services/compliance/handler.go",
-      "route_line": 84,
+      "route_line": 83,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -51957,7 +51724,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 923,
+          "line": 877,
           "name": "GenerateCBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -51983,7 +51750,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 448,
+      "handler_line": 432,
       "handler_name": "handleCBOMSummary",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51994,7 +51761,7 @@
       "normalized_path": "/compliance/cbom/summary",
       "path": "/compliance/cbom/summary",
       "route_file": "services/compliance/handler.go",
-      "route_line": 85,
+      "route_line": 84,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -52005,7 +51772,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 951,
+          "line": 905,
           "name": "CBOMSummary",
           "receiver_calls": [],
           "store_calls": []
@@ -52030,7 +51797,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 462,
+      "handler_line": 446,
       "handler_name": "handleCBOMExport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -52041,7 +51808,7 @@
       "normalized_path": "/compliance/cbom/export",
       "path": "/compliance/cbom/export",
       "route_file": "services/compliance/handler.go",
-      "route_line": 86,
+      "route_line": 85,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -52072,7 +51839,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 923,
+          "line": 877,
           "name": "GenerateCBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -52098,7 +51865,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 484,
+      "handler_line": 468,
       "handler_name": "handleCBOMPQCReadiness",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -52109,7 +51876,7 @@
       "normalized_path": "/compliance/cbom/pqc-readiness",
       "path": "/compliance/cbom/pqc-readiness",
       "route_file": "services/compliance/handler.go",
-      "route_line": 87,
+      "route_line": 86,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -52120,7 +51887,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 966,
+          "line": 920,
           "name": "CBOMPQCReadiness",
           "receiver_calls": [],
           "store_calls": []
@@ -52145,7 +51912,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 498,
+      "handler_line": 482,
       "handler_name": "handleCBOMDiff",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -52156,7 +51923,7 @@
       "normalized_path": "/compliance/cbom/diff",
       "path": "/compliance/cbom/diff",
       "route_file": "services/compliance/handler.go",
-      "route_line": 88,
+      "route_line": 87,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -52167,7 +51934,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 980,
+          "line": 934,
           "name": "CBOMDiff",
           "receiver_calls": [],
           "store_calls": []
@@ -52228,7 +51995,7 @@
       "normalized_path": "/compliance/evidence/export",
       "path": "/compliance/evidence/export",
       "route_file": "services/compliance/handler.go",
-      "route_line": 91,
+      "route_line": 90,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -52421,7 +52188,7 @@
       "normalized_path": "/compliance/risk/keys",
       "path": "/compliance/risk/keys",
       "route_file": "services/compliance/handler.go",
-      "route_line": 94,
+      "route_line": 93,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -52432,7 +52199,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1327,
+          "line": 1281,
           "name": "publishAudit",
           "receiver_calls": [],
           "store_calls": []
@@ -52469,7 +52236,7 @@
       "normalized_path": "/compliance/risk/summary",
       "path": "/compliance/risk/summary",
       "route_file": "services/compliance/handler.go",
-      "route_line": 95,
+      "route_line": 94,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -52506,7 +52273,7 @@
       "normalized_path": "/compliance/risk/remediation",
       "path": "/compliance/risk/remediation",
       "route_file": "services/compliance/handler.go",
-      "route_line": 96,
+      "route_line": 95,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -91467,14 +91234,14 @@
   ],
   "service_counts": {
     "backend_routes": {
-      "audit": 34,
+      "audit": 32,
       "auth": 90,
       "autokey": 15,
       "backup": 11,
       "certs": 70,
       "cloud": 28,
       "cluster-manager": 28,
-      "compliance": 61,
+      "compliance": 60,
       "confidential": 7,
       "dataprotect": 49,
       "discovery": 24,
@@ -91498,7 +91265,7 @@
     },
     "frontend_calls": {
       "$dynamic-service": 2,
-      "audit": 20,
+      "audit": 18,
       "auth": 47,
       "auth-edge": 4,
       "autokey": 11,
@@ -91616,6 +91383,24 @@
       {
         "id": "settings",
         "label": "Settings"
+      }
+    ],
+    "audit": [
+      {
+        "id": "events",
+        "label": "Events"
+      },
+      {
+        "id": "activity",
+        "label": "Activity"
+      },
+      {
+        "id": "investigate",
+        "label": "Investigate"
+      },
+      {
+        "id": "checkpoints",
+        "label": "Checkpoints"
       }
     ],
     "backup": [
@@ -91814,18 +91599,18 @@
     ]
   },
   "summary": {
-    "backend_routes": 916,
+    "backend_routes": 913,
     "backend_services": 28,
-    "button_inventory": 749,
-    "frontend_call_sites": 518,
-    "matched_frontend_call_sites": 488,
+    "button_inventory": 750,
+    "frontend_call_sites": 516,
+    "matched_frontend_call_sites": 486,
     "nav_items": 25,
-    "request_flows": 916,
-    "request_flows_with_frontend": 494,
+    "request_flows": 913,
+    "request_flows_with_frontend": 492,
     "request_flows_with_internal_package_calls": 201,
-    "request_flows_with_service_calls": 546,
-    "request_flows_with_store_calls": 643,
-    "subpane_groups": 13,
+    "request_flows_with_service_calls": 545,
+    "request_flows_with_store_calls": 641,
+    "subpane_groups": 14,
     "tab_components": 32,
     "unmatched_frontend_call_sites": 30
   },
@@ -92050,7 +91835,7 @@
       ]
     },
     {
-      "call_count": 10,
+      "call_count": 8,
       "component": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "group": "Monitor",
       "id": "audit",
@@ -92737,7 +92522,7 @@
         "frontendSites": [],
         "handler": "handlePublish",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 116,
+        "handlerLine": 115,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext",
@@ -92770,20 +92555,18 @@
       },
       {
         "complexity": 1,
-        "externalPackages": [
-          "strings.TrimSpace"
-        ],
+        "externalPackages": [],
         "frontendSites": [
           {
             "expression": "serviceRequest(\"audit\", `/audit/events?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 129,
+            "line": 134,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleEvents",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 180,
+        "handlerLine": 179,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -92811,13 +92594,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 134,
+            "line": 182,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleEvent",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 212,
+        "handlerLine": 198,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -92837,108 +92620,12 @@
         ]
       },
       {
-        "complexity": 1,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"audit\", `/audit/timeline/${encodeURIComponent(String(targetId || \"\").trim())}?${q.toString()}`)",
-            "file": "web/dashboard/src/lib/audit.ts",
-            "line": 151,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleTimeline",
-        "handlerFile": "services/audit/handler.go",
-        "handlerLine": 230,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/audit/timeline/{param}",
-        "path": "/audit/timeline/{target_id}",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "audit|GET|/audit/timeline/{param}",
-        "sensitive": false,
-        "service": "audit",
-        "serviceCalls": [],
-        "storeCalls": [
-          "QueryEvents"
-        ],
-        "uiLabels": [
-          "Audit Log"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"audit\", `/audit/session/${encodeURIComponent(String(sessionId || \"\").trim())}?${q.toString()}`)",
-            "file": "web/dashboard/src/lib/audit.ts",
-            "line": 208,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleSession",
-        "handlerFile": "services/audit/handler.go",
-        "handlerLine": 248,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/audit/session/{param}",
-        "path": "/audit/session/{session_id}",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "audit|GET|/audit/session/{param}",
-        "sensitive": false,
-        "service": "audit",
-        "serviceCalls": [],
-        "storeCalls": [
-          "QueryEvents"
-        ],
-        "uiLabels": [
-          "Audit Log"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"audit\", `/audit/correlation/${encodeURIComponent(String(correlationId || \"\").trim())}?${q.toString()}`)",
-            "file": "web/dashboard/src/lib/audit.ts",
-            "line": 224,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleCorrelation",
-        "handlerFile": "services/audit/handler.go",
-        "handlerLine": 266,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/audit/correlation/{param}",
-        "path": "/audit/correlation/{id}",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "audit|GET|/audit/correlation/{param}",
-        "sensitive": false,
-        "service": "audit",
-        "serviceCalls": [],
-        "storeCalls": [
-          "QueryEvents"
-        ],
-        "uiLabels": [
-          "Audit Log"
-        ]
-      },
-      {
         "complexity": 0,
         "externalPackages": [],
         "frontendSites": [],
         "handler": "handleSearch",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 284,
+        "handlerLine": 216,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -92969,13 +92656,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 232,
+            "line": 229,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleChainVerify",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 289,
+        "handlerLine": 221,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/tenantcheck.Enforce"
@@ -93031,13 +92718,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 248,
+            "line": 245,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleAuditConfig",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 314,
+        "handlerLine": 246,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93297,7 +92984,7 @@
         "frontendSites": [],
         "handler": "handleFIPSBoundary",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 329,
+        "handlerLine": 261,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -93605,12 +93292,46 @@
       },
       {
         "complexity": 1,
+        "externalPackages": [
+          "strings.TrimSpace"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"audit\", `/audit/investigate?${q.toString()}`)",
+            "file": "web/dashboard/src/lib/audit.ts",
+            "line": 173,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "investigate",
+        "handlerFile": "services/audit/investigate.go",
+        "handlerLine": 197,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/audit/investigate",
+        "path": "/audit/investigate",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "audit|GET|/audit/investigate",
+        "sensitive": false,
+        "service": "audit",
+        "serviceCalls": [],
+        "storeCalls": [
+          "Investigate"
+        ],
+        "uiLabels": [
+          "Audit Log"
+        ]
+      },
+      {
+        "complexity": 1,
         "externalPackages": [],
         "frontendSites": [
           {
             "expression": "serviceRequest(\"audit\", `/audit/activity/stats?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 82,
+            "line": 85,
             "source": "serviceRequest"
           }
         ],
@@ -93644,7 +93365,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 192,
+            "line": 221,
             "source": "serviceRequest"
           }
         ],
@@ -93678,7 +93399,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/checkpoints?${tenantQuery(session)}&limit=${limit}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 278,
+            "line": 275,
             "source": "serviceRequest"
           }
         ],
@@ -94093,6 +93814,7 @@
           "GetUserByUsername",
           "CreateSession",
           "GetUserByID",
+          "TouchSession",
           "UpdateUserPassword",
           "DeleteUserSessions",
           "DeleteSession",
@@ -94109,8 +93831,7 @@
           "ListUsers",
           "CreateUser",
           "UpdateUserRole",
-          "UpdateUserStatus",
-          "ListGroupRoleBindings"
+          "UpdateUserStatus"
         ],
         "uiLabels": [
           "API only"
@@ -94217,17 +93938,18 @@
         ]
       },
       {
-        "complexity": 3,
+        "complexity": 5,
         "externalPackages": [
           "errors.Is"
         ],
         "frontendSites": [],
         "handler": "handleRefresh",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 869,
+        "handlerLine": 870,
         "hasFrontend": false,
         "internalPackages": [
-          "pkg/auth.ClaimsFromContext"
+          "pkg/auth.ClaimsFromContext",
+          "pkg/crypto.Zeroize"
         ],
         "method": "POST",
         "normalizedPath": "/auth/refresh",
@@ -94241,7 +93963,8 @@
         "service": "auth",
         "serviceCalls": [],
         "storeCalls": [
-          "GetUserByID"
+          "GetUserByID",
+          "TouchSession"
         ],
         "uiLabels": [
           "API only"
@@ -94255,7 +93978,7 @@
         "frontendSites": [],
         "handler": "handleChangePassword",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 902,
+        "handlerLine": 923,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/clientip.From",
@@ -94333,7 +94056,7 @@
         "frontendSites": [],
         "handler": "handleLogout",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 989,
+        "handlerLine": 1011,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94360,7 +94083,7 @@
         "frontendSites": [],
         "handler": "handleMe",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1010,
+        "handlerLine": 1030,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94392,7 +94115,7 @@
         ],
         "handler": "handleCreateTenant",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1023,
+        "handlerLine": 1043,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -94425,7 +94148,7 @@
         ],
         "handler": "handleListTenants",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1036,
+        "handlerLine": 1056,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94455,7 +94178,7 @@
         "frontendSites": [],
         "handler": "handleGetTenant",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1046,
+        "handlerLine": 1066,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -94490,7 +94213,7 @@
         ],
         "handler": "handleGetTenantDeleteReadiness",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1060,
+        "handlerLine": 1080,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94531,7 +94254,7 @@
         ],
         "handler": "handleDisableTenant",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1092,
+        "handlerLine": 1112,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94569,7 +94292,7 @@
         ],
         "handler": "handleUpdateTenant",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1026,
+        "handlerLine": 1046,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -94608,7 +94331,7 @@
         ],
         "handler": "handleDeleteTenant",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1197,
+        "handlerLine": 1217,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94640,7 +94363,7 @@
         "frontendSites": [],
         "handler": "handleCreateTenantRole",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1029,
+        "handlerLine": 1049,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -94663,7 +94386,7 @@
         "frontendSites": [],
         "handler": "handleUpdateTenantRole",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1032,
+        "handlerLine": 1052,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -94688,7 +94411,7 @@
         "frontendSites": [],
         "handler": "handleDeleteTenantRole",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1479,
+        "handlerLine": 1499,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "DELETE",
@@ -94713,7 +94436,7 @@
         "frontendSites": [],
         "handler": "handleListUsers",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1498,
+        "handlerLine": 1518,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94750,7 +94473,7 @@
         ],
         "handler": "handleCreateUser",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1514,
+        "handlerLine": 1534,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext",
@@ -95073,7 +94796,7 @@
         ],
         "handler": "handleUpdateUserRole",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1593,
+        "handlerLine": 1613,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -95113,7 +94836,7 @@
         ],
         "handler": "handleUpdateUserStatus",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1657,
+        "handlerLine": 1677,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -95154,7 +94877,7 @@
         ],
         "handler": "handleResetUserPassword",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1699,
+        "handlerLine": 1719,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext",
@@ -95193,7 +94916,7 @@
         ],
         "handler": "handleListGroupRoleBindings",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1768,
+        "handlerLine": 1788,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -95232,7 +94955,7 @@
         ],
         "handler": "handleUpsertGroupRoleBinding",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1784,
+        "handlerLine": 1804,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -95272,7 +94995,7 @@
         ],
         "handler": "handleDeleteGroupRoleBinding",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1834,
+        "handlerLine": 1854,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -95524,7 +95247,7 @@
         "frontendSites": [],
         "handler": "handleGetPasswordPolicy",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1866,
+        "handlerLine": 1886,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -95549,7 +95272,7 @@
         "frontendSites": [],
         "handler": "handleUpdatePasswordPolicy",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1882,
+        "handlerLine": 1902,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -95576,7 +95299,7 @@
         "frontendSites": [],
         "handler": "handleGetSecurityPolicy",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1973,
+        "handlerLine": 1993,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -95601,7 +95324,7 @@
         "frontendSites": [],
         "handler": "handleUpdateSecurityPolicy",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1989,
+        "handlerLine": 2009,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -95638,7 +95361,7 @@
         ],
         "handler": "handleCLIStatus",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 2177,
+        "handlerLine": 2197,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -95692,7 +95415,7 @@
         ],
         "handler": "handleCLISession",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 2204,
+        "handlerLine": 2224,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext",
@@ -95754,7 +95477,7 @@
         ],
         "handler": "handleGetCLIHSMConfig",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 2039,
+        "handlerLine": 2059,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -95798,7 +95521,7 @@
         ],
         "handler": "handleUpdateCLIHSMConfig",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 2069,
+        "handlerLine": 2089,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -95842,7 +95565,7 @@
         ],
         "handler": "handleCLIHSMPartitions",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 2295,
+        "handlerLine": 2315,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -96022,7 +95745,7 @@
         "frontendSites": [],
         "handler": "handleSAMLMetadata",
         "handlerFile": "services/auth/handler_sso.go",
-        "handlerLine": 256,
+        "handlerLine": 259,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -96054,7 +95777,7 @@
         ],
         "handler": "handleListClients",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 2361,
+        "handlerLine": 2381,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -96093,7 +95816,7 @@
         ],
         "handler": "handleGetClient",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 2372,
+        "handlerLine": 2392,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -96133,7 +95856,7 @@
         ],
         "handler": "handleUpdateClient",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 2387,
+        "handlerLine": 2407,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -96172,7 +95895,7 @@
         ],
         "handler": "handleRESTClientSecuritySummary",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 2470,
+        "handlerLine": 2490,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -102309,7 +102032,7 @@
         "frontendSites": [],
         "handler": "handlePosture",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 101,
+        "handlerLine": 100,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -102338,7 +102061,7 @@
         "frontendSites": [],
         "handler": "handlePostureHistory",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 116,
+        "handlerLine": 115,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -102372,7 +102095,7 @@
         ],
         "handler": "handlePostureBreakdown",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 131,
+        "handlerLine": 130,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -102408,7 +102131,7 @@
         ],
         "handler": "handleAssessment",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 145,
+        "handlerLine": 144,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -102446,7 +102169,7 @@
         ],
         "handler": "handleAssessmentDelta",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 160,
+        "handlerLine": 159,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -102484,7 +102207,7 @@
         ],
         "handler": "handleRunAssessment",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 175,
+        "handlerLine": 174,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -102522,7 +102245,7 @@
         ],
         "handler": "handleAssessmentHistory",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 205,
+        "handlerLine": 204,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -102559,7 +102282,7 @@
         ],
         "handler": "handleAssessmentSchedule",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 282,
+        "handlerLine": 281,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -102597,7 +102320,7 @@
         ],
         "handler": "handleUpsertAssessmentSchedule",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 296,
+        "handlerLine": 295,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -102635,7 +102358,7 @@
         ],
         "handler": "handleListComplianceTemplates",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 221,
+        "handlerLine": 220,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -102673,7 +102396,7 @@
         ],
         "handler": "handleUpsertComplianceTemplate",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 249,
+        "handlerLine": 248,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -102704,7 +102427,7 @@
         "frontendSites": [],
         "handler": "handleGetComplianceTemplate",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 235,
+        "handlerLine": 234,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -102740,7 +102463,7 @@
         ],
         "handler": "handleDeleteComplianceTemplate",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 269,
+        "handlerLine": 268,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -102775,7 +102498,7 @@
         ],
         "handler": "handleFrameworks",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 324,
+        "handlerLine": 323,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -102804,7 +102527,7 @@
         "frontendSites": [],
         "handler": "handleFrameworkControls",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 329,
+        "handlerLine": 328,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -102840,7 +102563,7 @@
         ],
         "handler": "handleFrameworkGaps",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 349,
+        "handlerLine": 348,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -102875,7 +102598,7 @@
         ],
         "handler": "handleKeyHygiene",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 363,
+        "handlerLine": 362,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -102901,7 +102624,7 @@
         "frontendSites": [],
         "handler": "handleOrphaned",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 377,
+        "handlerLine": 376,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -102926,7 +102649,7 @@
         "frontendSites": [],
         "handler": "handleExpired",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 391,
+        "handlerLine": 390,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -102939,33 +102662,6 @@
         "service": "compliance",
         "serviceCalls": [
           "GetExpiredKeys"
-        ],
-        "storeCalls": [],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
-        "complexity": 0,
-        "externalPackages": [
-          "sort.Slice"
-        ],
-        "frontendSites": [],
-        "handler": "handleAuditCorrelations",
-        "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 405,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/compliance/audit/correlations",
-        "path": "/compliance/audit/correlations",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "compliance|GET|/compliance/audit/correlations",
-        "sensitive": false,
-        "service": "compliance",
-        "serviceCalls": [
-          "GetAuditCorrelations"
         ],
         "storeCalls": [],
         "uiLabels": [
@@ -102989,7 +102685,7 @@
         ],
         "handler": "handleAuditAnomalies",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 420,
+        "handlerLine": 404,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -103017,7 +102713,7 @@
         "frontendSites": [],
         "handler": "handleCBOM",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 434,
+        "handlerLine": 418,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -103044,7 +102740,7 @@
         "frontendSites": [],
         "handler": "handleCBOMSummary",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 448,
+        "handlerLine": 432,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -103072,7 +102768,7 @@
         "frontendSites": [],
         "handler": "handleCBOMExport",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 462,
+        "handlerLine": 446,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -103099,7 +102795,7 @@
         "frontendSites": [],
         "handler": "handleCBOMPQCReadiness",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 484,
+        "handlerLine": 468,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -103126,7 +102822,7 @@
         "frontendSites": [],
         "handler": "handleCBOMDiff",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 498,
+        "handlerLine": 482,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -124126,7 +123822,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-21T19:02:11Z",
+    "generatedAt": "2026-10-21T19:48:10Z",
     "methods": [
       "DELETE",
       "GET",
@@ -124166,8 +123862,8 @@
       "workload"
     ],
     "summary": {
-      "flows": 916,
-      "frontendBacked": 494,
+      "flows": 913,
+      "frontendBacked": 492,
       "highRisk": 346,
       "services": 28
     }

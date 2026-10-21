@@ -190,9 +190,9 @@ Every audit event is a structured JSON object conforming to the `AuditEvent` sch
 
 | Field | Type | Description |
 |---|---|---|
-| `correlation_id` | UUID string | Groups all events that belong to the same logical operation, even if that operation spans multiple microservices. Example: a key rotation that triggers a governance request, a backup, and re-encryption of dependent data will all share the same `correlation_id`. |
-| `parent_event_id` | UUID string | For child events spawned by a parent operation (e.g. a key rotation emits child events for each dependent key update), this links back to the originating event. Enables tree reconstruction of complex operations. |
-| `session_id` | UUID string | Groups all events from a single authenticated session (e.g. all actions taken by a user during one login session). Enables session replay for forensic investigation. |
+| `correlation_id` | string | One request across services: the first service's request ID, passed on by every internal call (`pkg/correlation`, through `servicetoken.Authorize`) and recorded by each service's route kernel. The edge removes it from outside requests, so a caller can't join its events to someone else's request. Since 13.42.0-beta; older events carry one ID per service. Background jobs start their own. |
+| `parent_event_id` | string | Not set by any service today. |
+| `session_id` | string | The sign-in: auth puts it in the token (`sid`) at login, keeps it on refresh, and ends it at sign-out; every event made with that token carries it. Since 13.42.0-beta; empty for events before, for service accounts and API keys. |
 
 #### Result
 
@@ -315,72 +315,75 @@ The audit service exposes a rich query interface. All query parameters are optio
 
 ```bash
 # List recent key operations with high risk score (risk >= 70)
-curl "https://localhost/svc/audit/audit/events?tenant_id=root&service=keycore&min_risk_score=70&limit=100" \
+curl "https://localhost/svc/audit/audit/events?tenant_id=root&service=kms-keycore&risk_min=70&limit=100" \
   -H "Authorization: Bearer $TOKEN"
 
 # All events for a specific key (full lifecycle history)
-curl "https://localhost/svc/audit/audit/timeline/KEY_UUID?tenant_id=root" \
+curl "https://localhost/svc/audit/audit/events?tenant_id=root&target_id=KEY_ID" \
   -H "Authorization: Bearer $TOKEN"
 
-# Session replay — all events in a single user session
-curl "https://localhost/svc/audit/audit/session/SESSION_UUID?tenant_id=root" \
+# Everything done in one sign-in session
+curl "https://localhost/svc/audit/audit/events?tenant_id=root&session_id=SESSION_ID" \
   -H "Authorization: Bearer $TOKEN"
 
-# Correlation group — all events in a distributed operation
-curl "https://localhost/svc/audit/audit/correlation/CORRELATION_UUID?tenant_id=root" \
+# One request through every service it reached
+curl "https://localhost/svc/audit/audit/events?tenant_id=root&correlation_id=CORRELATION_ID" \
   -H "Authorization: Bearer $TOKEN"
 
-# Events for a specific actor in a date range
-curl "https://localhost/svc/audit/audit/events?tenant_id=root&actor_id=USER_UUID&date_from=2024-01-01T00:00:00Z&date_to=2024-01-31T23:59:59Z" \
+# Everything from one address, in a window (RFC 3339; a bad time is 400)
+curl "https://localhost/svc/audit/audit/events?tenant_id=root&source_ip=203.0.113.9&from=2026-10-01T00:00:00Z&to=2026-10-22T00:00:00Z" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Who, what, on what, from where, how and outcome for a person in a window
+# (the Audit Log's Investigate view); each value's count is what the event
+# list returns with that value added
+curl "https://localhost/svc/audit/audit/investigate?tenant_id=root&actor_id=USER_ID&from=2026-10-01T00:00:00Z" \
   -H "Authorization: Bearer $TOKEN"
 
 # Failed operations only (for incident investigation)
 curl "https://localhost/svc/audit/audit/events?tenant_id=root&result=failure&limit=50" \
   -H "Authorization: Bearer $TOKEN"
 
-# All key destruction events ever
-curl "https://localhost/svc/audit/audit/events?tenant_id=root&action=key.destroy" \
+# Every key destruction, from any service that records one
+curl "https://localhost/svc/audit/audit/events?tenant_id=root&action_prefix=audit.key.destroy" \
   -H "Authorization: Bearer $TOKEN"
 
 # High-risk events from a specific IP address
-curl "https://localhost/svc/audit/audit/events?tenant_id=root&source_ip=198.51.100.42&min_risk_score=50" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Events requiring governance approval (filter by approval_id non-empty)
-curl "https://localhost/svc/audit/audit/events?tenant_id=root&has_approval=true" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Events tagged with a specific label (e.g. production payment keys only)
-curl "https://localhost/svc/audit/audit/events?tenant_id=root&tag=env:production&service=keycore" \
+curl "https://localhost/svc/audit/audit/events?tenant_id=root&source_ip=198.51.100.42&risk_min=50" \
   -H "Authorization: Bearer $TOKEN"
 ```
+
+There is no filter by tag or by approval: read `tags` and `approval_id` on
+the events returned.
 
 #### Query Parameters Reference
 
 | Parameter | Type | Description |
 |---|---|---|
-| `tenant_id` | string | **Required.** Tenant to query. Use `root` for the root tenant. |
-| `service` | string | Filter by service: `keycore`, `auth`, `certs`, `governance`, etc. |
-| `action` | string | Exact action match: `key.encrypt`, `cert.revoked`, etc. |
-| `actor_id` | UUID | Filter by actor (user, service account). |
-| `actor_type` | enum | `user`, `service`, `workload`, `system`. |
-| `target_id` | UUID | Filter by target resource (e.g. a specific key UUID). |
-| `target_type` | string | Filter by target resource type: `key`, `certificate`, `user`, etc. |
-| `result` | enum | `success`, `failure`, `partial`. |
-| `source_ip` | string | Exact IP address match. |
-| `min_risk_score` | int | Include only events with `risk_score >= N`. |
-| `max_risk_score` | int | Include only events with `risk_score <= N`. |
-| `date_from` | RFC3339 | Start of time range (inclusive). |
-| `date_to` | RFC3339 | End of time range (inclusive). |
-| `tag` | string | Filter by tag (format: `key:value`). |
-| `has_approval` | boolean | `true` = only events with a governance approval. |
-| `correlation_id` | UUID | Events in a specific correlation group. |
-| `session_id` | UUID | Events in a specific session. |
-| `fips_compliant` | boolean | Filter by FIPS compliance flag. |
-| `node_id` | string | Events processed by a specific cluster node. |
-| `limit` | int | Results per page (default: 50, max: 1000). |
-| `offset` | int | Pagination offset. |
-| `sort` | string | `timestamp_asc` or `timestamp_desc` (default: `timestamp_desc`). |
+| `tenant_id` | string | **Required.** The caller's own tenant. |
+| `service` | string | The emitting service, as recorded (`kms-keycore`, `kms-auth`, ...). |
+| `action` | string | Exact action (`audit.key.create`). |
+| `action_prefix` | string, repeatable | Actions starting with it (`audit.hsm.`); up to 5. |
+| `actor_id` | string | Who: a user ID, client ID or service. |
+| `target_id` | string | On what: a key, certificate, user or other object ID. |
+| `source_ip` | string | From where: the bare address (`192.0.2.1`). |
+| `user_agent` | string | How: the client's `User-Agent`, exactly as recorded. |
+| `result` | string | `success`, `failure`, `denied` or `refused`. |
+| `session_id` | string | One sign-in (the token's `sid`). |
+| `correlation_id` | string | One request across services. |
+| `risk_min`, `risk_max` | int | Risk score bounds, inclusive. |
+| `from`, `to` | RFC 3339 | Time bounds, inclusive. A value that is not a time is refused with 400. |
+| `exclude_http_requests` | `true` | Leave out the generic HTTP request records. |
+| `order` | `asc` | Oldest first (default newest first). |
+| `limit`, `offset` | int | Paging; `limit` at most 1000 (default 200). |
+
+`GET /audit/investigate` takes the same filters and returns, for the events
+they select (HTTP request records left out), the total, first and last
+seen, a time series and the ten commonest values of `actor_id`, `action`,
+`target_id`, `source_ip`, `user_agent`, `service`, `result`, `session_id`
+and `correlation_id`, each with how many distinct values there are. Every
+count is what `GET /audit/events` returns with that value added to the same
+filters.
 
 ---
 
@@ -1529,7 +1532,7 @@ curl "https://localhost/svc/compliance/compliance/cbom/pqc-readiness?tenant_id=r
 3. **Get the timeline of each accessed key:**
    ```bash
    for KEY_ID in $(jq -r '.[].target_id' compromised-account-activity.json | sort -u); do
-     curl "https://localhost/svc/audit/audit/timeline/$KEY_ID?tenant_id=root" \
+     curl "https://localhost/svc/audit/audit/events?tenant_id=root&target_id=$KEY_ID" \
        -H "Authorization: Bearer $ADMIN_TOKEN" > "key-timeline-$KEY_ID.json"
    done
    ```
@@ -1597,20 +1600,18 @@ curl -X POST "https://localhost/svc/reporting/reports/generate?tenant_id=root" \
 
 **Scenario:** A GDPR Data Subject Access Request (DSAR) requires the organisation to provide evidence of all processing activities involving a specific person's data.
 
+The audit log has no filter by tag, so start from the keys that hold the
+subject's data (the key inventory) and take each key's history:
+
 ```bash
-# Find all encryption/decryption events involving the data subject's data
-# (Keys tagged with the data subject's pseudonymous ID)
-curl "https://localhost/svc/audit/audit/events?tenant_id=root&tag=data-subject:pseudonym-hash-abc123" \
-  -H "Authorization: Bearer $TOKEN" > dsar-activity.json
-
-# Get timeline of all keys used for this subject's data
-curl "https://localhost/svc/audit/audit/events?tenant_id=root&service=keycore&tag=data-subject:pseudonym-hash-abc123&date_from=2018-05-25T00:00:00Z" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Generate signed, tamper-evident export as DSAR evidence
-curl "https://localhost/svc/audit/audit/events?tenant_id=root&tag=data-subject:pseudonym-hash-abc123&format=csv&signing_key_id=DSAR_SIGNING_KEY_UUID" \
-  -H "Authorization: Bearer $TOKEN" > dsar-evidence-signed.csv
+for KEY_ID in $SUBJECT_KEYS; do
+  curl "https://localhost/svc/audit/audit/events?tenant_id=root&target_id=$KEY_ID&from=2018-05-25T00:00:00Z&limit=1000" \
+    -H "Authorization: Bearer $TOKEN" > "dsar-$KEY_ID.json"
+done
 ```
+
+For signed evidence, list the same events in Audit Log → Events and use
+Export Signed CSV, which signs the file with a key you choose.
 
 ---
 

@@ -3,12 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { ChainStatus } from "./ChainStatus";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
-import { B, Btn, Card, Inp, Modal, Section, Sel, Tabs } from "../legacyPrimitives";
+import { B, Btn, Card, Inp, Modal, Section, Sel } from "../legacyPrimitives";
 import {
   listAuditEvents,
-  getAuditTimeline,
-  getAuditSession,
-  getAuditCorrelation,
   verifyAuditChain,
   getAuditConfig,
   exportEventsAsCSV,
@@ -17,9 +14,13 @@ import {
   type AuditEvent,
   type AuditConfig,
   type AuditCheckpoint,
-  type ChainVerifyResult
+  type ChainVerifyResult,
+  type InvestigatePivots
 } from "../../../lib/audit";
 import { AuditAnalyticsPanel } from "./AuditAnalyticsPanel";
+import { AuditEventDetail } from "./AuditEventDetail";
+import { AuditInvestigate } from "./AuditInvestigate";
+import { abbrevHash, eventOrigin, formatAction, isHTTPRequestAction, resultTone, riskColor, shortTS } from "./auditFormat";
 
 /* ── constants ── */
 
@@ -34,72 +35,6 @@ const SERVICES = [
 ];
 
 const PAGE_SIZE = 100;
-
-const RESULT_COLORS: Record<string, string> = { success: C.green, failure: C.red, denied: C.amber };
-
-/* ── helpers ── */
-
-function fmtTS(v: any) {
-  const raw = String(v || "").trim();
-  if (!raw) return "-";
-  const dt = new Date(raw);
-  if (Number.isNaN(dt.getTime())) return raw;
-  return dt.toLocaleString();
-}
-
-function shortTS(v: any) {
-  const raw = String(v || "").trim();
-  if (!raw) return "-";
-  const dt = new Date(raw);
-  if (Number.isNaN(dt.getTime())) return raw;
-  return `${dt.getMonth() + 1}/${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2, "0")}`;
-}
-
-function resultTone(r: string) {
-  const v = String(r || "").toLowerCase();
-  if (v === "success") return "green";
-  if (v === "failure") return "red";
-  if (v === "denied") return "amber";
-  return "blue";
-}
-
-function eventOrigin(e: AuditEvent): { origin: string; agentId: string } {
-  const d = (e.details || {}) as Record<string, unknown>;
-  const origin = typeof d.origin === "string" && d.origin ? d.origin : "service";
-  const agentId = typeof d.agent_id === "string" ? d.agent_id : "";
-  return { origin, agentId };
-}
-
-function riskColor(score: number): string {
-  if (score >= 80) return C.red;
-  if (score >= 60) return C.orange;
-  if (score >= 40) return C.amber;
-  return C.green;
-}
-
-function abbrevHash(hash: string) {
-  const h = String(hash || "");
-  if (h.length <= 12) return h || "-";
-  return `${h.slice(0, 6)}...${h.slice(-6)}`;
-}
-
-function isHTTPRequestAction(action: any) {
-  return String(action || "").trim().toLowerCase().includes(".http_request");
-}
-
-function formatAction(action: any) {
-  const raw = String(action || "").trim();
-  if (!raw) return "-";
-  const parts = raw.split(".").filter(Boolean);
-  if (parts.length >= 3 && parts[0].toLowerCase() === "audit") {
-    const actionWords = parts.slice(2).join(" ").replaceAll("_", " ");
-    return actionWords.replace(/\b\w/g, (c) => c.toUpperCase());
-  }
-  return raw
-    .replaceAll("_", " ")
-    .replaceAll(".", " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 function formatChainBreakReason(reason: any) {
   return String(reason || "")
@@ -249,7 +184,11 @@ const CheckpointsSection = ({ session }: { session: any }) => {
   );
 };
 
-export const AuditLogTab = ({ session, onToast }: any) => {
+// The view comes from the sidebar (SUB_PANES.audit); a view may switch to
+// another, as the event card does to Investigate.
+const VIEWS = ["events", "activity", "investigate", "checkpoints"];
+
+export const AuditLogTab = ({ session, onToast, subView, onSubViewChange }: any) => {
   const [loading, setLoading] = useState(false);
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [config, setConfig] = useState<AuditConfig | null>(null);
@@ -267,17 +206,14 @@ export const AuditLogTab = ({ session, onToast }: any) => {
   // audit export signing
   const [signingKeyId, setSigningKeyId] = useState("");
 
-  // sub-tab
-  const [subTab, setSubTab] = useState("Events");
+  const view = VIEWS.includes(String(subView || "")) ? String(subView) : "events";
 
   // event detail
   const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
 
-  // forensics
-  const [forensicMode, setForensicMode] = useState("Timeline");
-  const [forensicInput, setForensicInput] = useState("");
-  const [forensicEvents, setForensicEvents] = useState<AuditEvent[]>([]);
-  const [forensicLoading, setForensicLoading] = useState(false);
+  // Investigate: the pivots outlive a switch of view.
+  const [pivots, setPivots] = useState<InvestigatePivots>({});
+  const investigate = (p: InvestigatePivots) => { setPivots(p); onSubViewChange?.("investigate"); };
 
   /* ── data loading ── */
 
@@ -342,49 +278,6 @@ export const AuditLogTab = ({ session, onToast }: any) => {
       setChainVerifying(false);
     }
   };
-
-  /* ── forensic loaders ── */
-
-  const loadForensic = async () => {
-    const id = forensicInput.trim();
-    if (!id) { onToast?.("Enter an ID to search."); return; }
-    setForensicLoading(true);
-    try {
-      let results: AuditEvent[] = [];
-      if (forensicMode === "Timeline") results = await getAuditTimeline(session, id);
-      else if (forensicMode === "Session") results = await getAuditSession(session, id);
-      else results = await getAuditCorrelation(session, id);
-      const cleanResults = results.filter((ev) => !isHTTPRequestAction(ev.action));
-      setForensicEvents(cleanResults);
-      onToast?.(`${cleanResults.length} event(s) loaded.`);
-    } catch (error) {
-      onToast?.(`Forensic query failed: ${errMsg(error)}`);
-    } finally {
-      setForensicLoading(false);
-    }
-  };
-
-  const openForensic = (mode: string, id: string) => {
-    setSubTab("Forensics");
-    setForensicMode(mode);
-    setForensicInput(id);
-    setTimeout(async () => {
-      setForensicLoading(true);
-      try {
-        let results: AuditEvent[] = [];
-        if (mode === "Timeline") results = await getAuditTimeline(session, id);
-        else if (mode === "Session") results = await getAuditSession(session, id);
-        else results = await getAuditCorrelation(session, id);
-        setForensicEvents(results.filter((ev) => !isHTTPRequestAction(ev.action)));
-      } catch (error) {
-        onToast?.(`Forensic query failed: ${errMsg(error)}`);
-      } finally {
-        setForensicLoading(false);
-      }
-    }, 50);
-  };
-
-
 
   /* ── integrity status bar ── */
 
@@ -545,194 +438,24 @@ export const AuditLogTab = ({ session, onToast }: any) => {
 
 
 
-  /* ── render: Forensics sub-tab ── */
-
-  const renderForensics = () => (
-    <>
-      <Tabs tabs={["Timeline", "Session", "Correlation"]} active={forensicMode} onChange={setForensicMode} />
-
-      <div style={{ display: "flex", gap: 6, marginBottom: 14, alignItems: "center" }}>
-        <Inp
-          placeholder={
-            forensicMode === "Timeline" ? "Enter target ID (e.g., key ID)..." :
-            forensicMode === "Session" ? "Enter session ID..." :
-            "Enter correlation ID..."
-          }
-          w={320}
-          value={forensicInput}
-          onChange={(e: any) => setForensicInput(e.target.value)}
-          onKeyDown={(e: any) => { if (e.key === "Enter") loadForensic(); }}
-        />
-        <Btn small primary onClick={loadForensic} disabled={forensicLoading}>
-          {forensicLoading ? "Loading..." : "Load"}
-        </Btn>
-        <span style={{ fontSize: 10, color: C.muted }}>
-          {forensicMode === "Timeline" && "View all audit events for a specific entity (key, policy, user)"}
-          {forensicMode === "Session" && "Trace a user's complete session activity"}
-          {forensicMode === "Correlation" && "Follow a chain of correlated operations"}
-        </span>
-      </div>
-
-      {forensicEvents.length > 0 && (
-        <Card>
-          <div style={{ fontSize: 10, fontWeight: 600, color: C.dim, marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.6 }}>
-            {forensicMode} — {forensicEvents.length} event(s)
-          </div>
-          <div style={{ position: "relative", paddingLeft: 20 }}>
-            {/* vertical timeline line */}
-            <div style={{ position: "absolute", left: 7, top: 0, bottom: 0, width: 2, background: C.border }} />
-            {forensicEvents.map((ev, idx) => (
-              <div key={ev.id || idx} style={{ position: "relative", marginBottom: 12, paddingLeft: 16 }}>
-                {/* timeline dot */}
-                <div style={{
-                  position: "absolute", left: -17, top: 4, width: 10, height: 10, borderRadius: 5,
-                  background: RESULT_COLORS[ev.result] || C.dim,
-                  border: `2px solid ${C.card}`
-                }} />
-                <div style={{
-                  background: C.surface, border: `1px solid ${C.border}`, borderRadius: 4, padding: "8px 12px",
-                  cursor: "pointer"
-                }} onClick={() => setSelectedEvent(ev)}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = C.accent; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = C.border; }}>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 4 }}>
-                    <span style={{ fontSize: 10, color: C.muted }}>{fmtTS(ev.timestamp)}</span>
-                    <B c="blue">{(ev.service || "").replace("kms-", "")}</B>
-                    <B c={resultTone(ev.result)}>{ev.result}</B>
-                    <span style={{ fontSize: 10, color: C.text, fontWeight: 600 }} title={ev.action}>
-                      {formatAction(ev.action)}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 10, color: C.dim }}>
-                    Actor: {ev.actor_id || "-"} &bull; Target: {ev.target_id || "-"} &bull;
-                    Risk: <span style={{ color: riskColor(Number(ev.risk_score || 0)) }}>{ev.risk_score ?? 0}</span> &bull;
-                    Seq: {ev.sequence} &bull; Hash: <span style={{ fontFamily: "var(--font-mono)" }}>{abbrevHash(ev.chain_hash)}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {forensicEvents.length === 0 && forensicInput.trim() && !forensicLoading && (
-        <Card>
-          <div style={{ textAlign: "center", color: C.muted, fontSize: 10, padding: 20 }}>
-            No events found for this {forensicMode.toLowerCase()} query.
-          </div>
-        </Card>
-      )}
-    </>
-  );
-
-  /* ── event detail modal ── */
-
-  const renderEventModal = () => {
-    if (!selectedEvent) return null;
-    const ev = selectedEvent;
-    const fields = [
-      ["ID", ev.id],
-      ["Timestamp", fmtTS(ev.timestamp)],
-      ["Service", ev.service],
-      ["Action", ev.action],
-      ["Result", ev.result],
-      ["Actor", `${ev.actor_id} (${ev.actor_type || "unknown"})`],
-      ["Target", `${ev.target_id} (${ev.target_type || "unknown"})`],
-      ["Source IP", ev.source_ip],
-      ["Method", ev.method],
-      ["Endpoint", ev.endpoint],
-      ["Status Code", ev.status_code],
-      ["Duration", `${ev.duration_ms ?? 0}ms`],
-      ["Risk Score", ev.risk_score],
-      ["FIPS Compliant", ev.fips_compliant ? "Yes" : "No"],
-      ["Sequence", ev.sequence],
-      ["Chain Hash", ev.chain_hash],
-      ["Previous Hash", ev.previous_hash],
-      ["Session ID", ev.session_id],
-      ["Correlation ID", ev.correlation_id],
-      ["Node ID", ev.node_id],
-      ["User Agent", ev.user_agent],
-      ["Error", ev.error_message]
-    ];
-
-    return (
-      <Modal open={true} onClose={() => setSelectedEvent(null)} title="Audit Event Detail" wide>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px", marginBottom: 14 }}>
-          {fields.map(([label, value]) => (
-            <div key={String(label)}>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</div>
-              <div style={{ fontSize: 10, color: C.text, wordBreak: "break-all", fontFamily: String(label).includes("Hash") ? "var(--font-mono)" : "inherit" }}>
-                {String(value ?? "-") || "-"}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* forensic navigation links */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
-          {ev.target_id && (
-            <Btn small onClick={() => { setSelectedEvent(null); openForensic("Timeline", ev.target_id); }}>
-              View Timeline ({ev.target_id})
-            </Btn>
-          )}
-          {ev.session_id && (
-            <Btn small onClick={() => { setSelectedEvent(null); openForensic("Session", ev.session_id); }}>
-              View Session ({abbrevHash(ev.session_id)})
-            </Btn>
-          )}
-          {ev.correlation_id && (
-            <Btn small onClick={() => { setSelectedEvent(null); openForensic("Correlation", ev.correlation_id); }}>
-              View Correlation ({abbrevHash(ev.correlation_id)})
-            </Btn>
-          )}
-        </div>
-
-        {/* metadata JSON */}
-        {ev.details && Object.keys(ev.details).length > 0 && (
-          <>
-            <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Metadata</div>
-            <pre style={{
-              background: C.bg, border: `1px solid ${C.border}`, borderRadius: 3, padding: 10,
-              fontSize: 10, color: C.dim, overflow: "auto", maxHeight: 160,
-              fontFamily: "var(--font-mono)"
-            }}>
-              {JSON.stringify(ev.details, null, 2)}
-            </pre>
-          </>
-        )}
-
-        {/* tags */}
-        {Array.isArray(ev.tags) && ev.tags.length > 0 && (
-          <div style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Tags</div>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-              {ev.tags.map((t, i) => <B key={i} c="purple">{t}</B>)}
-            </div>
-          </div>
-        )}
-      </Modal>
-    );
-  };
-
   /* ── main render ── */
 
   return (
     <div>
       <IntegrityBar />
-      <Tabs tabs={["Events", "Activity", "Forensics", "Checkpoints"]} active={subTab} onChange={setSubTab} />
 
-      {subTab === "Events" && renderEvents()}
-      {subTab === "Activity" && <AuditAnalyticsPanel session={session} onOpenEvent={setSelectedEvent} />}
-      {subTab === "Forensics" && renderForensics()}
-      {subTab === "Checkpoints" && <CheckpointsSection session={session} />}
+      {view === "events" && renderEvents()}
+      {view === "activity" && <AuditAnalyticsPanel session={session} onOpenEvent={setSelectedEvent} />}
+      {view === "investigate" && <AuditInvestigate session={session} pivots={pivots} onPivotsChange={setPivots} onOpenEvent={setSelectedEvent} />}
+      {view === "checkpoints" && <CheckpointsSection session={session} />}
 
-      {renderEventModal()}
+      <AuditEventDetail event={selectedEvent} onClose={() => setSelectedEvent(null)} onInvestigate={investigate} />
 
       {/* audit integration note */}
       <div className="vk-fold" tabIndex={0} style={{ marginTop: 16, padding: "8px 12px", borderRadius: 4, background: C.card, border: `1px solid ${C.border}`, fontSize: 10, color: C.muted }}>
         Every service publishes to the single audit stream. Events are hash-chained (SHA-256), HMAC-signed, covered
-        by signed checkpoints (ECDSA-P384) and stored append-only; a fail-closed WAL covers outages. Charts are under Activity, where
-        clicking a chart lists the events it counts; alerts raised from these events are triaged in the Alert Center.
+        by signed checkpoints (ECDSA-P384) and stored append-only; a fail-closed WAL covers outages. Charts are under Activity;
+        Investigate follows a person, object, address, sign-in or request; alerts are triaged in the Alert Center.
       </div>
     </div>
   );

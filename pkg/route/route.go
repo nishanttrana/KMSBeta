@@ -36,6 +36,7 @@ import (
 	"strings"
 	"time"
 	"vecta-kms/pkg/clientip"
+	"vecta-kms/pkg/correlation"
 
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauth "vecta-kms/pkg/auth"
@@ -235,12 +236,15 @@ type Call struct {
 	Claims    *pkgauth.Claims // nil only on Public routes without a token
 	RequestID string
 
-	result  string
-	reason  string
-	errCode string
-	errMsg  string
-	target  string
-	details map[string]interface{}
+	// correlation ties this request's events to those of the request that
+	// caused it (pkg/correlation).
+	correlation string
+	result      string
+	reason      string
+	errCode     string
+	errMsg      string
+	target      string
+	details     map[string]interface{}
 	// verified is the identity a Public route authenticated itself.
 	verified, verifiedType string
 }
@@ -379,10 +383,16 @@ func (w *capture) Unwrap() http.ResponseWriter { return w.ResponseWriter }
 func (rt *Router) serve(w http.ResponseWriter, r *http.Request, spec Spec, h func(*Call)) {
 	start := time.Now()
 	cw := &capture{ResponseWriter: w}
-	c := &Call{W: cw, R: r, RequestID: headerOr(r, "X-Request-ID", "")}
-	if c.RequestID == "" {
-		c.RequestID = newRequestID()
+	reqID := headerOr(r, "X-Request-ID", "")
+	if reqID == "" {
+		reqID = newRequestID()
 	}
+	// The edge drops the header from outside callers, so one present here
+	// came from the platform service that called this one. The request the
+	// handler sees carries it, so its own internal calls pass it on.
+	corr := headerOr(r, correlation.Header, reqID)
+	r = r.WithContext(correlation.With(r.Context(), corr))
+	c := &Call{W: cw, R: r, RequestID: reqID, correlation: corr}
 	if claims, ok := pkgauth.ClaimsFromContext(r.Context()); ok {
 		c.Claims = claims
 	}
@@ -589,12 +599,13 @@ func (rt *Router) emit(c *Call, spec Spec, status int, took time.Duration) {
 		UserAgent:     r.UserAgent(),
 		Method:        r.Method,
 		Endpoint:      r.URL.Path,
-		CorrelationID: headerOr(r, "X-Correlation-ID", c.RequestID),
+		CorrelationID: c.correlation,
 		DurationMS:    float64(took.Microseconds()) / 1000,
 		Details:       details,
 	}
 	if c.Claims != nil {
 		evt.ActorRole = c.Claims.Role
+		evt.SessionID = c.Claims.SessionID
 		if evt.TenantID == "" {
 			evt.TenantID = c.Claims.TenantID
 		}

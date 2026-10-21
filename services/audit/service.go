@@ -453,6 +453,9 @@ func parseIncomingEvent(subject string, payload []byte) (AuditEvent, error) {
 	if event.SourceIP == "" {
 		event.SourceIP = str(event.Details["source_ip"])
 	}
+	if event.SessionID == "" {
+		event.SessionID = str(event.Details["session_id"])
+	}
 	// Wire-schema fields without dedicated columns are preserved in Details
 	// so downstream consumers and the UI can distinguish agent-originated
 	// events without a storage migration.

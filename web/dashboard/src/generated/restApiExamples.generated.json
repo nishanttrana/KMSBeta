@@ -37,6 +37,52 @@
     }
   },
   {
+    "id": "audit-investigate",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/audit/investigate?tenant_id={{tenant_id}}&actor_id={{actor_id}}",
+    "bodyTemplate": "",
+    "responseExample": {
+      "investigation": {
+        "bucket_seconds": 3600,
+        "distinct": {
+          "action": 0,
+          "actor_id": 0,
+          "correlation_id": 0,
+          "result": 0,
+          "service": 0,
+          "session_id": 0,
+          "source_ip": 0,
+          "target_id": 0,
+          "user_agent": 0
+        },
+        "facets": {
+          "action": [],
+          "actor_id": [],
+          "correlation_id": [],
+          "result": [],
+          "service": [],
+          "session_id": [],
+          "source_ip": [],
+          "target_id": [],
+          "user_agent": []
+        },
+        "first_seen": null,
+        "from": "2026-10-21T19:47:55.956134Z",
+        "last_seen": null,
+        "series": [
+          {
+            "count": 0,
+            "start": "2026-10-21T19:00:00Z"
+          }
+        ],
+        "to": "2026-10-21T19:47:55.956134Z",
+        "total": 0
+      },
+      "request_id": "req_d7213693e729b873"
+    }
+  },
+  {
     "id": "audit-search",
     "service": "audit",
     "method": "POST",
@@ -45,17 +91,6 @@
     "responseExample": {
       "items": null,
       "request_id": "req_ceb47c7ea201c7d5"
-    }
-  },
-  {
-    "id": "audit-timeline",
-    "service": "audit",
-    "method": "GET",
-    "pathTemplate": "/audit/timeline/{{target_id}}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "responseExample": {
-      "items": null,
-      "request_id": "req_322e8fdd95e99c9a"
     }
   },
   {

@@ -74,6 +74,9 @@ type Store interface {
 	DeleteUnboundAPIKeys(ctx context.Context, tenantID string) (int64, error)
 
 	CreateSession(ctx context.Context, s Session) error
+	// TouchSession records a refreshed token on a session still on record;
+	// false means the session ended (signed out, or never on this node).
+	TouchSession(ctx context.Context, tenantID string, sessionID string, tokenHash []byte, expiresAt time.Time) (bool, error)
 	DeleteSession(ctx context.Context, tenantID string, sessionID string) error
 	DeleteUserSessions(ctx context.Context, tenantID string, userID string) error
 
@@ -1301,6 +1304,17 @@ INSERT INTO auth_sessions (
 ) VALUES ($1,$2,$3,$4,$5,$6,$7,CURRENT_TIMESTAMP)
 `, session.ID, session.TenantID, session.UserID, session.TokenHash, session.IPAddress, session.UserAgent, session.ExpiresAt)
 	return err
+}
+
+func (s *SQLStore) TouchSession(ctx context.Context, tenantID string, sessionID string, tokenHash []byte, expiresAt time.Time) (bool, error) {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE auth_sessions SET token_hash=$3, expires_at=$4 WHERE tenant_id=$1 AND id=$2
+`, tenantID, sessionID, tokenHash, expiresAt)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n == 1, err
 }
 
 func (s *SQLStore) DeleteSession(ctx context.Context, tenantID string, sessionID string) error {

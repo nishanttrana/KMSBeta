@@ -811,52 +811,6 @@ func (s *Service) GetExpiredKeys(ctx context.Context, tenantID string) ([]map[st
 	return report.ExpiringKeys, nil
 }
 
-func (s *Service) GetAuditCorrelations(ctx context.Context, tenantID string, limit int) ([]CorrelationItem, error) {
-	events, err := s.fetchEvents(ctx, tenantID, 1000)
-	if err != nil {
-		return nil, err
-	}
-	if limit <= 0 || limit > 100 {
-		limit = 20
-	}
-	grouped := map[string]*CorrelationItem{}
-	actionBuckets := map[string]map[string]int{}
-	for _, ev := range events {
-		corr := firstString(ev["correlation_id"], ev["session_id"], ev["id"])
-		if corr == "" {
-			continue
-		}
-		item, ok := grouped[corr]
-		if !ok {
-			item = &CorrelationItem{CorrelationID: corr}
-			grouped[corr] = item
-			actionBuckets[corr] = map[string]int{}
-		}
-		item.Count++
-		ts := parseTimeString(firstString(ev["timestamp"], ev["created_at"]))
-		if item.FirstSeen.IsZero() || (!ts.IsZero() && ts.Before(item.FirstSeen)) {
-			item.FirstSeen = ts
-		}
-		if item.LastSeen.IsZero() || (!ts.IsZero() && ts.After(item.LastSeen)) {
-			item.LastSeen = ts
-		}
-		act := firstString(ev["action"], ev["audit_action"])
-		if act != "" {
-			actionBuckets[corr][act]++
-		}
-	}
-	out := make([]CorrelationItem, 0, len(grouped))
-	for corr, item := range grouped {
-		item.TopActions = topActions(actionBuckets[corr], 3)
-		out = append(out, *item)
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Count > out[j].Count })
-	if len(out) > limit {
-		out = out[:limit]
-	}
-	return out, nil
-}
-
 func (s *Service) GetAuditAnomalies(ctx context.Context, tenantID string) ([]AnomalyItem, error) {
 	events, err := s.fetchEvents(ctx, tenantID, 1000)
 	if err != nil {
@@ -1655,26 +1609,6 @@ func withTenantGaps(tenantID string, frameworkID string, in []ComplianceGap) []C
 			g.DetectedAt = time.Now().UTC()
 		}
 		out = append(out, g)
-	}
-	return out
-}
-
-func topActions(m map[string]int, n int) []string {
-	type kv struct {
-		K string
-		V int
-	}
-	items := make([]kv, 0, len(m))
-	for k, v := range m {
-		items = append(items, kv{K: k, V: v})
-	}
-	sort.Slice(items, func(i, j int) bool { return items[i].V > items[j].V })
-	if len(items) > n {
-		items = items[:n]
-	}
-	out := make([]string, 0, len(items))
-	for _, it := range items {
-		out = append(out, it.K)
 	}
 	return out
 }

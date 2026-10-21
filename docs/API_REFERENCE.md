@@ -154,15 +154,29 @@ after repeated failures).
 
 ### POST /svc/auth/auth/logout
 
-Bearer required. No body. Invalidates token. Response: 204.
+Bearer (`auth.session.logout`). No body; a body is ignored. Ends the sign-in
+the verified token names (its `sid` claim), never one a request names, so a
+caller can end only its own session. The session's tokens then no longer
+refresh and lapse at their expiry (15 minutes at most); auth keeps no
+revocation list. Event `audit.auth.logout` with `session_id`. Response:
+`200 {"status": "ok"}` (13.42.0-beta: the console's logout sent no body and
+was refused with 400, so no session was ever ended).
 
 ---
 
 ### POST /svc/auth/auth/refresh
 
 Bearer (`auth.token.refresh`). No refresh tokens exist: the caller's
-current, still-valid token is exchanged for a new one. Response:
-`access_token`, `expires_at`.
+current, still-valid token is exchanged for a new one with the same `sid`.
+Response: `access_token`, `expires_at`. A token whose session has ended
+(signed out, signed in on another cluster node, or issued before
+13.42.0-beta with no `sid`) is refused with `401 session_ended` and audited
+as `audit.auth.refresh_refused` (`reason: session_ended`); the console then
+asks the user to sign in again.
+
+Signed-in tokens carry `sid`, the session's ID in `auth_sessions`, from
+login, SSO login and password change (13.42.0-beta). Every event a service's
+route kernel records for that token carries it as `session_id`.
 
 ---
 
@@ -1620,8 +1634,11 @@ OR-ed; matched literally, so `_` and `%` are not wildcards; the HSM tab uses
 `action_prefix=audit.hsm.&action_prefix=audit.key.hsm_`), `actor_id`,
 `result`, `target_id`, `session_id`, `correlation_id`, `risk_min`,
 `risk_max` (inclusive; 7.17.0-beta), `service` (7.17.0-beta),
+`source_ip` (the bare address) and `user_agent` (exact) (13.42.0-beta),
 `exclude_http_requests=true` (drops generic HTTP request records;
-7.17.0-beta), `from` and `to` (RFC 3339, inclusive), `order=asc` (oldest
+7.17.0-beta), `from` and `to` (RFC 3339, inclusive; a value that is not a
+time is refused with `400 bad_window` since 13.42.0-beta, where it was
+ignored), `order=asc` (oldest
 first with a stable tiebreak, for readers that follow a cursor; default
 newest first; 7.19.0-beta), `limit` (at most 1000), `offset`.
 Response: `{"items": [AuditEvent, ...], "request_id": "..."}`.
@@ -1651,6 +1668,33 @@ then whole days for at most 60 points), `total`, `by_result`,
 `GET /audit/events` returns for the same window with `exclude_http_requests`
 and the matching `result`, `service`, `actor_id`, `risk_min`/`risk_max`, or
 the bucket's `from`/`to` (`TestAuditStatsWindows`, on SQLite and Postgres).
+
+---
+
+### GET /svc/audit/audit/investigate
+
+Permission `audit.events.read`; kernel event `audit.audit.investigation_read`
+(details: each pivot given, and `total`); a malformed window is refused with
+`reason` `bad_window` (13.42.0-beta). The Audit Log → Investigate view.
+Query: the `GET /audit/events` filters (`actor_id`, `action`, `target_id`,
+`source_ip`, `user_agent`, `service`, `result`, `session_id`,
+`correlation_id`, `risk_min`, `risk_max`, `action_prefix`, `from`, `to`);
+generic HTTP request records are always left out. Response
+`{"investigation": {...}}`: `from`, `to` (without `from`, from the first
+matching event), `bucket_seconds`, `total`, `first_seen`, `last_seen`,
+`series` (`{start, count}`), `distinct` (how many different values of each
+of the nine dimensions) and `facets` (each dimension's ten commonest
+non-empty values, `{key, kind, count}`; `kind` is the actor's or target's
+type). Each count equals the number of events `GET /audit/events` returns
+with the same filters, `exclude_http_requests=true` and that value added
+(`TestInvestigateCountsListTheirEvents`, on SQLite and Postgres).
+
+`GET /audit/timeline/{target_id}`, `GET /audit/session/{session_id}` and
+`GET /audit/correlation/{id}` are removed (13.42.0-beta): use
+`GET /audit/events?target_id=`, `session_id=` or `correlation_id=`. They
+were on the legacy mux, so reads through them were never audited. The
+compliance service's `GET /compliance/audit/correlations`, which grouped a
+sample of the newest 1,000 events, is removed too.
 
 ---
 
@@ -4297,6 +4341,7 @@ Selected events with dedicated audit classification:
 - `audit.key.rotation_policies_listed`, `audit.key.rotation_policy_created`, `audit.key.rotation_policy_updated`, `audit.key.rotation_policy_deleted`, `audit.key.rotation_policy_triggered`, `audit.key.rotation_runs_listed`, `audit.key.rotation_upcoming_listed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.key.rotation_policy_run` (scheduled run; `result: failure` when any key failed): key rotation policies
 - `audit.audit.checkpoints_listed` (kernel event for `GET /audit/checkpoints`; details `checkpoints`, `failed`), `audit.audit.checkpoint_signed` (a signed chain head: `chain_node`, `sequence`, `chain_hash`, `signed_at`, `key_id`, `algorithm`, `signature`), `audit.audit.checkpoint_key_created` (root; `target_id` key ID, `public_key_pem`), `audit.audit.checkpoint_refused` (`reason` `key_generation_failed`/`signing_failed`), `audit.audit.event_hmac_key_installed` (root; HMAC key derived from the audit master key; `mek_version`, `unavailable_mek_versions`).
 - `audit.audit.activity_stats_read` (kernel event for `GET /audit/activity/stats`, 7.17.0-beta; details `from`, `to`, `total`; refusals `result: refused`, `reason` `bad_window` or the kernel's).
+- `audit.audit.investigation_read` (kernel event for `GET /audit/investigate`, 13.42.0-beta; details: each pivot given and `total`, so who investigated whom is on record; refusals `result: refused`, `reason` `bad_window` or the kernel's).
 - `audit.audit.target_integrity_verified` (kernel event for `GET /audit/targets/{target_id}/integrity`; details `verdict`, `events_checked`, `failed`), `audit.audit.chain_broken` (critical; `scope: target` with `target_id` and per-event `breaks`, or the whole tenant chain; `break_count`). Published on the `AUDIT` stream (recorded by ingest, directly if the publish fails), so playbooks can trigger on it: audit trail integrity
 - `audit.key.key_consumers_read` (kernel event for `GET /keys/{id}/consumers`; detail `consumers`): a key's callers and rotate/delete impact
 - `audit.key.public_key_read` (kernel event for `GET /keys/{id}/public-key`; details `algorithm`, `version`; refusals `not_asymmetric`, `key_deleted`, `spki_unavailable` and the kernel's own): an asymmetric key's public key read (6.18.0-beta)
@@ -4310,6 +4355,7 @@ Selected events with dedicated audit classification:
 - `audit.key.agility_drill_run`, `audit.key.agility_drills_listed` (swap drill kernel events, above), `audit.key.caraf_*` (risk assessment kernel events, above), `audit.key.crypto_policy_refused` (a key operation refused by the tenant's migration policy; `result: refused`, `reason`, `operation`, `algorithm`, `key_id`, `rule_id`, `rule_name`, `rule_action`), `audit.key.agility_policy_rules_listed`, `audit.key.agility_policy_rule_created`, `audit.key.agility_policy_rule_updated`, `audit.key.agility_policy_rule_deleted` (kernel events; refusals `result: refused`)
 - `audit.key.algorithm_changed` (a rotation moved the key to `to_algorithm` under the same key ID; `from_algorithm`, `version`), `audit.key.algorithm_change_refused` (`result: refused`, `reason`), `audit.key.ciphertext_rewrapped` (kernel event; refusals as below): crypto agility under a stable key ID
 - `audit.key.agility_posture_read`, `audit.key.agility_inventory_read`, `audit.key.agility_keys_by_algorithm_read` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`): crypto agility
+- `audit.auth.refresh_refused` (`reason: session_ended`, `session_id`): a token whose sign-in ended asked to be renewed; answered `401 session_ended` (13.42.0-beta)
 - `audit.auth.login`, `audit.auth.logout`, `audit.auth.mfa_verified`
 - `audit.auth.scim_user_provisioned`, `audit.auth.scim_user_deprovisioned`
 - `audit.auth.scim_settings_updated`, `audit.auth.scim_token_rotated`
@@ -4412,16 +4458,14 @@ from the code; do not edit by hand.
 - `POST /svc/audit/audit/cluster/signing-key/import`
 - `POST /svc/audit/audit/cluster/signing-key/join-key`
 - `GET /svc/audit/audit/config`
-- `GET /svc/audit/audit/correlation/{id}`
 - `GET /svc/audit/audit/events`
 - `GET /svc/audit/audit/events/{id}`
 - `GET /svc/audit/audit/fips/boundary`
+- `GET /svc/audit/audit/investigate`
 - `POST /svc/audit/audit/publish`
 - `POST /svc/audit/audit/search`
-- `GET /svc/audit/audit/session/{session_id}`
 - `GET /svc/audit/audit/stream`
 - `GET /svc/audit/audit/targets/{target_id}/integrity`
-- `GET /svc/audit/audit/timeline/{target_id}`
 - `GET /svc/audit/metrics`
 - `GET /svc/audit/ops-metrics/by-service`
 - `GET /svc/audit/ops-metrics/errors`
@@ -4683,6 +4727,8 @@ from the code; do not edit by hand.
 
 ### cluster-manager (`/svc/cluster/`)
 
+- `POST /svc/cluster/cluster/failover/promote`
+- `GET /svc/cluster/cluster/failover/status`
 - `ANY /svc/cluster/cluster/forward/{svc}/{rest...}`
 - `POST /svc/cluster/cluster/join/complete`
 - `POST /svc/cluster/cluster/join/connect`
@@ -4695,13 +4741,16 @@ from the code; do not edit by hand.
 - `DELETE /svc/cluster/cluster/nodes/{id}`
 - `POST /svc/cluster/cluster/nodes/{id}/heartbeat`
 - `GET /svc/cluster/cluster/overview`
+- `POST /svc/cluster/cluster/peer/announce`
+- `POST /svc/cluster/cluster/peer/fence`
+- `POST /svc/cluster/cluster/peer/heartbeat`
+- `POST /svc/cluster/cluster/peer/resubscribe`
+- `GET /svc/cluster/cluster/peer/status`
+- `POST /svc/cluster/cluster/peer/vote`
 - `GET /svc/cluster/cluster/profiles`
 - `POST /svc/cluster/cluster/profiles`
 - `DELETE /svc/cluster/cluster/profiles/{id}`
 - `GET /svc/cluster/cluster/replication/status`
-- `GET /svc/cluster/cluster/failover/status`: this node's role, epoch, lease and the peers it knows (13.37.0-beta)
-- `POST /svc/cluster/cluster/failover/promote`: body `{"confirm": true, "force": false, "reason"}`; promotes the node it is sent to. `409 primary_reachable_check_failed` when the primary does not answer and `force` is not set, `409 not_promotable` without `CLUSTER_ADVERTISE_URL` / `CLUSTER_PG_ADVERTISE_HOST`, `409 not_a_member`
-- `POST /cluster/peer/heartbeat`, `POST /cluster/peer/resubscribe` (member's forwarding credential), `GET /cluster/peer/status`, `POST /cluster/peer/vote`, `POST /cluster/peer/announce`, `POST /cluster/peer/fence` (peer-secret signature: `X-Vecta-Peer-Node`, `X-Vecta-Peer-Time`, `X-Vecta-Peer-Signature`): node to node on the cluster-manager port, not through the edge
 - `POST /svc/cluster/cluster/sync/ack`
 - `GET /svc/cluster/cluster/sync/checkpoint`
 - `GET /svc/cluster/cluster/sync/events`
@@ -4717,7 +4766,6 @@ from the code; do not edit by hand.
 - `GET /svc/compliance/compliance/assessment/schedule`
 - `PUT /svc/compliance/compliance/assessment/schedule`
 - `GET /svc/compliance/compliance/audit/anomalies`
-- `GET /svc/compliance/compliance/audit/correlations`
 - `GET /svc/compliance/compliance/cbom`
 - `GET /svc/compliance/compliance/cbom/diff`
 - `GET /svc/compliance/compliance/cbom/export`
@@ -4958,6 +5006,7 @@ from the code; do not edit by hand.
 - `POST /svc/hyok/api/v1/keys/{id}/{version}/decrypt`
 - `POST /svc/hyok/hyok/alibaba/v1/keys/{id}/decrypt`
 - `POST /svc/hyok/hyok/alibaba/v1/keys/{id}/encrypt`
+- `GET /svc/hyok/hyok/credential-usage`
 - `POST /svc/hyok/hyok/dke/v1/keys/{id}/decrypt`
 - `GET /svc/hyok/hyok/dke/v1/keys/{id}/publickey`
 - `POST /svc/hyok/hyok/generic/v1/keys/{id}/decrypt`
@@ -4975,6 +5024,9 @@ from the code; do not edit by hand.
 - `PUT /svc/hyok/hyok/v1/endpoints/{protocol}`
 - `GET /svc/hyok/hyok/v1/health`
 - `GET /svc/hyok/hyok/v1/requests`
+- `GET /svc/hyok/oci/{rest...}`
+- `POST /svc/hyok/oci/{rest...}`
+- `POST /svc/hyok/xks/{rest...}`
 
 ### keyaccess (`/svc/keyaccess/`)
 
@@ -5297,6 +5349,14 @@ from the code; do not edit by hand.
 - `POST /svc/secrets/secrets/access/rules`
 - `DELETE /svc/secrets/secrets/access/rules/{rule_id}`
 - `GET /svc/secrets/secrets/access/rules/{rule_id}/impact`
+- `GET /svc/secrets/secrets/credential-usage`
+- `GET /svc/secrets/secrets/database/leases`
+- `POST /svc/secrets/secrets/database/leases/{id}/renew`
+- `POST /svc/secrets/secrets/database/leases/{id}/revoke`
+- `GET /svc/secrets/secrets/database/roles`
+- `DELETE /svc/secrets/secrets/database/roles/{name}`
+- `PUT /svc/secrets/secrets/database/roles/{name}`
+- `POST /svc/secrets/secrets/database/roles/{name}/creds`
 - `POST /svc/secrets/secrets/generate/keypair`
 - `POST /svc/secrets/secrets/generate/ssh_key`
 - `GET /svc/secrets/secrets/settings`
@@ -5319,6 +5379,7 @@ from the code; do not edit by hand.
 - `GET /svc/secrets/secrets/{id}/versions`
 - `DELETE /svc/secrets/secrets/{id}/versions/{version}`
 - `POST /svc/secrets/v1/auth/token/lookup-self`
+- `GET /svc/secrets/v1/database/creds/{name}`
 - `GET /svc/secrets/v1/sys/health`
 - `GET /svc/secrets/v1/sys/seal-status`
 - `DELETE /svc/secrets/v1/{mount}/data/{path...}`

@@ -20,6 +20,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"vecta-kms/pkg/correlation"
 )
 
 const apiKeyDerivationLabel = "kms-service-api-key:"
@@ -172,6 +174,11 @@ func (s *Source) Token(ctx context.Context) (string, error) {
 // any minting error it leaves the request unauthenticated (so a rollout in
 // progress, or an auth blip, never hard-fails the call).
 func (s *Source) Authorize(ctx context.Context, req *http.Request) {
+	// Every internal call passes this way, so it also carries the
+	// correlation ID of the request that caused it (pkg/correlation).
+	if id := correlation.From(ctx); id != "" && req.Header.Get(correlation.Header) == "" {
+		req.Header.Set(correlation.Header, id)
+	}
 	if s == nil {
 		return
 	}

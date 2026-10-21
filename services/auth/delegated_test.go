@@ -94,7 +94,7 @@ func TestDelegatedRoutesRefusalsAudited(t *testing.T) {
 // user (even an administrator), not another platform service.
 func TestDelegationOnlyForComplianceService(t *testing.T) {
 	d := newDelegatedHarness(t)
-	admin, _, _ := d.logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "u-admin", false)
+	admin, _, _ := d.logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "u-admin", false, "")
 	for _, tok := range []string{admin, d.token(t, "kms-keycore")} {
 		if w := d.call(t, "/auth/delegated/users/u-target/disable", tok, delegate("u-admin")); w.Code != http.StatusForbidden {
 			t.Fatalf("non-compliance caller: %d %s", w.Code, w.Body.String())
@@ -236,7 +236,7 @@ func TestAuthorityCheckForDiscoveryOnly(t *testing.T) {
 		t.Fatalf("discovery acted on a user: %d %s", w.Code, w.Body.String())
 	}
 	wantAuthRefusal(t, d.last(t), "delegated_user_disabled", reasonServiceIdentityRequired)
-	admin, _, _ := d.logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "u-admin", false)
+	admin, _, _ := d.logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "u-admin", false, "")
 	for _, tok := range []string{admin, d.token(t, "kms-keycore")} {
 		if w := d.call(t, "/auth/delegated/authority", tok, map[string]any{"user_id": "u-ops", "permissions": []string{"key.rotate"}}); w.Code != http.StatusForbidden {
 			t.Fatalf("authority check by another caller: %d %s", w.Code, w.Body.String())

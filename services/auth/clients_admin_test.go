@@ -27,7 +27,7 @@ func newClientAdminHarness(t *testing.T) *clientAdminHarness {
 	h, logic, store, pub := newTestHandler(t)
 	rec := &routetest.Recorder{}
 	h.kernelAudit = rec
-	admin, _, err := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "u-admin", false)
+	admin, _, err := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "u-admin", false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,13 +58,17 @@ func (c *clientAdminHarness) registerAndActivate(t *testing.T) (string, string) 
 	if w.Code != http.StatusOK {
 		t.Fatalf("register: %d %s", w.Code, w.Body.String())
 	}
-	var reg struct{ RegistrationID string `json:"registration_id"` }
+	var reg struct {
+		RegistrationID string `json:"registration_id"`
+	}
 	_ = json.Unmarshal(w.Body.Bytes(), &reg)
 	w = c.asAdmin(t, http.MethodPost, "/auth/register/"+reg.RegistrationID+"/activate", `{"tenant_id":"t1"}`)
 	if w.Code != http.StatusOK {
 		t.Fatalf("activate: %d %s", w.Code, w.Body.String())
 	}
-	var out struct{ APIKey string `json:"api_key"` }
+	var out struct {
+		APIKey string `json:"api_key"`
+	}
 	_ = json.Unmarshal(w.Body.Bytes(), &out)
 	return reg.RegistrationID, out.APIKey
 }
@@ -100,7 +104,9 @@ func TestRotatedClientKeyWorksAndOldKeyStops(t *testing.T) {
 	if ev := c.rec.Last(t); ev.Action != "client_key_rotated" || ev.Event.Result != route.ResultSuccess || ev.Event.TargetID != id {
 		t.Fatalf("rotation audit: %+v", ev)
 	}
-	var out struct{ APIKey string `json:"api_key"` }
+	var out struct {
+		APIKey string `json:"api_key"`
+	}
 	_ = json.Unmarshal(w.Body.Bytes(), &out)
 	if code := c.clientToken(t, id, out.APIKey); code != http.StatusOK {
 		t.Fatalf("rotated key refused: %d", code)
@@ -132,7 +138,9 @@ func TestRevokedClientKeyStops(t *testing.T) {
 func TestPendingClientKeyRotationRefused(t *testing.T) {
 	c := newClientAdminHarness(t)
 	w := c.do(t, http.MethodPost, "/auth/register", nil, `{"tenant_id":"t1","client_name":"pending-one"}`)
-	var reg struct{ RegistrationID string `json:"registration_id"` }
+	var reg struct {
+		RegistrationID string `json:"registration_id"`
+	}
 	_ = json.Unmarshal(w.Body.Bytes(), &reg)
 	if w := c.asAdmin(t, http.MethodPost, "/auth/clients/"+reg.RegistrationID+"/rotate-key", `{}`); w.Code != http.StatusConflict {
 		t.Fatalf("rotate pending: %d %s", w.Code, w.Body.String())

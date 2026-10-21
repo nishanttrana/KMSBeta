@@ -167,6 +167,45 @@ Until their messages age out of the stream (90 days after the upgrade), a
 replay would still duplicate them, so a lost consumer position is repaired
 by hand (docs/OPERATIONS_GUIDE.md).
 
+## Addresses on Postgres (13.42.0-beta)
+
+`source_ip` is an `INET` column on Postgres, and an `INET` read as text
+carries its prefix length (`192.0.2.1/32`, `2001:db8::7/128`). The chain hash
+is computed over the bare address `PersistEvent` normalises. Until
+13.42.0-beta the walk read the prefixed form, so on Postgres every event with
+an address failed with `chain_hash_mismatch`: on the live stack Verify Chain
+answered `ok: false` and the hourly full walk had never passed
+(`last_full_verification: null`). No row had been changed. No Postgres chain
+test stored an address, and SQLite stores the text as written.
+
+Rows are now read with `storedSourceIP`, which drops the prefix and
+normalises the address as it was hashed, in the walk, the per-target proof,
+checkpoint signing and the event list. Stored rows are not rewritten: they
+verify again as they are. An address changed in the table is still a break
+(`TestChainVerifiesEventsWithAnAddressPostgres`). A row's hash input is read
+in the form it was hashed in, and the Postgres test of a hash stores every
+field the hash covers (CLAUDE.md, "Integrity and audit").
+
+## Sessions and requests (13.42.0-beta)
+
+`session_id` and `correlation_id` are recorded for every event a route
+kernel emits, so an investigation can follow one sign-in or one request
+across services. Neither is identity or a control; both come from places
+a caller can't write:
+
+- `session_id` is the `sid` claim of the verified token (auth sets it at
+  sign-in and keeps it on refresh).
+- `correlation_id` is the request ID of the first service the request
+  reached, carried to every service it calls by `servicetoken.Authorize`
+  (`pkg/correlation`). The edge removes `X-Correlation-ID` from outside
+  requests (`infra/envoy/envoy.yaml`;
+  `TestEdgeRemovesTheCorrelationHeaderOnRealEnvoy`), so a caller can't join
+  its events to another request's. A background job starts its own.
+
+Before 13.42.0-beta no event carried a session (0 of 32,827 in the last
+week on the live stack), and 82 of 31,235 correlation IDs spanned more than
+one service: each service started its own.
+
 ## The write-ahead buffer (13.20.0-beta)
 
 With `AUDIT_FAIL_CLOSED=false`, audit buffers events on disk while Postgres

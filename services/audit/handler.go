@@ -72,9 +72,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /audit/publish", h.handlePublish)
 	mux.HandleFunc("GET /audit/events", h.handleEvents)
 	mux.HandleFunc("GET /audit/events/{id}", h.handleEvent)
-	mux.HandleFunc("GET /audit/timeline/{target_id}", h.handleTimeline)
-	mux.HandleFunc("GET /audit/session/{session_id}", h.handleSession)
-	mux.HandleFunc("GET /audit/correlation/{id}", h.handleCorrelation)
 	mux.HandleFunc("POST /audit/search", h.handleSearch)
 	mux.HandleFunc("GET /audit/chain/verify", h.handleChainVerify)
 	mux.HandleFunc("GET /audit/stream", h.handleStream)
@@ -84,6 +81,8 @@ func (h *Handler) routes() *http.ServeMux {
 	h.integrityRouter(selfEmitter{h.svc}).MountOn(mux)
 	// Activity statistics for the Audit Log charts (stats.go).
 	h.statsRouter(selfEmitter{h.svc}).MountOn(mux)
+	// Investigate: who, what, where, how and outcome for any pivot (investigate.go).
+	h.investigateRouter(selfEmitter{h.svc}).MountOn(mux)
 
 	// Cluster audit signing key transfer (cluster-manager only; cluster.go).
 	mux.HandleFunc("POST /audit/cluster/signing-key/join-key", h.handleClusterKeyJoinKey)
@@ -183,24 +182,11 @@ func (h *Handler) handleEvents(w http.ResponseWriter, r *http.Request) {
 	if tenantID == "" {
 		return
 	}
-	q := EventQuery{
-		Action:              strings.TrimSpace(r.URL.Query().Get("action")),
-		ActionPrefixes:      r.URL.Query()["action_prefix"],
-		ActorID:             strings.TrimSpace(r.URL.Query().Get("actor_id")),
-		Result:              strings.TrimSpace(r.URL.Query().Get("result")),
-		TargetID:            strings.TrimSpace(r.URL.Query().Get("target_id")),
-		SessionID:           strings.TrimSpace(r.URL.Query().Get("session_id")),
-		CorrelationID:       strings.TrimSpace(r.URL.Query().Get("correlation_id")),
-		RiskMin:             atoi(r.URL.Query().Get("risk_min")),
-		RiskMax:             atoi(r.URL.Query().Get("risk_max")),
-		Service:             strings.TrimSpace(r.URL.Query().Get("service")),
-		ExcludeHTTPRequests: r.URL.Query().Get("exclude_http_requests") == "true",
-		Ascending:           r.URL.Query().Get("order") == "asc",
-		Limit:               atoi(r.URL.Query().Get("limit")),
-		Offset:              atoi(r.URL.Query().Get("offset")),
+	q, ok := eventQueryFrom(r)
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "bad_window", "from and to must be RFC 3339 times", reqID, tenantID)
+		return
 	}
-	q.From = parseTS(r.URL.Query().Get("from"))
-	q.To = parseTS(r.URL.Query().Get("to"))
 	items, err := h.store.QueryEvents(r.Context(), tenantID, q)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
@@ -225,60 +211,6 @@ func (h *Handler) handleEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"event": item, "request_id": reqID})
-}
-
-func (h *Handler) handleTimeline(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	items, err := h.store.QueryEvents(r.Context(), tenantID, EventQuery{
-		TargetID: r.PathValue("target_id"),
-		Limit:    atoi(r.URL.Query().Get("limit")),
-		Offset:   atoi(r.URL.Query().Get("offset")),
-	})
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
-}
-
-func (h *Handler) handleSession(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	items, err := h.store.QueryEvents(r.Context(), tenantID, EventQuery{
-		SessionID: r.PathValue("session_id"),
-		Limit:     atoi(r.URL.Query().Get("limit")),
-		Offset:    atoi(r.URL.Query().Get("offset")),
-	})
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
-}
-
-func (h *Handler) handleCorrelation(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	items, err := h.store.QueryEvents(r.Context(), tenantID, EventQuery{
-		CorrelationID: r.PathValue("id"),
-		Limit:         atoi(r.URL.Query().Get("limit")),
-		Offset:        atoi(r.URL.Query().Get("offset")),
-	})
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
 }
 
 func (h *Handler) handleSearch(w http.ResponseWriter, r *http.Request) {

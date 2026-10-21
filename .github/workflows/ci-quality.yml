@@ -232,10 +232,10 @@ jobs:
           VECTA_TEST_ENVOY_IMAGE: envoyproxy/envoy:v1.39.1
         run: go test -count=1 -run 'RealEnvoy' ./services/certs
 
-      - name: The address the edge appends, on a real Envoy (pkg/clientip)
+      - name: The address the edge appends and the headers it removes, on a real Envoy (pkg/clientip, pkg/correlation)
         env:
           VECTA_TEST_ENVOY_IMAGE: envoyproxy/envoy:v1.39.1
-        run: go test -count=1 -run 'RealEnvoy' ./pkg/clientip
+        run: go test -count=1 -run 'RealEnvoy' ./pkg/clientip ./pkg/correlation
 
   dashboard-quality:
     name: Dashboard Lint/Type/Unit/Build/Smoke

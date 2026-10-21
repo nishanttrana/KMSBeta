@@ -32,7 +32,7 @@ func TestClusterMintOnlyForClusterManager(t *testing.T) {
 		}
 		return tok
 	}
-	user, _, _ := logic.IssueJWT("root", "admin", []string{"*"}, "u-admin", false)
+	user, _, _ := logic.IssueJWT("root", "admin", []string{"*"}, "u-admin", false, "")
 	body := map[string]any{"forwarded_by": "node-2", "claims": pkgauth.Claims{TenantID: "t1", Role: "tenant-admin", UserID: "alice"}}
 
 	for name, bearer := range map[string]string{"none": "", "admin user": user, "other service": service("kms-keycore")} {

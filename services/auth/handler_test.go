@@ -83,11 +83,11 @@ func TestHandlerRegisterActivateFlow(t *testing.T) {
 		t.Fatal("registration_id missing")
 	}
 
-	token, _, err := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false)
+	token, _, err := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	scoped, _, err := logic.IssueJWT("t1", "operator", []string{"auth.client.activate"}, "op-1", false)
+	scoped, _, err := logic.IssueJWT("t1", "operator", []string{"auth.client.activate"}, "op-1", false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,7 +319,7 @@ func TestHandlerRejectsDisabledUserLogin(t *testing.T) {
 
 func TestHandlerUserCreateHonorsPasswordPolicy(t *testing.T) {
 	h, logic, _, _ := newTestHandlerWithRoles(t)
-	adminToken, _, err := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false)
+	adminToken, _, err := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -389,7 +389,7 @@ func TestHandlerCLIResetRequiresAdmin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	nonAdminToken, _, err := logic.IssueJWT("t1", "readonly", []string{"auth.user.write"}, "user-1", false)
+	nonAdminToken, _, err := logic.IssueJWT("t1", "readonly", []string{"auth.user.write"}, "user-1", false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -406,7 +406,7 @@ func TestHandlerCLIResetRequiresAdmin(t *testing.T) {
 		t.Fatalf("expected forbidden for non-admin reset, got %d body=%s", forbiddenRR.Code, forbiddenRR.Body.String())
 	}
 
-	adminToken, _, err := logic.IssueJWT("t1", "admin", []string{"*"}, "admin-1", false)
+	adminToken, _, err := logic.IssueJWT("t1", "admin", []string{"*"}, "admin-1", false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -449,7 +449,7 @@ VALUES ('apr-delete','t-delete','tenant.delete','tenant','t-delete','approved')
 		t.Fatal(err)
 	}
 
-	superToken, _, err := logic.IssueJWT("root", "tenant-admin", []string{"*"}, "root-admin", false)
+	superToken, _, err := logic.IssueJWT("root", "tenant-admin", []string{"*"}, "root-admin", false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -512,7 +512,7 @@ VALUES ('apr-disable-block','t-disable','tenant.disable','tenant','t-disable','a
 		t.Fatal(err)
 	}
 
-	superToken, _, err := logic.IssueJWT("root", "tenant-admin", []string{"*"}, "root-admin", false)
+	superToken, _, err := logic.IssueJWT("root", "tenant-admin", []string{"*"}, "root-admin", false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -531,7 +531,7 @@ func TestHandlerTenantLifecycleWithoutPlatformQuorumAllowsNoApprovalID(t *testin
 	if err := store.CreateTenant(context.Background(), Tenant{ID: "t-noquorum", Name: "No Quorum", Status: "active"}); err != nil {
 		t.Fatal(err)
 	}
-	superToken, _, err := logic.IssueJWT("root", "tenant-admin", []string{"*"}, "root-admin", false)
+	superToken, _, err := logic.IssueJWT("root", "tenant-admin", []string{"*"}, "root-admin", false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -564,7 +564,7 @@ VALUES ('pol-quorum','t-quorum','kms-platform-governance-default','platform','["
 `); err != nil {
 		t.Fatal(err)
 	}
-	superToken, _, err := logic.IssueJWT("root", "tenant-admin", []string{"*"}, "root-admin", false)
+	superToken, _, err := logic.IssueJWT("root", "tenant-admin", []string{"*"}, "root-admin", false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -646,7 +646,7 @@ VALUES ('t1','grp-audit','u-readonly')
 		t.Fatal(err)
 	}
 
-	adminToken, _, err := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false)
+	adminToken, _, err := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -688,7 +688,7 @@ VALUES ('t1','grp-audit','u-readonly')
 
 func TestHandlerIdentityProviderConfigRoundTrip(t *testing.T) {
 	h, logic, _, _ := newTestHandlerWithRoles(t)
-	adminToken, _, err := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false)
+	adminToken, _, err := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -737,7 +737,7 @@ func TestHandlerIdentityProviderConfigRoundTrip(t *testing.T) {
 
 func TestHandlerImportIdentityUsersFromPayload(t *testing.T) {
 	h, logic, store, _ := newTestHandler(t)
-	adminToken, _, err := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false)
+	adminToken, _, err := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false, "")
 	if err != nil {
 		t.Fatal(err)
 	}

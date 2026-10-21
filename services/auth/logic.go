@@ -45,7 +45,9 @@ func (a *AuthLogic) ParseJWT(token string) (*pkgauth.Claims, error) {
 	})
 }
 
-func (a *AuthLogic) IssueJWT(tenantID string, role string, permissions []string, userID string, mustChangePassword bool) (string, time.Time, error) {
+// IssueJWT signs a user's token. sessionID names the sign-in (auth_sessions)
+// the token belongs to; a refresh passes the same one.
+func (a *AuthLogic) IssueJWT(tenantID string, role string, permissions []string, userID string, mustChangePassword bool, sessionID string) (string, time.Time, error) {
 	expiresAt := time.Now().UTC().Add(a.tokenTTL)
 	claims := &pkgauth.Claims{
 		TenantID:           tenantID,
@@ -53,6 +55,7 @@ func (a *AuthLogic) IssueJWT(tenantID string, role string, permissions []string,
 		Permissions:        permissions,
 		UserID:             userID,
 		MustChangePassword: mustChangePassword,
+		SessionID:          sessionID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    a.issuer,
 			Audience:  jwt.ClaimStrings{a.audience},
@@ -81,6 +84,7 @@ func (a *AuthLogic) IssueForwardedJWT(src *pkgauth.Claims, forwardedBy string) (
 		WorkloadIdentity:    src.WorkloadIdentity,
 		WorkloadTrustDomain: src.WorkloadTrustDomain,
 		AllowedKeyIDs:       src.AllowedKeyIDs,
+		SessionID:           src.SessionID,
 		ForwardedBy:         forwardedBy,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   src.Subject,

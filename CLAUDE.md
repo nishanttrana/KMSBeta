@@ -777,6 +777,14 @@ Security rules are explained in
 - Data kept for an outage (a write-ahead buffer) and the key that protects
   it live on the service's own volume together; a record that fails its
   check is quarantined and audited, never skipped (13.20).
+- A row's hash input is read in the form it was hashed in (an `INET`
+  reads back as `192.0.2.1/32`), and the Postgres test of a hash stores
+  every field the hash covers: every event with an address failed the
+  chain walk on Postgres until 13.42.0-beta
+  (`TestChainVerifiesEventsWithAnAddressPostgres`).
+- A field that links audit events (session, request) is tested from where
+  it is set to the event stored by the next service, and the edge strips
+  any such header from outside callers (13.42.0-beta; `pkg/correlation`).
 - A consumer that writes a record per stream message keys it on the
   message's identity, so a redelivery finds the row it already wrote:
   JetStream redelivers on a lost ack, and replays the stream when a

@@ -5,6 +5,30 @@ Newest entries on top.
 
 ## 2026-10-22
 
+### The audit trail's links were never tested end to end (13.42.0-beta)
+- Building Investigate meant reading what the trail can actually link, on
+  the live database. Four faults showed up, none of them caught by a test:
+  - Verify Chain failed on Postgres for every event with an address
+    (`/32`: `INET` read back as text), and the full walk had never passed.
+    No Postgres chain test stored an address.
+  - `session_id` was empty on all 32,827 events of the week: no token carried
+    a session, so Forensics → Session could never return anything.
+  - Logout was refused (the console sends no body; the handler required
+    one), so sign-out ended nothing and was never audited. `auth_sessions` was
+    written and never read.
+  - Correlation IDs didn't cross services: the kernel read the header, but
+    no client ever sent it.
+- **A row's hash input is read in the form it was hashed in, and the
+  Postgres test of a hash stores every field the hash covers.**
+- **A field the audit trail records to link events (session, request) is
+  tested from where it starts to the stored event in the next service**
+  (`TestCorrelationFollowsTheRequestToTheNextService`,
+  `TestSessionFollowsRefreshAndEndsAtSignOut`).
+- docs/GOVERNANCE_AND_COMPLIANCE.md listed audit query parameters that
+  don't exist (`min_risk_score`, `date_from`, `tag`, `has_approval`,
+  `actor_type`, ...). They are corrected against `eventQueryFrom`. The
+  DSAR walkthrough relied on `tag` and is rewritten.
+
 ### Dead code hid an unenforced control and a forgeable key (13.41.0-beta)
 - `deadcode -test ./...` listed `IsIPAllowed` in auth: the only check of a
   REST client's `ip_whitelist`, which the REST API tab let an admin set.

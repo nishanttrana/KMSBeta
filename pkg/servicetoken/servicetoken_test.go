@@ -1,9 +1,13 @@
 package servicetoken
 
 import (
+	"context"
 	"errors"
+	"net/http"
 	"strings"
 	"testing"
+
+	"vecta-kms/pkg/correlation"
 )
 
 func TestValidateBootstrapSecret(t *testing.T) {
@@ -44,5 +48,31 @@ func TestDeriveAPIKeyStrongSecret(t *testing.T) {
 	}
 	if a == InsecureDefaultAPIKey("kms-keycore") {
 		t.Fatal("strong-secret key must differ from the insecure default key")
+	}
+}
+
+// Every internal call goes through Authorize, so it is where a request's
+// correlation ID leaves for the next service (pkg/correlation). It is sent
+// even without a configured source, and never replaces one already set.
+func TestAuthorizeCarriesTheCorrelationID(t *testing.T) {
+	ctx := correlation.With(context.Background(), "corr_1")
+
+	req, _ := http.NewRequest(http.MethodGet, "https://keycore:8010/keys", nil)
+	(*Source)(nil).Authorize(ctx, req)
+	if got := req.Header.Get(correlation.Header); got != "corr_1" {
+		t.Fatalf("correlation header %q, want corr_1", got)
+	}
+
+	req, _ = http.NewRequest(http.MethodGet, "https://keycore:8010/keys", nil)
+	req.Header.Set(correlation.Header, "corr_set_by_caller")
+	Authorize(ctx, req)
+	if got := req.Header.Get(correlation.Header); got != "corr_set_by_caller" {
+		t.Fatalf("correlation header %q, want the one the caller set", got)
+	}
+
+	req, _ = http.NewRequest(http.MethodGet, "https://keycore:8010/keys", nil)
+	Authorize(context.Background(), req)
+	if got := req.Header.Get(correlation.Header); got != "" {
+		t.Fatalf("a context without a correlation sent %q", got)
 	}
 }

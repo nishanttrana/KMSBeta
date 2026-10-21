@@ -39,17 +39,14 @@ func TestAuditReadsCarryServiceIdentity(t *testing.T) {
 	}
 }
 
-// An unreachable or refusing audit makes posture, correlations and anomalies
-// fail, not score or report over zero events.
+// An unreachable or refusing audit makes posture and anomalies fail, not
+// score or report over zero events.
 func TestAuditFailureIsNotEmptyData(t *testing.T) {
 	svc, _, _, _, audit, _, _ := newComplianceService(t)
 	audit.err = errors.New("401 Unauthorized: request failed")
 	ctx := context.Background()
 	if _, err := svc.RecomputePosture(ctx, "t1"); err == nil {
 		t.Fatal("posture recomputed without audit events")
-	}
-	if _, err := svc.GetAuditCorrelations(ctx, "t1", 10); err == nil {
-		t.Fatal("correlations returned without audit events")
 	}
 	if _, err := svc.GetAuditAnomalies(ctx, "t1"); err == nil {
 		t.Fatal("anomalies returned without audit events")

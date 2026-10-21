@@ -19,7 +19,7 @@ func TestRESTExamplesMatchTheService(t *testing.T) {
 	if err := h.ensureTenantDefaults(context.Background(), "root"); err != nil {
 		t.Fatal(err)
 	}
-	token, _, err := logic.IssueJWT("root", "tenant-admin", []string{"*"}, "admin-1", false)
+	token, _, err := logic.IssueJWT("root", "tenant-admin", []string{"*"}, "admin-1", false, "")
 	if err != nil {
 		t.Fatal(err)
 	}

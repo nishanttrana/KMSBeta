@@ -280,6 +280,11 @@ voters and, on a member, **Promote this node**.
 
 ## Operating notes
 
+- **Sign-ins belong to the node that issued them** (`auth_sessions` is
+  node-local). Since 13.42.0-beta a token renews only on a node that holds its
+  session, so a user moved to another node (a failover, or a load balancer
+  without affinity) signs in again there at the next refresh, within 15
+  minutes. Put the console behind affinity per user if that matters.
 - Postgres runs with `wal_level=logical`, `max_replication_slots=64`,
   `max_wal_senders=64`, `max_worker_processes=96`,
   `max_logical_replication_workers=64` and

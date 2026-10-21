@@ -54,7 +54,7 @@ func newTenantAdminHarness(t *testing.T) *tenantAdminHarness {
 
 func (a *tenantAdminHarness) token(t *testing.T, tenant, role, userID string, perms ...string) string {
 	t.Helper()
-	tok, _, err := a.logic.IssueJWT(tenant, role, perms, userID, false)
+	tok, _, err := a.logic.IssueJWT(tenant, role, perms, userID, false, "")
 	if err != nil {
 		t.Fatal(err)
 	}

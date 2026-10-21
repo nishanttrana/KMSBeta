@@ -17,7 +17,7 @@ pull request.
 | Go tests — FIPS mode off, JCA step | `mvn verify` on `services/jca-provider`, the pom the SDK ships, built as a customer builds it (13.40.0-beta) |
 | Go tests — race detector | the whole suite under `-race` (13.8.0-beta) |
 | Backend RuntimeCfg/Vet/Test/Security | runtime config validation, `scripts/conformance.sh`, `go vet`, every test run twice (`-count=2`), the suite with no network, `govulncheck`, no unreachable code (`scripts/check-dead-code.sh`) |
-| Integration tests (Postgres) | storage behaviour SQLite cannot prove, a real NATS, an AWS KMS emulator (LocalStack) for BYOK, a real Envoy |
+| Integration tests (Postgres) | storage behaviour SQLite cannot prove, a real NATS, an AWS KMS emulator (LocalStack) for BYOK, a real Envoy (the address it appends, the internal headers it strips: `pkg/clientip`, `pkg/correlation`) |
 | Cluster replication and failover (three-node Postgres) | joining, replication, election, re-subscription, switchover and fencing between three databases |
 | Helm chart | the chart matches docker-compose.yml, lints, and renders manifests valid for Kubernetes 1.31 (`scripts/check-helm-chart.sh`); the install itself is `scripts/test-helm-kind.sh`, run locally with built images |
 | Volume repair (Docker Compose) | the volume scripts against real Docker volumes |

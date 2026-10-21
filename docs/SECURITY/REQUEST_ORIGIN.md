@@ -140,3 +140,18 @@ token carries no username or email.
 - **Governance's own `POST /governance/requests`** binds a user's requester
   ID, email and (now) address to the caller. A platform service's statement
   is taken as given.
+
+## Which request an event belongs to (13.42.0-beta)
+
+`correlation_id` links one request's audit events across services. The
+route kernel takes it from `X-Correlation-ID` when another platform service
+sent one, otherwise it uses its own request ID, and puts it in the handler's
+context (`pkg/correlation`). Every internal call sends it through
+`servicetoken.Authorize`, which every internal client already calls
+(conformance `service-token`). The edge drops `X-Correlation-ID` from every
+outside request with `x-vecta-delegated-token` and `x-vecta-key-usage`, so
+the header a service receives was set by a platform service
+(`TestEdgeRemovesTheCorrelationHeader`, and on a real Envoy). It labels
+events and decides nothing: it is never used for identity, tenancy or a
+permission.
+

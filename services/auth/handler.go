@@ -832,14 +832,15 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if u.MustChangePassword {
 		tokenPerms = []string{"auth.password.change"}
 	}
-	token, exp, err := h.logic.IssueJWT(req.TenantID, u.Role, tokenPerms, u.ID, u.MustChangePassword)
+	sessionID := NewID("sess")
+	token, exp, err := h.logic.IssueJWT(req.TenantID, u.Role, tokenPerms, u.ID, u.MustChangePassword, sessionID)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "jwt_issue_failed", "failed to issue token", reqID, req.TenantID)
 		return
 	}
 	sHash := tokenHash(token)
 	defer pkgcrypto.Zeroize(sHash)
-	if err := h.store.CreateSession(r.Context(), Session{ID: NewID("sess"), TenantID: req.TenantID, UserID: u.ID, TokenHash: sHash, IPAddress: clientip.From(r), UserAgent: r.UserAgent(), ExpiresAt: exp}); err != nil {
+	if err := h.store.CreateSession(r.Context(), Session{ID: sessionID, TenantID: req.TenantID, UserID: u.ID, TokenHash: sHash, IPAddress: clientip.From(r), UserAgent: r.UserAgent(), ExpiresAt: exp}); err != nil {
 		writeErr(w, http.StatusInternalServerError, "store_error", "failed to create session", reqID, req.TenantID)
 		return
 	}
@@ -848,7 +849,7 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if h.meter != nil {
 		_ = h.meter.IncrementOps()
 	}
-	if err := h.publishAudit(r.Context(), "audit.auth.login", reqID, req.TenantID, map[string]any{"user_id": u.ID}); err != nil {
+	if err := h.publishAudit(r.Context(), "audit.auth.login", reqID, req.TenantID, map[string]any{"user_id": u.ID, "actor_id": u.ID, "session_id": sessionID}); err != nil {
 		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, req.TenantID)
 		return
 	}
@@ -887,12 +888,32 @@ func (h *Handler) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	if user.MustChangePassword {
 		tokenPerms = []string{"auth.password.change"}
 	}
-	token, exp, err := h.logic.IssueJWT(claims.TenantID, user.Role, tokenPerms, claims.UserID, user.MustChangePassword)
+	token, exp, err := h.logic.IssueJWT(claims.TenantID, user.Role, tokenPerms, claims.UserID, user.MustChangePassword, claims.SessionID)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "jwt_issue_failed", "failed to refresh token", reqID, claims.TenantID)
 		return
 	}
-	if err := h.publishAudit(r.Context(), "audit.auth.refresh", reqID, claims.TenantID, map[string]any{"user_id": claims.UserID}); err != nil {
+	// A token renews only a sign-in still on record: after sign-out, or for
+	// a token from before sessions were in tokens, it lives to its expiry
+	// and no longer. 401, so the console ends the session.
+	live := false
+	if claims.SessionID != "" {
+		sHash := tokenHash(token)
+		live, err = h.store.TouchSession(r.Context(), claims.TenantID, claims.SessionID, sHash, exp)
+		pkgcrypto.Zeroize(sHash)
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, "store_error", "failed to renew session", reqID, claims.TenantID)
+			return
+		}
+	}
+	if !live {
+		_ = h.publishAudit(r.Context(), "audit.auth.refresh_refused", reqID, claims.TenantID, map[string]any{
+			"user_id": claims.UserID, "actor_id": claims.UserID, "session_id": claims.SessionID, "reason": "session_ended", "result": "refused", "severity": "warning",
+		})
+		writeErr(w, http.StatusUnauthorized, "session_ended", "the session has ended; sign in again", reqID, claims.TenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.refresh", reqID, claims.TenantID, map[string]any{"user_id": claims.UserID, "actor_id": claims.UserID, "session_id": claims.SessionID}); err != nil {
 		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
 		return
 	}
@@ -954,7 +975,8 @@ func (h *Handler) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusForbidden, "forbidden", err.Error(), reqID, claims.TenantID)
 		return
 	}
-	token, exp, err := h.logic.IssueJWT(claims.TenantID, user.Role, perms, claims.UserID, false)
+	sessionID := NewID("sess")
+	token, exp, err := h.logic.IssueJWT(claims.TenantID, user.Role, perms, claims.UserID, false, sessionID)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "jwt_issue_failed", "failed to issue token", reqID, claims.TenantID)
 		return
@@ -962,7 +984,7 @@ func (h *Handler) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 	sHash := tokenHash(token)
 	defer pkgcrypto.Zeroize(sHash)
 	if err := h.store.CreateSession(r.Context(), Session{
-		ID:        NewID("sess"),
+		ID:        sessionID,
 		TenantID:  claims.TenantID,
 		UserID:    claims.UserID,
 		TokenHash: sHash,
@@ -973,7 +995,7 @@ func (h *Handler) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "store_error", "failed to create session", reqID, claims.TenantID)
 		return
 	}
-	if err := h.publishAudit(r.Context(), "audit.auth.password_changed", reqID, claims.TenantID, map[string]any{"user_id": claims.UserID}); err != nil {
+	if err := h.publishAudit(r.Context(), "audit.auth.password_changed", reqID, claims.TenantID, map[string]any{"user_id": claims.UserID, "actor_id": claims.UserID, "session_id": sessionID}); err != nil {
 		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
 		return
 	}
@@ -989,18 +1011,16 @@ func (h *Handler) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
-	var req struct {
-		SessionID string `json:"session_id"`
+	// The verified token names the session to end; a body never does, so a
+	// caller can end only its own sign-in. A token from before sessions
+	// were in tokens has none to end.
+	if claims.SessionID != "" {
+		if err := h.store.DeleteSession(r.Context(), claims.TenantID, claims.SessionID); err != nil && !errors.Is(err, errNotFound) {
+			writeErr(w, http.StatusInternalServerError, "store_error", "failed to invalidate session", reqID, claims.TenantID)
+			return
+		}
 	}
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
-		return
-	}
-	if err := h.store.DeleteSession(r.Context(), claims.TenantID, req.SessionID); err != nil && !errors.Is(err, errNotFound) {
-		writeErr(w, http.StatusInternalServerError, "store_error", "failed to invalidate session", reqID, claims.TenantID)
-		return
-	}
-	if err := h.publishAudit(r.Context(), "audit.auth.logout", reqID, claims.TenantID, map[string]any{"user_id": claims.UserID, "session_id": req.SessionID}); err != nil {
+	if err := h.publishAudit(r.Context(), "audit.auth.logout", reqID, claims.TenantID, map[string]any{"user_id": claims.UserID, "actor_id": claims.UserID, "session_id": claims.SessionID}); err != nil {
 		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
 		return
 	}

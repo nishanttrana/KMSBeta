@@ -213,7 +213,8 @@ func (h *Handler) handleSSOCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, exp, err := h.logic.IssueJWT(tenantID, user.Role, tokenPerms, user.ID, false)
+	sessionID := NewID("sess")
+	token, exp, err := h.logic.IssueJWT(tenantID, user.Role, tokenPerms, user.ID, false, sessionID)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "jwt_issue_failed", "failed to issue token", reqID, tenantID)
 		return
@@ -222,7 +223,7 @@ func (h *Handler) handleSSOCallback(w http.ResponseWriter, r *http.Request) {
 	sHash := tokenHash(token)
 	defer pkgcrypto.Zeroize(sHash)
 	if err := h.store.CreateSession(r.Context(), Session{
-		ID:        NewID("sess"),
+		ID:        sessionID,
 		TenantID:  tenantID,
 		UserID:    user.ID,
 		TokenHash: sHash,
@@ -238,8 +239,10 @@ func (h *Handler) handleSSOCallback(w http.ResponseWriter, r *http.Request) {
 		_ = h.meter.IncrementOps()
 	}
 	_ = h.publishAudit(r.Context(), "audit.auth.sso_login", reqID, tenantID, map[string]any{
-		"user_id":  user.ID,
-		"provider": provider,
+		"user_id":    user.ID,
+		"actor_id":   user.ID,
+		"provider":   provider,
+		"session_id": sessionID,
 	})
 
 	// Redirect back to frontend with SSO token via URL fragment (not query string)

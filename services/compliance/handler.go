@@ -78,7 +78,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /compliance/keys/orphaned", h.handleOrphaned)
 	mux.HandleFunc("GET /compliance/keys/expired", h.handleExpired)
 
-	mux.HandleFunc("GET /compliance/audit/correlations", h.handleAuditCorrelations)
 	mux.HandleFunc("GET /compliance/audit/anomalies", h.handleAuditAnomalies)
 
 	mux.HandleFunc("GET /compliance/cbom", h.handleCBOM)
@@ -395,21 +394,6 @@ func (h *Handler) handleExpired(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	items, err := h.svc.GetExpiredKeys(r.Context(), tenantID)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
-}
-
-func (h *Handler) handleAuditCorrelations(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	limit := atoi(r.URL.Query().Get("limit"))
-	items, err := h.svc.GetAuditCorrelations(r.Context(), tenantID, limit)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return

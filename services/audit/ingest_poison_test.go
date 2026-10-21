@@ -46,6 +46,12 @@ func TestDataEnvelopeKeepsItsRefusal(t *testing.T) {
 	if ev.Result != "refused" || ev.ActorID != "usr_2" {
 		t.Fatalf("actor_user_id envelope: result %q actor %q", ev.Result, ev.ActorID)
 	}
+	// A sign-in's session goes to the session column, so the trail can be
+	// followed by session (13.42.0-beta).
+	ev, _ = parseIncomingEvent("audit.auth.login", []byte(`{"tenant_id":"t1","data":{"user_id":"usr_3","actor_id":"usr_3","session_id":"sess_9"}}`))
+	if ev.SessionID != "sess_9" || ev.ActorID != "usr_3" {
+		t.Fatalf("login envelope: session %q actor %q", ev.SessionID, ev.ActorID)
+	}
 	ev, _ = parseIncomingEvent("audit.x.y", []byte(`{"tenant_id":"t1","result":"failure","actor_id":"a","data":{"result":"refused","actor_id":"b"}}`))
 	if ev.Result != "failure" || ev.ActorID != "a" {
 		t.Fatalf("the envelope's own fields must win: %q %q", ev.Result, ev.ActorID)

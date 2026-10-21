@@ -177,11 +177,15 @@ test("analytics, alerts and audit each have a single home", async ({ page }) => 
     from: now, to: now, bucket_seconds: 3600, series: [{ start: now, count: 2 }],
   } })));
 
+  // The Audit Log's views are sidebar sub-options, not a tab strip (13.42.0-beta).
   await nav("Audit Log");
-  for (const t of ["Events", "Activity", "Forensics", "Checkpoints"]) {
+  const auditViews = page.getByTestId("subnav-audit");
+  await expect(auditViews.getByRole("button")).toHaveText(["Events", "Activity", "Investigate", "Checkpoints"]);
+  for (const t of ["Events", "Activity", "Investigate", "Checkpoints"]) {
     await expect(page.getByRole("button", { name: t, exact: true })).toHaveCount(1);
   }
-  await page.getByRole("button", { name: "Activity", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Forensics", exact: true })).toHaveCount(0);
+  await auditViews.getByRole("button", { name: "Activity", exact: true }).click();
   await expect(page.getByText("Not successful")).toBeVisible();
   const pickWindow = async (current: string, next: string) => {
     await page.getByText(current, { exact: true }).first().click();
@@ -272,6 +276,67 @@ test("operations status shows unavailable, not zero, when a source fails", async
     await expect(card.getByText("—", { exact: true })).toBeVisible();
     await expect(card.getByText("0", { exact: true })).toHaveCount(0);
   }
+  await assertNoRenderBoundary(page);
+});
+
+// Audit Log → Investigate (13.42.0-beta): any value narrows the
+// investigation, the event card jumps to everything sharing one of its
+// fields, and each request names exactly the pivots shown.
+test("Investigate follows who, what and where, and lists what it counts", async ({ page }) => {
+  const now = new Date().toISOString();
+  const json = (body: unknown) => ({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+  const events = [
+    { id: "ev-1", timestamp: now, service: "kms-keycore", action: "audit.key.decrypt", actor_id: "mallory", actor_type: "user", target_id: "key-1", target_type: "key", source_ip: "203.0.113.9", user_agent: "curl/8.7.1", session_id: "sess_m", correlation_id: "corr_1", result: "refused", details: { reason: "permission_denied" } },
+    { id: "ev-2", timestamp: now, service: "kms-auth", action: "audit.auth.login", actor_id: "alice", actor_type: "user", target_id: "", source_ip: "192.0.2.10", user_agent: "Mozilla/5.0", session_id: "sess_a", correlation_id: "corr_2", result: "success" },
+  ];
+  const DIMS = ["actor_id", "action", "target_id", "source_ip", "user_agent", "service", "result", "session_id", "correlation_id"] as const;
+  const match = (q: URLSearchParams) => events.filter((e) => DIMS.every((d) => !q.get(d) || (e as Record<string, unknown>)[d] === q.get(d)));
+  const asked: string[] = [];
+  await page.route("**/svc/audit/audit/investigate?**", (r) => {
+    const q = new URL(r.request().url()).searchParams;
+    asked.push(DIMS.filter((d) => q.get(d)).map((d) => `${d}=${q.get(d)}`).join("&"));
+    const hit = match(q);
+    const facets = Object.fromEntries(DIMS.map((d) => {
+      const counts = new Map<string, number>();
+      for (const e of hit) { const v = String((e as Record<string, unknown>)[d] || ""); if (v) counts.set(v, (counts.get(v) || 0) + 1); }
+      return [d, [...counts].map(([key, count]) => ({ key, count }))];
+    }));
+    return r.fulfill(json({ investigation: {
+      from: now, to: now, bucket_seconds: 3600, total: hit.length, first_seen: now, last_seen: now,
+      distinct: Object.fromEntries(DIMS.map((d) => [d, (facets[d] as unknown[]).length])), facets, series: [{ start: now, count: hit.length }],
+    } }));
+  });
+  await page.route("**/svc/audit/audit/events?**", (r) => r.fulfill(json({ items: match(new URL(r.request().url()).searchParams) })));
+
+  await page.getByText("Audit Log", { exact: true }).first().click();
+  await page.getByTestId("subnav-audit").getByRole("button", { name: "Investigate", exact: true }).click();
+  await expect(page.getByText("All activity. Click any value to narrow it.")).toBeVisible();
+  await expect(page.getByText("Events: 2 entries")).toBeVisible();
+
+  // Who: clicking a person narrows everything to them.
+  await page.locator('[data-facet="actor_id"]', { hasText: "mallory" }).click();
+  await expect.poll(() => asked[asked.length - 1]).toBe("actor_id=mallory");
+  await expect(page.getByText("Events: 1 entry")).toBeVisible();
+  await expect(page.locator('[data-facet="actor_id"]', { hasText: "alice" })).toHaveCount(0);
+
+  // The event card answers who, what, where and how, and jumps by address.
+  await page.getByText("Decrypt · keycore").click();
+  const card = page.getByRole("dialog");
+  for (const part of ["mallory (user)", "key-1 (key)", "203.0.113.9", "curl/8.7.1", "permission_denied"]) {
+    await expect(card.getByText(part, { exact: true })).toBeVisible();
+  }
+  await card.getByRole("button", { name: "Everything from 203.0.113.9", exact: true }).click();
+  await expect.poll(() => asked[asked.length - 1]).toBe("source_ip=203.0.113.9");
+  await expect(page.getByText("From address:")).toBeVisible();
+
+  // A value typed in adds a pivot; removing one asks again without it.
+  await page.getByText("Who", { exact: true }).first().click();
+  await page.getByRole("option", { name: "On what", exact: true }).click();
+  await page.getByPlaceholder("User, key, address, session or request ID").fill("key-1");
+  await page.getByRole("button", { name: "Investigate", exact: true }).last().click();
+  await expect.poll(() => asked[asked.length - 1]).toBe("target_id=key-1&source_ip=203.0.113.9");
+  await page.getByRole("button", { name: "Remove From address", exact: true }).click();
+  await expect.poll(() => asked[asked.length - 1]).toBe("target_id=key-1");
   await assertNoRenderBoundary(page);
 });
 

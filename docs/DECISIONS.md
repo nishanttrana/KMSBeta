@@ -7,6 +7,79 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-22 — Investigate: pivot on any field, counted by the audit service
+**Decision:** Audit Log → Investigate replaces Forensics. The user starts
+from any value (a person, object, address, client, sign-in or request) and
+sees the top values of nine dimensions for the matching events, counted by
+`GET /audit/investigate` over the whole window with the event list's own
+filter. Clicking a value adds it to the pivots, so the list below is
+exactly what it counted. The event card links each of its fields to the
+same view. The Audit Log's views moved from a tab strip in the page to
+sidebar sub-options.
+**Why:** the owner asked for "co-relation of what who how when" in an
+intuitive way. Forensics took a raw ID in one of three modes, answered one
+question, and its session mode could never return anything.
+**Rejected:** a graph of entities (it needs a layout engine and still
+answers "who did what" worse than counted lists); counting in the
+dashboard over a fetched page (a sample: CLAUDE.md, "A number on a page is
+counted by its service"); keeping the timeline, session and correlation
+routes beside it (three legacy-mux routes, unaudited, for what one filter
+does).
+**Enforced:** `TestInvestigateCountsListTheirEvents` (SQLite and Postgres),
+`TestInvestigateRouteIsAudited`, smoke "Investigate follows who, what and
+where, and lists what it counts".
+
+---
+
+## 2026-10-22 — Sessions are in the token; sign-out stops renewal
+**Decision:** auth puts the sign-in's `auth_sessions` ID in the token as
+`sid`, keeps it on refresh, and ends the session the verified token names at
+sign-out. A refresh is refused (`401 session_ended`) when the session is
+gone. Audit events carry `sid` as `session_id`.
+**Why:** no event ever carried a session, logout was refused before it
+ended anything, and `auth_sessions` was written and never read.
+**Rejected:** a revocation list every service checks (a call to auth or a
+shared store on every request; a 15-minute token lapses soon enough once it
+can't renew); refreshing a token with no `sid` into a new session (it would
+keep tokens from before the change alive forever); a session named in the
+logout body (a caller could end another user's session in its tenant).
+**Consequence:** sessions are node-local (`pkg/clustercatalog`), so a user
+whose requests move to another cluster node signs in again there at the
+next refresh. Everyone signs in again once after the upgrade.
+**Enforced:** `TestSessionFollowsRefreshAndEndsAtSignOut`,
+`TestSessionRenewalPostgres`.
+
+---
+
+## 2026-10-22 — A request's correlation ID is carried by the internal-call helper
+**Decision:** the route kernel keeps a request's correlation ID in its
+context (`pkg/correlation`), `servicetoken.Authorize` sends it on every
+internal call, and the edge strips `X-Correlation-ID` from outside requests.
+**Why:** every internal call already goes through `Authorize` (conformance
+`service-token`), so one change carries it by construction; the edge strip
+makes the header something only a platform service sets.
+**Rejected:** trusting the header only from a service principal (a service
+that forwards the user's own token would break the chain); a new header per
+client (every client changes and a new one forgets).
+**Enforced:** `TestCorrelationFollowsTheRequestToTheNextService`,
+`TestAuthorizeCarriesTheCorrelationID`, `TestEdgeRemovesTheCorrelationHeader`
+and its real-Envoy twin.
+
+---
+
+## 2026-10-22 — The chain walk reads a stored row as it was hashed
+**Decision:** the audit store reads `source_ip` through `storedSourceIP`
+(prefix dropped, normalised as at insert) for every read, the walk
+included. Stored rows are not rewritten.
+**Why:** Postgres prints `INET` with its prefix length, so every event with
+an address failed verification there.
+**Rejected:** `host(source_ip)` in the SQL (SQLite has no such function,
+and the column list is shared); re-hashing stored rows (that would be
+rewriting the record the chain protects).
+**Enforced:** `TestChainVerifiesEventsWithAnAddressPostgres`.
+
+---
+
 ## 2026-10-22 — Audit ingest keys an event on its stream position
 **Decision:** an event the audit service reads from the AUDIT stream is
 stored under an id derived from the message's stream, sequence, storage time

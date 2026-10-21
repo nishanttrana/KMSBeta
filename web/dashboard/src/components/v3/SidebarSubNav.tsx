@@ -17,6 +17,7 @@ import {
   Plug,
   Radio,
   RefreshCw,
+  Search,
   Server,
   Settings,
   Shield,
@@ -36,6 +37,13 @@ export type SubPane = { id: string; label: string; hint: string; icon: LucideIco
 // never in a second column or a tab strip of the shell (owner directive,
 // 2026-10-11; CLAUDE.md "Sub-options live in the sidebar").
 export const SUB_PANES: Record<string, SubPane[]> = {
+  // Audit Log's views (13.42.0-beta: they were a tab strip in the page).
+  audit: [
+    { id: "events", label: "Events", hint: "Every audit event, filtered and exported", icon: List },
+    { id: "activity", label: "Activity", hint: "Audit charts over a window, each drilling into its events", icon: Activity },
+    { id: "investigate", label: "Investigate", hint: "Who did what, on what, from where and how, for any person, object, address, session or request", icon: Search },
+    { id: "checkpoints", label: "Checkpoints", hint: "Signed checkpoints of the audit chain", icon: ShieldCheck }
+  ],
   workbench: [
     { id: "crypto", label: "Crypto Console", hint: "Interactive cryptographic operations and algorithm console", icon: Zap },
     { id: "restapi", label: "REST API", hint: "Authenticated API explorer and endpoint documentation", icon: FileText },

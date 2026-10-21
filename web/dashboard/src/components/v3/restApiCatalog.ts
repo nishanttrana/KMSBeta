@@ -1552,21 +1552,20 @@ export const REST_API_CATALOG = [
     ],
   },
   {
-    id: "audit-timeline",
+    id: "audit-investigate",
     group: "Audit",
-    title: "Target Event Timeline",
+    title: "Investigate Audit Activity",
     service: "audit",
     method: "GET",
-    pathTemplate: "/audit/timeline/{{target_id}}?tenant_id={{tenant_id}}",
+    pathTemplate: "/audit/investigate?tenant_id={{tenant_id}}&actor_id={{actor_id}}",
     bodyTemplate: "",
-    description: "Returns timeline of all events related to a specific target (key, cert, secret).",
-    requestExample: "GET /svc/audit/audit/timeline/{target_id}?tenant_id=root",
-    responseExample: {"items": null, "request_id": "req_322e8fdd95e99c9a"},
+    description: "For the events the pivots select (actor_id, action, target_id, source_ip, user_agent, service, result, session_id, correlation_id, from, to), the top values of each, counted over the whole window. GET /audit/events with the same filters plus one value lists exactly the events it counts.",
+    requestExample: "GET /svc/audit/audit/investigate?tenant_id=root&actor_id=admin",
+    responseExample: {"investigation": {"bucket_seconds": 3600, "distinct": {"action": 0, "actor_id": 0, "correlation_id": 0, "result": 0, "service": 0, "session_id": 0, "source_ip": 0, "target_id": 0, "user_agent": 0}, "facets": {"action": [], "actor_id": [], "correlation_id": [], "result": [], "service": [], "session_id": [], "source_ip": [], "target_id": [], "user_agent": []}, "first_seen": null, "from": "2026-10-21T19:47:55.956134Z", "last_seen": null, "series": [{"count": 0, "start": "2026-10-21T19:00:00Z"}], "to": "2026-10-21T19:47:55.956134Z", "total": 0}, "request_id": "req_d7213693e729b873"},
     errorCodes: [
-      { code: 400, meaning: "The body does not decode, or the request is not valid for this route" },
+      { code: 400, meaning: "from or to is not an RFC 3339 time" },
       { code: 401, meaning: "Token missing, invalid or expired" },
-      { code: 403, meaning: "The caller lacks the permission this route needs" },
-      { code: 404, meaning: "Not found, or not visible to the caller" }
+      { code: 403, meaning: "The caller lacks the permission this route needs" }
     ],
   },
 

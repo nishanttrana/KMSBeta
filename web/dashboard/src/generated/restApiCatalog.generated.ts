@@ -507,34 +507,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "audit-get-audit-correlation-id",
-    "group": "Audit & Alerts (audit)",
-    "title": "GET /audit/correlation/{id}",
-    "service": "audit",
-    "method": "GET",
-    "pathTemplate": "/audit/correlation/{id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Audit service.",
-    "requestExample": "GET /svc/audit/audit/correlation/{id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "audit-get-audit-events",
     "group": "Audit & Alerts (audit)",
     "title": "GET /audit/events",
@@ -619,15 +591,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "audit-get-audit-session-session-id",
+    "id": "audit-get-audit-investigate",
     "group": "Audit & Alerts (audit)",
-    "title": "GET /audit/session/{session_id}",
+    "title": "GET /audit/investigate",
     "service": "audit",
     "method": "GET",
-    "pathTemplate": "/audit/session/{session_id}?tenant_id={{tenant_id}}",
+    "pathTemplate": "/audit/investigate?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
     "description": "Auto-discovered route from Audit service.",
-    "requestExample": "GET /svc/audit/audit/session/{session_id}?tenant_id={{tenant_id}}",
+    "requestExample": "GET /svc/audit/audit/investigate?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -684,34 +656,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Audit service.",
     "requestExample": "GET /svc/audit/audit/targets/{target_id}/integrity?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "audit-get-audit-timeline-target-id",
-    "group": "Audit & Alerts (audit)",
-    "title": "GET /audit/timeline/{target_id}",
-    "service": "audit",
-    "method": "GET",
-    "pathTemplate": "/audit/timeline/{target_id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Audit service.",
-    "requestExample": "GET /svc/audit/audit/timeline/{target_id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -5164,34 +5108,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Compliance service.",
     "requestExample": "GET /svc/compliance/compliance/audit/anomalies?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "compliance-get-compliance-audit-correlations",
-    "group": "Compliance (compliance)",
-    "title": "GET /compliance/audit/correlations",
-    "service": "compliance",
-    "method": "GET",
-    "pathTemplate": "/compliance/audit/correlations?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Compliance service.",
-    "requestExample": "GET /svc/compliance/compliance/audit/correlations?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

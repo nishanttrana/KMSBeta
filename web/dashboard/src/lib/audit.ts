@@ -44,6 +44,9 @@ export type AuditEventQuery = {
   target_id?: string;
   session_id?: string;
   correlation_id?: string;
+  // The bare address ("192.0.2.1") and the client's User-Agent as recorded.
+  source_ip?: string;
+  user_agent?: string;
   risk_min?: number;
   // Inclusive ceiling; with risk_min selects one Activity risk bucket.
   risk_max?: number;
@@ -118,6 +121,8 @@ export async function listAuditEvents(
   if (String(query?.target_id || "").trim()) q.set("target_id", String(query!.target_id).trim());
   if (String(query?.session_id || "").trim()) q.set("session_id", String(query!.session_id).trim());
   if (String(query?.correlation_id || "").trim()) q.set("correlation_id", String(query!.correlation_id).trim());
+  if (String(query?.source_ip || "").trim()) q.set("source_ip", String(query!.source_ip).trim());
+  if (String(query?.user_agent || "").trim()) q.set("user_agent", String(query!.user_agent).trim());
   if (query?.risk_min && query.risk_min > 0) q.set("risk_min", String(Math.trunc(query.risk_min)));
   if (query?.risk_max && query.risk_max > 0) q.set("risk_max", String(Math.trunc(query.risk_max)));
   if (String(query?.service || "").trim()) q.set("service", String(query!.service).trim());
@@ -130,6 +135,49 @@ export async function listAuditEvents(
   return Array.isArray(out?.items) ? out.items : [];
 }
 
+// GET /audit/investigate (services/audit/investigate.go): for the events the
+// pivots select, the top values of each dimension, counted by the audit
+// service over the whole window with the event list's own filter. Adding a
+// value to the pivots lists exactly the events it counts.
+export const INVESTIGATE_DIMENSIONS = [
+  "actor_id", "action", "target_id", "source_ip", "user_agent", "service", "result", "session_id", "correlation_id"
+] as const;
+export type InvestigateDimension = (typeof INVESTIGATE_DIMENSIONS)[number];
+export type InvestigatePivots = Partial<Record<InvestigateDimension, string>>;
+export type InvestigateFacet = { key: string; kind?: string; count: number };
+export type AuditInvestigation = {
+  from: string;
+  to: string;
+  bucket_seconds: number;
+  total: number;
+  first_seen: string | null;
+  last_seen: string | null;
+  distinct: Record<InvestigateDimension, number>;
+  facets: Record<InvestigateDimension, InvestigateFacet[]>;
+  series: Array<{ start: string; count: number }>;
+};
+
+export async function getAuditInvestigation(
+  session: AuthSession,
+  pivots: InvestigatePivots,
+  window: { from?: string; to?: string }
+): Promise<AuditInvestigation> {
+  const q = new URLSearchParams();
+  q.set("tenant_id", session.tenantId);
+  for (const d of INVESTIGATE_DIMENSIONS) {
+    const v = String(pivots[d] || "").trim();
+    if (v) q.set(d, v);
+  }
+  if (window.from) q.set("from", window.from);
+  if (window.to) q.set("to", window.to);
+  const out = await serviceRequest<{ investigation?: AuditInvestigation }>(session, "audit", `/audit/investigate?${q.toString()}`);
+  const inv = out?.investigation;
+  if (!inv || typeof inv.total !== "number" || !inv.facets || !Array.isArray(inv.series)) {
+    throw new Error("the audit service returned no investigation");
+  }
+  return inv;
+}
+
 export async function getAuditEvent(session: AuthSession, id: string): Promise<AuditEvent> {
   const out = await serviceRequest<{ event?: AuditEvent }>(
     session, "audit",
@@ -139,25 +187,6 @@ export async function getAuditEvent(session: AuthSession, id: string): Promise<A
   return out.event;
 }
 
-export async function getAuditTimeline(
-  session: AuthSession,
-  targetId: string,
-  opts?: { limit?: number; offset?: number }
-): Promise<AuditEvent[]> {
-  const q = new URLSearchParams();
-  q.set("tenant_id", session.tenantId);
-  q.set("limit", String(Math.max(1, Math.trunc(Number(opts?.limit || 100)))));
-  q.set("offset", String(Math.max(0, Math.trunc(Number(opts?.offset || 0)))));
-  const out = await serviceRequest<{ items?: AuditEvent[] }>(
-    session, "audit",
-    `/audit/timeline/${encodeURIComponent(String(targetId || "").trim())}?${q.toString()}`
-  );
-  return Array.isArray(out?.items) ? out.items : [];
-}
-
-// GET /audit/targets/{id}/integrity: each of the target's audit events
-// recomputed from the stored row and checked against its chain links, its
-// HMAC and the chain head signed by the checkpoint that covers it.
 export type AuditEventIntegrity = {
   event_id: string;
   sequence: number;
@@ -194,38 +223,6 @@ export async function verifyTargetIntegrity(session: AuthSession, targetId: stri
     `/audit/targets/${encodeURIComponent(String(targetId || "").trim())}/integrity?${tenantQuery(session)}`
   );
   return out.integrity;
-}
-
-export async function getAuditSession(
-  session: AuthSession,
-  sessionId: string,
-  opts?: { limit?: number; offset?: number }
-): Promise<AuditEvent[]> {
-  const q = new URLSearchParams();
-  q.set("tenant_id", session.tenantId);
-  q.set("limit", String(Math.max(1, Math.trunc(Number(opts?.limit || 100)))));
-  q.set("offset", String(Math.max(0, Math.trunc(Number(opts?.offset || 0)))));
-  const out = await serviceRequest<{ items?: AuditEvent[] }>(
-    session, "audit",
-    `/audit/session/${encodeURIComponent(String(sessionId || "").trim())}?${q.toString()}`
-  );
-  return Array.isArray(out?.items) ? out.items : [];
-}
-
-export async function getAuditCorrelation(
-  session: AuthSession,
-  correlationId: string,
-  opts?: { limit?: number; offset?: number }
-): Promise<AuditEvent[]> {
-  const q = new URLSearchParams();
-  q.set("tenant_id", session.tenantId);
-  q.set("limit", String(Math.max(1, Math.trunc(Number(opts?.limit || 100)))));
-  q.set("offset", String(Math.max(0, Math.trunc(Number(opts?.offset || 0)))));
-  const out = await serviceRequest<{ items?: AuditEvent[] }>(
-    session, "audit",
-    `/audit/correlation/${encodeURIComponent(String(correlationId || "").trim())}?${q.toString()}`
-  );
-  return Array.isArray(out?.items) ? out.items : [];
 }
 
 export async function verifyAuditChain(session: AuthSession): Promise<ChainVerifyResult> {

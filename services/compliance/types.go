@@ -94,14 +94,6 @@ type KeyHygieneReport struct {
 	ExpiringKeys          []map[string]interface{} `json:"expiring_keys"`
 }
 
-type CorrelationItem struct {
-	CorrelationID string    `json:"correlation_id"`
-	Count         int       `json:"count"`
-	FirstSeen     time.Time `json:"first_seen"`
-	LastSeen      time.Time `json:"last_seen"`
-	TopActions    []string  `json:"top_actions"`
-}
-
 type AnomalyItem struct {
 	ID          string    `json:"id"`
 	Type        string    `json:"type"`

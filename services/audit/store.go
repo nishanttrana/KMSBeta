@@ -19,6 +19,7 @@ type Store interface {
 	PersistEvent(ctx context.Context, event AuditEvent) (AuditEvent, error)
 	QueryEvents(ctx context.Context, tenantID string, q EventQuery) ([]AuditEvent, error)
 	AuditStats(ctx context.Context, tenantID string, from, to time.Time) (AuditStats, error)
+	Investigate(ctx context.Context, tenantID string, q EventQuery) (Investigation, error)
 	GetEvent(ctx context.Context, tenantID string, id string) (AuditEvent, error)
 	VerifyChain(ctx context.Context, tenantID string) (bool, []map[string]interface{}, error)
 	VerifyChainWalk(ctx context.Context, tenantID string, sinceCheckpoint bool) (ChainVerification, error)
@@ -100,6 +101,10 @@ type EventQuery struct {
 	// start at 20).
 	RiskMax int
 	Service string
+	// SourceIP is the bare address ("192.0.2.1"); UserAgent the client's
+	// header exactly as recorded.
+	SourceIP  string
+	UserAgent string
 	// ExcludeHTTPRequests drops the generic HTTP request records, as the
 	// Activity statistics do.
 	ExcludeHTTPRequests bool
@@ -196,22 +201,41 @@ INSERT INTO audit_events (
 	return event, nil
 }
 
-func (s *SQLStore) QueryEvents(ctx context.Context, tenantID string, q EventQuery) ([]AuditEvent, error) {
-	if q.Limit <= 0 || q.Limit > 1000 {
-		q.Limit = 200
+// eventFilter is the WHERE clause and arguments for q: one predicate for the
+// event list and every count over it (GET /audit/investigate), so a count
+// lists exactly its events.
+func (s *SQLStore) eventFilter(tenantID string, q EventQuery) (string, []interface{}) {
+	args := []interface{}{tenantID}
+	where := []string{"tenant_id=$1"}
+	add := func(clause string, v interface{}) {
+		args = append(args, v)
+		where = append(where, fmt.Sprintf(clause, len(args)))
 	}
-	args := []interface{}{tenantID, q.Action, q.ActorID, q.Result, q.TargetID, q.SessionID, q.CorrelationID, q.RiskMin, nullableTime(q.From), nullableTime(q.To), q.Limit, q.Offset}
-	prefixClause := ""
+	for _, f := range []struct{ col, v string }{
+		{"action", q.Action}, {"actor_id", q.ActorID}, {"result", q.Result}, {"target_id", q.TargetID},
+		{"session_id", q.SessionID}, {"correlation_id", q.CorrelationID}, {"service", q.Service}, {"user_agent", q.UserAgent},
+	} {
+		if f.v != "" {
+			add(f.col+" = $%d", f.v)
+		}
+	}
+	if q.SourceIP != "" {
+		add(s.sourceIPText()+" = $%d", q.SourceIP)
+	}
+	if q.RiskMin > 0 {
+		add("risk_score >= $%d", q.RiskMin)
+	}
 	if q.RiskMax > 0 && q.RiskMax < 100 {
-		args = append(args, q.RiskMax)
-		prefixClause += fmt.Sprintf("  AND COALESCE(risk_score,0) <= $%d\n", len(args))
+		add("COALESCE(risk_score,0) <= $%d", q.RiskMax)
 	}
-	if q.Service != "" {
-		args = append(args, q.Service)
-		prefixClause += fmt.Sprintf("  AND service = $%d\n", len(args))
+	if !q.From.IsZero() {
+		add("timestamp >= $%d", q.From.UTC())
+	}
+	if !q.To.IsZero() {
+		add("timestamp <= $%d", q.To.UTC())
 	}
 	if q.ExcludeHTTPRequests {
-		prefixClause += "  AND " + notHTTPRequest + "\n"
+		where = append(where, notHTTPRequest)
 	}
 	var likes []string
 	for _, p := range q.ActionPrefixes {
@@ -223,12 +247,30 @@ func (s *SQLStore) QueryEvents(ctx context.Context, tenantID string, q EventQuer
 		likes = append(likes, fmt.Sprintf(`action LIKE $%d ESCAPE '\'`, len(args)))
 	}
 	if len(likes) > 0 {
-		prefixClause += "  AND (" + strings.Join(likes, " OR ") + ")"
+		where = append(where, "("+strings.Join(likes, " OR ")+")")
 	}
+	return "WHERE " + strings.Join(where, " AND "), args
+}
+
+// sourceIPText is source_ip as the bare address text the API filters and
+// groups by: Postgres stores INET, SQLite the text PersistEvent wrote.
+func (s *SQLStore) sourceIPText() string {
+	if s.isPostgres {
+		return "host(source_ip)"
+	}
+	return "source_ip"
+}
+
+func (s *SQLStore) QueryEvents(ctx context.Context, tenantID string, q EventQuery) ([]AuditEvent, error) {
+	if q.Limit <= 0 || q.Limit > 1000 {
+		q.Limit = 200
+	}
+	where, args := s.eventFilter(tenantID, q)
 	order := "DESC"
 	if q.Ascending {
 		order = "ASC"
 	}
+	args = append(args, q.Limit, q.Offset)
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT id, tenant_id, sequence, chain_hash, previous_hash,
        COALESCE(hmac_sig,''), COALESCE(category_group,''),
@@ -238,20 +280,10 @@ SELECT id, tenant_id, sequence, chain_hash, previous_hash,
        result, COALESCE(status_code,0), COALESCE(error_message,''), COALESCE(duration_ms,0), COALESCE(fips_compliant,false), COALESCE(approval_id,''),
        COALESCE(risk_score,0), COALESCE(tags,'[]'), COALESCE(node_id,''), COALESCE(details,'{}'), created_at
 FROM audit_events
-WHERE tenant_id=$1
-  AND ($2='' OR action=$2)
-  AND ($3='' OR actor_id=$3)
-  AND ($4='' OR result=$4)
-  AND ($5='' OR target_id=$5)
-  AND ($6='' OR session_id=$6)
-  AND ($7='' OR correlation_id=$7)
-  AND ($8=0 OR risk_score >= $8)
-  AND timestamp >= COALESCE($9, timestamp)
-  AND timestamp <= COALESCE($10, timestamp)
-`+prefixClause+`
-ORDER BY timestamp `+order+`, id
-LIMIT $11 OFFSET $12
-`, args...)
+`+where+fmt.Sprintf(`
+ORDER BY timestamp %s, id
+LIMIT $%d OFFSET $%d
+`, order, len(args)-1, len(args)), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -312,6 +344,7 @@ func scanChainRow(rows interface {
 	}
 	ev.TenantID = tenantID
 	ev.Timestamp = parseTimeValue(timestampRaw)
+	ev.SourceIP = storedSourceIP(ev.SourceIP)
 	_ = json.Unmarshal(tagsRaw, &ev.Tags)
 	_ = json.Unmarshal(detailsRaw, &ev.Details)
 	return ev, nil
@@ -586,6 +619,7 @@ func scanEvent(scanner interface {
 	}
 	ev.Timestamp = parseTimeValue(timestampRaw)
 	ev.CreatedAt = parseTimeValue(createdRaw)
+	ev.SourceIP = storedSourceIP(ev.SourceIP)
 	_ = json.Unmarshal(tagsRaw, &ev.Tags)
 	_ = json.Unmarshal(detailsRaw, &ev.Details)
 	if ev.Details == nil {
@@ -603,13 +637,6 @@ func nullable(v string) interface{} {
 		return nil
 	}
 	return v
-}
-
-func nullableTime(t time.Time) interface{} {
-	if t.IsZero() {
-		return nil
-	}
-	return t
 }
 
 func parseTimeValue(v interface{}) time.Time {
@@ -659,6 +686,18 @@ func normalizeSourceIP(raw string) string {
 		return ""
 	}
 	return ip.String()
+}
+
+// storedSourceIP is a stored source_ip as PersistEvent hashed it. Postgres
+// keeps it as INET, and an INET read as text carries its prefix length
+// ("192.0.2.1/32"); the hash covered the bare address. Until 13.42.0-beta
+// the chain walk read the prefixed form, so every event with an address
+// failed verification on Postgres.
+func storedSourceIP(raw string) string {
+	if i := strings.IndexByte(raw, '/'); i >= 0 {
+		raw = raw[:i]
+	}
+	return normalizeSourceIP(raw)
 }
 
 func (s *SQLStore) ensureAuditPartition(ctx context.Context, tx *sql.Tx, ts time.Time) error {

@@ -106,7 +106,7 @@ func TestIdentityProviderSecretsFailClosedWithoutKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	hstore.idp = &idpVault{}
-	token, _, _ := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false)
+	token, _, _ := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false, "")
 	for _, req := range []*http.Request{
 		httptest.NewRequest(http.MethodGet, "/auth/identity/providers/ldap", nil),
 		httptest.NewRequest(http.MethodGet, "/auth/identity/providers", nil),
@@ -257,7 +257,7 @@ func TestReplacingIdentityProviderSecretsClosesExposure(t *testing.T) {
 		closed = append(closed, tenantID+"|"+provider+"|"+by)
 		return true
 	}
-	token, _, _ := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false)
+	token, _, _ := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false, "")
 	put := func(body string) {
 		t.Helper()
 		req := httptest.NewRequest(http.MethodPut, "/auth/identity/providers/ldap", bytes.NewReader([]byte(body)))

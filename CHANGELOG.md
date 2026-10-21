@@ -4,6 +4,60 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.42.0-beta] — 2026-10-22
+
+### Added
+- **Audit Log → Investigate** (replaces Forensics). Start from anyone or
+  anything (a person, key, address, client, sign-in or request) and see who,
+  what, on what, from where, how and the outcome: totals, first and last
+  seen, a time chart, and the ten commonest values of nine dimensions, each
+  counted by the audit service over the whole window
+  (`GET /audit/investigate`). Clicking a value narrows the investigation to
+  it, so the events listed below are exactly the ones it counted. The event
+  card is laid out as who, what, on what, when, where from and how, with
+  one-click jumps to everything by that person, from that address, on that
+  object, in that sign-in, and the whole request across services.
+- `GET /audit/events` filters by `source_ip` and `user_agent`.
+- The Audit Log's views (Events, Activity, Investigate, Checkpoints) are
+  sidebar sub-options instead of a tab strip in the page.
+
+### Fixed
+- **Audit chain verification failed on Postgres for every event with an
+  address.** Postgres reads an `INET` back as `192.0.2.1/32`, and the chain
+  hash covers the bare address, so Verify Chain on the live stack reported
+  `chain_hash_mismatch` and the hourly full walk had never passed. Rows are
+  read as they were hashed; nothing stored is rewritten, and they verify
+  again. Addresses also no longer show `/32` in the console.
+- **Sign-out never ended a session.** The console's logout sent no body and
+  was refused; there were no logout events. Logout now ends the session the
+  verified token names (never one the body names) and is audited; that
+  session's tokens can no longer refresh (`401 session_ended`, audited as
+  `audit.auth.refresh_refused`) and lapse within 15 minutes.
+- **No audit event recorded a session.** Tokens now carry the sign-in's
+  session (`sid`), kept across refreshes, and every event the route kernel
+  records carries it. Sign-in, refresh, logout and password-change events
+  name the user as the actor instead of `system`.
+- **One request's events weren't linked across services**: each service
+  started its own correlation ID (82 of 31,235 spanned more than one).
+  Every internal call now carries the first service's ID, and the edge
+  removes `X-Correlation-ID` from outside requests so nobody can join their
+  events to another request.
+- `GET /audit/events` refuses a `from` or `to` that is not an RFC 3339 time
+  (`400 bad_window`) instead of ignoring it.
+
+### Removed
+- `GET /audit/timeline/{id}`, `/audit/session/{id}` and
+  `/audit/correlation/{id}` (unaudited legacy routes): use
+  `GET /audit/events` with `target_id`, `session_id` or `correlation_id`.
+- Compliance `GET /compliance/audit/correlations`, which grouped a sample of
+  the newest 1,000 events and had no caller.
+
+### Upgrade notes
+- **Everyone signs in again once**: tokens issued before this version have
+  no session and don't refresh.
+- In a cluster, a user moved to another node signs in again there
+  (docs/CLUSTERING.md).
+
 ## [13.41.0-beta] — 2026-10-22
 
 ### Security

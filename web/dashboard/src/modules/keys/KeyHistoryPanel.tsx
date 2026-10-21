@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { AuthSession } from "../../lib/auth";
-import { getAuditTimeline, verifyTargetIntegrity, type AuditEvent, type AuditEventIntegrity, type AuditTargetIntegrity } from "../../lib/audit";
+import { listAuditEvents, verifyTargetIntegrity, type AuditEvent, type AuditEventIntegrity, type AuditTargetIntegrity } from "../../lib/audit";
 import { getKeyConsumers, type KeyConsumers } from "../../lib/keyConsumers";
 import { Btn } from "../../components/v3/legacyPrimitives";
 import { errMsg } from "../../components/v3/runtimeUtils";
@@ -36,7 +36,7 @@ export function KeyHistoryPanel({ session, keyID }: { session: AuthSession | nul
     let live = true;
     setProof(null);
     setProofError("");
-    getAuditTimeline(session, keyID, { limit: 100 })
+    listAuditEvents(session, { target_id: keyID, limit: 100 })
       .then((items) => { if (live) { setEvents(items); setEventsError(""); } })
       .catch((e) => { if (live) { setEvents([]); setEventsError(errMsg(e)); } });
     getKeyConsumers(session, keyID)

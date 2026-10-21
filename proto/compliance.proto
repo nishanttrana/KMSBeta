@@ -17,7 +17,6 @@ service ComplianceService {
   rpc GetOrphanedKeys (GetOrphanedKeysRequest) returns (KeysResponse);
   rpc GetExpiredKeys (GetExpiredKeysRequest) returns (KeysResponse);
 
-  rpc GetAuditCorrelations (GetAuditCorrelationsRequest) returns (AuditCorrelationsResponse);
   rpc GetAuditAnomalies (GetAuditAnomaliesRequest) returns (AuditAnomaliesResponse);
 
 
@@ -89,14 +88,6 @@ message KeyHygieneReport {
   int32 unused_90_days_count = 9;
   double pqc_ready_pct = 10;
   map<string, int32> algorithm_distribution = 11;
-}
-
-message CorrelationItem {
-  string correlation_id = 1;
-  int32 count = 2;
-  string first_seen = 3;
-  string last_seen = 4;
-  repeated string top_actions = 5;
 }
 
 message AnomalyItem {
@@ -179,15 +170,6 @@ message GetExpiredKeysRequest {
 
 message KeysResponse {
   repeated JsonObject items = 1;
-}
-
-message GetAuditCorrelationsRequest {
-  string tenant_id = 1;
-  int32 limit = 2;
-}
-
-message AuditCorrelationsResponse {
-  repeated CorrelationItem items = 1;
 }
 
 message GetAuditAnomaliesRequest {

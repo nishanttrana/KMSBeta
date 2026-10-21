@@ -68,11 +68,13 @@ func TestHandlerKeyHygieneAndAuditEndpoints(t *testing.T) {
 		t.Fatalf("hygiene status=%d body=%s", rr.Code, rr.Body.String())
 	}
 
-	corrReq := httptest.NewRequest(http.MethodGet, "/compliance/audit/correlations?tenant_id=t2", nil)
-	corrRR := httptest.NewRecorder()
-	h.ServeHTTP(corrRR, corrReq)
-	if corrRR.Code != http.StatusOK {
-		t.Fatalf("correlations status=%d body=%s", corrRR.Code, corrRR.Body.String())
+	// The correlation list sampled the newest 1,000 events; the Audit Log's
+	// Investigate view counts the whole set (13.42.0-beta).
+	gone := httptest.NewRequest(http.MethodGet, "/compliance/audit/correlations?tenant_id=t2", nil)
+	goneRR := httptest.NewRecorder()
+	h.ServeHTTP(goneRR, gone)
+	if goneRR.Code != http.StatusNotFound {
+		t.Fatalf("removed correlations route answered %d", goneRR.Code)
 	}
 
 	anomReq := httptest.NewRequest(http.MethodGet, "/compliance/audit/anomalies?tenant_id=t2", nil)
