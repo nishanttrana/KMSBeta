@@ -1,0 +1,4858 @@
+{
+ "configFiles": {
+  "infra-consul-consul.hcl": "files/infra/infra-consul-consul.hcl",
+  "infra-envoy-entry.sh": "files/infra/infra-envoy-entry.sh",
+  "infra-envoy-envoy.yaml": "files/infra/infra-envoy-envoy.yaml",
+  "infra-envoy-sds-edge-server.yaml": "files/infra/infra-envoy-sds-edge-server.yaml",
+  "infra-envoy-sds-internal-client.yaml": "files/infra/infra-envoy-sds-internal-client.yaml",
+  "infra-nats-nats-server.conf": "files/infra/infra-nats-nats-server.conf",
+  "infra-postgres-pg-hba.conf": "files/infra/infra-postgres-pg-hba.conf",
+  "infra-reconciler-manifests-.gitkeep": "files/infra/infra-reconciler-manifests-.gitkeep",
+  "infra-tls-tls-entry.sh": "files/infra/infra-tls-tls-entry.sh",
+  "infra-valkey-valkey.conf": "files/infra/infra-valkey-valkey.conf"
+ },
+ "generatedFrom": "docker-compose.yml (scripts/helm-chart.sh)",
+ "hostnames": [
+  "audit",
+  "auth",
+  "autokey",
+  "backup",
+  "certs",
+  "cloud",
+  "cluster-manager",
+  "compliance",
+  "confidential",
+  "consul",
+  "dashboard",
+  "dataprotect",
+  "discovery",
+  "ekm",
+  "envoy",
+  "governance",
+  "hsm-connector",
+  "hsm-integration",
+  "hyok",
+  "keyaccess",
+  "keycore",
+  "kmip",
+  "nats",
+  "policy",
+  "postgres",
+  "posture",
+  "pqc",
+  "reconciler",
+  "reporting",
+  "sbom",
+  "secrets",
+  "signing",
+  "valkey",
+  "watchdog",
+  "workload"
+ ],
+ "infraTLSSubdirs": [
+  "postgres",
+  "nats",
+  "valkey",
+  "consul"
+ ],
+ "memoryVolumes": {
+  "runtime-certs": [
+   "100:101",
+   "700",
+   "32Mi"
+  ]
+ },
+ "services": [
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CERTS_CRWK_ARGON_ITERATIONS",
+     "value": "4"
+    },
+    {
+     "name": "CERTS_CRWK_ARGON_MEMORY_KB",
+     "value": "131072"
+    },
+    {
+     "name": "CERTS_CRWK_ARGON_PARALLEL",
+     "value": "2"
+    },
+    {
+     "name": "CERTS_CRWK_BOOTSTRAP_PASSPHRASE",
+     "value": ""
+    },
+    {
+     "name": "CERTS_CRWK_MLOCK_REQUIRED",
+     "value": "false"
+    },
+    {
+     "name": "CERTS_CRWK_PASSPHRASE_FILE",
+     "value": "/var/lib/vecta/certs/bootstrap.passphrase"
+    },
+    {
+     "name": "CERTS_CRWK_SEALED_PATH",
+     "value": "/var/lib/vecta/certs/crwk.sealed"
+    },
+    {
+     "name": "CERTS_DASHBOARD_TLS_DIR",
+     "value": "/run/vecta/dashboard-tls"
+    },
+    {
+     "name": "CERTS_DASHBOARD_TLS_GID",
+     "value": "101"
+    },
+    {
+     "name": "CERTS_EDGE_PROBE_TARGETS",
+     "value": "envoy=envoy:443,kmip=kmip:25696"
+    },
+    {
+     "name": "CERTS_INFRA_TLS_DIR",
+     "value": "/run/vecta/infra-tls"
+    },
+    {
+     "name": "CERTS_ROOT_KEY_MODE",
+     "value": "software"
+    },
+    {
+     "name": "CERTS_RUNTIME_ENVOY_CN",
+     "value": "vecta-envoy"
+    },
+    {
+     "name": "CERTS_RUNTIME_ENVOY_SANS",
+     "value": "localhost,envoy,127.0.0.1"
+    },
+    {
+     "name": "CERTS_RUNTIME_KMIP_CN",
+     "value": "vecta-kmip"
+    },
+    {
+     "name": "CERTS_RUNTIME_KMIP_SANS",
+     "value": "localhost,kmip,127.0.0.1"
+    },
+    {
+     "name": "CERTS_RUNTIME_MATERIALIZER_DIR",
+     "value": "/run/vecta/certs"
+    },
+    {
+     "name": "CERTS_RUNTIME_MATERIALIZER_ENABLED",
+     "value": "true"
+    },
+    {
+     "name": "CERTS_RUNTIME_MATERIALIZER_INTERVAL",
+     "value": "5m"
+    },
+    {
+     "name": "CERTS_RUNTIME_MATERIALIZER_RENEW_BEFORE",
+     "value": "24h"
+    },
+    {
+     "name": "CERTS_RUNTIME_ROOT_CA_NAME",
+     "value": "vecta-runtime-root"
+    },
+    {
+     "name": "CERTS_RUNTIME_TENANT_ID",
+     "value": "root"
+    },
+    {
+     "name": "CERTS_RUNTIME_VALIDITY_DAYS",
+     "value": "90"
+    },
+    {
+     "name": "CERTS_STORAGE_MODE",
+     "value": "db_encrypted"
+    },
+    {
+     "name": "CERTS_TRUST_DIR",
+     "value": "/run/vecta/trust"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18030"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8030"
+    },
+    {
+     "name": "KEYCORE_URL",
+     "value": "https://keycore:8010"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "groupAdd": [
+    101
+   ],
+   "image": "vecta/certs",
+   "mounts": [
+    {
+     "data": "certs-key-data",
+     "mountPath": "/var/lib/vecta/certs",
+     "readOnly": false
+    },
+    {
+     "memory": "runtime-certs",
+     "mountPath": "/run/vecta/certs",
+     "readOnly": false
+    },
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": false
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    },
+    {
+     "data": "dashboard-tls",
+     "mountPath": "/run/vecta/dashboard-tls",
+     "readOnly": false
+    },
+    {
+     "data": "infra-tls",
+     "mountPath": "/run/vecta/infra-tls",
+     "readOnly": false
+    }
+   ],
+   "name": "certs",
+   "noNewPrivileges": true,
+   "ports": [
+    8030,
+    18030
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18030 && test -s /run/vecta/certs/envoy/tls.crt && test -s /run/vecta/certs/envoy/tls.key && test -s /run/vecta/certs/kmip/tls.crt && test -s /run/vecta/certs/kmip/tls.key && test -s /run/vecta/certs/ca/ca.crt"
+   ],
+   "profiles": [
+    "certs"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": true,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": [
+    "postgres",
+    "-c",
+    "ssl=on",
+    "-c",
+    "ssl_cert_file=/etc/vecta-tls/tls.crt",
+    "-c",
+    "ssl_key_file=/etc/vecta-tls/tls.key",
+    "-c",
+    "ssl_ca_file=/etc/vecta-tls/internal-chain.crt",
+    "-c",
+    "ssl_min_protocol_version=TLSv1.3",
+    "-c",
+    "hba_file=/etc/postgresql/pg_hba.conf",
+    "-c",
+    "shared_buffers=256MB",
+    "-c",
+    "effective_cache_size=768MB",
+    "-c",
+    "work_mem=8MB",
+    "-c",
+    "maintenance_work_mem=128MB",
+    "-c",
+    "wal_level=logical",
+    "-c",
+    "max_replication_slots=64",
+    "-c",
+    "max_wal_senders=64",
+    "-c",
+    "max_worker_processes=96",
+    "-c",
+    "max_logical_replication_workers=64",
+    "-c",
+    "max_sync_workers_per_subscription=4",
+    "-c",
+    "max_connections=200",
+    "-c",
+    "idle_in_transaction_session_timeout=60000",
+    "-c",
+    "statement_timeout=30000",
+    "-c",
+    "lock_timeout=10000",
+    "-c",
+    "wal_buffers=16MB",
+    "-c",
+    "checkpoint_completion_target=0.9",
+    "-c",
+    "max_wal_size=1GB",
+    "-c",
+    "wal_compression=zstd",
+    "-c",
+    "random_page_cost=1.1",
+    "-c",
+    "default_statistics_target=200",
+    "-c",
+    "jit=on",
+    "-c",
+    "autovacuum_vacuum_scale_factor=0.05",
+    "-c",
+    "autovacuum_analyze_scale_factor=0.02",
+    "-c",
+    "log_min_duration_statement=200",
+    "-c",
+    "log_checkpoints=on",
+    "-c",
+    "log_lock_waits=on",
+    "-c",
+    "log_connections=on",
+    "-c",
+    "log_disconnections=on",
+    "-c",
+    "track_activity_query_size=4096",
+    "-c",
+    "track_io_timing=on",
+    "-c",
+    "password_encryption=scram-sha-256",
+    "-c",
+    "tcp_keepalives_idle=60",
+    "-c",
+    "tcp_keepalives_interval=10",
+    "-c",
+    "tcp_keepalives_count=3",
+    "-c",
+    "shared_preload_libraries=pg_stat_statements,pg_trgm,auto_explain",
+    "-c",
+    "pg_stat_statements.track=all",
+    "-c",
+    "pg_stat_statements.max=10000",
+    "-c",
+    "pg_stat_statements.track_planning=on",
+    "-c",
+    "auto_explain.log_min_duration=1000",
+    "-c",
+    "auto_explain.log_analyze=on",
+    "-c",
+    "auto_explain.log_buffers=on",
+    "-c",
+    "auto_explain.log_format=json"
+   ],
+   "entrypoint": [
+    "/usr/local/bin/tls-entry.sh",
+    "postgres:postgres",
+    "kill -HUP 1",
+    "docker-entrypoint.sh"
+   ],
+   "env": [
+    {
+     "name": "POSTGRES_DB",
+     "value": "vecta"
+    },
+    {
+     "name": "POSTGRES_INITDB_ARGS",
+     "value": "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    },
+    {
+     "name": "POSTGRES_USER",
+     "value": "postgres"
+    }
+   ],
+   "image": "postgres:17.11-alpine",
+   "mounts": [
+    {
+     "data": "postgres-data",
+     "mountPath": "/var/lib/postgresql/data",
+     "readOnly": false
+    },
+    {
+     "config": "infra-postgres-pg-hba.conf",
+     "executable": false,
+     "mountPath": "/etc/postgresql/pg_hba.conf"
+    },
+    {
+     "data": "infra-tls/postgres",
+     "mountPath": "/run/vecta/infra-tls",
+     "readOnly": true
+    },
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "config": "infra-tls-tls-entry.sh",
+     "executable": true,
+     "mountPath": "/usr/local/bin/tls-entry.sh"
+    }
+   ],
+   "name": "postgres",
+   "ports": [
+    5432
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "pg_isready -U postgres -d vecta"
+   ],
+   "profiles": [],
+   "resources": {
+    "limits": {
+     "cpu": 2,
+     "memory": "2Gi"
+    },
+    "requests": {
+     "cpu": 0.5,
+     "memory": "512Mi"
+    }
+   },
+   "secretEnv": [
+    "POSTGRES_PASSWORD"
+   ],
+   "shm": "256Mi",
+   "sidecar": true,
+   "startupProbe": true,
+   "vecta": false
+  },
+  {
+   "command": [
+    "nats-server",
+    "--config",
+    "/etc/nats/nats-server.conf"
+   ],
+   "entrypoint": [
+    "/usr/local/bin/tls-entry.sh",
+    "root:root",
+    "kill -HUP 1",
+    "docker-entrypoint.sh"
+   ],
+   "env": [],
+   "image": "nats:2.14.7-alpine",
+   "mounts": [
+    {
+     "config": "infra-nats-nats-server.conf",
+     "executable": false,
+     "mountPath": "/etc/nats/nats-server.conf"
+    },
+    {
+     "data": "nats-data",
+     "mountPath": "/data",
+     "readOnly": false
+    },
+    {
+     "data": "infra-tls/nats",
+     "mountPath": "/run/vecta/infra-tls",
+     "readOnly": true
+    },
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "config": "infra-tls-tls-entry.sh",
+     "executable": true,
+     "mountPath": "/usr/local/bin/tls-entry.sh"
+    }
+   ],
+   "name": "nats",
+   "ports": [
+    4222
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 4222"
+   ],
+   "profiles": [
+    "event_streaming"
+   ],
+   "resources": {
+    "limits": {},
+    "requests": {}
+   },
+   "secretEnv": [
+    "NATS_AUTH_TOKEN"
+   ],
+   "sidecar": true,
+   "startupProbe": false,
+   "vecta": false
+  },
+  {
+   "command": [
+    "valkey-server",
+    "/etc/valkey/valkey.conf",
+    "--requirepass",
+    "$(VALKEY_PASSWORD)"
+   ],
+   "entrypoint": [
+    "/usr/local/bin/tls-entry.sh",
+    "valkey:valkey",
+    "valkey-cli --no-auth-warning -s /tmp/valkey.sock -a \"$VALKEY_PASSWORD\" VECTA_CONFIG SET tls-cert-file /etc/vecta-tls/tls.crt",
+    "tini",
+    "--",
+    "docker-entrypoint.sh"
+   ],
+   "env": [],
+   "image": "valkey/valkey:9.0.6-alpine",
+   "mounts": [
+    {
+     "config": "infra-valkey-valkey.conf",
+     "executable": false,
+     "mountPath": "/etc/valkey/valkey.conf"
+    },
+    {
+     "data": "valkey-data",
+     "mountPath": "/data",
+     "readOnly": false
+    },
+    {
+     "data": "infra-tls/valkey",
+     "mountPath": "/run/vecta/infra-tls",
+     "readOnly": true
+    },
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "config": "infra-tls-tls-entry.sh",
+     "executable": true,
+     "mountPath": "/usr/local/bin/tls-entry.sh"
+    }
+   ],
+   "name": "valkey",
+   "ports": [
+    6379
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "valkey-cli --no-auth-warning -s /tmp/valkey.sock -a \"$VALKEY_PASSWORD\" ping | grep -q PONG"
+   ],
+   "profiles": [
+    "distributed_cache"
+   ],
+   "resources": {
+    "limits": {},
+    "requests": {}
+   },
+   "secretEnv": [
+    "VALKEY_PASSWORD"
+   ],
+   "sidecar": true,
+   "startupProbe": false,
+   "vecta": false
+  },
+  {
+   "command": [
+    "agent",
+    "-server",
+    "-bootstrap-expect=1",
+    "-client=0.0.0.0",
+    "-ui",
+    "-config-file=/consul/config/consul.hcl"
+   ],
+   "entrypoint": [
+    "/usr/local/bin/tls-entry.sh",
+    "consul:consul",
+    "kill -HUP 1",
+    "docker-entrypoint.sh"
+   ],
+   "env": [],
+   "image": "hashicorp/consul:1.22.7",
+   "mounts": [
+    {
+     "config": "infra-consul-consul.hcl",
+     "executable": false,
+     "mountPath": "/consul/config/consul.hcl"
+    },
+    {
+     "data": "consul-data",
+     "mountPath": "/consul/data",
+     "readOnly": false
+    },
+    {
+     "data": "infra-tls/consul",
+     "mountPath": "/run/vecta/infra-tls",
+     "readOnly": true
+    },
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "config": "infra-tls-tls-entry.sh",
+     "executable": true,
+     "mountPath": "/usr/local/bin/tls-entry.sh"
+    }
+   ],
+   "name": "consul",
+   "ports": [
+    8501
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 8501"
+   ],
+   "profiles": [
+    "service_discovery"
+   ],
+   "resources": {
+    "limits": {},
+    "requests": {}
+   },
+   "secretEnv": [],
+   "sidecar": true,
+   "startupProbe": false,
+   "vecta": false
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CLUSTER_BOOTSTRAP_PROFILE_ID",
+     "value": "cluster-profile-base"
+    },
+    {
+     "name": "CLUSTER_NODE_ID",
+     "value": "vecta-kms-01"
+    },
+    {
+     "name": "CLUSTER_SYNC_SHARED_SECRET",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_SYNC_TLS_CA_FILE",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_SYNC_TLS_CERT_FILE",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_SYNC_TLS_INSECURE_SKIP_VERIFY",
+     "value": "false"
+    },
+    {
+     "name": "CLUSTER_SYNC_TLS_KEY_FILE",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_SYNC_TLS_SERVER_NAME",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_URL",
+     "value": "https://cluster-manager:8210"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18070"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8070"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/audit",
+   "mounts": [
+    {
+     "data": "audit-data",
+     "mountPath": "/app/data",
+     "readOnly": false
+    },
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "audit",
+   "noNewPrivileges": true,
+   "ports": [
+    8070,
+    18070
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18070"
+   ],
+   "profiles": [],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_BOOTSTRAP_ADMIN_EMAIL",
+     "value": "admin@vecta.local"
+    },
+    {
+     "name": "AUTH_BOOTSTRAP_ADMIN_ROLE",
+     "value": "tenant-admin"
+    },
+    {
+     "name": "AUTH_BOOTSTRAP_ADMIN_USERNAME",
+     "value": "admin"
+    },
+    {
+     "name": "AUTH_BOOTSTRAP_CLI_EMAIL",
+     "value": "cli@vecta.local"
+    },
+    {
+     "name": "AUTH_BOOTSTRAP_CLI_ENABLED",
+     "value": "true"
+    },
+    {
+     "name": "AUTH_BOOTSTRAP_CLI_USERNAME",
+     "value": "cli-user"
+    },
+    {
+     "name": "AUTH_BOOTSTRAP_RESET_ADMIN",
+     "value": "false"
+    },
+    {
+     "name": "AUTH_BOOTSTRAP_TENANT_ID",
+     "value": "root"
+    },
+    {
+     "name": "AUTH_BOOTSTRAP_TENANT_NAME",
+     "value": "Root"
+    },
+    {
+     "name": "AUTH_CLI_HOST",
+     "value": "127.0.0.1"
+    },
+    {
+     "name": "AUTH_CLI_HSM_SERVICE_NAME",
+     "value": "hsm-integration"
+    },
+    {
+     "name": "AUTH_CLI_HSM_WORKSPACE_ROOT",
+     "value": "/var/lib/vecta/hsm/providers"
+    },
+    {
+     "name": "AUTH_CLI_PORT",
+     "value": "2222"
+    },
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18001"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8001"
+    },
+    {
+     "name": "JWT_PRIVATE_KEY_PATH",
+     "value": "/var/lib/vecta/auth/jwt_private.pem"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/auth",
+   "mounts": [
+    {
+     "data": "auth-data",
+     "mountPath": "/var/lib/vecta/auth",
+     "readOnly": false
+    },
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "auth",
+   "noNewPrivileges": true,
+   "ports": [
+    8001,
+    18001
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18001"
+   ],
+   "profiles": [],
+   "resources": {
+    "limits": {
+     "cpu": 1,
+     "memory": "512Mi"
+    },
+    "requests": {
+     "cpu": 0.25,
+     "memory": "128Mi"
+    }
+   },
+   "secretEnv": [
+    "AUTH_BOOTSTRAP_CLI_PASSWORD",
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GOVERNANCE_URL",
+     "value": "https://governance:8050"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18260"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8260"
+    },
+    {
+     "name": "KEYCORE_URL",
+     "value": "https://keycore:8010"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/autokey",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "autokey",
+   "noNewPrivileges": true,
+   "ports": [
+    8260,
+    18260
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18260"
+   ],
+   "profiles": [
+    "autokey_provisioning"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18290"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8290"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/backup",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "backup",
+   "noNewPrivileges": true,
+   "ports": [
+    8290,
+    18290
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18290"
+   ],
+   "profiles": [],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "COMPLIANCE_URL",
+     "value": "https://compliance:8110"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18080"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8080"
+    },
+    {
+     "name": "KEYCORE_URL",
+     "value": "https://keycore:8010"
+    },
+    {
+     "name": "KEY_ACCESS_URL",
+     "value": "https://keyaccess:8270"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_DEPLOYED_PROFILES",
+     "value": ""
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/cloud",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "cloud",
+   "noNewPrivileges": true,
+   "ports": [
+    8080,
+    18080
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18080"
+   ],
+   "profiles": [
+    "cloud_byok"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CLUSTER_ADVERTISE_URL",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_BOOTSTRAP_COMPONENTS",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_BOOTSTRAP_PROFILE_ID",
+     "value": "cluster-profile-base"
+    },
+    {
+     "name": "CLUSTER_HSM_KEY_REPLICATION_ENABLED",
+     "value": "false"
+    },
+    {
+     "name": "CLUSTER_HSM_PARTITION_LABEL",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_HTTP_REQUIRE_CLIENT_CERT",
+     "value": "true"
+    },
+    {
+     "name": "CLUSTER_HTTP_TLS_CERT_FILE",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_HTTP_TLS_CLIENT_CA_FILE",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_HTTP_TLS_ENABLE",
+     "value": "false"
+    },
+    {
+     "name": "CLUSTER_HTTP_TLS_KEY_FILE",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_JOIN_ALLOW_HTTP",
+     "value": "false"
+    },
+    {
+     "name": "CLUSTER_MEK_IN_HSM",
+     "value": "false"
+    },
+    {
+     "name": "CLUSTER_MEK_LOGICAL_ID",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_NODE_ENDPOINT",
+     "value": "10.0.1.100"
+    },
+    {
+     "name": "CLUSTER_NODE_ID",
+     "value": "vecta-kms-01"
+    },
+    {
+     "name": "CLUSTER_NODE_NAME",
+     "value": "vecta-kms-01"
+    },
+    {
+     "name": "CLUSTER_NODE_ROLE",
+     "value": "leader"
+    },
+    {
+     "name": "CLUSTER_PG_ADVERTISE_HOST",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_PG_ADVERTISE_PORT",
+     "value": "5432"
+    },
+    {
+     "name": "CLUSTER_PG_SSLMODE",
+     "value": "verify-full"
+    },
+    {
+     "name": "CLUSTER_SYNC_ANTI_REPLAY_SEC",
+     "value": "120"
+    },
+    {
+     "name": "CLUSTER_SYNC_REQUIRE_MTLS",
+     "value": "false"
+    },
+    {
+     "name": "CLUSTER_SYNC_SHARED_SECRET",
+     "value": ""
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18210"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8210"
+    },
+    {
+     "name": "KEYCORE_URL",
+     "value": "https://keycore:8010"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/cluster",
+   "mounts": [
+    {
+     "memory": "runtime-certs",
+     "mountPath": "/run/vecta/runtime-certs",
+     "readOnly": true
+    },
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "cluster-manager",
+   "noNewPrivileges": true,
+   "ports": [
+    8210,
+    18210
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18210"
+   ],
+   "profiles": [
+    "clustering"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUDIT_URL",
+     "value": "https://audit:8070"
+    },
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CERTS_URL",
+     "value": "https://certs:8030"
+    },
+    {
+     "name": "CLOUD_URL",
+     "value": "https://cloud:8080"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "DISCOVERY_URL",
+     "value": "https://discovery:8100"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GOVERNANCE_URL",
+     "value": "https://governance:8050"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18110"
+    },
+    {
+     "name": "HSM_CONNECTOR_URL",
+     "value": "https://hsm-connector:8430"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8110"
+    },
+    {
+     "name": "HYOK_URL",
+     "value": "https://hyok:8120"
+    },
+    {
+     "name": "KEYCORE_URL",
+     "value": "https://keycore:8010"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POLICY_URL",
+     "value": "https://policy:8040"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "POSTURE_URL",
+     "value": "https://posture:8220"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "REPORTING_URL",
+     "value": "https://reporting:8140"
+    },
+    {
+     "name": "SECRETS_URL",
+     "value": "https://secrets:8020"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_DEPLOYED_PROFILES",
+     "value": ""
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/compliance",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "compliance",
+   "noNewPrivileges": true,
+   "ports": [
+    8110,
+    18110
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18110"
+   ],
+   "profiles": [
+    "compliance_dashboard"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CLUSTER_NODE_ID",
+     "value": "vecta-kms-01"
+    },
+    {
+     "name": "CONFIDENTIAL_JWT_PUBLIC_KEY_B64",
+     "value": ""
+    },
+    {
+     "name": "CONFIDENTIAL_JWT_PUBLIC_KEY_PEM",
+     "value": ""
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18240"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8240"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/confidential",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "confidential",
+   "noNewPrivileges": true,
+   "ports": [
+    8240,
+    18240
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18240"
+   ],
+   "profiles": [
+    "confidential_compute"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "entrypoint": null,
+   "env": [],
+   "image": "vecta/dashboard",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "dashboard-tls",
+     "mountPath": "/run/vecta/dashboard-tls",
+     "readOnly": true
+    },
+    {
+     "deployment": true,
+     "mountPath": "/usr/share/nginx/html/config/deployment.yaml"
+    }
+   ],
+   "name": "dashboard",
+   "ports": [
+    5173
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 5173"
+   ],
+   "profiles": [],
+   "resources": {
+    "limits": {},
+    "requests": {}
+   },
+   "secretEnv": [],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18200"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8200"
+    },
+    {
+     "name": "KEYCORE_URL",
+     "value": "https://keycore:8010"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/dataprotect",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "dataprotect",
+   "noNewPrivileges": true,
+   "ports": [
+    8200,
+    18200
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18200"
+   ],
+   "profiles": [
+    "data_protection"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CERTS_URL",
+     "value": "https://certs:8030"
+    },
+    {
+     "name": "COMPLIANCE_URL",
+     "value": "https://compliance:8110"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18100"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8100"
+    },
+    {
+     "name": "KEYCORE_URL",
+     "value": "https://keycore:8010"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/discovery",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "discovery",
+   "noNewPrivileges": true,
+   "ports": [
+    8100,
+    18100
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18100"
+   ],
+   "profiles": [
+    "crypto_discovery"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "COMPLIANCE_URL",
+     "value": "https://compliance:8110"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18130"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8130"
+    },
+    {
+     "name": "KEYCORE_URL",
+     "value": "https://keycore:8010"
+    },
+    {
+     "name": "KEY_ACCESS_URL",
+     "value": "https://keyaccess:8270"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_DEPLOYED_PROFILES",
+     "value": ""
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/ekm",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "ekm",
+   "noNewPrivileges": true,
+   "ports": [
+    8130,
+    18130
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18130"
+   ],
+   "profiles": [
+    "ekm_database"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "entrypoint": [
+    "/bin/sh",
+    "/etc/envoy/entry.sh"
+   ],
+   "env": [],
+   "image": "envoyproxy/envoy:v1.39.1",
+   "mounts": [
+    {
+     "config": "infra-envoy-envoy.yaml",
+     "executable": false,
+     "mountPath": "/etc/envoy/envoy.yaml"
+    },
+    {
+     "config": "infra-envoy-entry.sh",
+     "executable": true,
+     "mountPath": "/etc/envoy/entry.sh"
+    },
+    {
+     "configDir": "infra-envoy-sds",
+     "files": [
+      {
+       "key": "infra-envoy-sds-edge-server.yaml",
+       "path": "edge_server.yaml"
+      },
+      {
+       "key": "infra-envoy-sds-internal-client.yaml",
+       "path": "internal_client.yaml"
+      }
+     ],
+     "mountPath": "/etc/envoy/sds"
+    },
+    {
+     "memory": "runtime-certs",
+     "mountPath": "/run/vecta/runtime-certs",
+     "readOnly": true
+    },
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    }
+   ],
+   "name": "envoy",
+   "ports": [
+    443,
+    5696,
+    9901
+   ],
+   "probe": [
+    "/usr/local/bin/envoy",
+    "--version"
+   ],
+   "profiles": [],
+   "resources": {
+    "limits": {},
+    "requests": {}
+   },
+   "runAsGroup": 101,
+   "runAsUser": 100,
+   "secretEnv": [],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": false
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "APP_BASE_URL",
+     "value": "https://localhost"
+    },
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CERTS_URL",
+     "value": "https://certs:8030"
+    },
+    {
+     "name": "COMPLIANCE_URL",
+     "value": "https://compliance:8110"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18050"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8050"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_DEPLOYED_PROFILES",
+     "value": ""
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/governance",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": false
+    }
+   ],
+   "name": "governance",
+   "noNewPrivileges": true,
+   "ports": [
+    8050,
+    18050
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18050"
+   ],
+   "profiles": [
+    "governance"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "COMPLIANCE_URL",
+     "value": "https://compliance:8110"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18430"
+    },
+    {
+     "name": "HSM_LIBRARY_ROOTS",
+     "value": "/var/lib/vecta/hsm/providers"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8430"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "groupAdd": [
+    10430
+   ],
+   "image": "vecta/hsm-connector",
+   "mounts": [
+    {
+     "data": "hsm-integration-data",
+     "mountPath": "/var/lib/vecta/hsm",
+     "readOnly": true
+    },
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "hsm-connector",
+   "noNewPrivileges": true,
+   "ports": [
+    8430,
+    18430
+   ],
+   "probe": [
+    "bash",
+    "-c",
+    "exec 3<>/dev/tcp/127.0.0.1/8430"
+   ],
+   "profiles": [
+    "hsm_hardware"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 1,
+     "memory": "512Mi"
+    },
+    "requests": {}
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "HSM_INTEGRATION_SSH_AUTHORIZED_KEYS",
+     "value": ""
+    },
+    {
+     "name": "HSM_INTEGRATION_USER",
+     "value": "cli-user"
+    },
+    {
+     "name": "HSM_INTEGRATION_WORKSPACE_ROOT",
+     "value": "/var/lib/vecta/hsm/providers"
+    },
+    {
+     "name": "HSM_PROVIDERS_GID",
+     "value": "10430"
+    }
+   ],
+   "image": "vecta/hsm-integration",
+   "mounts": [
+    {
+     "data": "hsm-integration-data",
+     "mountPath": "/var/lib/vecta/hsm",
+     "readOnly": false
+    },
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    }
+   ],
+   "name": "hsm-integration",
+   "ports": [
+    22
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "netstat -ltn | grep -q ':22[[:space:]]'"
+   ],
+   "profiles": [
+    "hsm_cli",
+    "hsm_hardware"
+   ],
+   "resources": {
+    "limits": {},
+    "requests": {}
+   },
+   "secretEnv": [],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "AZURE_EKM_PORT",
+     "value": "8443"
+    },
+    {
+     "name": "AZURE_EKM_TLS_CERT_FILE",
+     "value": "/etc/vecta-certs/envoy/tls.crt"
+    },
+    {
+     "name": "AZURE_EKM_TLS_KEY_FILE",
+     "value": "/etc/vecta-certs/envoy/tls.key"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GOVERNANCE_URL",
+     "value": "https://governance:8050"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18120"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8120"
+    },
+    {
+     "name": "KEYCORE_URL",
+     "value": "https://keycore:8010"
+    },
+    {
+     "name": "KEY_ACCESS_URL",
+     "value": "https://keyaccess:8270"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POLICY_URL",
+     "value": "https://policy:8040"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_DEPLOYED_PROFILES",
+     "value": ""
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/hyok",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    },
+    {
+     "memory": "runtime-certs",
+     "mountPath": "/etc/vecta-certs",
+     "readOnly": true
+    }
+   ],
+   "name": "hyok",
+   "noNewPrivileges": true,
+   "ports": [
+    8120,
+    8443,
+    18120
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18120"
+   ],
+   "profiles": [
+    "hyok_proxy"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GOVERNANCE_URL",
+     "value": "https://governance:8050"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18270"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8270"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/keyaccess",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "keyaccess",
+   "noNewPrivileges": true,
+   "ports": [
+    8270,
+    18270
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18270"
+   ],
+   "profiles": [
+    "key_access_justifications"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CLUSTER_BOOTSTRAP_PROFILE_ID",
+     "value": "cluster-profile-base"
+    },
+    {
+     "name": "CLUSTER_HSM_KEY_REPLICATION_ENABLED",
+     "value": "false"
+    },
+    {
+     "name": "CLUSTER_HSM_PARTITION_LABEL",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_NODE_ID",
+     "value": "vecta-kms-01"
+    },
+    {
+     "name": "CLUSTER_SYNC_SHARED_SECRET",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_SYNC_TLS_CA_FILE",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_SYNC_TLS_CERT_FILE",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_SYNC_TLS_INSECURE_SKIP_VERIFY",
+     "value": "false"
+    },
+    {
+     "name": "CLUSTER_SYNC_TLS_KEY_FILE",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_SYNC_TLS_SERVER_NAME",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_URL",
+     "value": "https://cluster-manager:8210"
+    },
+    {
+     "name": "COMPLIANCE_URL",
+     "value": "https://compliance:8110"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GOVERNANCE_URL",
+     "value": "https://governance:8050"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18010"
+    },
+    {
+     "name": "HSM_ENDPOINT",
+     "value": "hsm-connector:18430"
+    },
+    {
+     "name": "HSM_MODE",
+     "value": "software"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8010"
+    },
+    {
+     "name": "KEYCORE_MEK_IN_HSM",
+     "value": "false"
+    },
+    {
+     "name": "KEYCORE_MEK_LOGICAL_ID",
+     "value": ""
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POLICY_ENGINE_URL",
+     "value": "https://policy:8040"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_DEPLOYED_PROFILES",
+     "value": ""
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/keycore",
+   "mounts": [
+    {
+     "data": "keycore-data",
+     "mountPath": "/app/data",
+     "readOnly": false
+    },
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "keycore",
+   "noNewPrivileges": true,
+   "ports": [
+    8010,
+    18010
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18010"
+   ],
+   "profiles": [],
+   "resources": {
+    "limits": {
+     "cpu": 1,
+     "memory": "512Mi"
+    },
+    "requests": {
+     "cpu": 0.25,
+     "memory": "128Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CERTS_URL",
+     "value": "https://certs:8030"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "15696"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8160"
+    },
+    {
+     "name": "KEYCORE_URL",
+     "value": "https://keycore:8010"
+    },
+    {
+     "name": "KMIP_PORT",
+     "value": "25696"
+    },
+    {
+     "name": "KMIP_REQUIRE_REGISTERED_CLIENT",
+     "value": "true"
+    },
+    {
+     "name": "KMIP_TLS_CERT_FILE",
+     "value": "/etc/vecta-certs/kmip/tls.crt"
+    },
+    {
+     "name": "KMIP_TLS_CLIENT_CA_FILE",
+     "value": "/etc/vecta-certs/ca/ca.crt"
+    },
+    {
+     "name": "KMIP_TLS_KEY_FILE",
+     "value": "/etc/vecta-certs/kmip/tls.key"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/kmip",
+   "mounts": [
+    {
+     "memory": "runtime-certs",
+     "mountPath": "/etc/vecta-certs",
+     "readOnly": true
+    },
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "kmip",
+   "noNewPrivileges": true,
+   "ports": [
+    8160,
+    15696
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 15696"
+   ],
+   "profiles": [
+    "kmip_server"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CLUSTER_BOOTSTRAP_PROFILE_ID",
+     "value": "cluster-profile-base"
+    },
+    {
+     "name": "CLUSTER_NODE_ID",
+     "value": "vecta-kms-01"
+    },
+    {
+     "name": "CLUSTER_SYNC_SHARED_SECRET",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_SYNC_TLS_CA_FILE",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_SYNC_TLS_CERT_FILE",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_SYNC_TLS_INSECURE_SKIP_VERIFY",
+     "value": "false"
+    },
+    {
+     "name": "CLUSTER_SYNC_TLS_KEY_FILE",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_SYNC_TLS_SERVER_NAME",
+     "value": ""
+    },
+    {
+     "name": "CLUSTER_URL",
+     "value": "https://cluster-manager:8210"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18040"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8040"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/policy",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "policy",
+   "noNewPrivileges": true,
+   "ports": [
+    8040,
+    18040
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18040"
+   ],
+   "profiles": [],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUDIT_URL",
+     "value": "https://audit:8070"
+    },
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18220"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8220"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "POSTURE_AUDIT_SYNC_LIMIT",
+     "value": "500"
+    },
+    {
+     "name": "POSTURE_ENGINE_INTERVAL_SEC",
+     "value": "60"
+    },
+    {
+     "name": "POSTURE_HOT_RETENTION_HOURS",
+     "value": "72"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/posture",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "posture",
+   "noNewPrivileges": true,
+   "ports": [
+    8220,
+    18220
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18220"
+   ],
+   "profiles": [
+    "posture_management"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CERTS_URL",
+     "value": "https://certs:8030"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "DISCOVERY_URL",
+     "value": "https://discovery:8100"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18060"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8060"
+    },
+    {
+     "name": "KEYCORE_URL",
+     "value": "https://keycore:8010"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/pqc",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "pqc",
+   "noNewPrivileges": true,
+   "ports": [
+    8060,
+    18060
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18060"
+   ],
+   "profiles": [
+    "pqc_migration"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8470"
+    },
+    {
+     "name": "KEYCORE_URL",
+     "value": "https://keycore:8010"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POLICY_URL",
+     "value": "https://policy:8040"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "RECONCILER_MANIFEST_DIR",
+     "value": "/etc/vecta/manifests"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/reconciler",
+   "mounts": [
+    {
+     "configDir": "infra-reconciler-manifests",
+     "files": [
+      {
+       "key": "infra-reconciler-manifests-.gitkeep",
+       "path": ".gitkeep"
+      }
+     ],
+     "mountPath": "/etc/vecta/manifests"
+    },
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "reconciler",
+   "noNewPrivileges": true,
+   "ports": [
+    8470
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 8470"
+   ],
+   "profiles": [],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUDIT_URL",
+     "value": "https://audit:8070"
+    },
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "COMPLIANCE_URL",
+     "value": "https://compliance:8110"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18140"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8140"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/reporting",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "reporting",
+   "noNewPrivileges": true,
+   "ports": [
+    8140,
+    18140
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18140"
+   ],
+   "profiles": [
+    "reporting_alerting"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CBOM_SCHEDULE",
+     "value": "daily"
+    },
+    {
+     "name": "CBOM_SCHEDULE_TENANTS",
+     "value": "root"
+    },
+    {
+     "name": "CERTS_URL",
+     "value": "https://certs:8030"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "DISCOVERY_URL",
+     "value": "https://discovery:8100"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18180"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8180"
+    },
+    {
+     "name": "KEYCORE_URL",
+     "value": "https://keycore:8010"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SBOM_SCHEDULE",
+     "value": "daily"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/sbom",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "sbom",
+   "noNewPrivileges": true,
+   "ports": [
+    8180,
+    18180
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18180"
+   ],
+   "profiles": [
+    "sbom_cbom"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18020"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8020"
+    },
+    {
+     "name": "KEYCORE_URL",
+     "value": "https://keycore:8010"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/secrets",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "secrets",
+   "noNewPrivileges": true,
+   "ports": [
+    8020,
+    18020
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18020"
+   ],
+   "profiles": [
+    "secrets"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18280"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8280"
+    },
+    {
+     "name": "KEYCORE_URL",
+     "value": "https://keycore:8010"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/signing",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "signing",
+   "noNewPrivileges": true,
+   "ports": [
+    8280,
+    18280
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18280"
+   ],
+   "profiles": [
+    "artifact_signing"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8480"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/watchdog",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "watchdog",
+   "noNewPrivileges": true,
+   "ports": [
+    8480
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 8480"
+   ],
+   "profiles": [],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  },
+  {
+   "command": null,
+   "dropAll": true,
+   "entrypoint": null,
+   "env": [
+    {
+     "name": "AUDIT_URL",
+     "value": "https://audit:8070"
+    },
+    {
+     "name": "AUTH_URL",
+     "value": "https://auth:8001"
+    },
+    {
+     "name": "BUILD_VERSION",
+     "value": "__VECTA_VERSION__"
+    },
+    {
+     "name": "CONSUL_HEALTH_CHECK_TYPE",
+     "value": "tcp"
+    },
+    {
+     "name": "CONSUL_HTTP_ADDR",
+     "value": "https://consul:8501"
+    },
+    {
+     "name": "CONSUL_SERVICE_ADDRESS",
+     "value": "$HOSTNAME"
+    },
+    {
+     "name": "DB_MAX_IDLE",
+     "value": "20"
+    },
+    {
+     "name": "DB_MAX_OPEN",
+     "value": "50"
+    },
+    {
+     "name": "GODEBUG",
+     "value": "fips140=on"
+    },
+    {
+     "name": "GRPC_PORT",
+     "value": "18250"
+    },
+    {
+     "name": "HTTP_PORT",
+     "value": "8250"
+    },
+    {
+     "name": "KEYCORE_URL",
+     "value": "https://keycore:8010"
+    },
+    {
+     "name": "NATS_URL",
+     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
+    },
+    {
+     "name": "POSTGRES_DSN",
+     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
+    },
+    {
+     "name": "RATE_LIMIT_BURST",
+     "value": "200"
+    },
+    {
+     "name": "RATE_LIMIT_RPS",
+     "value": "100"
+    },
+    {
+     "name": "REDIS_URL",
+     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
+    },
+    {
+     "name": "SQLITE_FALLBACK",
+     "value": "false"
+    },
+    {
+     "name": "VECTA_FIPS_MODE",
+     "value": "on"
+    }
+   ],
+   "image": "vecta/workload-identity",
+   "mounts": [
+    {
+     "data": "internal-trust",
+     "mountPath": "/run/vecta/trust",
+     "readOnly": true
+    },
+    {
+     "data": "platform-state",
+     "mountPath": "/run/vecta/platform",
+     "readOnly": true
+    }
+   ],
+   "name": "workload",
+   "noNewPrivileges": true,
+   "ports": [
+    8250,
+    18250
+   ],
+   "probe": [
+    "sh",
+    "-c",
+    "nc -z 127.0.0.1 18250"
+   ],
+   "profiles": [
+    "workload_identity"
+   ],
+   "resources": {
+    "limits": {
+     "cpu": 0.5,
+     "memory": "256Mi"
+    },
+    "requests": {
+     "cpu": 0.1,
+     "memory": "48Mi"
+    }
+   },
+   "secretEnv": [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
+    "JWT_PUBLIC_KEY_B64",
+    "NATS_AUTH_TOKEN",
+    "POSTGRES_PASSWORD",
+    "VALKEY_PASSWORD",
+    "WORKLOAD_IDENTITY_SHARED_SECRET"
+   ],
+   "sidecar": false,
+   "startupProbe": false,
+   "vecta": true
+  }
+ ],
+ "volumeOwners": {
+  "audit-data": [
+   "100:101",
+   "700"
+  ],
+  "auth-data": [
+   "100:101",
+   "700"
+  ],
+  "certs-key-data": [
+   "100:101",
+   "700"
+  ],
+  "consul-data": null,
+  "dashboard-tls": [
+   "100:101",
+   "750"
+  ],
+  "hsm-integration-data": null,
+  "infra-tls": [
+   "100:101",
+   "700"
+  ],
+  "internal-trust": [
+   "100:101",
+   "755"
+  ],
+  "keycore-data": [
+   "100:101",
+   "700"
+  ],
+  "nats-data": null,
+  "platform-state": [
+   "10001",
+   "755"
+  ],
+  "postgres-data": null,
+  "valkey-data": null
+ }
+}

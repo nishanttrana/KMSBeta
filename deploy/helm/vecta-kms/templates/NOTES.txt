@@ -1,0 +1,16 @@
+Vecta KMS {{ include "vecta.tag" . }} — one node, release {{ .Release.Name }}.
+
+The node starts in a few minutes: certs and Postgres first, then the services.
+  kubectl -n {{ .Release.Namespace }} get pod {{ include "vecta.fullname" . }}-0
+
+Console and API (HTTPS edge):
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "vecta.fullname" . }} 8443:443
+  then https://localhost:8443 — the edge certificate comes from the KMS's internal CA
+  until you choose an external one in Certificates / PKI.
+
+Sign in as admin with the password changeit; the console makes you change it
+at once. Do this before exposing the edge.
+{{- if not .Values.existingSecret }}
+
+Secrets were generated into {{ include "vecta.secretName" . }} and are kept on upgrade and uninstall.
+{{- end }}

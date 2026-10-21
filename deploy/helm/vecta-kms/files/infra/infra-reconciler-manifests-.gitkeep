@@ -1,0 +1,14 @@
+# Tenant manifests directory.
+# Drop *.yaml files in this directory; the reconciler picks them up on the
+# next tick (every 30 seconds). Manifest format is documented in
+# services/reconciler/tenant.go (TenantManifest struct).
+#
+# Example minimal manifest:
+#   apiVersion: vecta-kms/v1
+#   kind: TenantManifest
+#   tenant:
+#     id: tenant-prod-01
+#     name: Production
+#     status: active
+#     min_algorithm_tier: pqc-hybrid
+#     ops_budget_per_day: 1000000

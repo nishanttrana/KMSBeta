@@ -4,6 +4,32 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.38.0-beta] — 2026-10-21
+
+### Added
+- **Helm chart** (`deploy/helm/vecta-kms`, docs/KUBERNETES.md): one KMS node
+  per release, the containers docker-compose.yml runs on one host in one
+  pod, so the shared trust and TLS files work as on Docker and the runtime
+  TLS keys stay in memory. A prepare step lays out the node volume and makes
+  the CRWK passphrase; certs and the infrastructure daemons start first as
+  native sidecars. Secrets are generated once and kept on upgrade and
+  uninstall, or read from `existingSecret`. Features and HSM mode are the
+  deployment file's. The chart's service list is generated from
+  docker-compose.yml (`scripts/helm-chart.sh`) and CI fails if it drifts;
+  `scripts/test-helm-kind.sh` installs it on kind, signs in through the
+  edge and upgrades it.
+
+### Fixed
+- **Cluster members could not reach a primary's Postgres from another
+  host**: `pg_hba.conf` admitted only the Docker network, with a client
+  certificate that subscriptions don't present. The members' replication
+  roles (`vecta_repl_*`) now connect over TLS with SCRAM from any address;
+  every other remote connection still needs the internal CA's certificate.
+- `JWT_PUBLIC_KEY_B64` may be a certificate for auth's signing key, as the
+  chart generates. Governance and ekm already accepted one; the shared
+  loader and keycore's own parser didn't (keycore refused to start on the
+  chart's first kind install).
+
 ## [13.37.0-beta] — 2026-10-21
 
 ### Added

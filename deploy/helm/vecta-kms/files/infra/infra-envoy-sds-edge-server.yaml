@@ -1,0 +1,8 @@
+# The external edge certificate, written by the certs service and reloaded
+# when it is renewed.
+resources:
+- "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret
+  name: edge_server
+  tls_certificate:
+    certificate_chain: { filename: /run/vecta/runtime-certs/envoy/tls.crt }
+    private_key: { filename: /run/vecta/runtime-certs/envoy/tls.key }

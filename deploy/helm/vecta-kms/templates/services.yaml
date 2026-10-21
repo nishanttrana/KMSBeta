@@ -1,0 +1,38 @@
+{{- $fullname := include "vecta.fullname" . }}
+# The HTTPS edge and KMIP, both terminated by Envoy in the pod.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- include "vecta.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  {{- if and (eq .Values.service.type "LoadBalancer") .Values.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.service.loadBalancerIP }}
+  {{- end }}
+  selector:
+    {{- include "vecta.selector" . | nindent 4 }}
+  ports:
+    - { name: https, port: 443, targetPort: 443, protocol: TCP }
+    - { name: kmip, port: 5696, targetPort: 5696, protocol: TCP }
+---
+# The node's stable name (StatefulSet). Cluster peers reach cluster-manager
+# and Postgres through whatever the operator exposes for them
+# (docs/KUBERNETES.md, "Clustering").
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullname }}-node
+  labels:
+    {{- include "vecta.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    {{- include "vecta.selector" . | nindent 4 }}
+  ports:
+    - { name: https, port: 443, targetPort: 443, protocol: TCP }

@@ -1,0 +1,8 @@
+apiVersion: v2
+name: vecta-kms
+description: Vecta KMS, one node per release (docs/KUBERNETES.md)
+type: application
+# The chart and the KMS release share a version (VERSION).
+version: 13.38.0-beta
+appVersion: 13.38.0-beta
+kubeVersion: ">=1.29.0-0"

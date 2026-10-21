@@ -729,6 +729,10 @@ Security rules are explained in
 - A client for another service's route is tested once against that
   route's real handler, and a credential fallback no server accepts is an
   error, never a quiet unauthenticated call (`pkg/agentauth`, 13.33.0-beta).
+- A change to docker-compose.yml or a file it mounts regenerates the Helm
+  chart (`scripts/helm-chart.sh`); CI fails on a stale chart. A deployment
+  artifact is proven by installing it (`scripts/test-helm-kind.sh`), not by
+  rendering it (13.38.0-beta).
 - A middleware that verifies one credential leaves other Authorization
   schemes to the route that verifies them (AWS SigV4 for XKS); such a route
   is tested through the service's real middleware (13.32.0-beta).

@@ -4,9 +4,14 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/pem"
+	"math/big"
 	"testing"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // makeTestKey returns a fresh RSA-2048 public-key PEM suitable for
@@ -111,5 +116,40 @@ func TestLoadParser_PerServiceOverridesShared(t *testing.T) {
 	}
 	if p == nil {
 		t.Fatalf("expected non-nil parser")
+	}
+}
+
+// The Helm chart gives services a certificate for auth's signing key (Helm
+// can make one from a key but can't print the bare public key): a token
+// signed by that key verifies, and one signed by another key doesn't.
+func TestLoadParser_AcceptsACertificateForTheSigningKey(t *testing.T) {
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpl := &x509.Certificate{SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: "vecta-jwt"}, NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour)}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &priv.PublicKey, priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TEST_JWT_PUBLIC_KEY_PEM", "")
+	t.Setenv("TEST_JWT_PUBLIC_KEY_B64", base64.StdEncoding.EncodeToString(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})))
+	p, err := LoadParser(Config{Prefix: "TEST", Issuer: "iss", Audience: "aud"})
+	if err != nil || p == nil {
+		t.Fatalf("certificate refused: %v", err)
+	}
+	sign := func(k *rsa.PrivateKey) string {
+		tok, err := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{"iss": "iss", "aud": "aud", "sub": "alice", "tenant_id": "root", "exp": time.Now().Add(time.Minute).Unix()}).SignedString(k)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return tok
+	}
+	if _, err := p(sign(priv)); err != nil {
+		t.Fatalf("a token signed by the certificate's key was refused: %v", err)
+	}
+	other, _ := rsa.GenerateKey(rand.Reader, 2048)
+	if _, err := p(sign(other)); err == nil {
+		t.Fatal("a token signed by another key verified")
 	}
 }

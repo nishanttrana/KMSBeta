@@ -6,15 +6,13 @@ package jwtauth
 
 import (
 	"encoding/base64"
-	"encoding/pem"
 	"errors"
-	"crypto/rsa"
-	"crypto/x509"
 	"os"
 	"strings"
 	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 // Config describes what LoadParser reads from the environment. Prefix
@@ -73,22 +71,11 @@ func LoadParser(cfg Config) (func(string) (*pkgauth.Claims, error), error) {
 	if pubPEM == "" {
 		return nil, nil
 	}
-	block, _ := pem.Decode([]byte(pubPEM))
-	if block == nil {
-		return nil, errors.New("jwtauth: invalid public key PEM")
-	}
-	var pub *rsa.PublicKey
-	if parsed, err := x509.ParsePKIXPublicKey(block.Bytes); err == nil {
-		if p, ok := parsed.(*rsa.PublicKey); ok {
-			pub = p
-		}
-	}
-	if pub == nil {
-		if p, err := x509.ParsePKCS1PublicKey(block.Bytes); err == nil {
-			pub = p
-		}
-	}
-	if pub == nil {
+	// A PKIX or PKCS#1 public key, or a certificate for the signing key (the
+	// Helm chart generates one: Helm can make a certificate from a key but
+	// cannot write out the bare public key).
+	pub, err := pkgcrypto.ParseRSAPublicKeyPEM(pubPEM)
+	if err != nil {
 		return nil, errors.New("jwtauth: unable to parse RSA public key")
 	}
 	issuer := cfg.Issuer

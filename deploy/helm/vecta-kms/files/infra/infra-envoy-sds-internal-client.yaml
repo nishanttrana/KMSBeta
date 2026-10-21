@@ -1,0 +1,8 @@
+# Envoy's internal client certificate (internal-services Sub CA), written by
+# the certs service and reloaded when it is renewed.
+resources:
+- "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret
+  name: internal_client
+  tls_certificate:
+    certificate_chain: { filename: /run/vecta/runtime-certs/envoy-client/tls.crt }
+    private_key: { filename: /run/vecta/runtime-certs/envoy-client/tls.key }

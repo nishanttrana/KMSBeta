@@ -17,7 +17,8 @@ pull request.
 | Go tests — race detector | the whole suite under `-race` (13.8.0-beta) |
 | Backend RuntimeCfg/Vet/Test/Security | runtime config validation, `scripts/conformance.sh`, `go vet`, every test run twice (`-count=2`), the suite with no network, `govulncheck` |
 | Integration tests (Postgres) | storage behaviour SQLite cannot prove, a real NATS, an AWS KMS emulator (LocalStack) for BYOK, a real Envoy |
-| Cluster replication (two-node Postgres) | joining and replication between two databases |
+| Cluster replication and failover (three-node Postgres) | joining, replication, election, re-subscription, switchover and fencing between three databases |
+| Helm chart | the chart matches docker-compose.yml, lints, and renders manifests valid for Kubernetes 1.31 (`scripts/check-helm-chart.sh`); the install itself is `scripts/test-helm-kind.sh`, run locally with built images |
 | Volume repair (Docker Compose) | the volume scripts against real Docker volumes |
 | Dashboard Lint/Type/Unit/Build/Smoke | the dashboard steps in order on the locked dependencies, then every Playwright spec |
 

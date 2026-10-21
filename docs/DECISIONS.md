@@ -7,6 +7,26 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-21 — Kubernetes: one pod per KMS node, generated from compose
+**Decision:** the Helm chart runs a node's containers in one pod (a
+StatefulSet of one), with compose service names resolving to the pod, a
+memory `emptyDir` for the runtime TLS keys, and one volume for the node's
+data. Its container list is generated from docker-compose.yml and CI fails
+if it drifts. Clusters are several releases joined as Docker nodes are.
+**Why:** about thirty services read files certs and governance write; the
+edge and KMIP keys must stay in memory, which only one pod can share; and
+the product scales by nodes with their own Postgres, not by service
+replicas. Generating from compose keeps one source of truth for every
+image, variable, port and mount.
+**Rejected:** a Deployment per service (needs ReadWriteMany storage for the
+shared files and puts the runtime keys on disk); a hand-written chart (it
+would drift from compose with the next service); an external Postgres (not
+how a node is built today).
+**Enforced:** `scripts/check-helm-chart.sh` (CI job Helm chart),
+`scripts/test-helm-kind.sh`.
+
+---
+
 ## 2026-10-21 — Failover: majority leases at three nodes, an administrator at two
 **Decision:** with three or more voters, members elect a new primary by
 majority vote (one vote per epoch, only for a candidate with at least the

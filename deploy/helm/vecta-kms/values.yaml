@@ -1,0 +1,80 @@
+# Vecta KMS on Kubernetes: one KMS node per release (docs/KUBERNETES.md).
+# Several nodes form a cluster through Platform → Cluster, as on Docker.
+
+image:
+  # Vecta images are <registry><name>:<tag>, e.g. registry.example.com/vecta/auth.
+  registry: ""
+  # Defaults to the chart's appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+# Other images by service name (postgres, nats, valkey, consul, envoy), and the
+# small image the prepare step runs in.
+images:
+  prepare: alpine:3.24
+imagePullSecrets: []
+
+# The same features as infra/deployment/deployment.yaml; each one is the
+# Compose profile of its services (infra/scripts/parse-deployment.sh).
+deployment:
+  hsm_mode: software          # software | hardware | auto
+  features:
+    secrets: true
+    certs: true
+    governance: true
+    cloud_byok: true
+    hyok_proxy: true
+    kmip_server: true
+    ekm_database: true
+    autokey_provisioning: true
+    artifact_signing: true
+    key_access_justifications: true
+    workload_identity: true
+    confidential_compute: true
+    compliance_dashboard: true
+    sbom_cbom: true
+    reporting_alerting: true
+    posture_management: true
+    pqc_migration: true
+    crypto_discovery: true
+    data_protection: true
+    clustering: false
+  cert_security:
+    cert_storage_mode: db_encrypted
+    root_key_mode: software
+
+# FIPS 140-3 runtime mode at first start: on | only | off. Customers change
+# it in the console afterwards (docs/SECURITY/FIPS.md).
+fipsMode: "on"
+
+# Secrets. With existingSecret, the chart reads every key below from it and
+# creates nothing. Otherwise it generates them once and keeps them on upgrade.
+#   POSTGRES_PASSWORD NATS_AUTH_TOKEN VALKEY_PASSWORD
+#   WORKLOAD_IDENTITY_SHARED_SECRET INTERNAL_API_TOKEN
+#   INTERNAL_SERVICE_BOOTSTRAP_SECRET AUTH_BOOTSTRAP_CLI_PASSWORD
+#   jwt_private.pem JWT_PUBLIC_KEY_B64 (a certificate for the signing key)
+existingSecret: ""
+
+# One volume holds every node volume (Postgres, the services' data, the
+# trust bundle, infra TLS) in subdirectories; the runtime TLS keys are in
+# memory only.
+persistence:
+  size: 20Gi
+  storageClass: ""
+  accessModes: [ReadWriteOnce]
+
+# The HTTPS edge (443) and KMIP (5696).
+service:
+  type: ClusterIP
+  annotations: {}
+  loadBalancerIP: ""
+
+# Extra environment for every container, and per service.
+env: {}
+serviceEnv: {}
+#   keycore:
+#     KEYCORE_POLICY_FAIL_CLOSED: "true"
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}

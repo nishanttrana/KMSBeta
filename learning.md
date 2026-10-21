@@ -5,6 +5,20 @@ Newest entries on top.
 
 ## 2026-10-21
 
+### Install it, don't just render it (13.38.0-beta)
+- The chart linted and its manifests validated against the Kubernetes
+  schema, and the node still could not start: Postgres admitted only the
+  Docker network, kmip and Envoy both wanted port 5696 once they shared a
+  pod, and keycore parsed the JWT key with its own copy of the parser that
+  refused the certificate the shared one accepted. Each surfaced only on a
+  real install (`scripts/test-helm-kind.sh`). **A deployment artifact is
+  tested by deploying it.** Reading pg_hba.conf for the pod also showed that
+  cluster members on other hosts were refused too: the join tests run on
+  Postgres without the product's pg_hba.conf.
+- **A second copy of a parser drifts**: fix the shared one, then
+  `git grep` for the error message to find the copies.
+
+
 ### A control that changes a label is not failover (13.37.0-beta)
 - Node Management had a Leader/Follower select whose Apply changed
   `cluster_nodes.role` and nothing else: no node stopped or started

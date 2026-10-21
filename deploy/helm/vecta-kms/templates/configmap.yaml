@@ -1,0 +1,59 @@
+{{- $stack := .Files.Get "files/stack.json" | fromJson }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "vecta.fullname" . }}-infra
+  labels:
+    {{- include "vecta.labels" . | nindent 4 }}
+data:
+  {{- range $key, $path := $stack.configFiles }}
+  {{ $key }}: |-
+    {{- $.Files.Get $path | nindent 4 }}
+  {{- end }}
+  crwk-passphrase.sh: |-
+    {{- .Files.Get "files/infra/crwk-passphrase.sh" | nindent 4 }}
+  # The console shows a module only where its feature is deployed
+  # (web/dashboard/src/lib/deployment.ts).
+  deployment.yaml: |-
+    apiVersion: kms.vecta.io/v1
+    kind: DeploymentConfig
+    metadata:
+      appliance_id: {{ include "vecta.fullname" . }}
+    spec:
+      core:
+        audit: true
+        auth: true
+        keycore: true
+        policy: true
+      features:
+        {{- range $k, $v := .Values.deployment.features }}
+        {{ $k }}: {{ $v }}
+        {{- end }}
+      hsm_mode: {{ .Values.deployment.hsm_mode }}
+      cert_security:
+        {{- toYaml .Values.deployment.cert_security | nindent 8 }}
+  # The node's volumes, as infra/scripts/compose-volumes.sh lays them out for
+  # Compose: each writer owns its directory. Runs as root before anything else.
+  prepare.sh: |-
+    set -eu
+    {{- range $vol, $own := $stack.volumeOwners }}
+    mkdir -p /pv/{{ $vol }}
+    {{- if $own }}
+    chown {{ if has $vol (list "certs-key-data" "infra-tls") }}-R {{ end }}{{ index $own 0 }} /pv/{{ $vol }}
+    chmod {{ index $own 1 }} /pv/{{ $vol }}
+    {{- end }}
+    {{- end }}
+    {{- range $sub := $stack.infraTLSSubdirs }}
+    mkdir -p /pv/infra-tls/{{ $sub }}
+    chown 100:101 /pv/infra-tls/{{ $sub }}
+    chmod 700 /pv/infra-tls/{{ $sub }}
+    {{- end }}
+    {{- range $vol, $spec := $stack.memoryVolumes }}
+    chown {{ index $spec 0 }} /mem/{{ $vol }}
+    chmod {{ index $spec 1 }} /mem/{{ $vol }}
+    {{- end }}
+    # Auth's token signing key, from the release's Secret.
+    install -o 100 -g 101 -m 600 /jwt/jwt_private.pem /pv/auth-data/jwt_private.pem
+    # The passphrase sealing the certs root wrapping key: generated in the
+    # certs volume, never printed (infra/scripts/crwk-passphrase.sh).
+    CERTS_CRWK_PASSPHRASE_FILE=/var/lib/vecta/certs/bootstrap.passphrase sh /cfg/crwk-passphrase.sh
