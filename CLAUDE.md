@@ -777,6 +777,11 @@ Security rules are explained in
 - Data kept for an outage (a write-ahead buffer) and the key that protects
   it live on the service's own volume together; a record that fails its
   check is quarantined and audited, never skipped (13.20).
+- A consumer that writes a record per stream message keys it on the
+  message's identity, so a redelivery finds the row it already wrote:
+  JetStream redelivers on a lost ack, and replays the stream when a
+  consumer's stored position is lost (13.39.0-beta,
+  `TestRedeliveredMessageIsStoredOnce`).
 
 **Fix the class; remove completely**
 - A hole found in one route means every route of that service is listed

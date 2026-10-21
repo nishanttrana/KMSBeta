@@ -142,6 +142,31 @@ refusals by action and `details.result`, not by the `result` column. A new
 event's test checks the row as stored at least once, not only the payload
 published (CLAUDE.md, "Before calling a change done").
 
+## One row per stream message (13.39.0-beta)
+
+The chain proves rows weren't changed; it doesn't prove each event was
+recorded once. JetStream delivers a message again whenever its ack is
+lost, and replays the stream when a consumer's stored position is lost
+(2026-10-21: an interrupted write zeroed `audit-ingest`'s state file).
+Before 13.39.0-beta only cluster-relayed events were checked for an existing
+row, so each redelivery was a second row with a new id.
+
+An event read from the stream is stored under
+`evt_` + the first 16 bytes of SHA-256 over the stream name, stream
+sequence, the time the server stored the message (nanoseconds) and the
+payload (`streamEventID`). A message whose id is already stored for the
+tenant is skipped, whether it is a redelivery or a cluster relay. The id in
+a payload is kept only for a relay; anything else gets its stream id, so a
+publisher can't choose the id its event is stored under. An event the
+write-ahead buffer holds carries its stream id, and the drain skips it if it
+was stored before the buffer was rewritten
+(`TestRedeliveredMessageIsStoredOnce`, `...Postgres`).
+
+Rows stored before 13.39.0-beta keep their random ids and aren't rewritten.
+Until their messages age out of the stream (90 days after the upgrade), a
+replay would still duplicate them, so a lost consumer position is repaired
+by hand (docs/OPERATIONS_GUIDE.md).
+
 ## The write-ahead buffer (13.20.0-beta)
 
 With `AUDIT_FAIL_CLOSED=false`, audit buffers events on disk while Postgres

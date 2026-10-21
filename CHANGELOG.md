@@ -4,6 +4,32 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.39.0-beta] — 2026-10-22
+
+### Fixed
+- **Audit ingest stores a redelivered stream message once.** JetStream
+  delivers a message again whenever its ack is lost: a crash between the
+  commit and the ack, or a consumer whose stored position is gone. The
+  ingest skipped duplicates only for cluster-relayed events, so every other
+  redelivery became a second row in the hash chain, and losing the
+  `audit-ingest` position (2026-10-21, an interrupted write left its state
+  file zeroed and audit restart-looping on `subscribe failed: nats: error
+  creating store for consumer`) would have replayed up to 90 days of events
+  into it. An event from the stream is now stored under an id derived from
+  its stream, sequence, storage time and payload, and a message whose id is
+  already stored is skipped. A payload can no longer choose the id of a
+  non-relayed event. Events buffered in the write-ahead log keep that id,
+  so a drain interrupted before the buffer was rewritten doesn't store them
+  twice (`TestRedeliveredMessageIsStoredOnce`, and its Postgres twin).
+  Events stored by earlier releases have random ids, so until they age out
+  of the stream (90 days) a lost position is still repaired by hand
+  (docs/OPERATIONS_GUIDE.md, "Audit restart-loops on a corrupt consumer").
+
+### Removed
+- `Service.StartSubscriber` in the audit service (durable `kms-audit`), a
+  second ingest path that nothing called and that the new check didn't
+  cover.
+
 ## [13.38.0-beta] — 2026-10-21
 
 ### Added

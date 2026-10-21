@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,7 +11,6 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
-	pkgevents "vecta-kms/pkg/events"
 )
 
 type Service struct {
@@ -86,8 +87,15 @@ func (s *Service) HandleNATSMessage(ctx context.Context, msg *nats.Msg) error {
 	if err != nil {
 		return fmt.Errorf("%w: %s: %v", errUnparseableEvent, msg.Subject, err)
 	}
-	if s.isRelayedDuplicate(ctx, event) {
-		return nil // another node's event, already here by replication
+	if !isRelayed(event) {
+		// JetStream redelivers a message whose ack it never got (a crash
+		// between commit and ack, or a consumer whose stored position was
+		// lost, 2026-10-22). The id comes from the message's place in the
+		// stream, so a redelivery finds the row it already wrote.
+		event.ID = streamEventID(msg)
+	}
+	if s.alreadyStored(ctx, event) {
+		return nil
 	}
 	_, err = s.ProcessEvent(ctx, event)
 	if err == nil {
@@ -96,10 +104,40 @@ func (s *Service) HandleNATSMessage(ctx context.Context, msg *nats.Msg) error {
 	if s.cfg.FailClosed {
 		return err
 	}
-	if walErr := s.wal.Append("ingest", msg.Subject, msg.Data); walErr != nil {
+	if walErr := s.wal.Append("ingest", msg.Subject, withEventID(msg.Data, event.ID)); walErr != nil {
 		return walErr
 	}
 	return nil
+}
+
+// streamEventID is the id of the event in a JetStream message, derived from
+// the stream, sequence and storage time the server gave it, and its payload:
+// the same message delivered again gets the same id, another message never
+// does. It is "" for a message that didn't come from JetStream.
+func streamEventID(msg *nats.Msg) string {
+	meta, err := msg.Metadata()
+	if err != nil {
+		return ""
+	}
+	h := sha256.New()
+	fmt.Fprintf(h, "%s\x00%d\x00%d\x00", meta.Stream, meta.Sequence.Stream, meta.Timestamp.UnixNano())
+	_, _ = h.Write(msg.Data)
+	return "evt_" + hex.EncodeToString(h.Sum(nil)[:16])
+}
+
+// withEventID returns payload carrying id, so an event buffered in the WAL is
+// stored under the id its stream message gave it.
+func withEventID(payload []byte, id string) []byte {
+	var in map[string]interface{}
+	if id == "" || json.Unmarshal(payload, &in) != nil {
+		return payload
+	}
+	in["id"] = id
+	out, err := json.Marshal(in)
+	if err != nil {
+		return payload
+	}
+	return out
 }
 
 func (s *Service) ProcessEvent(ctx context.Context, event AuditEvent) (AuditEvent, error) {
@@ -203,18 +241,6 @@ func (s *Service) classifyAndCorrelate(ctx context.Context, event AuditEvent) Au
 	return event
 }
 
-func (s *Service) StartSubscriber(ctx context.Context, sub *pkgevents.Subscriber) (*nats.Subscription, error) {
-	return sub.SubscribeDurable("audit.>", "kms-audit", func(msg *nats.Msg) {
-		if err := s.HandleNATSMessage(ctx, msg); err != nil {
-			if s.cfg.FailClosed {
-				_ = msg.Nak()
-				return
-			}
-		}
-		_ = msg.Ack()
-	})
-}
-
 func (s *Service) DrainWAL(ctx context.Context) error {
 	return s.wal.Drain(func(rec WALRecord, payload []byte) error {
 		switch rec.Type {
@@ -227,6 +253,9 @@ func (s *Service) DrainWAL(ctx context.Context) error {
 			event, err := parseIncomingEvent(rec.Subject, payload)
 			if err != nil {
 				return err
+			}
+			if s.alreadyStored(ctx, event) {
+				return nil // stored before the WAL was rewritten
 			}
 			_, err = s.ProcessEvent(ctx, event)
 			return err

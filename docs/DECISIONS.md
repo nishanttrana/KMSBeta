@@ -7,6 +7,25 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-22 — Audit ingest keys an event on its stream position
+**Decision:** an event the audit service reads from the AUDIT stream is
+stored under an id derived from the message's stream, sequence, storage time
+and payload, and is skipped when that id is already stored.
+**Why:** JetStream delivers at least once. The ingest has to make a
+redelivery harmless itself, and the stream position is known for every
+message, including those already in the stream when this shipped.
+**Rejected:** an id assigned by `Client.Emit` (every emitter changes, and
+messages already in the stream carry none); JetStream's `Nats-Msg-Id`
+duplicate window (covers publisher retries for two minutes, not
+redeliveries to a consumer); a hash of the payload alone (two real events
+with the same bytes would become one); `INSERT ... ON CONFLICT` (the key
+includes the timestamp, which an event without one gets at insert, so a
+redelivery of it would not conflict).
+**Enforced:** `TestRedeliveredMessageIsStoredOnce` and its Postgres twin;
+CLAUDE.md, "Integrity and audit".
+
+---
+
 ## 2026-10-21 — Kubernetes: one pod per KMS node, generated from compose
 **Decision:** the Helm chart runs a node's containers in one pod (a
 StatefulSet of one), with compose service names resolving to the pod, a

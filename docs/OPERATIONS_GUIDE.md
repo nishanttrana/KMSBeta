@@ -189,6 +189,39 @@ docker compose exec -e PGPASSWORD postgres psql -U postgres -d vecta
   should be seconds old. If not, read `docker compose logs audit` for
   ingest errors.
 
+### Audit restart-loops on a corrupt consumer
+
+`docker compose logs audit` repeats `subscribe failed: nats: error creating
+store for consumer`, and `docker compose logs nats` says `Error adding
+consumer '$G > AUDIT > audit-ingest': ... corrupt state file (10104)`.
+Services that depend on audit report `dependency audit failed to start`.
+NATS lost the consumer's position (its `o.dat`), usually through a write cut
+off by a crash or a host reboot. The stream's messages are intact.
+
+Don't delete the consumer while events stored before 13.39.0-beta are still
+in the stream (90 days after the upgrade). A new consumer starts at the
+beginning, and those older events would be stored again
+(docs/SECURITY/AUDIT_INTEGRITY.md, "One row per stream message"). Restore
+the position instead:
+
+1. Stop audit. Find the newest row it stored: `select action, timestamp
+   from audit_events order by created_at desc limit 5`.
+2. Copy `/data/jetstream/jetstream/$G/streams/AUDIT/msgs` out of the nats
+   container and find that event's stream sequence: each record in a
+   `.blk` file is a little-endian length, sequence, stored time and
+   subject, then the JSON payload. Match on action and timestamp, and check
+   that every message before it in the last few minutes has a row.
+3. Back up `.../AUDIT/obs/audit-ingest/`, remove `o.dat.tmp`, and write
+   `o.dat` as the bytes `16 02`, then the sequence as an unsigned varint
+   four times (ack floor and delivered, consumer and stream), then `00 00`.
+   The healthy `playbook-trigger-listener/o.dat` next to it has the same
+   shape.
+4. Restart nats, then start audit. NATS delivers only the messages after
+   that sequence, and the row count grows by exactly that many.
+
+Once only 13.39.0-beta ids remain in the stream, deleting the consumer is
+safe: the replay finds every row already stored.
+
 ## Rotating Internal Certificates
 
 Go to **Certificates / PKI > Service mTLS** (root administrator).

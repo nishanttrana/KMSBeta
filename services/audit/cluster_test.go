@@ -163,7 +163,7 @@ func TestRelayedDuplicatesAreSkippedOnlyWhenPresent(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !svc.isRelayedDuplicate(ctx, ev) {
+		if !svc.alreadyStored(ctx, ev) {
 			if _, err := svc.ProcessEvent(ctx, ev); err != nil {
 				t.Fatal(err)
 			}

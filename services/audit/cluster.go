@@ -392,10 +392,17 @@ func (s *SQLStore) EventExists(ctx context.Context, tenantID, id string) (bool, 
 	return n > 0, err
 }
 
-// isRelayedDuplicate: a relayed event whose id is already persisted (it came
-// in by replication). Anything else, relay-marked or not, is persisted.
-func (s *Service) isRelayedDuplicate(ctx context.Context, ev AuditEvent) bool {
-	if ev.ID == "" || ev.Details == nil || ev.Details["origin"] != pkgaudit.OriginClusterRelay {
+// isRelayed: another node's event, relayed with the id it has in that node's
+// chain.
+func isRelayed(ev AuditEvent) bool {
+	return ev.Details != nil && ev.Details["origin"] == pkgaudit.OriginClusterRelay
+}
+
+// alreadyStored: an event whose id is already persisted, a relayed event that
+// came in by replication or a stream message delivered again. An event
+// without an id is new, and gets one when it is persisted.
+func (s *Service) alreadyStored(ctx context.Context, ev AuditEvent) bool {
+	if ev.ID == "" {
 		return false
 	}
 	sq, ok := s.store.(*SQLStore)

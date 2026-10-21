@@ -39,7 +39,8 @@ const DeadLetterSubject = "auditdlq.events"
 // reporting, metrics) run their logic on these fields alone.
 type Event struct {
 	// ID is set only on a cluster relay (Relay): the id the event already has
-	// in the audit chain. Emitters leave it empty; the audit service assigns it.
+	// in the audit chain. Emitters leave it empty; the audit service derives
+	// it from the message's place in the stream, so a redelivery is stored once.
 	ID            string                 `json:"id,omitempty"`
 	TenantID      string                 `json:"tenant_id"`
 	Service       string                 `json:"service"`

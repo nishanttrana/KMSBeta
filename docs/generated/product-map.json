@@ -33680,7 +33680,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-21T11:05:35Z",
+  "generated_at": "2026-10-21T18:52:20Z",
   "navigation": [
     {
       "group": "Home",
@@ -33898,7 +33898,7 @@
             "Publish"
           ],
           "internal_package_calls": [],
-          "line": 54,
+          "line": 55,
           "name": "PublishAudit",
           "receiver_calls": [
             "s.wal.Append",
@@ -33913,7 +33913,7 @@
             "reportChainBroken"
           ],
           "internal_package_calls": [],
-          "line": 265,
+          "line": 294,
           "name": "VerifyChainWalk",
           "receiver_calls": [],
           "store_calls": [
@@ -34240,7 +34240,7 @@
             "reportChainBroken"
           ],
           "internal_package_calls": [],
-          "line": 265,
+          "line": 294,
           "name": "VerifyChainWalk",
           "receiver_calls": [],
           "store_calls": [
@@ -124487,7 +124487,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-21T11:05:35Z",
+    "generatedAt": "2026-10-21T18:52:20Z",
     "methods": [
       "DELETE",
       "GET",

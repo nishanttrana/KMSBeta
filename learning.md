@@ -3,6 +3,31 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-10-22
+
+### A stream consumer's writes must survive a redelivery (13.39.0-beta)
+- After a restart, NATS could not load the `audit-ingest` consumer: its
+  `o.dat` was 24 zero bytes, a rewrite interrupted at 17:51:43 UTC with an
+  empty `o.dat.tmp` beside it (`corrupt state file (10104)`). Audit exited
+  on `subscribe failed`, and every service that depends on it stayed down.
+  The stream itself (134,798 messages) was intact.
+- The usual fix, deleting the consumer, would have replayed the whole
+  stream into the chain: the ingest skipped an event it already had only
+  when the event was a cluster relay carrying its id. Every other event got
+  a random id at insert, so the same message delivered twice was two rows.
+  The same was true of the ordinary case, a crash between the commit and
+  the ack. **A consumer that writes a row per message keys the row on the
+  message's identity**, here its stream position, so a redelivery finds
+  what it wrote.
+- The position was recovered exactly instead: the last row in Postgres
+  matched stream sequence 134307 on action and timestamp to the
+  microsecond, all 41 events from 17:40 up to it were stored, and a 16-byte
+  state file acknowledging through 134307 made NATS deliver only the 722
+  events after it.
+- The playbook listener has the same consumer shape, but a replay can't
+  re-run playbooks: events older than `maxTriggerAge` are refused as stale
+  and audited, and fires have a cooldown.
+
 ## 2026-10-21
 
 ### Install it, don't just render it (13.38.0-beta)
