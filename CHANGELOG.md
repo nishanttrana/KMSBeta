@@ -4,7 +4,14 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
-## [13.44.0-beta] — 2026-10-22
+## [13.45.0-beta] — 2026-10-22
+
+### Fixed
+- CI was still red on 13.44.0-beta: the backup schedule test compared a
+  time read back from Postgres (microseconds) with its own clock, which on
+  Linux carries nanoseconds. Its clock is truncated to microseconds.
+
+ — 2026-10-22
 
 ### Fixed
 - **A recipient-sealed backup schedule failed on every run when the tenant

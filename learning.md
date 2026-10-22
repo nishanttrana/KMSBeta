@@ -5,6 +5,14 @@ Newest entries on top.
 
 ## 2026-10-22
 
+### The rule was written down and still missed (13.45.0-beta)
+- CLAUDE.md already says a value compared with a stored time is truncated
+  to microseconds. The schedule test broke it and passed on macOS, whose
+  clock gives microseconds, then failed on CI's Linux, whose clock gives
+  nanoseconds. It was proven by adding 123 ns to the test clock on the Mac,
+  which fails at the same line CI did. A Postgres test that compares times
+  is checked against that rule before it ships, not after CI reads it.
+
 ### A shared database showed a bug the clean one hid (13.44.0-beta)
 - CI's integration job runs every package against one Postgres database.
   Another package leaves an enabled HSM profile for `root`, so the backup

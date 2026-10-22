@@ -73,7 +73,7 @@ func TestBackupSchedulePostgres(t *testing.T) {
 	ctx := context.Background()
 	auth := &fakeAuthority{active: true}
 	svc.authority = auth
-	clock := time.Now().UTC()
+	clock := time.Now().UTC().Truncate(time.Microsecond) // Postgres keeps microseconds
 	svc.now = func() time.Time { return clock }
 	store := svc.store.(*SQLStore)
 	if _, err := store.db.SQL().ExecContext(ctx, `DELETE FROM governance_backup_schedules`); err != nil {
