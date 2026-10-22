@@ -110,6 +110,11 @@ or CI that does not ship with:
 3. an update to the document of the area it changed: something under `docs/`
    (not `docs/generated/`, which is regenerated) or `CLAUDE.md`.
 
+It also fails, on every change, when a `CHANGELOG.md` section has lost its
+`## [x.y.z]` heading (a line that starts with its date): inserting a section
+by replacing the next one's heading removed seven headings before this
+check existed (13.46.0-beta).
+
 A commit whose change has no area document can say why in a line
 `Docs: n/a — <reason>`; that waives (3) only. Until 13.17.0-beta the gate
 ran on pull requests only, and changes reach `main` without one, so it never

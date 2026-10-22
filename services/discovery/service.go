@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -39,6 +40,9 @@ type Service struct {
 	// audit emits events playbooks can trigger on (secret_exposed); nil
 	// when NATS is unavailable.
 	audit route.Emitter
+	// ocsp asks OCSP responders (revocation.go); nil is the guarded
+	// default, tests reach their loopback responder with their own.
+	ocsp *http.Client
 
 	// conns opens a private repository's git connection (compliance) and
 	// authority re-checks who authorized a schedule (auth).
@@ -247,7 +251,10 @@ func (s *Service) storeAssets(ctx context.Context, tenantID string, items []Cryp
 		seen[a.ID] = true
 		// A rescan rewrites what it observed and keeps the review.
 		old, err := s.store.GetAsset(ctx, tenantID, a.ID)
+		var previous *CryptoAsset
 		if err == nil {
+			prev := old
+			previous = &prev
 			old = withReview(old)
 			if a.Metadata == nil {
 				a.Metadata = map[string]interface{}{}
@@ -262,6 +269,7 @@ func (s *Service) storeAssets(ctx context.Context, tenantID string, items []Cryp
 			continue
 		}
 		n++
+		s.recordChain(ctx, a, previous)
 		// A long hex string is listed as exposed but is often a hash, so
 		// it doesn't raise the incident event.
 		if errors.Is(err, errNotFound) && a.Classification == "exposed" && a.AssetType != "hex_secret" {

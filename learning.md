@@ -5,6 +5,26 @@ Newest entries on top.
 
 ## 2026-10-22
 
+### A refusal a library makes for us is invisible unless we record why (13.46.0-beta)
+- Go 1.27.3 refuses chains through the compromised eMudhra intermediates,
+  but its error is the generic "certificate signed by unknown authority".
+  Discovery stored only `chain_trusted: false`, so nobody could tell which
+  certificates were affected or why, and certificates scanned earlier kept
+  their old "trusted" result. Discovery now keeps the presented chain and
+  the verification error, and matches distrusted keys when read.
+- The platform's list is a copy of the toolchain's. A test reads the
+  toolchain's own source and fails when the copy drifts, so a Go update
+  that distrusts another CA can't pass unnoticed.
+- Seven CHANGELOG sections had lost their headings (13.22-13.25 and
+  13.42-13.44, the last three mine): a script inserted a new section by
+  replacing the next one's heading instead of adding before it, and the
+  docs gate only checked that the new heading existed.
+  `scripts/check-docs.sh` now fails on a section left with only its date.
+- The two small CI fixes (13.44, 13.45) were pushed after vet, tests and
+  the docs gate, without conformance, and 13.44 left `docs/generated`
+  stale. A fix of a red run goes through the same checks as any change,
+  conformance included.
+
 ### The rule was written down and still missed (13.45.0-beta)
 - CLAUDE.md already says a value compared with a stored time is truncated
   to microseconds. The schedule test broke it and passed on macOS, whose

@@ -4022,6 +4022,32 @@ asset; details: type, source, location and fingerprint prefix). Playbooks
 can trigger on it (`secret_exposed`). Finding the same secret again does
 not repeat the event.
 
+**Certificate chains, distrusted CAs and revocation (13.46.0-beta).** A
+`tls_certificate` asset's `metadata` carries `chain` (what the endpoint
+presented, leaf first: `position`, `subject`, `issuer`, `spki_sha256`,
+`not_after`), `chain_error` (why the chain did not verify, from Go's
+`crypto/x509`) and `revocation` (from the leaf's OCSP responder: `status`
+`good`, `revoked` with `revoked_at` and `reason`, `unknown`,
+`unavailable` with `error`, or `not_offered`; `responder`, `checked_at`).
+The OCSP answer counts only when signed for the presented issuer and
+current; CRLs are not read.
+
+| Route | Permission | Behavior |
+|---|---|---|
+| `GET /discovery/distrusted-cas` | `discovery.read` | `{"items": [{spki_sha256, label, source ("platform"/"tenant"), added_by, created_at, affected}]}`: the platform's list (the CA keys Go 1.27.3 refuses: the eight compromised eMudhra emSign G3 intermediates) and the tenant's, each with how many discovered certificates' chains contain it. |
+| `POST /discovery/distrusted-cas` | `discovery.write` | Body exactly `label`, `spki_sha256` (64 hex), `certificate_pem` (the CA's certificate; its key's hash is taken). `201 {"distrusted_ca": ...}` with `affected`; each affected certificate emits `distrusted_ca_found`. A platform entry, a malformed hash or a hash that isn't the certificate's is `400 invalid_distrusted_ca`. |
+| `DELETE /discovery/distrusted-cas/{spki}` | `discovery.write` | Removes a tenant entry; the platform's list can't be changed (`400`). |
+| `GET /discovery/distrusted` | `discovery.read` | `{"total", "chain_unrecorded", "items": [{asset, matches}]}`: certificates whose recorded chain contains a distrusted key (one CA with `spki`), paged with `limit` (at most 500) and `offset`, counted over the whole inventory. `chain_unrecorded` counts TLS certificates found before chains were recorded (rescan them). |
+
+Matching happens when read, against the list as it is then, so a CA
+distrusted after a scan is found without rescanning. Events (playbook
+triggers): `audit.discovery.distrusted_ca_found` the first time a
+certificate is found under a distrusted CA (target: the asset; details
+`location`, `subject`, `issuer`, `distrusted_spki_sha256`,
+`distrusted_label`, `distrusted_source`), and
+`audit.discovery.revoked_certificate_found` the first time its responder
+says it is revoked (`revoked_at`, `reason`, `responder`).
+
 ---
 
 ## Service 26: SBOM (`/svc/sbom/`)
@@ -4896,6 +4922,10 @@ from the code; do not edit by hand.
 - `DELETE /svc/discovery/discovery/buckets/{id}`
 - `POST /svc/discovery/discovery/buckets/{id}/test`
 - `GET /svc/discovery/discovery/crypto/assets`
+- `GET /svc/discovery/discovery/distrusted`
+- `GET /svc/discovery/discovery/distrusted-cas`
+- `POST /svc/discovery/discovery/distrusted-cas`
+- `DELETE /svc/discovery/discovery/distrusted-cas/{spki}`
 - `GET /svc/discovery/discovery/repositories`
 - `POST /svc/discovery/discovery/repositories`
 - `DELETE /svc/discovery/discovery/repositories/{id}`

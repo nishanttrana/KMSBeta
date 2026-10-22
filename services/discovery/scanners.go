@@ -169,6 +169,7 @@ func (s *Service) probeEndpoint(ctx context.Context, tenantID, scanID string, ep
 	if err != nil {
 		return nil, err
 	}
+	p.revocation = s.checkRevocation(ctx, p.chain)
 	return s.tlsAssets(tenantID, scanID, ep.addr, p), nil
 }
 
@@ -177,6 +178,11 @@ type tlsProbe struct {
 	kex             string
 	leaf            *x509.Certificate
 	trusted         bool
+	// chain is what the endpoint presented, leaf first; chainErr why it
+	// did not verify; revocation what the leaf's OCSP responder said.
+	chain      []*x509.Certificate
+	chainErr   string
+	revocation map[string]interface{}
 }
 
 func probeTLS(ctx context.Context, endpoint string, timeout time.Duration, guard dialControl) (tlsProbe, error) {
@@ -197,13 +203,16 @@ func probeTLS(ctx context.Context, endpoint string, timeout time.Duration, guard
 			if len(cs.PeerCertificates) == 0 {
 				return errors.New("no certificate presented")
 			}
-			p.leaf = cs.PeerCertificates[0]
+			p.leaf, p.chain = cs.PeerCertificates[0], cs.PeerCertificates
 			pool := x509.NewCertPool()
 			for _, c := range cs.PeerCertificates[1:] {
 				pool.AddCert(c)
 			}
 			_, verr := p.leaf.Verify(x509.VerifyOptions{DNSName: host, Intermediates: pool})
 			p.trusted = verr == nil
+			if verr != nil {
+				p.chainErr = verr.Error()
+			}
 			return nil
 		},
 	}
@@ -283,9 +292,15 @@ func (s *Service) tlsAssets(tenantID, scanID, ep string, p tlsProbe) []CryptoAss
 		Metadata: map[string]interface{}{
 			"subject": p.leaf.Subject.String(), "issuer": p.leaf.Issuer.String(),
 			"not_after": p.leaf.NotAfter.UTC().Format(time.RFC3339), "signature_algorithm": p.leaf.SignatureAlgorithm.String(),
-			"chain_trusted": p.trusted,
+			"chain_trusted": p.trusted, "chain": chainOf(p.chain),
 		},
 		FirstSeen: now, LastSeen: now,
+	}
+	if p.chainErr != "" {
+		cert.Metadata["chain_error"] = p.chainErr
+	}
+	if p.revocation != nil {
+		cert.Metadata["revocation"] = p.revocation
 	}
 	if time.Now().After(p.leaf.NotAfter) {
 		cert.Status = "expired"

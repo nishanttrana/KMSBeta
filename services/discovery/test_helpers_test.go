@@ -96,6 +96,14 @@ func newDiscoveryHandler(t *testing.T) (http.Handler, *Service, *nopDiscoveryPub
 
 func createDiscoverySchemaForTest(conn *pkgdb.DB) error {
 	stmts := []string{
+		`CREATE TABLE discovery_cert_chains (
+			tenant_id TEXT NOT NULL, asset_id TEXT NOT NULL, position INTEGER NOT NULL, spki_sha256 TEXT NOT NULL,
+			subject TEXT NOT NULL DEFAULT '', issuer TEXT NOT NULL DEFAULT '', PRIMARY KEY (tenant_id, asset_id, position)
+		);`,
+		`CREATE TABLE discovery_distrusted_cas (
+			tenant_id TEXT NOT NULL, spki_sha256 TEXT NOT NULL, label TEXT NOT NULL, added_by TEXT NOT NULL,
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, spki_sha256)
+		);`,
 		`CREATE TABLE discovery_scans (
 			tenant_id TEXT NOT NULL,
 			id TEXT NOT NULL,

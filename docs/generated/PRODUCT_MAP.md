@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-22T04:37:09Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-22T06:04:18Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `25`
 - Tab/component mappings: `32`
 - Sub-pane groups: `14`
-- Backend HTTP routes discovered: `907` across `27` services
-- Backend routes on the `pkg/route` kernel: `542` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `509`
-- Frontend call sites with exact backend route match: `479`
+- Backend HTTP routes discovered: `911` across `27` services
+- Backend routes on the `pkg/route` kernel: `546` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `513`
+- Frontend call sites with exact backend route match: `483`
 - Frontend call sites needing review or dynamic/runtime confirmation: `30`
-- Clickable controls with static `onClick` handlers: `750`
-- Backend request flows with handler/service/package summaries: `907`
+- Clickable controls with static `onClick` handlers: `753`
+- Backend request flows with handler/service/package summaries: `911`
 
 ## How To Use This For Launch
 
@@ -143,7 +143,7 @@ flowchart LR
   svc_cluster_manager["cluster-manager (28 routes)"]
   svc_compliance["compliance (60 routes)"]
   svc_confidential["confidential (7 routes)"]
-  svc_discovery["discovery (24 routes)"]
+  svc_discovery["discovery (28 routes)"]
   svc_ekm["ekm (56 routes)"]
   svc_governance["governance (40 routes)"]
   svc_hyok["hyok (25 routes)"]
@@ -211,7 +211,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | compliance | 60 | 27 |
 | confidential | 7 | 6 |
 | dataprotect | 49 | 28 |
-| discovery | 24 | 22 |
+| discovery | 28 | 26 |
 | ekm | 56 | 29 |
 | governance | 40 | 26 |
 | hsm-connector | 14 | 0 |

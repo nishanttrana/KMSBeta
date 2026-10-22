@@ -28,6 +28,22 @@ const FACTS: [string, string, ((v: unknown) => ReactNode)?][] = [
   ["not_after", "Expires", expiry],
   ["signature_algorithm", "Signature"],
   ["chain_trusted", "Chain", (v) => (v ? "Trusted" : "Not trusted")],
+  ["chain_error", "Why not trusted"],
+  ["chain", "Presented chain", (v) => (Array.isArray(v) ? (
+    <span style={{ display: "grid", gap: 2 }}>
+      {v.map((c: { position?: number; subject?: string; spki_sha256?: string }) => (
+        <span key={`${c.position}`}>{`${c.position}. ${c.subject || "-"} `}<span style={{ fontFamily: MONO, color: C.muted, fontSize: 10 }} title={c.spki_sha256}>{`SPKI ${String(c.spki_sha256 || "").slice(0, 12)}…`}</span></span>
+      ))}
+    </span>
+  ) : String(v))],
+  ["revocation", "Revocation (OCSP)", (v) => {
+    const r = (v || {}) as { status?: string; revoked_at?: string; reason?: string; error?: string; checked_at?: string };
+    const when = r.checked_at ? ` · checked ${absTime(r.checked_at)}` : "";
+    if (r.status === "revoked") return <span style={{ color: C.redFg }}>{`Revoked ${r.revoked_at ? absTime(r.revoked_at) : ""} (${r.reason || "no reason given"})${when}`}</span>;
+    if (r.status === "unavailable") return `Not known: ${r.error || "no answer"}${when}`;
+    if (r.status === "not_offered") return "The issuer offers no OCSP";
+    return `${r.status || "-"}${when}`;
+  }],
   ["self_signed", "Self-signed", yesNo],
   ["is_ca", "CA certificate", yesNo],
   ["serial", "Serial"],

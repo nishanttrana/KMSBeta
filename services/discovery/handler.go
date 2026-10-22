@@ -67,6 +67,7 @@ func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger) *Handler 
 	r.Handle("POST /discovery/buckets/{id}/test", bucket("bucket_test", "id"), h.testBucket)
 	r.Handle("GET /discovery/schedule", read("schedule_read"), h.getSchedule)
 	r.Handle("PUT /discovery/schedule", route.Spec{Action: "schedule_update", Permission: schedulePermission, Resource: "discovery_schedule"}, h.putSchedule)
+	h.distrustRoutes(r)
 	h.router = r
 	return h
 }

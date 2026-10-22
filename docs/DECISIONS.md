@@ -7,6 +7,28 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-22 — Distrusted CAs are matched when read, against Go's list and the tenant's
+**Decision:** discovery records each scanned certificate's presented chain
+by SPKI SHA-256 and matches it against the distrusted list when findings
+are read. The platform's list is the one Go's `crypto/x509` refuses
+(tested against the toolchain's source); a tenant adds its own by
+certificate or key hash. Revocation is asked of the leaf's OCSP
+responder; CRLs are not read.
+**Why:** the owner asked for a response to the eMudhra compromise
+(2026-10-22). Go refuses those chains but reports only "unknown
+authority", so nobody could see which certificates were affected, or find
+the ones scanned earlier.
+**Rejected:** a flag written at scan time (stale as soon as the list
+changes, and scans before it never update); matching subjects or issuer
+names (they are not unique; the key is what was compromised); CRL
+download (large, slow and per-issuer; OCSP answers per certificate, and
+a certificate without OCSP reads `not_offered` rather than a guess).
+**Enforced:** `TestBuiltinDistrustMatchesGoToolchain`,
+`TestDistrustedCAFindings` (and Postgres), `TestOCSPRevocation`,
+`TestDistrustRoutes`, smoke `discovery.spec.ts`.
+
+---
+
 ## 2026-10-22 — Scheduled backups keep their key in the HSM or seal it to the administrator
 **Decision:** a backup schedule names its key protection: `hsm` (the
 HSM-bound mode, refused when no HSM is enabled) or `recipient` (the key

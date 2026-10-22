@@ -49,6 +49,16 @@ type Store interface {
 	CreateTarget(ctx context.Context, target ScanTarget) error
 	ListTargets(ctx context.Context, tenantID string) ([]ScanTarget, error)
 	DeleteTarget(ctx context.Context, tenantID string, id string) error
+
+	// Certificate chains and distrusted CAs (distrust.go).
+	PutCertChain(ctx context.Context, tenantID, assetID string, chain []ChainCert) error
+	ChainSPKIsOf(ctx context.Context, tenantID string, assetIDs []string) (map[string][]string, error)
+	CountAssetsByChainSPKI(ctx context.Context, tenantID string, hashes []string) (map[string]int64, error)
+	AssetsWithChainSPKI(ctx context.Context, tenantID string, hashes []string, limit, offset int) ([]string, int, error)
+	CountCertificatesWithoutChain(ctx context.Context, tenantID string) (int, error)
+	ListDistrustedCAs(ctx context.Context, tenantID string) ([]DistrustedCA, error)
+	PutDistrustedCA(ctx context.Context, tenantID string, d DistrustedCA) error
+	DeleteDistrustedCA(ctx context.Context, tenantID, hash string) error
 }
 
 // ScanTarget is an endpoint a tenant added for the network scan. Host is a

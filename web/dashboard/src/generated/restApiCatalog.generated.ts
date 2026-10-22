@@ -8095,6 +8095,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "discovery-delete-discovery-distrusted-cas-spki",
+    "group": "Discovery (discovery)",
+    "title": "DELETE /discovery/distrusted-cas/{spki}",
+    "service": "discovery",
+    "method": "DELETE",
+    "pathTemplate": "/discovery/distrusted-cas/{spki}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "DELETE /svc/discovery/discovery/distrusted-cas/{spki}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "discovery-delete-discovery-repositories-id",
     "group": "Discovery (discovery)",
     "title": "DELETE /discovery/repositories/{id}",
@@ -8244,6 +8272,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Discovery service.",
     "requestExample": "GET /svc/discovery/discovery/crypto/assets?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-get-discovery-distrusted-cas",
+    "group": "Discovery (discovery)",
+    "title": "GET /discovery/distrusted-cas",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/distrusted-cas?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "GET /svc/discovery/discovery/distrusted-cas?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-get-discovery-distrusted",
+    "group": "Discovery (discovery)",
+    "title": "GET /discovery/distrusted",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/distrusted?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "GET /svc/discovery/discovery/distrusted?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -8496,6 +8580,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Discovery service.",
     "requestExample": "POST /svc/discovery/discovery/buckets/{id}/test?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-post-discovery-distrusted-cas",
+    "group": "Discovery (discovery)",
+    "title": "POST /discovery/distrusted-cas",
+    "service": "discovery",
+    "method": "POST",
+    "pathTemplate": "/discovery/distrusted-cas?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "POST /svc/discovery/discovery/distrusted-cas?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

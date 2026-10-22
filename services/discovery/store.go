@@ -135,6 +135,9 @@ WHERE tenant_id = $1 AND id = $2
 }
 
 func (s *SQLStore) DeleteAsset(ctx context.Context, tenantID string, id string) error {
+	if _, err := s.db.SQL().ExecContext(ctx, `DELETE FROM discovery_cert_chains WHERE tenant_id = $1 AND asset_id = $2`, strings.TrimSpace(tenantID), strings.TrimSpace(id)); err != nil {
+		return err
+	}
 	res, err := s.db.SQL().ExecContext(ctx, `
 DELETE FROM discovery_assets WHERE tenant_id = $1 AND id = $2
 `, strings.TrimSpace(tenantID), strings.TrimSpace(id))

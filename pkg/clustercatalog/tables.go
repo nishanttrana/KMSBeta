@@ -109,6 +109,8 @@ var Replicated = map[string][]string{
 		"discovery_assets",
 		"discovery_bucket_objects",
 		"discovery_buckets",
+		"discovery_cert_chains",
+		"discovery_distrusted_cas",
 		"discovery_repositories",
 		"discovery_scans",
 		"discovery_scan_targets",

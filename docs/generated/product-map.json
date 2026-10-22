@@ -5461,6 +5461,66 @@
       "service": "dataprotect"
     },
     {
+      "action": "distrusted_cas_list",
+      "code_scope": "discovery",
+      "file": "services/discovery/distrust.go",
+      "handler": "h.listDistrustedCAs",
+      "line": 483,
+      "match_key": "discovery|GET|/discovery/distrusted-cas",
+      "method": "GET",
+      "normalized_path": "/discovery/distrusted-cas",
+      "path": "/discovery/distrusted-cas",
+      "permission": "discovery.read",
+      "registration": "kernel",
+      "resource": "distrusted_ca",
+      "service": "discovery"
+    },
+    {
+      "action": "distrusted_ca_add",
+      "code_scope": "discovery",
+      "file": "services/discovery/distrust.go",
+      "handler": "h.addDistrustedCA",
+      "line": 484,
+      "match_key": "discovery|POST|/discovery/distrusted-cas",
+      "method": "POST",
+      "normalized_path": "/discovery/distrusted-cas",
+      "path": "/discovery/distrusted-cas",
+      "permission": "discovery.write",
+      "registration": "kernel",
+      "resource": "distrusted_ca",
+      "service": "discovery"
+    },
+    {
+      "action": "distrusted_ca_remove",
+      "code_scope": "discovery",
+      "file": "services/discovery/distrust.go",
+      "handler": "h.removeDistrustedCA",
+      "line": 485,
+      "match_key": "discovery|DELETE|/discovery/distrusted-cas/{param}",
+      "method": "DELETE",
+      "normalized_path": "/discovery/distrusted-cas/{param}",
+      "path": "/discovery/distrusted-cas/{spki}",
+      "permission": "discovery.write",
+      "registration": "kernel",
+      "resource": "distrusted_ca",
+      "service": "discovery"
+    },
+    {
+      "action": "distrusted_findings_list",
+      "code_scope": "discovery",
+      "file": "services/discovery/distrust.go",
+      "handler": "h.distrustFindings",
+      "line": 486,
+      "match_key": "discovery|GET|/discovery/distrusted",
+      "method": "GET",
+      "normalized_path": "/discovery/distrusted",
+      "path": "/discovery/distrusted",
+      "permission": "discovery.read",
+      "registration": "kernel",
+      "resource": "crypto_asset",
+      "service": "discovery"
+    },
+    {
       "action": "scan_start",
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
@@ -6620,7 +6680,7 @@
       "code_scope": "governance",
       "file": "services/governance/backup_schedule.go",
       "handler": "h.listBackupSchedules",
-      "line": 460,
+      "line": 464,
       "match_key": "governance|GET|/governance/backups/schedules",
       "method": "GET",
       "normalized_path": "/governance/backups/schedules",
@@ -6635,7 +6695,7 @@
       "code_scope": "governance",
       "file": "services/governance/backup_schedule.go",
       "handler": "h.saveBackupSchedule",
-      "line": 461,
+      "line": 465,
       "match_key": "governance|POST|/governance/backups/schedules",
       "method": "POST",
       "normalized_path": "/governance/backups/schedules",
@@ -6650,7 +6710,7 @@
       "code_scope": "governance",
       "file": "services/governance/backup_schedule.go",
       "handler": "h.saveBackupSchedule",
-      "line": 462,
+      "line": 466,
       "match_key": "governance|PUT|/governance/backups/schedules/{param}",
       "method": "PUT",
       "normalized_path": "/governance/backups/schedules/{param}",
@@ -6665,7 +6725,7 @@
       "code_scope": "governance",
       "file": "services/governance/backup_schedule.go",
       "handler": "h.deleteBackupSchedule",
-      "line": 463,
+      "line": 467,
       "match_key": "governance|DELETE|/governance/backups/schedules/{param}",
       "method": "DELETE",
       "normalized_path": "/governance/backups/schedules/{param}",
@@ -6680,7 +6740,7 @@
       "code_scope": "governance",
       "file": "services/governance/backup_schedule.go",
       "handler": "h.runBackupSchedule",
-      "line": 464,
+      "line": 468,
       "match_key": "governance|POST|/governance/backups/schedules/{param}/run",
       "method": "POST",
       "normalized_path": "/governance/backups/schedules/{param}/run",
@@ -16462,7 +16522,7 @@
       "code_scope": "governance",
       "file": "services/governance/backup_schedule.go",
       "handler": "h.saveBackupSchedule",
-      "line": 461,
+      "line": 465,
       "match_key": "governance|POST|/governance/backups/schedules",
       "method": "POST",
       "normalized_path": "/governance/backups/schedules",
@@ -16477,7 +16537,7 @@
       "code_scope": "governance",
       "file": "services/governance/backup_schedule.go",
       "handler": "h.saveBackupSchedule",
-      "line": 462,
+      "line": 466,
       "match_key": "governance|PUT|/governance/backups/schedules/{param}",
       "method": "PUT",
       "normalized_path": "/governance/backups/schedules/{param}",
@@ -21959,16 +22019,6 @@
       "file": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
       "handler": "",
       "label": "void load()} disabled= >",
-      "line": 212,
-      "tabs": [
-        "discovery"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
-      "handler": "",
-      "label": "setScheduleOpen(true)} title={schedule?.paused_reason || (schedule?.enabled ?...",
       "line": 213,
       "tabs": [
         "discovery"
@@ -21978,8 +22028,18 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
       "handler": "",
+      "label": "setScheduleOpen(true)} title={schedule?.paused_reason || (schedule?.enabled ?...",
+      "line": 214,
+      "tabs": [
+        "discovery"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
+      "handler": "",
       "label": "void runScan(scanAllTypes)} disabled= title={scanAllTypes.length ? `Scan $ `...",
-      "line": 217,
+      "line": 218,
       "tabs": [
         "discovery"
       ],
@@ -25093,7 +25153,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
       "handler": "",
       "label": "setStatus(s)} style={ }>",
-      "line": 162,
+      "line": 178,
       "tabs": [],
       "tag": "button"
     },
@@ -25101,7 +25161,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
       "handler": "",
       "label": "void save()} disabled= >Save",
-      "line": 170,
+      "line": 186,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25109,7 +25169,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
       "handler": "",
       "label": "(confirmRemove ? void remove() : setConfirmRemove(true))} disabled= >",
-      "line": 177,
+      "line": 193,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25160,6 +25220,30 @@
       "line": 39,
       "tabs": [],
       "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/DistrustedCAs.tsx",
+      "handler": "",
+      "label": "setAdding((v) => !v)}>",
+      "line": 79,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/DistrustedCAs.tsx",
+      "handler": "",
+      "label": "void add()}>Distrust",
+      "line": 94,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/DistrustedCAs.tsx",
+      "handler": "",
+      "label": "void removeDistrustedCA(session, c.spki_sha256).then(load, (e) => onToast?.(e...",
+      "line": 109,
+      "tabs": [],
+      "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/discovery/Inventory.tsx",
@@ -29811,6 +29895,58 @@
     },
     {
       "dynamic": true,
+      "expression": "serviceRequest(\"discovery\", `/discovery/distrusted-cas?${q(session)}`)",
+      "file": "web/dashboard/src/lib/discoveryTrust.ts",
+      "line": 23,
+      "match_key": "discovery|GET|/discovery/distrusted-cas",
+      "method": "GET",
+      "normalized_path": "/discovery/distrusted-cas",
+      "path": "/discovery/distrusted-cas?{param}",
+      "service": "discovery",
+      "service_key": "discovery",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"discovery\", `/discovery/distrusted-cas?${q(session)}`)",
+      "file": "web/dashboard/src/lib/discoveryTrust.ts",
+      "line": 31,
+      "match_key": "discovery|POST|/discovery/distrusted-cas",
+      "method": "POST",
+      "normalized_path": "/discovery/distrusted-cas",
+      "path": "/discovery/distrusted-cas?{param}",
+      "service": "discovery",
+      "service_key": "discovery",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"discovery\", `/discovery/distrusted-cas/${encodeURIComponent(spki)}?${q(session)}`)",
+      "file": "web/dashboard/src/lib/discoveryTrust.ts",
+      "line": 40,
+      "match_key": "discovery|DELETE|/discovery/distrusted-cas/{param}",
+      "method": "DELETE",
+      "normalized_path": "/discovery/distrusted-cas/{param}",
+      "path": "/discovery/distrusted-cas/{param}?{param}",
+      "service": "discovery",
+      "service_key": "discovery",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"discovery\", `/discovery/distrusted?${p.toString()}`)",
+      "file": "web/dashboard/src/lib/discoveryTrust.ts",
+      "line": 48,
+      "match_key": "discovery|GET|/discovery/distrusted",
+      "method": "GET",
+      "normalized_path": "/discovery/distrusted",
+      "path": "/discovery/distrusted?{param}",
+      "service": "discovery",
+      "service_key": "discovery",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/agents?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
       "line": 241,
@@ -33229,7 +33365,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-22T04:37:09Z",
+  "generated_at": "2026-10-22T06:04:18Z",
   "navigation": [
     {
       "group": "Home",
@@ -56607,6 +56743,304 @@
     {
       "frontend_call_sites": [
         {
+          "expression": "serviceRequest(\"discovery\", `/discovery/distrusted-cas?${q(session)}`)",
+          "file": "web/dashboard/src/lib/discoveryTrust.ts",
+          "line": 23,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.listDistrustedCAs",
+      "handler_external_package_calls": [],
+      "handler_file": "services/discovery/distrust.go",
+      "handler_helper_calls": [
+        "ListDistrustedCAs",
+        "Error"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 489,
+      "handler_name": "listDistrustedCAs",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "ListDistrustedCAs"
+      ],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/discovery/distrusted-cas",
+      "path": "/discovery/distrusted-cas",
+      "route_file": "services/discovery/distrust.go",
+      "route_line": 483,
+      "service": "discovery",
+      "service_external_package_calls": [
+        "sort.Slice"
+      ],
+      "service_helper_calls": [
+        "distrustList",
+        "CountAssetsByChainSPKI",
+        "hashesOf"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "sort.Slice"
+          ],
+          "file": "services/discovery/distrust.go",
+          "helper_calls": [
+            "distrustList",
+            "CountAssetsByChainSPKI",
+            "hashesOf"
+          ],
+          "internal_package_calls": [],
+          "line": 123,
+          "name": "ListDistrustedCAs",
+          "receiver_calls": [],
+          "store_calls": [
+            "CountAssetsByChainSPKI"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "CountAssetsByChainSPKI"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"discovery\", `/discovery/distrusted-cas?${q(session)}`)",
+          "file": "web/dashboard/src/lib/discoveryTrust.ts",
+          "line": 31,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.addDistrustedCA",
+      "handler_external_package_calls": [
+        "errors.Is"
+      ],
+      "handler_file": "services/discovery/distrust.go",
+      "handler_helper_calls": [
+        "AddDistrustedCA",
+        "Error"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 498,
+      "handler_name": "addDistrustedCA",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "AddDistrustedCA"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/discovery/distrusted-cas",
+      "path": "/discovery/distrusted-cas",
+      "route_file": "services/discovery/distrust.go",
+      "route_line": 484,
+      "service": "discovery",
+      "service_external_package_calls": [
+        "crypto/x509.ParseCertificate",
+        "encoding/pem.Decode",
+        "fmt.Errorf",
+        "strings.TrimSpace",
+        "strings.ToLower"
+      ],
+      "service_helper_calls": [
+        "spkiSHA256",
+        "PutDistrustedCA",
+        "AssetsWithChainSPKI",
+        "GetAsset",
+        "distrustedFound"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "crypto/x509.ParseCertificate",
+            "encoding/pem.Decode",
+            "fmt.Errorf",
+            "strings.TrimSpace",
+            "strings.ToLower"
+          ],
+          "file": "services/discovery/distrust.go",
+          "helper_calls": [
+            "spkiSHA256",
+            "PutDistrustedCA",
+            "AssetsWithChainSPKI",
+            "GetAsset",
+            "distrustedFound"
+          ],
+          "internal_package_calls": [],
+          "line": 156,
+          "name": "AddDistrustedCA",
+          "receiver_calls": [],
+          "store_calls": [
+            "PutDistrustedCA",
+            "AssetsWithChainSPKI",
+            "GetAsset"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "PutDistrustedCA",
+        "AssetsWithChainSPKI",
+        "GetAsset"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"discovery\", `/discovery/distrusted-cas/${encodeURIComponent(spki)}?${q(session)}`)",
+          "file": "web/dashboard/src/lib/discoveryTrust.ts",
+          "line": 40,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.removeDistrustedCA",
+      "handler_external_package_calls": [
+        "errors.Is"
+      ],
+      "handler_file": "services/discovery/distrust.go",
+      "handler_helper_calls": [
+        "RemoveDistrustedCA",
+        "Error"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 518,
+      "handler_name": "removeDistrustedCA",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "RemoveDistrustedCA"
+      ],
+      "handler_store_calls": [],
+      "method": "DELETE",
+      "normalized_path": "/discovery/distrusted-cas/{param}",
+      "path": "/discovery/distrusted-cas/{spki}",
+      "route_file": "services/discovery/distrust.go",
+      "route_line": 485,
+      "service": "discovery",
+      "service_external_package_calls": [
+        "fmt.Errorf",
+        "strings.ToLower",
+        "strings.TrimSpace"
+      ],
+      "service_helper_calls": [
+        "DeleteDistrustedCA"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "fmt.Errorf",
+            "strings.ToLower",
+            "strings.TrimSpace"
+          ],
+          "file": "services/discovery/distrust.go",
+          "helper_calls": [
+            "DeleteDistrustedCA"
+          ],
+          "internal_package_calls": [],
+          "line": 204,
+          "name": "RemoveDistrustedCA",
+          "receiver_calls": [],
+          "store_calls": [
+            "DeleteDistrustedCA"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "DeleteDistrustedCA"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"discovery\", `/discovery/distrusted?${p.toString()}`)",
+          "file": "web/dashboard/src/lib/discoveryTrust.ts",
+          "line": 48,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.distrustFindings",
+      "handler_external_package_calls": [
+        "errors.Is",
+        "strconv.Atoi"
+      ],
+      "handler_file": "services/discovery/distrust.go",
+      "handler_helper_calls": [
+        "DistrustFindings",
+        "max",
+        "Error"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 532,
+      "handler_name": "distrustFindings",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "DistrustFindings"
+      ],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/discovery/distrusted",
+      "path": "/discovery/distrusted",
+      "route_file": "services/discovery/distrust.go",
+      "route_line": 486,
+      "service": "discovery",
+      "service_external_package_calls": [
+        "fmt.Errorf",
+        "strings.ToLower",
+        "strings.TrimSpace"
+      ],
+      "service_helper_calls": [
+        "distrustList",
+        "hashesOf",
+        "AssetsWithChainSPKI",
+        "ChainSPKIsOf",
+        "GetAsset",
+        "withReview",
+        "CountCertificatesWithoutChain"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "fmt.Errorf",
+            "strings.ToLower",
+            "strings.TrimSpace"
+          ],
+          "file": "services/discovery/distrust.go",
+          "helper_calls": [
+            "distrustList",
+            "hashesOf",
+            "AssetsWithChainSPKI",
+            "ChainSPKIsOf",
+            "GetAsset",
+            "withReview",
+            "CountCertificatesWithoutChain"
+          ],
+          "internal_package_calls": [],
+          "line": 216,
+          "name": "DistrustFindings",
+          "receiver_calls": [],
+          "store_calls": [
+            "AssetsWithChainSPKI",
+            "ChainSPKIsOf",
+            "GetAsset",
+            "CountCertificatesWithoutChain"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "AssetsWithChainSPKI",
+        "ChainSPKIsOf",
+        "GetAsset",
+        "CountCertificatesWithoutChain"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
           "expression": "serviceRequest(\"discovery\", \"/discovery/scan\")",
           "file": "web/dashboard/src/lib/discovery.ts",
           "line": 69,
@@ -56624,7 +57058,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 76,
+      "handler_line": 77,
       "handler_name": "startScan",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -56674,7 +57108,7 @@
             "runScan"
           ],
           "internal_package_calls": [],
-          "line": 84,
+          "line": 88,
           "name": "StartScan",
           "receiver_calls": [
             "s.mu.Lock",
@@ -56715,7 +57149,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 98,
+      "handler_line": 99,
       "handler_name": "listScans",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -56747,7 +57181,7 @@
             "settle"
           ],
           "internal_package_calls": [],
-          "line": 356,
+          "line": 364,
           "name": "ListScans",
           "receiver_calls": [],
           "store_calls": [
@@ -56777,7 +57211,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 107,
+      "handler_line": 108,
       "handler_name": "getScan",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -56809,7 +57243,7 @@
             "settle"
           ],
           "internal_package_calls": [],
-          "line": 368,
+          "line": 376,
           "name": "GetScan",
           "receiver_calls": [],
           "store_calls": [
@@ -56844,7 +57278,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 119,
+      "handler_line": 120,
       "handler_name": "listAssets",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -56878,7 +57312,7 @@
             "walkAssets"
           ],
           "internal_package_calls": [],
-          "line": 392,
+          "line": 400,
           "name": "FindAssets",
           "receiver_calls": [],
           "store_calls": []
@@ -56902,7 +57336,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 119,
+      "handler_line": 120,
       "handler_name": "listAssets",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -56936,7 +57370,7 @@
             "walkAssets"
           ],
           "internal_package_calls": [],
-          "line": 392,
+          "line": 400,
           "name": "FindAssets",
           "receiver_calls": [],
           "store_calls": []
@@ -56955,7 +57389,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 141,
+      "handler_line": 142,
       "handler_name": "getAsset",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -56991,7 +57425,7 @@
             "withReview"
           ],
           "internal_package_calls": [],
-          "line": 542,
+          "line": 550,
           "name": "GetAsset",
           "receiver_calls": [],
           "store_calls": [
@@ -57024,7 +57458,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 154,
+      "handler_line": 155,
       "handler_name": "reviewAsset",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -57062,7 +57496,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 588,
+          "line": 596,
           "name": "ClassifyAsset",
           "receiver_calls": [],
           "store_calls": [
@@ -57092,7 +57526,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 172,
+      "handler_line": 173,
       "handler_name": "summary",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -57130,7 +57564,7 @@
             "pct"
           ],
           "internal_package_calls": [],
-          "line": 626,
+          "line": 634,
           "name": "Summary",
           "receiver_calls": [],
           "store_calls": []
@@ -57156,7 +57590,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 181,
+      "handler_line": 182,
       "handler_name": "listTargets",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -57212,7 +57646,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 194,
+      "handler_line": 195,
       "handler_name": "addTarget",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -57286,7 +57720,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 228,
+      "handler_line": 229,
       "handler_name": "removeTarget",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -57346,7 +57780,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 239,
+      "handler_line": 240,
       "handler_name": "sources",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -57418,7 +57852,7 @@
             "extractInt"
           ],
           "internal_package_calls": [],
-          "line": 671,
+          "line": 679,
           "name": "Sources",
           "receiver_calls": [
             "s.cloud.ListAccounts",
@@ -57468,7 +57902,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 255,
+      "handler_line": 256,
       "handler_name": "upload",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -57506,7 +57940,7 @@
             "UpdateScan"
           ],
           "internal_package_calls": [],
-          "line": 313,
+          "line": 321,
           "name": "ScanUpload",
           "receiver_calls": [],
           "store_calls": [
@@ -57538,7 +57972,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 295,
+      "handler_line": 296,
       "handler_name": "removeAsset",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -57566,7 +58000,7 @@
             "DeleteAsset"
           ],
           "internal_package_calls": [],
-          "line": 534,
+          "line": 542,
           "name": "RemoveAsset",
           "receiver_calls": [],
           "store_calls": [
@@ -57596,7 +58030,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 306,
+      "handler_line": 307,
       "handler_name": "listRepositories",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -57662,7 +58096,7 @@
         "AddBucket"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 319,
+      "handler_line": 320,
       "handler_name": "addRepository",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -57825,7 +58259,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 361,
+      "handler_line": 362,
       "handler_name": "removeRepository",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -57886,7 +58320,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 374,
+      "handler_line": 375,
       "handler_name": "testRepository",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -57940,7 +58374,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 389,
+      "handler_line": 390,
       "handler_name": "listBuckets",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58010,7 +58444,7 @@
       "handler_internal_package_calls": [
         "pkg/tenantcheck.IsServicePrincipal"
       ],
-      "handler_line": 403,
+      "handler_line": 404,
       "handler_name": "addBucket",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58177,7 +58611,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 443,
+      "handler_line": 444,
       "handler_name": "removeBucket",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58242,7 +58676,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 457,
+      "handler_line": 458,
       "handler_name": "testBucket",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58296,7 +58730,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 474,
+      "handler_line": 475,
       "handler_name": "getSchedule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58358,7 +58792,7 @@
       "handler_internal_package_calls": [
         "pkg/tenantcheck.IsServicePrincipal"
       ],
-      "handler_line": 486,
+      "handler_line": 487,
       "handler_name": "putSchedule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -62249,7 +62683,7 @@
         "ListBackupSchedules"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 478,
+      "handler_line": 482,
       "handler_name": "listBackupSchedules",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -62260,7 +62694,7 @@
       "normalized_path": "/governance/backups/schedules",
       "path": "/governance/backups/schedules",
       "route_file": "services/governance/backup_schedule.go",
-      "route_line": 460,
+      "route_line": 464,
       "service": "governance",
       "service_external_package_calls": [
         "errors.New"
@@ -62300,7 +62734,7 @@
         "SaveBackupSchedule"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 491,
+      "handler_line": 495,
       "handler_name": "saveBackupSchedule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -62311,7 +62745,7 @@
       "normalized_path": "/governance/backups/schedules",
       "path": "/governance/backups/schedules",
       "route_file": "services/governance/backup_schedule.go",
-      "route_line": 461,
+      "route_line": 465,
       "service": "governance",
       "service_external_package_calls": [
         "errors.New",
@@ -62371,7 +62805,7 @@
         "SaveBackupSchedule"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 491,
+      "handler_line": 495,
       "handler_name": "saveBackupSchedule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -62382,7 +62816,7 @@
       "normalized_path": "/governance/backups/schedules/{param}",
       "path": "/governance/backups/schedules/{id}",
       "route_file": "services/governance/backup_schedule.go",
-      "route_line": 462,
+      "route_line": 466,
       "service": "governance",
       "service_external_package_calls": [
         "errors.New",
@@ -62449,7 +62883,7 @@
         "DeleteBackupSchedule"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 528,
+      "handler_line": 532,
       "handler_name": "deleteBackupSchedule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -62460,7 +62894,7 @@
       "normalized_path": "/governance/backups/schedules/{param}",
       "path": "/governance/backups/schedules/{id}",
       "route_file": "services/governance/backup_schedule.go",
-      "route_line": 463,
+      "route_line": 467,
       "service": "governance",
       "service_external_package_calls": [
         "errors.New"
@@ -62508,7 +62942,7 @@
         "RunBackupSchedule"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 545,
+      "handler_line": 549,
       "handler_name": "runBackupSchedule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -62519,24 +62953,11 @@
       "normalized_path": "/governance/backups/schedules/{param}/run",
       "path": "/governance/backups/schedules/{id}/run",
       "route_file": "services/governance/backup_schedule.go",
-      "route_line": 464,
+      "route_line": 468,
       "service": "governance",
       "service_external_package_calls": [
-        "bytes.NewReader",
         "context.WithTimeout",
-        "encoding/json.Marshal",
-        "encoding/json.Unmarshal",
         "errors.New",
-        "errors.Is",
-        "fmt.Errorf",
-        "io.ReadAll",
-        "io.LimitReader",
-        "net/http.NewRequestWithContext",
-        "net/http.Do",
-        "net/url.QueryEscape",
-        "strings.EqualFold",
-        "strings.TrimSpace",
-        "strings.TrimRight",
         "time.Duration"
       ],
       "service_helper_calls": [
@@ -62546,48 +62967,14 @@
         "Authority",
         "parseBackupRecipient",
         "CreateBackup",
-        "pruneScheduledBackups",
-        "scheduledBackupIDs",
-        "DeleteBackup",
-        "scanBackupSchedule",
-        "parseTimeValue",
-        "queryBackupSchedules",
-        "listBackupSchedules",
-        "getBackupSchedule",
-        "dueBackupSchedules",
-        "nullableTimePtr",
-        "deleteBackupSchedule",
-        "backupScheduleRouter",
-        "rootOnly",
-        "ListBackupSchedules",
-        "saveBackupSchedule",
-        "SaveBackupSchedule",
-        "DeleteBackupSchedule",
-        "runBackupSchedule",
-        "newAuthAuthority"
+        "pruneScheduledBackups"
       ],
-      "service_internal_package_calls": [
-        "pkg/route.New",
-        "pkg/servicetoken.Authorize"
-      ],
+      "service_internal_package_calls": [],
       "service_method_details": [
         {
           "external_package_calls": [
-            "bytes.NewReader",
             "context.WithTimeout",
-            "encoding/json.Marshal",
-            "encoding/json.Unmarshal",
             "errors.New",
-            "errors.Is",
-            "fmt.Errorf",
-            "io.ReadAll",
-            "io.LimitReader",
-            "net/http.NewRequestWithContext",
-            "net/http.Do",
-            "net/url.QueryEscape",
-            "strings.EqualFold",
-            "strings.TrimSpace",
-            "strings.TrimRight",
             "time.Duration"
           ],
           "file": "services/governance/backup_schedule.go",
@@ -62598,42 +62985,19 @@
             "Authority",
             "parseBackupRecipient",
             "CreateBackup",
-            "pruneScheduledBackups",
-            "scheduledBackupIDs",
-            "DeleteBackup",
-            "scanBackupSchedule",
-            "parseTimeValue",
-            "queryBackupSchedules",
-            "listBackupSchedules",
-            "getBackupSchedule",
-            "dueBackupSchedules",
-            "nullableTimePtr",
-            "deleteBackupSchedule",
-            "backupScheduleRouter",
-            "rootOnly",
-            "ListBackupSchedules",
-            "saveBackupSchedule",
-            "SaveBackupSchedule",
-            "DeleteBackupSchedule",
-            "runBackupSchedule",
-            "newAuthAuthority"
+            "pruneScheduledBackups"
           ],
-          "internal_package_calls": [
-            "pkg/route.New",
-            "pkg/servicetoken.Authorize"
-          ],
+          "internal_package_calls": [],
           "line": 240,
           "name": "RunBackupSchedule",
           "receiver_calls": [
-            "s.authority.Authority",
-            "s.db.SQL"
+            "s.authority.Authority"
           ],
           "store_calls": []
         }
       ],
       "service_receiver_calls": [
-        "s.authority.Authority",
-        "s.db.SQL"
+        "s.authority.Authority"
       ],
       "service_store_calls": []
     },
@@ -63124,7 +63488,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 472,
+          "line": 474,
           "name": "RestoreBackup",
           "receiver_calls": [],
           "store_calls": []
@@ -63159,7 +63523,7 @@
             "sanitizeBackupJobSummary"
           ],
           "internal_package_calls": [],
-          "line": 311,
+          "line": 313,
           "name": "ListBackups",
           "receiver_calls": [],
           "store_calls": []
@@ -63175,7 +63539,7 @@
             "sanitizeBackupJobSummary"
           ],
           "internal_package_calls": [],
-          "line": 335,
+          "line": 337,
           "name": "GetBackup",
           "receiver_calls": [],
           "store_calls": []
@@ -63192,7 +63556,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 353,
+          "line": 355,
           "name": "DeleteBackup",
           "receiver_calls": [],
           "store_calls": []
@@ -63202,7 +63566,7 @@
           "file": "services/governance/backup.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 386,
+          "line": 388,
           "name": "GetBackupArtifactDownload",
           "receiver_calls": [],
           "store_calls": []
@@ -63221,7 +63585,7 @@
             "backupKeyFileFor"
           ],
           "internal_package_calls": [],
-          "line": 432,
+          "line": 434,
           "name": "GetBackupKeyDownload",
           "receiver_calls": [],
           "store_calls": []
@@ -63539,7 +63903,7 @@
             "sanitizeBackupJobSummary"
           ],
           "internal_package_calls": [],
-          "line": 311,
+          "line": 313,
           "name": "ListBackups",
           "receiver_calls": [],
           "store_calls": []
@@ -63755,7 +64119,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 472,
+          "line": 474,
           "name": "RestoreBackup",
           "receiver_calls": [],
           "store_calls": []
@@ -63790,7 +64154,7 @@
             "sanitizeBackupJobSummary"
           ],
           "internal_package_calls": [],
-          "line": 311,
+          "line": 313,
           "name": "ListBackups",
           "receiver_calls": [],
           "store_calls": []
@@ -63806,7 +64170,7 @@
             "sanitizeBackupJobSummary"
           ],
           "internal_package_calls": [],
-          "line": 335,
+          "line": 337,
           "name": "GetBackup",
           "receiver_calls": [],
           "store_calls": []
@@ -63823,7 +64187,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 353,
+          "line": 355,
           "name": "DeleteBackup",
           "receiver_calls": [],
           "store_calls": []
@@ -63833,7 +64197,7 @@
           "file": "services/governance/backup.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 386,
+          "line": 388,
           "name": "GetBackupArtifactDownload",
           "receiver_calls": [],
           "store_calls": []
@@ -63852,7 +64216,7 @@
             "backupKeyFileFor"
           ],
           "internal_package_calls": [],
-          "line": 432,
+          "line": 434,
           "name": "GetBackupKeyDownload",
           "receiver_calls": [],
           "store_calls": []
@@ -64329,7 +64693,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 472,
+          "line": 474,
           "name": "RestoreBackup",
           "receiver_calls": [],
           "store_calls": []
@@ -64467,7 +64831,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 353,
+          "line": 355,
           "name": "DeleteBackup",
           "receiver_calls": [],
           "store_calls": []
@@ -64525,7 +64889,7 @@
             "sanitizeBackupJobSummary"
           ],
           "internal_package_calls": [],
-          "line": 335,
+          "line": 337,
           "name": "GetBackup",
           "receiver_calls": [],
           "store_calls": []
@@ -64578,7 +64942,7 @@
           "file": "services/governance/backup.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 386,
+          "line": 388,
           "name": "GetBackupArtifactDownload",
           "receiver_calls": [],
           "store_calls": []
@@ -64652,7 +65016,7 @@
             "backupKeyFileFor"
           ],
           "internal_package_calls": [],
-          "line": 432,
+          "line": 434,
           "name": "GetBackupKeyDownload",
           "receiver_calls": [],
           "store_calls": []
@@ -90975,7 +91339,7 @@
       "compliance": 60,
       "confidential": 7,
       "dataprotect": 49,
-      "discovery": 24,
+      "discovery": 28,
       "ekm": 56,
       "governance": 40,
       "hsm-connector": 14,
@@ -91006,7 +91370,7 @@
       "compliance": 27,
       "confidential": 6,
       "dataprotect": 28,
-      "discovery": 22,
+      "discovery": 26,
       "ekm": 29,
       "governance": 26,
       "hyok": 7,
@@ -91329,17 +91693,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 907,
+    "backend_routes": 911,
     "backend_services": 27,
-    "button_inventory": 750,
-    "frontend_call_sites": 509,
-    "matched_frontend_call_sites": 479,
+    "button_inventory": 753,
+    "frontend_call_sites": 513,
+    "matched_frontend_call_sites": 483,
     "nav_items": 25,
-    "request_flows": 907,
-    "request_flows_with_frontend": 485,
-    "request_flows_with_internal_package_calls": 202,
-    "request_flows_with_service_calls": 545,
-    "request_flows_with_store_calls": 632,
+    "request_flows": 911,
+    "request_flows_with_frontend": 489,
+    "request_flows_with_internal_package_calls": 201,
+    "request_flows_with_service_calls": 549,
+    "request_flows_with_store_calls": 636,
     "subpane_groups": 14,
     "tab_components": 32,
     "unmatched_frontend_call_sites": 30
@@ -104959,6 +105323,167 @@
         ]
       },
       {
+        "complexity": 1,
+        "externalPackages": [
+          "sort.Slice"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"discovery\", `/discovery/distrusted-cas?${q(session)}`)",
+            "file": "web/dashboard/src/lib/discoveryTrust.ts",
+            "line": 23,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "listDistrustedCAs",
+        "handlerFile": "services/discovery/distrust.go",
+        "handlerLine": 489,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/discovery/distrusted-cas",
+        "path": "/discovery/distrusted-cas",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "discovery|GET|/discovery/distrusted-cas",
+        "sensitive": false,
+        "service": "discovery",
+        "serviceCalls": [
+          "ListDistrustedCAs"
+        ],
+        "storeCalls": [
+          "CountAssetsByChainSPKI"
+        ],
+        "uiLabels": [
+          "discoveryTrust"
+        ]
+      },
+      {
+        "complexity": 3,
+        "externalPackages": [
+          "errors.Is",
+          "crypto/x509.ParseCertificate",
+          "encoding/pem.Decode",
+          "fmt.Errorf",
+          "strings.TrimSpace",
+          "strings.ToLower"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"discovery\", `/discovery/distrusted-cas?${q(session)}`)",
+            "file": "web/dashboard/src/lib/discoveryTrust.ts",
+            "line": 31,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "addDistrustedCA",
+        "handlerFile": "services/discovery/distrust.go",
+        "handlerLine": 498,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/discovery/distrusted-cas",
+        "path": "/discovery/distrusted-cas",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "discovery|POST|/discovery/distrusted-cas",
+        "sensitive": false,
+        "service": "discovery",
+        "serviceCalls": [
+          "AddDistrustedCA"
+        ],
+        "storeCalls": [
+          "PutDistrustedCA",
+          "AssetsWithChainSPKI",
+          "GetAsset"
+        ],
+        "uiLabels": [
+          "discoveryTrust"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [
+          "errors.Is",
+          "fmt.Errorf",
+          "strings.ToLower",
+          "strings.TrimSpace"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"discovery\", `/discovery/distrusted-cas/${encodeURIComponent(spki)}?${q(session)}`)",
+            "file": "web/dashboard/src/lib/discoveryTrust.ts",
+            "line": 40,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "removeDistrustedCA",
+        "handlerFile": "services/discovery/distrust.go",
+        "handlerLine": 518,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "DELETE",
+        "normalizedPath": "/discovery/distrusted-cas/{param}",
+        "path": "/discovery/distrusted-cas/{spki}",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "discovery|DELETE|/discovery/distrusted-cas/{param}",
+        "sensitive": false,
+        "service": "discovery",
+        "serviceCalls": [
+          "RemoveDistrustedCA"
+        ],
+        "storeCalls": [
+          "DeleteDistrustedCA"
+        ],
+        "uiLabels": [
+          "discoveryTrust"
+        ]
+      },
+      {
+        "complexity": 4,
+        "externalPackages": [
+          "errors.Is",
+          "strconv.Atoi",
+          "fmt.Errorf",
+          "strings.ToLower",
+          "strings.TrimSpace"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"discovery\", `/discovery/distrusted?${p.toString()}`)",
+            "file": "web/dashboard/src/lib/discoveryTrust.ts",
+            "line": 48,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "distrustFindings",
+        "handlerFile": "services/discovery/distrust.go",
+        "handlerLine": 532,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/discovery/distrusted",
+        "path": "/discovery/distrusted",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "discovery|GET|/discovery/distrusted",
+        "sensitive": false,
+        "service": "discovery",
+        "serviceCalls": [
+          "DistrustFindings"
+        ],
+        "storeCalls": [
+          "AssetsWithChainSPKI",
+          "ChainSPKIsOf",
+          "GetAsset",
+          "CountCertificatesWithoutChain"
+        ],
+        "uiLabels": [
+          "discoveryTrust"
+        ]
+      },
+      {
         "complexity": 5,
         "externalPackages": [
           "errors.Is",
@@ -104977,7 +105502,7 @@
         ],
         "handler": "startScan",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 76,
+        "handlerLine": 77,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -105018,7 +105543,7 @@
         ],
         "handler": "listScans",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 98,
+        "handlerLine": 99,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -105054,7 +105579,7 @@
         ],
         "handler": "getScan",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 107,
+        "handlerLine": 108,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -105092,7 +105617,7 @@
         ],
         "handler": "listAssets",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 119,
+        "handlerLine": 120,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -105121,7 +105646,7 @@
         "frontendSites": [],
         "handler": "listAssets",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 119,
+        "handlerLine": 120,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -105148,7 +105673,7 @@
         "frontendSites": [],
         "handler": "getAsset",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 141,
+        "handlerLine": 142,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -105186,7 +105711,7 @@
         ],
         "handler": "reviewAsset",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 154,
+        "handlerLine": 155,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -105222,7 +105747,7 @@
         ],
         "handler": "summary",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 172,
+        "handlerLine": 173,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -105254,7 +105779,7 @@
         ],
         "handler": "listTargets",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 181,
+        "handlerLine": 182,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -105293,7 +105818,7 @@
         ],
         "handler": "addTarget",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 194,
+        "handlerLine": 195,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -105328,7 +105853,7 @@
         ],
         "handler": "removeTarget",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 228,
+        "handlerLine": 229,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -105372,7 +105897,7 @@
         ],
         "handler": "sources",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 239,
+        "handlerLine": 240,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -105418,7 +105943,7 @@
         ],
         "handler": "upload",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 255,
+        "handlerLine": 256,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -105453,7 +105978,7 @@
         ],
         "handler": "removeAsset",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 295,
+        "handlerLine": 296,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -105487,7 +106012,7 @@
         ],
         "handler": "listRepositories",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 306,
+        "handlerLine": 307,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -105526,7 +106051,7 @@
         ],
         "handler": "addRepository",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 319,
+        "handlerLine": 320,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -105570,7 +106095,7 @@
         ],
         "handler": "removeRepository",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 361,
+        "handlerLine": 362,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -105606,7 +106131,7 @@
         ],
         "handler": "testRepository",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 374,
+        "handlerLine": 375,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -105638,7 +106163,7 @@
         ],
         "handler": "listBuckets",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 389,
+        "handlerLine": 390,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -105681,7 +106206,7 @@
         ],
         "handler": "addBucket",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 403,
+        "handlerLine": 404,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/tenantcheck.IsServicePrincipal"
@@ -105726,7 +106251,7 @@
         ],
         "handler": "removeBucket",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 443,
+        "handlerLine": 444,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -105763,7 +106288,7 @@
         ],
         "handler": "testBucket",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 457,
+        "handlerLine": 458,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -105797,7 +106322,7 @@
         ],
         "handler": "getSchedule",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 474,
+        "handlerLine": 475,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -105837,7 +106362,7 @@
         ],
         "handler": "putSchedule",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 486,
+        "handlerLine": 487,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/tenantcheck.IsServicePrincipal"
@@ -107790,7 +108315,7 @@
         ],
         "handler": "listBackupSchedules",
         "handlerFile": "services/governance/backup_schedule.go",
-        "handlerLine": 478,
+        "handlerLine": 482,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -107822,7 +108347,7 @@
         "frontendSites": [],
         "handler": "saveBackupSchedule",
         "handlerFile": "services/governance/backup_schedule.go",
-        "handlerLine": 491,
+        "handlerLine": 495,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -107854,7 +108379,7 @@
         "frontendSites": [],
         "handler": "saveBackupSchedule",
         "handlerFile": "services/governance/backup_schedule.go",
-        "handlerLine": 491,
+        "handlerLine": 495,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -107889,7 +108414,7 @@
         ],
         "handler": "deleteBackupSchedule",
         "handlerFile": "services/governance/backup_schedule.go",
-        "handlerLine": 528,
+        "handlerLine": 532,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -107909,23 +108434,11 @@
         ]
       },
       {
-        "complexity": 4,
+        "complexity": 1,
         "externalPackages": [
           "errors.Is",
-          "bytes.NewReader",
           "context.WithTimeout",
-          "encoding/json.Marshal",
-          "encoding/json.Unmarshal",
           "errors.New",
-          "fmt.Errorf",
-          "io.ReadAll",
-          "io.LimitReader",
-          "net/http.NewRequestWithContext",
-          "net/http.Do",
-          "net/url.QueryEscape",
-          "strings.EqualFold",
-          "strings.TrimSpace",
-          "strings.TrimRight",
           "time.Duration"
         ],
         "frontendSites": [
@@ -107938,18 +108451,14 @@
         ],
         "handler": "runBackupSchedule",
         "handlerFile": "services/governance/backup_schedule.go",
-        "handlerLine": 545,
+        "handlerLine": 549,
         "hasFrontend": true,
-        "internalPackages": [
-          "pkg/route.New",
-          "pkg/servicetoken.Authorize"
-        ],
+        "internalPackages": [],
         "method": "POST",
         "normalizedPath": "/governance/backups/schedules/{param}/run",
         "path": "/governance/backups/schedules/{id}/run",
         "receiverCalls": [
-          "s.authority.Authority",
-          "s.db.SQL"
+          "s.authority.Authority"
         ],
         "risk": "high",
         "routeKey": "governance|POST|/governance/backups/schedules/{param}/run",
@@ -123376,7 +123885,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-22T04:37:09Z",
+    "generatedAt": "2026-10-22T06:04:18Z",
     "methods": [
       "DELETE",
       "GET",
@@ -123415,9 +123924,9 @@
       "workload"
     ],
     "summary": {
-      "flows": 907,
-      "frontendBacked": 485,
-      "highRisk": 350,
+      "flows": 911,
+      "frontendBacked": 489,
+      "highRisk": 351,
       "services": 27
     }
   }

@@ -256,3 +256,46 @@ test("a private bucket is added with a storage connection and tested", async ({ 
   await expect.poll(() => added().length).toBe(1);
   expect(added()[0]!.postDataJSON()).toEqual({ provider: "azure", endpoint: "https://acme.blob.core.windows.net", bucket: "backups", prefix: "keys/", region: "", connection_id: "pbconn_az", deep: true });
 });
+
+// Distrusted CAs (13.46.0-beta): the platform's and the tenant's list with
+// the certificates under each, counted by the service; a count lists its
+// certificates, a certificate shows its chain, why it isn't trusted and its
+// revocation; distrusting a CA sends only the fields the route takes.
+test("certificates under a distrusted CA are counted, listed and explained", async ({ page }) => {
+  const writes = await stub(page);
+  const tlsCert = fx.assets.find((a) => a.asset_type === "tls_certificate")!;
+  const partner = { spki_sha256: "ab".repeat(32), label: "Old partner CA", source: "tenant", added_by: "admin", affected: 1 };
+  const emudhra = { spki_sha256: "ebed6475c2c2d80fcb199f3fe8dd6e6b3ce60b77eb15d4e42c3dec0c6f5b5105", label: "eMudhra emSign G3 intermediate (key compromised, October 2026)", source: "platform", affected: 0 };
+  const finding = { ...tlsCert, metadata: { ...tlsCert.metadata, chain_trusted: false, chain_error: "x509: certificate signed by unknown authority",
+    chain: [{ position: 0, subject: "CN=api.example.com", spki_sha256: "11".repeat(32) }, { position: 1, subject: "CN=Old partner CA", spki_sha256: partner.spki_sha256 }],
+    revocation: { status: "revoked", revoked_at: "2026-10-20T08:00:00Z", reason: "ca_compromise", checked_at: "2026-10-22T08:00:00Z" } } };
+  await page.route("**/svc/discovery/discovery/distrusted-cas**", (r) => r.request().method() === "POST"
+    ? (writes.push(r.request()), r.fulfill(json({ distrusted_ca: { ...partner, spki_sha256: "cd".repeat(32), affected: 0 } }, 201)))
+    : r.fulfill(json({ items: [partner, emudhra] })));
+  await page.route("**/svc/discovery/discovery/distrusted?**", (r) => {
+    const spki = new URL(r.request().url()).searchParams.get("spki");
+    return r.fulfill(json({ total: !spki || spki === partner.spki_sha256 ? 1 : 0, chain_unrecorded: 2, items: !spki || spki === partner.spki_sha256 ? [{ asset: finding, matches: [partner] }] : [] }));
+  });
+  await open(page);
+  await expect(page.getByText("Distrusted CAs", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(emudhra.label)).toBeVisible();
+  await expect(page.getByText("Chain not recorded")).toBeVisible();
+
+  await page.getByText("1 cert", { exact: true }).click();
+  await expect(page.getByText("Under Old partner CA: 1 entry")).toBeVisible();
+  await expect(page.getByTestId("distrust-finding")).toHaveCount(1);
+  await page.getByTestId("distrust-finding").click();
+  await expect(page.getByText("x509: certificate signed by unknown authority")).toBeVisible();
+  await expect(page.getByText(/^Revoked .*\(ca_compromise\)/)).toBeVisible();
+  await expect(page.getByText("1. CN=Old partner CA", { exact: false })).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.getByRole("button", { name: "Distrust a CA", exact: true }).click();
+  await page.getByPlaceholder("ebed6475...").fill("cd".repeat(32));
+  await page.getByPlaceholder("Defaults to the certificate's subject").fill("Another CA");
+  await page.getByRole("button", { name: "Distrust", exact: true }).click();
+  await expect.poll(() => writes.filter((w) => w.url().includes("distrusted-cas")).length).toBe(1);
+  const body = writes.find((w) => w.url().includes("distrusted-cas"))!.postDataJSON();
+  expect(Object.keys(body).sort()).toEqual(["certificate_pem", "label", "spki_sha256"]);
+  expect(body).toMatchObject({ label: "Another CA", spki_sha256: "cd".repeat(32) });
+});

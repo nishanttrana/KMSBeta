@@ -51,6 +51,8 @@ var playbookTriggers = []TriggerSpec{
 	{Type: "key_compromised", Label: "Key compromise reported", Group: "Incident response", Subjects: []string{"audit.key.compromise_detected"}},
 	{Type: "audit_chain_broken", Label: "Audit trail tampering detected", Group: "Incident response", Subjects: []string{"audit.audit.chain_broken"}},
 	{Type: "secret_exposed", Label: "Exposed secret discovered (code, repository, bucket or upload)", Group: "Incident response", Subjects: []string{"audit.discovery.secret_exposed"}},
+	{Type: "distrusted_ca_found", Label: "Certificate found under a distrusted CA", Group: "Incident response", Subjects: []string{"audit.discovery.distrusted_ca_found"}},
+	{Type: "revoked_certificate_found", Label: "Revoked certificate found on an endpoint", Group: "Incident response", Subjects: []string{"audit.discovery.revoked_certificate_found"}},
 	{Type: "secret_access_rule_changed", Label: "Secret access rule or vault setting changed", Group: "Access", Subjects: []string{"audit.secrets.access_rule_created", "audit.secrets.access_rule_deleted", "audit.secrets.settings_updated", "audit.secrets.version_cap_set", "audit.secrets.version_cap_deleted"}, SuccessOnly: true},
 	{Type: "private_endpoint_changed", Label: "Private endpoint approved or withdrawn (connections)", Group: "Access", Subjects: []string{"audit.compliance.private_endpoint_added", "audit.compliance.private_endpoint_removed"}, SuccessOnly: true},
 	{Type: "secret_access_rule_stale", Label: "Secret access rule names a subject that no longer exists", Group: "Access", Subjects: []string{"audit.secrets.access_rule_subject_missing"}},

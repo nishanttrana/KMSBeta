@@ -1,16 +1,16 @@
 # Generated Request Flow Map
 
-Generated at `2026-10-22T04:37:09Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-22T06:04:18Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `907`
-- Routes with exact frontend call sites: `485`
-- Routes whose handlers call `h.svc.*`: `545`
-- Routes with detected store calls: `632`
-- Routes with detected internal `pkg/*` calls: `202`
+- Backend routes analyzed: `911`
+- Routes with exact frontend call sites: `489`
+- Routes whose handlers call `h.svc.*`: `549`
+- Routes with detected store calls: `636`
+- Routes with detected internal `pkg/*` calls: `201`
 
 ## How To Trace One Frontend Click
 
@@ -224,28 +224,32 @@ This file connects frontend requests to backend Go processing. It is static anal
 | dataprotect\|POST\|/field-encryption/leases/{param}/revoke | POST /field-encryption/leases/{id}/revoke | handleRevokeFieldEncryptionLease (services/dataprotect/handler.go:908) | RevokeFieldEncryptionLease | RevokeFieldEncryptionLease |  |  | web/dashboard/src/lib/dataprotect.ts:772 |
 | dataprotect\|GET\|/audit-log | GET /audit-log | handleListAuditLog (services/dataprotect/handler.go:1077) | ListAuditLog | ListAuditLog |  |  | web/dashboard/src/lib/dataprotect.ts:841 |
 | dataprotect\|GET\|/stats | GET /stats | handleGetStats (services/dataprotect/handler.go:1108) | GetStats | GetStats |  |  | web/dashboard/src/lib/dataprotect.ts:825 |
-| discovery\|POST\|/discovery/scan | POST /discovery/scan | startScan (services/discovery/handler.go:76) | StartScan | CreateScan | s.mu.Lock, s.mu.Unlock, s.scans.Add, s.scans.Done |  | web/dashboard/src/lib/discovery.ts:69 |
-| discovery\|GET\|/discovery/scans | GET /discovery/scans | listScans (services/discovery/handler.go:98) | ListScans | ListScans |  |  | web/dashboard/src/lib/discovery.ts:89 |
-| discovery\|GET\|/discovery/scans/{param} | GET /discovery/scans/{id} | getScan (services/discovery/handler.go:107) | GetScan | GetScan |  |  | web/dashboard/src/lib/discovery.ts:101 |
-| discovery\|GET\|/discovery/assets | GET /discovery/assets | listAssets (services/discovery/handler.go:119) | FindAssets |  |  |  | web/dashboard/src/lib/discovery.ts:141 |
-| discovery\|PUT\|/discovery/assets/{param}/classify | PUT /discovery/assets/{id}/classify | reviewAsset (services/discovery/handler.go:154) | ClassifyAsset | UpsertAsset |  |  | web/dashboard/src/lib/discovery.ts:183 |
-| discovery\|GET\|/discovery/summary | GET /discovery/summary | summary (services/discovery/handler.go:172) | Summary |  |  |  | web/dashboard/src/lib/discovery.ts:164 |
-| discovery\|GET\|/discovery/targets | GET /discovery/targets | listTargets (services/discovery/handler.go:181) | ListTargets | ListTargets |  |  | web/dashboard/src/lib/discovery.ts:196 |
-| discovery\|POST\|/discovery/targets | POST /discovery/targets | addTarget (services/discovery/handler.go:194) | AddTarget | ListTargets, CreateTarget |  |  | web/dashboard/src/lib/discovery.ts:210 |
-| discovery\|DELETE\|/discovery/targets/{param} | DELETE /discovery/targets/{id} | removeTarget (services/discovery/handler.go:228) | RemoveTarget | ListTargets, DeleteTarget |  |  | web/dashboard/src/lib/discovery.ts:220 |
-| discovery\|GET\|/discovery/sources | GET /discovery/sources | sources (services/discovery/handler.go:239) | Sources | ListTargets, ListRepositories, ListBuckets, ListScans | s.cloud.ListAccounts, s.certs.AllCertificates |  | web/dashboard/src/lib/discovery.ts:229 |
-| discovery\|POST\|/discovery/upload | POST /discovery/upload | upload (services/discovery/handler.go:255) | ScanUpload | CreateScan, UpdateScan |  |  | web/dashboard/src/lib/discovery.ts:256 |
-| discovery\|DELETE\|/discovery/assets/{param} | DELETE /discovery/assets/{id} | removeAsset (services/discovery/handler.go:295) | RemoveAsset | DeleteAsset |  |  | web/dashboard/src/lib/discovery.ts:266 |
-| discovery\|GET\|/discovery/repositories | GET /discovery/repositories | listRepositories (services/discovery/handler.go:306) | ListRepositories | ListRepositories |  |  | web/dashboard/src/lib/discovery.ts:289 |
-| discovery\|POST\|/discovery/repositories | POST /discovery/repositories | addRepository (services/discovery/handler.go:319) | AddRepository, RemoveRepository, TestRepository, ListBuckets, AddBucket | ListRepositories, CreateRepository, DeleteRepository, ListBuckets, CreateBucket, DeleteBucket, PruneBucketObjects |  |  | web/dashboard/src/lib/discovery.ts:301 |
-| discovery\|DELETE\|/discovery/repositories/{param} | DELETE /discovery/repositories/{id} | removeRepository (services/discovery/handler.go:361) | RemoveRepository | DeleteRepository |  |  | web/dashboard/src/lib/discovery.ts:311 |
-| discovery\|POST\|/discovery/repositories/{param}/test | POST /discovery/repositories/{id}/test | testRepository (services/discovery/handler.go:374) | TestRepository |  |  |  | web/dashboard/src/lib/discovery.ts:322 |
-| discovery\|GET\|/discovery/buckets | GET /discovery/buckets | listBuckets (services/discovery/handler.go:389) | ListBuckets | ListBuckets |  |  | web/dashboard/src/lib/discovery.ts:421 |
-| discovery\|POST\|/discovery/buckets | POST /discovery/buckets | addBucket (services/discovery/handler.go:403) | AddBucket, RemoveBucket, TestBucket, GetSchedule, SaveSchedule | ListBuckets, CreateBucket, DeleteBucket, PruneBucketObjects, GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:433 |
-| discovery\|DELETE\|/discovery/buckets/{param} | DELETE /discovery/buckets/{id} | removeBucket (services/discovery/handler.go:443) | RemoveBucket | DeleteBucket, PruneBucketObjects |  |  | web/dashboard/src/lib/discovery.ts:443 |
-| discovery\|POST\|/discovery/buckets/{param}/test | POST /discovery/buckets/{id}/test | testBucket (services/discovery/handler.go:457) | TestBucket |  |  |  | web/dashboard/src/lib/discovery.ts:454 |
-| discovery\|GET\|/discovery/schedule | GET /discovery/schedule | getSchedule (services/discovery/handler.go:474) | GetSchedule | GetSchedule |  |  | web/dashboard/src/lib/discovery.ts:347 |
-| discovery\|PUT\|/discovery/schedule | PUT /discovery/schedule | putSchedule (services/discovery/handler.go:486) | SaveSchedule | GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:362 |
+| discovery\|GET\|/discovery/distrusted-cas | GET /discovery/distrusted-cas | listDistrustedCAs (services/discovery/distrust.go:489) | ListDistrustedCAs | CountAssetsByChainSPKI |  |  | web/dashboard/src/lib/discoveryTrust.ts:23 |
+| discovery\|POST\|/discovery/distrusted-cas | POST /discovery/distrusted-cas | addDistrustedCA (services/discovery/distrust.go:498) | AddDistrustedCA | PutDistrustedCA, AssetsWithChainSPKI, GetAsset |  |  | web/dashboard/src/lib/discoveryTrust.ts:31 |
+| discovery\|DELETE\|/discovery/distrusted-cas/{param} | DELETE /discovery/distrusted-cas/{spki} | removeDistrustedCA (services/discovery/distrust.go:518) | RemoveDistrustedCA | DeleteDistrustedCA |  |  | web/dashboard/src/lib/discoveryTrust.ts:40 |
+| discovery\|GET\|/discovery/distrusted | GET /discovery/distrusted | distrustFindings (services/discovery/distrust.go:532) | DistrustFindings | AssetsWithChainSPKI, ChainSPKIsOf, GetAsset, CountCertificatesWithoutChain |  |  | web/dashboard/src/lib/discoveryTrust.ts:48 |
+| discovery\|POST\|/discovery/scan | POST /discovery/scan | startScan (services/discovery/handler.go:77) | StartScan | CreateScan | s.mu.Lock, s.mu.Unlock, s.scans.Add, s.scans.Done |  | web/dashboard/src/lib/discovery.ts:69 |
+| discovery\|GET\|/discovery/scans | GET /discovery/scans | listScans (services/discovery/handler.go:99) | ListScans | ListScans |  |  | web/dashboard/src/lib/discovery.ts:89 |
+| discovery\|GET\|/discovery/scans/{param} | GET /discovery/scans/{id} | getScan (services/discovery/handler.go:108) | GetScan | GetScan |  |  | web/dashboard/src/lib/discovery.ts:101 |
+| discovery\|GET\|/discovery/assets | GET /discovery/assets | listAssets (services/discovery/handler.go:120) | FindAssets |  |  |  | web/dashboard/src/lib/discovery.ts:141 |
+| discovery\|PUT\|/discovery/assets/{param}/classify | PUT /discovery/assets/{id}/classify | reviewAsset (services/discovery/handler.go:155) | ClassifyAsset | UpsertAsset |  |  | web/dashboard/src/lib/discovery.ts:183 |
+| discovery\|GET\|/discovery/summary | GET /discovery/summary | summary (services/discovery/handler.go:173) | Summary |  |  |  | web/dashboard/src/lib/discovery.ts:164 |
+| discovery\|GET\|/discovery/targets | GET /discovery/targets | listTargets (services/discovery/handler.go:182) | ListTargets | ListTargets |  |  | web/dashboard/src/lib/discovery.ts:196 |
+| discovery\|POST\|/discovery/targets | POST /discovery/targets | addTarget (services/discovery/handler.go:195) | AddTarget | ListTargets, CreateTarget |  |  | web/dashboard/src/lib/discovery.ts:210 |
+| discovery\|DELETE\|/discovery/targets/{param} | DELETE /discovery/targets/{id} | removeTarget (services/discovery/handler.go:229) | RemoveTarget | ListTargets, DeleteTarget |  |  | web/dashboard/src/lib/discovery.ts:220 |
+| discovery\|GET\|/discovery/sources | GET /discovery/sources | sources (services/discovery/handler.go:240) | Sources | ListTargets, ListRepositories, ListBuckets, ListScans | s.cloud.ListAccounts, s.certs.AllCertificates |  | web/dashboard/src/lib/discovery.ts:229 |
+| discovery\|POST\|/discovery/upload | POST /discovery/upload | upload (services/discovery/handler.go:256) | ScanUpload | CreateScan, UpdateScan |  |  | web/dashboard/src/lib/discovery.ts:256 |
+| discovery\|DELETE\|/discovery/assets/{param} | DELETE /discovery/assets/{id} | removeAsset (services/discovery/handler.go:296) | RemoveAsset | DeleteAsset |  |  | web/dashboard/src/lib/discovery.ts:266 |
+| discovery\|GET\|/discovery/repositories | GET /discovery/repositories | listRepositories (services/discovery/handler.go:307) | ListRepositories | ListRepositories |  |  | web/dashboard/src/lib/discovery.ts:289 |
+| discovery\|POST\|/discovery/repositories | POST /discovery/repositories | addRepository (services/discovery/handler.go:320) | AddRepository, RemoveRepository, TestRepository, ListBuckets, AddBucket | ListRepositories, CreateRepository, DeleteRepository, ListBuckets, CreateBucket, DeleteBucket, PruneBucketObjects |  |  | web/dashboard/src/lib/discovery.ts:301 |
+| discovery\|DELETE\|/discovery/repositories/{param} | DELETE /discovery/repositories/{id} | removeRepository (services/discovery/handler.go:362) | RemoveRepository | DeleteRepository |  |  | web/dashboard/src/lib/discovery.ts:311 |
+| discovery\|POST\|/discovery/repositories/{param}/test | POST /discovery/repositories/{id}/test | testRepository (services/discovery/handler.go:375) | TestRepository |  |  |  | web/dashboard/src/lib/discovery.ts:322 |
+| discovery\|GET\|/discovery/buckets | GET /discovery/buckets | listBuckets (services/discovery/handler.go:390) | ListBuckets | ListBuckets |  |  | web/dashboard/src/lib/discovery.ts:421 |
+| discovery\|POST\|/discovery/buckets | POST /discovery/buckets | addBucket (services/discovery/handler.go:404) | AddBucket, RemoveBucket, TestBucket, GetSchedule, SaveSchedule | ListBuckets, CreateBucket, DeleteBucket, PruneBucketObjects, GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:433 |
+| discovery\|DELETE\|/discovery/buckets/{param} | DELETE /discovery/buckets/{id} | removeBucket (services/discovery/handler.go:444) | RemoveBucket | DeleteBucket, PruneBucketObjects |  |  | web/dashboard/src/lib/discovery.ts:443 |
+| discovery\|POST\|/discovery/buckets/{param}/test | POST /discovery/buckets/{id}/test | testBucket (services/discovery/handler.go:458) | TestBucket |  |  |  | web/dashboard/src/lib/discovery.ts:454 |
+| discovery\|GET\|/discovery/schedule | GET /discovery/schedule | getSchedule (services/discovery/handler.go:475) | GetSchedule | GetSchedule |  |  | web/dashboard/src/lib/discovery.ts:347 |
+| discovery\|PUT\|/discovery/schedule | PUT /discovery/schedule | putSchedule (services/discovery/handler.go:487) | SaveSchedule | GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:362 |
 | ekm\|GET\|/ekm/clients | GET /ekm/clients | listClients (services/ekm/clients.go:280) |  | ListClients |  |  | web/dashboard/src/lib/ekmClients.ts:56 |
 | ekm\|POST\|/ekm/clients | POST /ekm/clients | createClient (services/ekm/clients.go:344) | createTDEKey | ListClients, CreatePendingClient, PurgeAgent, GetClient, CreateTDEKey, GetTDEKey, BumpAgentConfigVersion, RecordKeyAccess, +7 more | s.keycore.CreateAsymmetricKey, s.keycore.GetKey, s.keycore.PublicKey, s.keycore.Wrap, s.keycore.Unwrap, s.keycore.RotateKey, s.keycore.DestroyKeyImmediately | pkg/crypto.Zeroize | web/dashboard/src/lib/ekmClients.ts:71 |
 | ekm\|GET\|/ekm/clients/{param} | GET /ekm/clients/{id} | getClient (services/ekm/clients.go:295) |  | GetClient, ListClientCheckIns, GetTDEKey, ListKeyAccessByAgent, ListDatabases |  |  | web/dashboard/src/lib/ekmClients.ts:66 |
@@ -275,9 +279,9 @@ This file connects frontend requests to backend Go processing. It is static anal
 | ekm\|DELETE\|/ekm/google-cse/configs/{param} | DELETE /ekm/google-cse/configs/{id} | handleDeleteGoogleCSEConfig (services/ekm/handler_google_cse.go:187) |  | DeleteGoogleCSEConfig |  |  | web/dashboard/src/lib/ekm.ts:622 |
 | ekm\|POST\|/ekm/google-cse/keys | POST /ekm/google-cse/keys | handleCreateGoogleCSEKey (services/ekm/handler_google_cse.go:204) |  | GetGoogleCSEConfig, CreateGoogleCSEKey, UpdateGoogleCSEConfig, ListGoogleCSEKeys, DeleteGoogleCSEKey, IncrementGoogleCSEKeyUsage, ListGoogleCSEConfigs, GetGoogleCSEKeyByURI |  |  | web/dashboard/src/lib/ekm.ts:642 |
 | ekm\|DELETE\|/ekm/google-cse/keys/{param} | DELETE /ekm/google-cse/keys/{id} | handleDeleteGoogleCSEKey (services/ekm/handler_google_cse.go:293) |  | DeleteGoogleCSEKey |  |  | web/dashboard/src/lib/ekm.ts:652 |
-| governance\|GET\|/governance/backups/schedules | GET /governance/backups/schedules | listBackupSchedules (services/governance/backup_schedule.go:478) | ListBackupSchedules |  |  |  | web/dashboard/src/lib/backupSchedules.ts:52 |
-| governance\|DELETE\|/governance/backups/schedules/{param} | DELETE /governance/backups/schedules/{id} | deleteBackupSchedule (services/governance/backup_schedule.go:528) | DeleteBackupSchedule |  |  |  | web/dashboard/src/lib/backupSchedules.ts:70 |
-| governance\|POST\|/governance/backups/schedules/{param}/run | POST /governance/backups/schedules/{id}/run | runBackupSchedule (services/governance/backup_schedule.go:545) | RunBackupSchedule |  | s.authority.Authority, s.db.SQL | pkg/route.New, pkg/servicetoken.Authorize | web/dashboard/src/lib/backupSchedules.ts:74 |
+| governance\|GET\|/governance/backups/schedules | GET /governance/backups/schedules | listBackupSchedules (services/governance/backup_schedule.go:482) | ListBackupSchedules |  |  |  | web/dashboard/src/lib/backupSchedules.ts:52 |
+| governance\|DELETE\|/governance/backups/schedules/{param} | DELETE /governance/backups/schedules/{id} | deleteBackupSchedule (services/governance/backup_schedule.go:532) | DeleteBackupSchedule |  |  |  | web/dashboard/src/lib/backupSchedules.ts:70 |
+| governance\|POST\|/governance/backups/schedules/{param}/run | POST /governance/backups/schedules/{id}/run | runBackupSchedule (services/governance/backup_schedule.go:549) | RunBackupSchedule |  | s.authority.Authority |  | web/dashboard/src/lib/backupSchedules.ts:74 |
 | governance\|GET\|/governance/settings | GET /governance/settings | handleGetSettings (services/governance/handler.go:97) | GetSettings | GetSettings |  |  | web/dashboard/src/lib/governance.ts:130 |
 | governance\|PUT\|/governance/settings | PUT /governance/settings | handleUpdateSettings (services/governance/handler.go:112) | UpdateSettings | GetSettings, UpsertSettings | s.conns.Resolve | pkg/tenantcheck.ActingFor | web/dashboard/src/lib/governance.ts:184 |
 | governance\|POST\|/governance/settings/smtp/test | POST /governance/settings/smtp/test | handleTestSMTP (services/governance/handler.go:134) | TestSMTP |  |  |  | web/dashboard/src/lib/governance.ts:195 |
@@ -878,30 +882,34 @@ This file connects frontend requests to backend Go processing. It is static anal
 | dataprotect\|POST\|/field-encryption/leases/{param}/revoke | POST /field-encryption/leases/{id}/revoke | handleRevokeFieldEncryptionLease (services/dataprotect/handler.go:908) | RevokeFieldEncryptionLease | RevokeFieldEncryptionLease |  |  | web/dashboard/src/lib/dataprotect.ts:772 |
 | dataprotect\|GET\|/audit-log | GET /audit-log | handleListAuditLog (services/dataprotect/handler.go:1077) | ListAuditLog | ListAuditLog |  |  | web/dashboard/src/lib/dataprotect.ts:841 |
 | dataprotect\|GET\|/stats | GET /stats | handleGetStats (services/dataprotect/handler.go:1108) | GetStats | GetStats |  |  | web/dashboard/src/lib/dataprotect.ts:825 |
-| discovery\|POST\|/discovery/scan | POST /discovery/scan | startScan (services/discovery/handler.go:76) | StartScan | CreateScan | s.mu.Lock, s.mu.Unlock, s.scans.Add, s.scans.Done |  | web/dashboard/src/lib/discovery.ts:69 |
-| discovery\|GET\|/discovery/scans | GET /discovery/scans | listScans (services/discovery/handler.go:98) | ListScans | ListScans |  |  | web/dashboard/src/lib/discovery.ts:89 |
-| discovery\|GET\|/discovery/scans/{param} | GET /discovery/scans/{id} | getScan (services/discovery/handler.go:107) | GetScan | GetScan |  |  | web/dashboard/src/lib/discovery.ts:101 |
-| discovery\|GET\|/discovery/assets | GET /discovery/assets | listAssets (services/discovery/handler.go:119) | FindAssets |  |  |  | web/dashboard/src/lib/discovery.ts:141 |
-| discovery\|GET\|/discovery/crypto/assets | GET /discovery/crypto/assets | listAssets (services/discovery/handler.go:119) | FindAssets |  |  |  |  |
-| discovery\|GET\|/discovery/assets/{param} | GET /discovery/assets/{id} | getAsset (services/discovery/handler.go:141) | GetAsset | GetAsset |  |  |  |
-| discovery\|PUT\|/discovery/assets/{param}/classify | PUT /discovery/assets/{id}/classify | reviewAsset (services/discovery/handler.go:154) | ClassifyAsset | UpsertAsset |  |  | web/dashboard/src/lib/discovery.ts:183 |
-| discovery\|GET\|/discovery/summary | GET /discovery/summary | summary (services/discovery/handler.go:172) | Summary |  |  |  | web/dashboard/src/lib/discovery.ts:164 |
-| discovery\|GET\|/discovery/targets | GET /discovery/targets | listTargets (services/discovery/handler.go:181) | ListTargets | ListTargets |  |  | web/dashboard/src/lib/discovery.ts:196 |
-| discovery\|POST\|/discovery/targets | POST /discovery/targets | addTarget (services/discovery/handler.go:194) | AddTarget | ListTargets, CreateTarget |  |  | web/dashboard/src/lib/discovery.ts:210 |
-| discovery\|DELETE\|/discovery/targets/{param} | DELETE /discovery/targets/{id} | removeTarget (services/discovery/handler.go:228) | RemoveTarget | ListTargets, DeleteTarget |  |  | web/dashboard/src/lib/discovery.ts:220 |
-| discovery\|GET\|/discovery/sources | GET /discovery/sources | sources (services/discovery/handler.go:239) | Sources | ListTargets, ListRepositories, ListBuckets, ListScans | s.cloud.ListAccounts, s.certs.AllCertificates |  | web/dashboard/src/lib/discovery.ts:229 |
-| discovery\|POST\|/discovery/upload | POST /discovery/upload | upload (services/discovery/handler.go:255) | ScanUpload | CreateScan, UpdateScan |  |  | web/dashboard/src/lib/discovery.ts:256 |
-| discovery\|DELETE\|/discovery/assets/{param} | DELETE /discovery/assets/{id} | removeAsset (services/discovery/handler.go:295) | RemoveAsset | DeleteAsset |  |  | web/dashboard/src/lib/discovery.ts:266 |
-| discovery\|GET\|/discovery/repositories | GET /discovery/repositories | listRepositories (services/discovery/handler.go:306) | ListRepositories | ListRepositories |  |  | web/dashboard/src/lib/discovery.ts:289 |
-| discovery\|POST\|/discovery/repositories | POST /discovery/repositories | addRepository (services/discovery/handler.go:319) | AddRepository, RemoveRepository, TestRepository, ListBuckets, AddBucket | ListRepositories, CreateRepository, DeleteRepository, ListBuckets, CreateBucket, DeleteBucket, PruneBucketObjects |  |  | web/dashboard/src/lib/discovery.ts:301 |
-| discovery\|DELETE\|/discovery/repositories/{param} | DELETE /discovery/repositories/{id} | removeRepository (services/discovery/handler.go:361) | RemoveRepository | DeleteRepository |  |  | web/dashboard/src/lib/discovery.ts:311 |
-| discovery\|POST\|/discovery/repositories/{param}/test | POST /discovery/repositories/{id}/test | testRepository (services/discovery/handler.go:374) | TestRepository |  |  |  | web/dashboard/src/lib/discovery.ts:322 |
-| discovery\|GET\|/discovery/buckets | GET /discovery/buckets | listBuckets (services/discovery/handler.go:389) | ListBuckets | ListBuckets |  |  | web/dashboard/src/lib/discovery.ts:421 |
-| discovery\|POST\|/discovery/buckets | POST /discovery/buckets | addBucket (services/discovery/handler.go:403) | AddBucket, RemoveBucket, TestBucket, GetSchedule, SaveSchedule | ListBuckets, CreateBucket, DeleteBucket, PruneBucketObjects, GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:433 |
-| discovery\|DELETE\|/discovery/buckets/{param} | DELETE /discovery/buckets/{id} | removeBucket (services/discovery/handler.go:443) | RemoveBucket | DeleteBucket, PruneBucketObjects |  |  | web/dashboard/src/lib/discovery.ts:443 |
-| discovery\|POST\|/discovery/buckets/{param}/test | POST /discovery/buckets/{id}/test | testBucket (services/discovery/handler.go:457) | TestBucket |  |  |  | web/dashboard/src/lib/discovery.ts:454 |
-| discovery\|GET\|/discovery/schedule | GET /discovery/schedule | getSchedule (services/discovery/handler.go:474) | GetSchedule | GetSchedule |  |  | web/dashboard/src/lib/discovery.ts:347 |
-| discovery\|PUT\|/discovery/schedule | PUT /discovery/schedule | putSchedule (services/discovery/handler.go:486) | SaveSchedule | GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:362 |
+| discovery\|GET\|/discovery/distrusted-cas | GET /discovery/distrusted-cas | listDistrustedCAs (services/discovery/distrust.go:489) | ListDistrustedCAs | CountAssetsByChainSPKI |  |  | web/dashboard/src/lib/discoveryTrust.ts:23 |
+| discovery\|POST\|/discovery/distrusted-cas | POST /discovery/distrusted-cas | addDistrustedCA (services/discovery/distrust.go:498) | AddDistrustedCA | PutDistrustedCA, AssetsWithChainSPKI, GetAsset |  |  | web/dashboard/src/lib/discoveryTrust.ts:31 |
+| discovery\|DELETE\|/discovery/distrusted-cas/{param} | DELETE /discovery/distrusted-cas/{spki} | removeDistrustedCA (services/discovery/distrust.go:518) | RemoveDistrustedCA | DeleteDistrustedCA |  |  | web/dashboard/src/lib/discoveryTrust.ts:40 |
+| discovery\|GET\|/discovery/distrusted | GET /discovery/distrusted | distrustFindings (services/discovery/distrust.go:532) | DistrustFindings | AssetsWithChainSPKI, ChainSPKIsOf, GetAsset, CountCertificatesWithoutChain |  |  | web/dashboard/src/lib/discoveryTrust.ts:48 |
+| discovery\|POST\|/discovery/scan | POST /discovery/scan | startScan (services/discovery/handler.go:77) | StartScan | CreateScan | s.mu.Lock, s.mu.Unlock, s.scans.Add, s.scans.Done |  | web/dashboard/src/lib/discovery.ts:69 |
+| discovery\|GET\|/discovery/scans | GET /discovery/scans | listScans (services/discovery/handler.go:99) | ListScans | ListScans |  |  | web/dashboard/src/lib/discovery.ts:89 |
+| discovery\|GET\|/discovery/scans/{param} | GET /discovery/scans/{id} | getScan (services/discovery/handler.go:108) | GetScan | GetScan |  |  | web/dashboard/src/lib/discovery.ts:101 |
+| discovery\|GET\|/discovery/assets | GET /discovery/assets | listAssets (services/discovery/handler.go:120) | FindAssets |  |  |  | web/dashboard/src/lib/discovery.ts:141 |
+| discovery\|GET\|/discovery/crypto/assets | GET /discovery/crypto/assets | listAssets (services/discovery/handler.go:120) | FindAssets |  |  |  |  |
+| discovery\|GET\|/discovery/assets/{param} | GET /discovery/assets/{id} | getAsset (services/discovery/handler.go:142) | GetAsset | GetAsset |  |  |  |
+| discovery\|PUT\|/discovery/assets/{param}/classify | PUT /discovery/assets/{id}/classify | reviewAsset (services/discovery/handler.go:155) | ClassifyAsset | UpsertAsset |  |  | web/dashboard/src/lib/discovery.ts:183 |
+| discovery\|GET\|/discovery/summary | GET /discovery/summary | summary (services/discovery/handler.go:173) | Summary |  |  |  | web/dashboard/src/lib/discovery.ts:164 |
+| discovery\|GET\|/discovery/targets | GET /discovery/targets | listTargets (services/discovery/handler.go:182) | ListTargets | ListTargets |  |  | web/dashboard/src/lib/discovery.ts:196 |
+| discovery\|POST\|/discovery/targets | POST /discovery/targets | addTarget (services/discovery/handler.go:195) | AddTarget | ListTargets, CreateTarget |  |  | web/dashboard/src/lib/discovery.ts:210 |
+| discovery\|DELETE\|/discovery/targets/{param} | DELETE /discovery/targets/{id} | removeTarget (services/discovery/handler.go:229) | RemoveTarget | ListTargets, DeleteTarget |  |  | web/dashboard/src/lib/discovery.ts:220 |
+| discovery\|GET\|/discovery/sources | GET /discovery/sources | sources (services/discovery/handler.go:240) | Sources | ListTargets, ListRepositories, ListBuckets, ListScans | s.cloud.ListAccounts, s.certs.AllCertificates |  | web/dashboard/src/lib/discovery.ts:229 |
+| discovery\|POST\|/discovery/upload | POST /discovery/upload | upload (services/discovery/handler.go:256) | ScanUpload | CreateScan, UpdateScan |  |  | web/dashboard/src/lib/discovery.ts:256 |
+| discovery\|DELETE\|/discovery/assets/{param} | DELETE /discovery/assets/{id} | removeAsset (services/discovery/handler.go:296) | RemoveAsset | DeleteAsset |  |  | web/dashboard/src/lib/discovery.ts:266 |
+| discovery\|GET\|/discovery/repositories | GET /discovery/repositories | listRepositories (services/discovery/handler.go:307) | ListRepositories | ListRepositories |  |  | web/dashboard/src/lib/discovery.ts:289 |
+| discovery\|POST\|/discovery/repositories | POST /discovery/repositories | addRepository (services/discovery/handler.go:320) | AddRepository, RemoveRepository, TestRepository, ListBuckets, AddBucket | ListRepositories, CreateRepository, DeleteRepository, ListBuckets, CreateBucket, DeleteBucket, PruneBucketObjects |  |  | web/dashboard/src/lib/discovery.ts:301 |
+| discovery\|DELETE\|/discovery/repositories/{param} | DELETE /discovery/repositories/{id} | removeRepository (services/discovery/handler.go:362) | RemoveRepository | DeleteRepository |  |  | web/dashboard/src/lib/discovery.ts:311 |
+| discovery\|POST\|/discovery/repositories/{param}/test | POST /discovery/repositories/{id}/test | testRepository (services/discovery/handler.go:375) | TestRepository |  |  |  | web/dashboard/src/lib/discovery.ts:322 |
+| discovery\|GET\|/discovery/buckets | GET /discovery/buckets | listBuckets (services/discovery/handler.go:390) | ListBuckets | ListBuckets |  |  | web/dashboard/src/lib/discovery.ts:421 |
+| discovery\|POST\|/discovery/buckets | POST /discovery/buckets | addBucket (services/discovery/handler.go:404) | AddBucket, RemoveBucket, TestBucket, GetSchedule, SaveSchedule | ListBuckets, CreateBucket, DeleteBucket, PruneBucketObjects, GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:433 |
+| discovery\|DELETE\|/discovery/buckets/{param} | DELETE /discovery/buckets/{id} | removeBucket (services/discovery/handler.go:444) | RemoveBucket | DeleteBucket, PruneBucketObjects |  |  | web/dashboard/src/lib/discovery.ts:443 |
+| discovery\|POST\|/discovery/buckets/{param}/test | POST /discovery/buckets/{id}/test | testBucket (services/discovery/handler.go:458) | TestBucket |  |  |  | web/dashboard/src/lib/discovery.ts:454 |
+| discovery\|GET\|/discovery/schedule | GET /discovery/schedule | getSchedule (services/discovery/handler.go:475) | GetSchedule | GetSchedule |  |  | web/dashboard/src/lib/discovery.ts:347 |
+| discovery\|PUT\|/discovery/schedule | PUT /discovery/schedule | putSchedule (services/discovery/handler.go:487) | SaveSchedule | GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:362 |
 | ekm\|GET\|/ekm/clients | GET /ekm/clients | listClients (services/ekm/clients.go:280) |  | ListClients |  |  | web/dashboard/src/lib/ekmClients.ts:56 |
 | ekm\|POST\|/ekm/clients | POST /ekm/clients | createClient (services/ekm/clients.go:344) | createTDEKey | ListClients, CreatePendingClient, PurgeAgent, GetClient, CreateTDEKey, GetTDEKey, BumpAgentConfigVersion, RecordKeyAccess, +7 more | s.keycore.CreateAsymmetricKey, s.keycore.GetKey, s.keycore.PublicKey, s.keycore.Wrap, s.keycore.Unwrap, s.keycore.RotateKey, s.keycore.DestroyKeyImmediately | pkg/crypto.Zeroize | web/dashboard/src/lib/ekmClients.ts:71 |
 | ekm\|GET\|/ekm/clients/{param} | GET /ekm/clients/{id} | getClient (services/ekm/clients.go:295) |  | GetClient, ListClientCheckIns, GetTDEKey, ListKeyAccessByAgent, ListDatabases |  |  | web/dashboard/src/lib/ekmClients.ts:66 |
@@ -955,11 +963,11 @@ This file connects frontend requests to backend Go processing. It is static anal
 | ekm\|POST\|/ekm/kacls/wrap | POST /ekm/kacls/wrap | handleKACLSWrap (services/ekm/handler_google_cse.go:322) |  | IncrementGoogleCSEKeyUsage |  |  |  |
 | ekm\|POST\|/ekm/kacls/unwrap | POST /ekm/kacls/unwrap | handleKACLSUnwrap (services/ekm/handler_google_cse.go:383) |  | IncrementGoogleCSEKeyUsage |  |  |  |
 | ekm\|POST\|/ekm/kacls/privilegedunwrap | POST /ekm/kacls/privilegedunwrap | handleKACLSPrivilegedUnwrap (services/ekm/handler_google_cse.go:442) |  | IncrementGoogleCSEKeyUsage |  |  |  |
-| governance\|GET\|/governance/backups/schedules | GET /governance/backups/schedules | listBackupSchedules (services/governance/backup_schedule.go:478) | ListBackupSchedules |  |  |  | web/dashboard/src/lib/backupSchedules.ts:52 |
-| governance\|POST\|/governance/backups/schedules | POST /governance/backups/schedules | saveBackupSchedule (services/governance/backup_schedule.go:491) | SaveBackupSchedule |  |  |  |  |
-| governance\|PUT\|/governance/backups/schedules/{param} | PUT /governance/backups/schedules/{id} | saveBackupSchedule (services/governance/backup_schedule.go:491) | SaveBackupSchedule |  |  |  |  |
-| governance\|DELETE\|/governance/backups/schedules/{param} | DELETE /governance/backups/schedules/{id} | deleteBackupSchedule (services/governance/backup_schedule.go:528) | DeleteBackupSchedule |  |  |  | web/dashboard/src/lib/backupSchedules.ts:70 |
-| governance\|POST\|/governance/backups/schedules/{param}/run | POST /governance/backups/schedules/{id}/run | runBackupSchedule (services/governance/backup_schedule.go:545) | RunBackupSchedule |  | s.authority.Authority, s.db.SQL | pkg/route.New, pkg/servicetoken.Authorize | web/dashboard/src/lib/backupSchedules.ts:74 |
+| governance\|GET\|/governance/backups/schedules | GET /governance/backups/schedules | listBackupSchedules (services/governance/backup_schedule.go:482) | ListBackupSchedules |  |  |  | web/dashboard/src/lib/backupSchedules.ts:52 |
+| governance\|POST\|/governance/backups/schedules | POST /governance/backups/schedules | saveBackupSchedule (services/governance/backup_schedule.go:495) | SaveBackupSchedule |  |  |  |  |
+| governance\|PUT\|/governance/backups/schedules/{param} | PUT /governance/backups/schedules/{id} | saveBackupSchedule (services/governance/backup_schedule.go:495) | SaveBackupSchedule |  |  |  |  |
+| governance\|DELETE\|/governance/backups/schedules/{param} | DELETE /governance/backups/schedules/{id} | deleteBackupSchedule (services/governance/backup_schedule.go:532) | DeleteBackupSchedule |  |  |  | web/dashboard/src/lib/backupSchedules.ts:70 |
+| governance\|POST\|/governance/backups/schedules/{param}/run | POST /governance/backups/schedules/{id}/run | runBackupSchedule (services/governance/backup_schedule.go:549) | RunBackupSchedule |  | s.authority.Authority |  | web/dashboard/src/lib/backupSchedules.ts:74 |
 | governance\|GET\|/governance/settings | GET /governance/settings | handleGetSettings (services/governance/handler.go:97) | GetSettings | GetSettings |  |  | web/dashboard/src/lib/governance.ts:130 |
 | governance\|PUT\|/governance/settings | PUT /governance/settings | handleUpdateSettings (services/governance/handler.go:112) | UpdateSettings | GetSettings, UpsertSettings | s.conns.Resolve | pkg/tenantcheck.ActingFor | web/dashboard/src/lib/governance.ts:184 |
 | governance\|POST\|/governance/settings/smtp/test | POST /governance/settings/smtp/test | handleTestSMTP (services/governance/handler.go:134) | TestSMTP |  |  |  | web/dashboard/src/lib/governance.ts:195 |

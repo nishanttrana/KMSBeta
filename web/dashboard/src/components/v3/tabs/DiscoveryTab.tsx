@@ -34,6 +34,7 @@ import { AlgorithmBars, ChartCard, ClassBars, SourceStack } from "./discovery/Ch
 import { CodeSetupModal, SourceCards, TargetsModal } from "./discovery/Sources";
 import { ClassPill, Inventory, NO_FILTERS, type Filters } from "./discovery/Inventory";
 import { AssetDetail } from "./discovery/AssetDetail";
+import { DistrustedCAs } from "./discovery/DistrustedCAs";
 import { RunningBanner, ScansView } from "./discovery/Scans";
 import { RepositoriesModal } from "./discovery/Repositories";
 import { BucketsModal } from "./discovery/Buckets";
@@ -282,6 +283,8 @@ export const DiscoveryTab = ({ session, onToast, onNavigate }: any) => {
         </DrillPanel>
       )}
       <div style={{ height: 16 }} />
+
+      {!loadError && <DistrustedCAs session={session} onOpen={setDetail} onToast={onToast} reloadKey={reloadKey} />}
 
       {!loadError && <>
         <Tabs tabs={["Inventory", "Scans"]} active={view} onChange={setView} />

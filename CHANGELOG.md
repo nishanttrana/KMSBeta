@@ -4,6 +4,35 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.46.0-beta] — 2026-10-22
+
+### Added
+- **Distrusted CAs in Crypto Discovery.** A TLS scan now records the chain
+  each endpoint presents (each certificate by its key's SHA-256) and why
+  it failed to verify. Discovery lists every certificate whose chain runs
+  through a distrusted CA, counted over the whole inventory. The list is
+  the platform's own (the eight compromised eMudhra emSign G3 intermediates
+  Go 1.27.3 refuses, kept equal to Go's list by a test) plus any CA the
+  tenant adds by its certificate or key hash. Matching happens when read,
+  so certificates scanned before a CA was distrusted are found without
+  rescanning. Certificates found before chains were recorded are counted
+  separately; rescan them.
+- **Revocation of discovered certificates (OCSP).** The leaf's OCSP
+  responder is asked during the scan. The answer counts only when signed
+  for the presented issuer and current, and the asset shows good, revoked
+  (with date and reason), unknown, unavailable or not offered. CRLs are
+  not read.
+- Playbook triggers "Certificate found under a distrusted CA" and "Revoked
+  certificate found on an endpoint", each emitted once per certificate.
+  Routes: `/discovery/distrusted-cas`, `/discovery/distrusted`.
+
+### Fixed
+- Seven CHANGELOG sections (13.22 to 13.25, 13.42 to 13.44) had lost their
+  headings; they are restored, and `scripts/check-docs.sh` now fails on a
+  section left without one.
+- CI's conformance was red on 13.44.0 and 13.45.0-beta: `docs/generated`
+  was not regenerated after 13.44.0-beta's governance change. It is now.
+
 ## [13.45.0-beta] — 2026-10-22
 
 ### Fixed
@@ -11,7 +40,7 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
   time read back from Postgres (microseconds) with its own clock, which on
   Linux carries nanoseconds. Its clock is truncated to microseconds.
 
- — 2026-10-22
+## [13.44.0-beta] — 2026-10-22
 
 ### Fixed
 - **A recipient-sealed backup schedule failed on every run when the tenant
@@ -23,7 +52,7 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
   profile, and CI's shared database holds one left by another package. Its
   HSM cases use a tenant of their own.
 
- — 2026-10-22
+## [13.43.0-beta] — 2026-10-22
 
 ### Added
 - **Scheduled encrypted backups** (Backup & Restore → Schedules, root
@@ -48,7 +77,7 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 - Governance's kernel routes record a bad bearer token as an invalid token,
   not a missing one.
 
- — 2026-10-22
+## [13.42.0-beta] — 2026-10-22
 
 ### Added
 - **Audit Log → Investigate** (replaces Forensics). Start from anyone or
@@ -557,7 +586,7 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
   service submits for approval; triggers are free-text patterns, as in
   Approvals.
 
- — 2026-10-20
+## [13.25.0-beta] — 2026-10-20
 
 The third of three steps to make the console simpler without removing
 anything: add what was missing.
@@ -585,7 +614,7 @@ anything: add what was missing.
   or FIPS-state call failed it said "No keys yet". It loads every key, and a
   failed key list reads "Keys unavailable" with the error.
 
- — 2026-10-20
+## [13.24.0-beta] — 2026-10-20
 
 ### Fixed
 - **No list silently returns fewer rows than asked.** Most lists shrink a
@@ -621,7 +650,7 @@ anything: add what was missing.
   newest 500-1000 audit events by design of those views; they are within
   the endpoint's maximum and are not counts of the whole set.
 
- — 2026-10-18
+## [13.23.0-beta] — 2026-10-18
 
 The second of three steps to make the console simpler without removing
 anything: fewer places to look.
@@ -651,7 +680,7 @@ anything: fewer places to look.
   Backup while the Backup & Restore module is a labelled preview (the
   scheduler). Each needs one home; neither was merged without the owner.
 
- — 2026-10-18
+## [13.22.0-beta] — 2026-10-18
 
 ### Changed
 - **The certificate lifetime policy is yours alone.** The certs service

@@ -245,6 +245,10 @@ discovery,discovery,GET,/discovery/buckets?{param},/discovery/buckets,True,servi
 discovery,discovery,POST,/discovery/buckets?{param},/discovery/buckets,True,serviceRequest,web/dashboard/src/lib/discovery.ts,433,discovery|POST|/discovery/buckets
 discovery,discovery,DELETE,/discovery/buckets/{param}?{param},/discovery/buckets/{param},True,serviceRequest,web/dashboard/src/lib/discovery.ts,443,discovery|DELETE|/discovery/buckets/{param}
 discovery,discovery,POST,/discovery/buckets/{param}/test?{param},/discovery/buckets/{param}/test,True,serviceRequest,web/dashboard/src/lib/discovery.ts,454,discovery|POST|/discovery/buckets/{param}/test
+discovery,discovery,GET,/discovery/distrusted-cas?{param},/discovery/distrusted-cas,True,serviceRequest,web/dashboard/src/lib/discoveryTrust.ts,23,discovery|GET|/discovery/distrusted-cas
+discovery,discovery,POST,/discovery/distrusted-cas?{param},/discovery/distrusted-cas,True,serviceRequest,web/dashboard/src/lib/discoveryTrust.ts,31,discovery|POST|/discovery/distrusted-cas
+discovery,discovery,DELETE,/discovery/distrusted-cas/{param}?{param},/discovery/distrusted-cas/{param},True,serviceRequest,web/dashboard/src/lib/discoveryTrust.ts,40,discovery|DELETE|/discovery/distrusted-cas/{param}
+discovery,discovery,GET,/discovery/distrusted?{param},/discovery/distrusted,True,serviceRequest,web/dashboard/src/lib/discoveryTrust.ts,48,discovery|GET|/discovery/distrusted
 ekm,ekm,GET,/ekm/agents?{param},/ekm/agents,True,serviceRequest,web/dashboard/src/lib/ekm.ts,241,ekm|GET|/ekm/agents
 ekm,ekm,GET,/ekm/agents/{param}/logs?{param}&limit={param},/ekm/agents/{param}/logs,True,serviceRequest,web/dashboard/src/lib/ekm.ts,246,ekm|GET|/ekm/agents/{param}/logs
 ekm,ekm,POST,/ekm/agents/{param}/rotate,/ekm/agents/{param}/rotate,True,serviceRequest,web/dashboard/src/lib/ekm.ts,255,ekm|POST|/ekm/agents/{param}/rotate

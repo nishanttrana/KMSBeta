@@ -1008,6 +1008,8 @@ func TestTriggerSubjectsAreEmitted(t *testing.T) {
 		"audit.cloud.byok_rotation_due":             {"services/cloud/byok_automation.go", `"byok_rotation_due"`},
 		"audit.audit.chain_broken":                  {"services/audit/service.go", `s.publisher.Publish(ctx, evt.Action, payload)`},
 		"audit.discovery.secret_exposed":            {"services/discovery/service.go", `Emit(ctx, "secret_exposed"`},
+		"audit.discovery.distrusted_ca_found":       {"services/discovery/distrust.go", `emitDiscovery(ctx, "distrusted_ca_found"`},
+		"audit.discovery.revoked_certificate_found": {"services/discovery/distrust.go", `emitDiscovery(ctx, "revoked_certificate_found"`},
 		"audit.compliance.private_endpoint_added":   {"services/compliance/private_endpoints.go", `Action: "private_endpoint_added"`},
 		"audit.compliance.private_endpoint_removed": {"services/compliance/private_endpoints.go", `Action: "private_endpoint_removed"`},
 		"audit.secrets.access_rule_created":         {"services/secrets/handler.go", `Action: "access_rule_created"`},

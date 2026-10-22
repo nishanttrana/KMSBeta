@@ -25,6 +25,16 @@ AREA='^(docs/|CLAUDE\.md$)'
 
 code=$(printf '%s\n' "$CHANGED" | grep -E "$CODE" | grep -v '_test\.go$' || true)
 
+# Every section keeps its heading. Inserting a section by replacing the
+# next one's heading left only its date: 13.22-13.25 and 13.42-13.44 lost
+# theirs this way, and the version check below still passed (13.46.0-beta).
+if orphans=$(grep -nE '^ — [0-9]{4}-[0-9]{2}-[0-9]{2}' CHANGELOG.md); then
+  echo "FAIL [changelog-headings]: a CHANGELOG section lost its '## [version]' heading:"
+  echo "$orphans"
+  exit 1
+fi
+echo "PASS [changelog-headings]"
+
 # Every KMS change bumps the minor version (or major), with a CHANGELOG heading.
 if [ -n "$code" ]; then
   old_v="$(git show "$(git merge-base "$BASE" HEAD):VERSION" 2>/dev/null | tr -d '[:space:]')"
