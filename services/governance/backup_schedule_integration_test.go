@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -78,6 +79,9 @@ func TestBackupSchedulePostgres(t *testing.T) {
 	if _, err := store.db.SQL().ExecContext(ctx, `DELETE FROM governance_backup_schedules`); err != nil {
 		t.Fatal(err)
 	}
+	// A tenant of this test's own: the shared CI database may hold an HSM
+	// profile for root, left by another package's tests.
+	noHSM := "t-nohsm-" + strconv.FormatInt(time.Now().UnixNano(), 36)
 	priv, pubPEM := recipientPair(t, 3072)
 	_, weakPEM := recipientPair(t, 2048)
 	enabled := true
@@ -88,7 +92,7 @@ func TestBackupSchedulePostgres(t *testing.T) {
 	for name, in := range map[string]BackupScheduleInput{
 		"no protection":   {Name: "x", Scope: "system", IntervalHours: 24, RetainCount: 3},
 		"software":        {Name: "x", Scope: "system", IntervalHours: 24, RetainCount: 3, KeyProtection: "software"},
-		"hsm without HSM": {Name: "x", Scope: "system", IntervalHours: 24, RetainCount: 3, KeyProtection: keyProtectionHSM},
+		"hsm without HSM": {Name: "x", Scope: "tenant", TargetTenantID: noHSM, IntervalHours: 24, RetainCount: 3, KeyProtection: keyProtectionHSM},
 		"weak key":        {Name: "x", Scope: "system", IntervalHours: 24, RetainCount: 3, KeyProtection: keyProtectionRecipient, RecipientPublicKey: weakPEM},
 		"private key":     {Name: "x", Scope: "system", IntervalHours: 24, RetainCount: 3, KeyProtection: keyProtectionRecipient, RecipientPublicKey: privPEM},
 		"zero retention":  {Name: "x", Scope: "system", IntervalHours: 24, RetainCount: 0, KeyProtection: keyProtectionRecipient, RecipientPublicKey: pubPEM},
@@ -242,7 +246,7 @@ func TestBackupSchedulePostgres(t *testing.T) {
 	}
 
 	// A failed backup is audited and tried again within the hour.
-	if _, err := store.db.SQL().ExecContext(ctx, `UPDATE governance_backup_schedules SET key_protection='hsm', recipient_public_key='' WHERE id=$1`, sch.ID); err != nil {
+	if _, err := store.db.SQL().ExecContext(ctx, `UPDATE governance_backup_schedules SET key_protection='hsm', recipient_public_key='', scope='tenant', target_tenant_id=$2 WHERE id=$1`, sch.ID, noHSM); err != nil {
 		t.Fatal(err)
 	}
 	clock = clock.Add(2 * time.Hour)

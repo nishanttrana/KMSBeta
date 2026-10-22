@@ -147,6 +147,17 @@ func (s *Service) createBackup(ctx context.Context, in CreateBackupInput) (Backu
 		bindToHSM = *in.BindToHSM
 	}
 
+	hsmTenantID := in.TenantID
+	if scope == backupScopeTenant {
+		hsmTenantID = targetTenantID
+	}
+	binding := store.loadHSMBinding(ctx, hsmTenantID)
+	hsmBound := bindToHSM && binding.Enabled
+	// Checked before anything is captured: a schedule that keeps its key in
+	// the HSM never takes a backup without one.
+	if in.RequireHSM && !hsmBound {
+		return BackupJob{}, nil, errors.New("this schedule keeps the backup key in the HSM, and the tenant has no enabled HSM profile")
+	}
 	payload, rowCountTotal, tableCount, coverage, err := s.captureBackupPayload(ctx, store, in.TenantID, scope, targetTenantID)
 	if err != nil {
 		return BackupJob{}, nil, err
@@ -171,15 +182,6 @@ func (s *Service) createBackup(ctx context.Context, in CreateBackupInput) (Backu
 	ciphertext, nonce, err := encryptAESGCM(payload, backupKey, aad)
 	if err != nil {
 		return BackupJob{}, nil, err
-	}
-	hsmTenantID := in.TenantID
-	if scope == backupScopeTenant {
-		hsmTenantID = targetTenantID
-	}
-	binding := store.loadHSMBinding(ctx, hsmTenantID)
-	hsmBound := bindToHSM && binding.Enabled
-	if in.RequireHSM && !hsmBound {
-		return BackupJob{}, nil, errors.New("this schedule keeps the backup key in the HSM, and the tenant has no enabled HSM profile")
 	}
 	if in.Recipient != nil && (hsmBound || guardians != nil) {
 		return BackupJob{}, nil, errors.New("a backup key sealed to a recipient is neither HSM-bound nor split")

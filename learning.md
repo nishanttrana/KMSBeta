@@ -5,6 +5,17 @@ Newest entries on top.
 
 ## 2026-10-22
 
+### A shared database showed a bug the clean one hid (13.44.0-beta)
+- CI's integration job runs every package against one Postgres database.
+  Another package leaves an enabled HSM profile for `root`, so the backup
+  schedule test, which assumed `root` had none, failed there and passed on
+  a fresh local database. Reproducing CI's state (that row) also showed a
+  real fault: a recipient-sealed schedule on a tenant with an HSM failed on
+  every run, because backups bind to the HSM by default.
+  **A Postgres test that depends on what a tenant lacks uses a tenant of
+  its own; and a feature is tried with the platform's optional pieces
+  present, not only absent.**
+
 ### An unattended job must say where a secret goes (13.43.0-beta)
 - A governance backup with `bind_to_hsm` and no enabled HSM quietly becomes
   a software-mode backup, whose key is returned once, to the caller. A

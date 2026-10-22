@@ -296,6 +296,10 @@ func (s *Service) RunBackupSchedule(ctx context.Context, sch BackupSchedule) (Ba
 			return BackupJob{}, err
 		}
 		in.Recipient = &rk
+		// Sealed to the administrator, not bound to the tenant's HSM even
+		// when it has one.
+		noHSM := false
+		in.BindToHSM = &noHSM
 	} else {
 		in.RequireHSM = true
 	}

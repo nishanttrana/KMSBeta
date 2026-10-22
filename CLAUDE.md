@@ -682,9 +682,10 @@ Security rules are explained in
   not that it is the last; a test that sets process-wide state resets it in
   `t.Cleanup`.
 - SQL is run once against Postgres before it ships; Postgres tests use their
-  own schema; cursor paging is tested on Postgres; a value compared with a
-  stored time is truncated to microseconds; a failed time parse is an error,
-  never a zero value (12.2).
+  own schema and their own tenant (CI shares one database between
+  packages, 13.44.0-beta); cursor paging is tested on Postgres; a value
+  compared with a stored time is truncated to microseconds; a failed time
+  parse is an error, never a zero value (12.2).
 
 **Fail closed, show failure**
 - No fail-open switch, no `dev`/`Any`/weaker fallback in TLS or listener

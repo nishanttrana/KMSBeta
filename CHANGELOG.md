@@ -4,7 +4,19 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
-## [13.43.0-beta] — 2026-10-22
+## [13.44.0-beta] — 2026-10-22
+
+### Fixed
+- **A recipient-sealed backup schedule failed on every run when the tenant
+  had an HSM profile.** The backup bound its key to the HSM by default and
+  then refused a key both HSM-bound and sealed. A recipient schedule now
+  never binds to the HSM. An HSM schedule's missing HSM is refused before
+  anything is captured.
+- CI was red on 13.43.0-beta: the schedule test assumed `root` had no HSM
+  profile, and CI's shared database holds one left by another package. Its
+  HSM cases use a tenant of their own.
+
+ — 2026-10-22
 
 ### Added
 - **Scheduled encrypted backups** (Backup & Restore → Schedules, root

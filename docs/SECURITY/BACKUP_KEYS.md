@@ -74,7 +74,9 @@ would reach no one. A schedule therefore names how its key is kept:
   recipient_sealed`) holds the sealed key, the key's SHA-256 and the
   recipient's fingerprint (`pkg/crypto.RecipientKeyBinding`); the platform
   can't open it, so it can be downloaded again at any time. The private key
-  never reaches the platform.
+  never reaches the platform. It is never also bound to the tenant's HSM, even
+  when the tenant has one (13.44.0-beta: before, such a schedule failed on
+  every run).
 
   To restore, the private key's holder unseals the key file:
   - In the console, Restore and Verify ask for the private key (PKCS#8
