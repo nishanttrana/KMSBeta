@@ -344,10 +344,40 @@ Examples:
 
 ### Backup Workflow
 
-1. Open `Governance`.
+1. Open Backup & Restore → Encrypted Backups.
 2. Create a backup before significant change.
 3. Confirm backup coverage metadata.
 4. Store artifacts according to your operational policy.
+
+### Scheduled Backups
+
+Backup & Restore → Schedules (root administrators). A schedule takes a
+backup every N hours and keeps the newest M it took.
+
+1. Choose how its key is kept. With an enabled HSM profile, choose the HSM.
+   Otherwise make a key pair on a machine you control and keep the private
+   key offline:
+
+   ```bash
+   openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out backup-private.pem
+   openssl pkey -in backup-private.pem -pubout -out backup-public.pem
+   ```
+
+   Paste `backup-public.pem` into the schedule. Never paste the private key:
+   the form refuses one.
+2. Check the first run: the schedule shows `last succeeded` and the backup
+   lists as "scheduled" under Encrypted Backups. Download its artifact and
+   key file and run Verify Backup with the private key; the key opens in the
+   browser and is never sent.
+3. A schedule pauses when the administrator who saved it leaves or loses
+   `auth.tenant.write`; another administrator saves it again to resume.
+   Failed and paused runs are audited (`scheduled_backup_failed`,
+   `scheduled_backup_refused`) and can start a playbook ("Scheduled backup
+   failed or paused").
+
+The backups stay in the governance database on the cluster primary. Copy
+artifacts and key files off the platform as your policy requires: a
+schedule alone does not protect against losing that database.
 
 ### Restore Workflow
 

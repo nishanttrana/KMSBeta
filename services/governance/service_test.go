@@ -159,6 +159,14 @@ func createGovernanceSchemaForTest(conn *pkgdb.DB) error {
 			expires_at TEXT NOT NULL,
 			created_at TEXT DEFAULT CURRENT_TIMESTAMP
 		);`,
+		`CREATE TABLE governance_backup_schedules (
+			id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, enabled BOOLEAN NOT NULL DEFAULT TRUE,
+			scope TEXT NOT NULL, target_tenant_id TEXT NOT NULL DEFAULT '', interval_hours INTEGER NOT NULL, retain_count INTEGER NOT NULL,
+			key_protection TEXT NOT NULL, recipient_public_key TEXT NOT NULL DEFAULT '', recipient_key_sha256 TEXT NOT NULL DEFAULT '',
+			authorized_by TEXT NOT NULL, paused_reason TEXT NOT NULL DEFAULT '', next_run_at TIMESTAMP, last_run_at TIMESTAMP,
+			last_result TEXT NOT NULL DEFAULT '', last_backup_id TEXT NOT NULL DEFAULT '', last_error TEXT NOT NULL DEFAULT '',
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		);`,
 		`CREATE TABLE governance_settings (
 				tenant_id TEXT PRIMARY KEY,
 				approval_expiry_minutes INTEGER NOT NULL DEFAULT 60,

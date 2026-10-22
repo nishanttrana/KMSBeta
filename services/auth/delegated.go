@@ -29,9 +29,9 @@ const delegatingService = "kms-compliance"
 // permissions (POST /auth/delegated/authority), which changes nothing. A
 // service that runs saved work unattended asks before each run
 // (docs/PLATFORM_CONTRACT.md): compliance for playbooks, discovery for scan
-// schedules (7.20.0-beta). The operations that act on users, keys and
-// clients stay compliance's alone.
-var authorityCallers = map[string]bool{delegatingService: true, "kms-discovery": true}
+// schedules (7.20.0-beta), governance for backup schedules (13.43.0-beta).
+// The operations that act on users, keys and clients stay compliance's alone.
+var authorityCallers = map[string]bool{delegatingService: true, "kms-discovery": true, "kms-governance": true}
 
 // Refusal reasons for delegated operations.
 const (
@@ -148,7 +148,7 @@ func (h *Handler) decodeDelegation(c *route.Call) (delegation, bool) {
 // automatic run, so a person who lost a permission stops their playbooks.
 func (h *Handler) delegatedAuthority(c *route.Call) {
 	if !tenantcheck.IsServicePrincipal(c.Claims) || !authorityCallers[c.Claims.ClientID] {
-		c.Refuse(http.StatusForbidden, reasonServiceIdentityRequired, "only the compliance and discovery services may check a person's authority")
+		c.Refuse(http.StatusForbidden, reasonServiceIdentityRequired, "only the compliance, discovery and governance services may check a person's authority")
 		return
 	}
 	var in struct {

@@ -63,12 +63,10 @@ test("a policy without triggers or approvers is not saved", async ({ page }) => 
   expect(writes).toHaveLength(0);
 });
 
-test("Encrypted Backups is offered to platform administrators only", async ({ page }) => {
+test("Backup & Restore is offered to platform administrators only", async ({ page }) => {
   await stub(page, ["auth.user.read"]); // root tenant, not a platform administrator
-  await page.goto("/#backup");
-  const sub = page.getByTestId("subnav-backup");
-  await expect(sub.getByRole("button", { name: "Schedules", exact: true })).toBeVisible();
-  await expect(sub.getByRole("button", { name: "Encrypted Backups", exact: true })).toHaveCount(0);
+  await page.goto("/");
+  await expect(page.getByText("Backup & Restore", { exact: true })).toHaveCount(0);
 });
 
 // The trigger choices are actions services really submit for approval; a

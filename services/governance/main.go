@@ -23,9 +23,9 @@ import (
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/clusterstate"
-	"vecta-kms/pkg/credstore"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
+	"vecta-kms/pkg/credstore"
 	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
@@ -100,7 +100,10 @@ func main() {
 		WithSNMPPublisher(snmpPublisher),
 		WithNotifyConnections(newComplianceConnections(envOr("COMPLIANCE_URL", "https://compliance:8110"))),
 		WithCredentials(credstore.FromEnv()),
+		WithBackupAuthority(newAuthAuthority(envOr("AUTH_URL", "https://auth:8001"))),
 	)
+	// Scheduled backups, on the primary only (backup_schedule.go).
+	go svc.RunBackupSchedulesLoop(ctx, clusterstate.RunsPrimaryJobs, time.Minute)
 	go svc.migrateNotifyURLsLoop(ctx, clusterstate.RunsPrimaryJobs, 15*time.Minute, logger.Printf)
 	// The mail relay an earlier release stored in plaintext moves into the
 	// credential store the same way.

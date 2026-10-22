@@ -55,6 +55,61 @@ and the backup is gone, keep it and that one person can restore every key.
   algorithm, and no FIPS standard covers it. It is available in every mode
   (see [FIPS.md](FIPS.md#whats-inside-the-validated-boundary-and-what-isnt)).
 
+## Scheduled backups (13.43.0-beta)
+
+Backup & Restore → Schedules (`/governance/backups/schedules`, root
+administrators). A schedule takes a backup every `interval_hours` (1–720)
+and keeps its newest `retain_count` (1–90); older ones it took are deleted,
+each audited as `backup_deleted`. Backups taken by hand are never pruned.
+
+Nobody is there when a schedule runs, so a software key file returned once
+would reach no one. A schedule therefore names how its key is kept:
+
+- **`hsm`**: the HSM-bound mode above. Saving needs an enabled HSM profile
+  for the tenant, and a run without one fails
+  (`scheduled_backup_failed`); it never falls back to a software key.
+- **`recipient`**: the backup key is sealed to the administrator's RSA
+  public key (PEM, 3072 bits or more) with RSA-OAEP-SHA256 (MGF1-SHA256,
+  label `vecta-kms backup key v1`). The package (`mode:
+  recipient_sealed`) holds the sealed key, the key's SHA-256 and the
+  recipient's fingerprint (`pkg/crypto.RecipientKeyBinding`); the platform
+  can't open it, so it can be downloaded again at any time. The private key
+  never reaches the platform.
+
+  To restore, the private key's holder unseals the key file:
+  - In the console, Restore and Verify ask for the private key (PKCS#8
+    PEM) when the key file is sealed and open it in the browser with
+    WebCrypto. Only the unsealed key file is sent.
+  - Offline:
+
+    ```bash
+    jq -r .wrapped_key_b64 vecta-backup-ID.key.json | base64 -d > wrapped.bin
+    openssl pkeyutl -decrypt -inkey private.pem -in wrapped.bin \
+      -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 \
+      -pkeyopt rsa_mgf1_md:sha256 \
+      -pkeyopt rsa_oaep_label:$(printf 'vecta-kms backup key v1' | xxd -p | tr -d '\n') \
+      | base64        # put this in backup_key_b64 in the key file
+    ```
+
+  Restore refuses a sealed file that wasn't unsealed, and an unsealed key
+  whose SHA-256 isn't the backup's.
+
+A run acts on the authority of the administrator who saved the schedule:
+before every run, governance asks auth (`POST /auth/delegated/authority`)
+whether they are still active and still hold `auth.tenant.write`. If auth
+can't be asked the run is postponed 15 minutes; if they no longer qualify
+the schedule pauses until someone who does saves it again. Schedules run on
+the cluster primary only. Events:
+`audit.governance.scheduled_backup_taken`, `scheduled_backup_failed`
+(retried within the hour) and `scheduled_backup_refused` (authority), the
+last two a playbook trigger ("Scheduled backup failed or paused").
+
+Tests: `TestBackupSchedulePostgres` (refused schedules, three runs with
+retention, the sealed key restoring once unsealed and refused while sealed
+or wrong, auth outage, revoked authority and resume, an HSM schedule with no
+HSM failing rather than falling back), `TestBackupScheduleRoutes`,
+`tests/unit/backupUnseal.test.ts`, smoke `backup-schedules.spec.ts`.
+
 ## Verifying a backup (recovery evidence)
 
 `POST /governance/backups/verify` (System Administration > Backups > Verify

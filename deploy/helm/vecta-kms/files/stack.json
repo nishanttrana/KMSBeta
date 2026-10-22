@@ -16,7 +16,6 @@
   "audit",
   "auth",
   "autokey",
-  "backup",
   "certs",
   "cloud",
   "cluster-manager",
@@ -1142,128 +1141,6 @@
    "profiles": [
     "autokey_provisioning"
    ],
-   "resources": {
-    "limits": {
-     "cpu": 0.5,
-     "memory": "256Mi"
-    },
-    "requests": {
-     "cpu": 0.1,
-     "memory": "48Mi"
-    }
-   },
-   "secretEnv": [
-    "INTERNAL_API_TOKEN",
-    "INTERNAL_SERVICE_BOOTSTRAP_SECRET",
-    "JWT_PUBLIC_KEY_B64",
-    "NATS_AUTH_TOKEN",
-    "POSTGRES_PASSWORD",
-    "VALKEY_PASSWORD",
-    "WORKLOAD_IDENTITY_SHARED_SECRET"
-   ],
-   "sidecar": false,
-   "startupProbe": false,
-   "vecta": true
-  },
-  {
-   "command": null,
-   "dropAll": true,
-   "entrypoint": null,
-   "env": [
-    {
-     "name": "AUTH_URL",
-     "value": "https://auth:8001"
-    },
-    {
-     "name": "BUILD_VERSION",
-     "value": "__VECTA_VERSION__"
-    },
-    {
-     "name": "CONSUL_HEALTH_CHECK_TYPE",
-     "value": "tcp"
-    },
-    {
-     "name": "CONSUL_HTTP_ADDR",
-     "value": "https://consul:8501"
-    },
-    {
-     "name": "CONSUL_SERVICE_ADDRESS",
-     "value": "$HOSTNAME"
-    },
-    {
-     "name": "DB_MAX_IDLE",
-     "value": "20"
-    },
-    {
-     "name": "DB_MAX_OPEN",
-     "value": "50"
-    },
-    {
-     "name": "GODEBUG",
-     "value": "fips140=on"
-    },
-    {
-     "name": "GRPC_PORT",
-     "value": "18290"
-    },
-    {
-     "name": "HTTP_PORT",
-     "value": "8290"
-    },
-    {
-     "name": "NATS_URL",
-     "value": "nats://$(NATS_AUTH_TOKEN)@nats:4222"
-    },
-    {
-     "name": "POSTGRES_DSN",
-     "value": "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/vecta?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10"
-    },
-    {
-     "name": "RATE_LIMIT_BURST",
-     "value": "200"
-    },
-    {
-     "name": "RATE_LIMIT_RPS",
-     "value": "100"
-    },
-    {
-     "name": "REDIS_URL",
-     "value": "rediss://:$(VALKEY_PASSWORD)@valkey:6379"
-    },
-    {
-     "name": "SQLITE_FALLBACK",
-     "value": "false"
-    },
-    {
-     "name": "VECTA_FIPS_MODE",
-     "value": "on"
-    }
-   ],
-   "image": "vecta/backup",
-   "mounts": [
-    {
-     "data": "internal-trust",
-     "mountPath": "/run/vecta/trust",
-     "readOnly": true
-    },
-    {
-     "data": "platform-state",
-     "mountPath": "/run/vecta/platform",
-     "readOnly": true
-    }
-   ],
-   "name": "backup",
-   "noNewPrivileges": true,
-   "ports": [
-    8290,
-    18290
-   ],
-   "probe": [
-    "sh",
-    "-c",
-    "nc -z 127.0.0.1 18290"
-   ],
-   "profiles": [],
    "resources": {
     "limits": {
      "cpu": 0.5,

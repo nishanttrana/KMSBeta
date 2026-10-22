@@ -10223,6 +10223,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "governance-delete-governance-backups-schedules-id",
+    "group": "Governance (governance)",
+    "title": "DELETE /governance/backups/schedules/{id}",
+    "service": "governance",
+    "method": "DELETE",
+    "pathTemplate": "/governance/backups/schedules/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "DELETE /svc/governance/governance/backups/schedules/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "governance-delete-governance-policies-id",
     "group": "Governance (governance)",
     "title": "DELETE /governance/policies/{id}",
@@ -10372,6 +10400,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Governance service.",
     "requestExample": "GET /svc/governance/governance/backups/{id}/key?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "governance-get-governance-backups-schedules",
+    "group": "Governance (governance)",
+    "title": "GET /governance/backups/schedules",
+    "service": "governance",
+    "method": "GET",
+    "pathTemplate": "/governance/backups/schedules?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "GET /svc/governance/governance/backups/schedules?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -10783,6 +10839,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "governance-post-governance-backups-schedules",
+    "group": "Governance (governance)",
+    "title": "POST /governance/backups/schedules",
+    "service": "governance",
+    "method": "POST",
+    "pathTemplate": "/governance/backups/schedules?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "POST /svc/governance/governance/backups/schedules?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "governance-post-governance-backups-schedules-id-run",
+    "group": "Governance (governance)",
+    "title": "POST /governance/backups/schedules/{id}/run",
+    "service": "governance",
+    "method": "POST",
+    "pathTemplate": "/governance/backups/schedules/{id}/run?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "POST /svc/governance/governance/backups/schedules/{id}/run?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "governance-post-governance-backups-verify",
     "group": "Governance (governance)",
     "title": "POST /governance/backups/verify",
@@ -11016,6 +11128,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Governance service.",
     "requestExample": "POST /svc/governance/governance/system/snmp/test?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "governance-put-governance-backups-schedules-id",
+    "group": "Governance (governance)",
+    "title": "PUT /governance/backups/schedules/{id}",
+    "service": "governance",
+    "method": "PUT",
+    "pathTemplate": "/governance/backups/schedules/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "PUT /svc/governance/governance/backups/schedules/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

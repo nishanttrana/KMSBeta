@@ -90,7 +90,9 @@ person themselves. Playbooks are the reference: `ActionSpec.Permission`,
 `missingPermissions`, `authorized_by` and `checkAuthority` in
 `services/compliance` (2.4.0-beta, re-checks since 2.5.0-beta). Discovery's
 scan schedule follows the same rule (`services/discovery/schedule.go`,
-7.20.0-beta).
+7.20.0-beta), and so do governance's backup schedules
+(`services/governance/backup_schedule.go`, 13.43.0-beta). Auth admits only
+the services in `authorityCallers` to that route.
 
 Rules the conformance check enforces:
 

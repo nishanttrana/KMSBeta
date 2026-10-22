@@ -826,6 +826,10 @@ Security rules are explained in
 - Work whose duration depends on someone else's network runs in the
   background with a deadline and progress, refuses a second run, and a row
   left `running` by a restart reads as interrupted.
+- Work that runs with nobody present never takes a path that hands a
+  secret to a person; it names where the secret goes (an HSM, a recipient
+  key) and refuses when that isn't there, never falling back (backup
+  schedules, 13.43.0-beta).
 - Unattended work (playbooks, schedulers) re-checks the person's authority
   when it runs and fails closed when it can't ask; a detection runs on a
   scheduler, primary-only if it writes replicated data, tested by driving

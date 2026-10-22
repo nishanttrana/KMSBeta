@@ -146,15 +146,15 @@ type GovernanceSettings struct {
 	// credential, never accepted (mail_credentials.go).
 	SMTPConnectionID string `json:"smtp_connection_id"`
 	SMTPHost         string `json:"smtp_host"`
-	SMTPPort                   string `json:"smtp_port"`
-	SMTPUsername               string `json:"smtp_username"`
-	SMTPPassword               string `json:"smtp_password,omitempty"`
-	SMTPFrom                   string `json:"smtp_from"`
-	SMTPStartTLS               bool   `json:"smtp_starttls"`
-	NotifyDashboard            bool   `json:"notify_dashboard"`
-	NotifyEmail                bool   `json:"notify_email"`
-	NotifySlack                bool   `json:"notify_slack"`
-	NotifyTeams                bool   `json:"notify_teams"`
+	SMTPPort         string `json:"smtp_port"`
+	SMTPUsername     string `json:"smtp_username"`
+	SMTPPassword     string `json:"smtp_password,omitempty"`
+	SMTPFrom         string `json:"smtp_from"`
+	SMTPStartTLS     bool   `json:"smtp_starttls"`
+	NotifyDashboard  bool   `json:"notify_dashboard"`
+	NotifyEmail      bool   `json:"notify_email"`
+	NotifySlack      bool   `json:"notify_slack"`
+	NotifyTeams      bool   `json:"notify_teams"`
 	// Slack and Teams notices go through compliance connections. The URL
 	// fields are what an earlier release stored in plaintext; they are never
 	// returned or accepted, and the migration moves them into connections
@@ -250,6 +250,14 @@ type CreateBackupInput struct {
 	// KeySplit, when set, splits a software-mode backup key into one Shamir
 	// share per guardian; any Threshold of them restore the backup.
 	KeySplit *BackupKeySplit `json:"key_split,omitempty"`
+
+	// Set only by a backup schedule (backup_schedule.go), never by a request:
+	// the schedule, and how the key is kept with nobody there to take it.
+	// RequireHSM refuses rather than fall back to a software key;
+	// Recipient seals the key to the administrator's RSA public key.
+	ScheduleID string           `json:"-"`
+	RequireHSM bool             `json:"-"`
+	Recipient  *backupRecipient `json:"-"`
 }
 
 type BackupKeySplit struct {
@@ -280,6 +288,7 @@ type BackupJob struct {
 	CreatedAt             time.Time              `json:"created_at"`
 	CompletedAt           time.Time              `json:"completed_at"`
 	FailureReason         string                 `json:"failure_reason,omitempty"`
+	ScheduleID            string                 `json:"schedule_id,omitempty"`
 	ArtifactCiphertext    []byte                 `json:"-"`
 	ArtifactNonce         []byte                 `json:"-"`
 	KeyPackageRaw         []byte                 `json:"-"`

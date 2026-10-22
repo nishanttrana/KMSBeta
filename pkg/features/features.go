@@ -34,7 +34,6 @@ var Preview = []Feature{
 	{"keycore.metadata_profile", "keycore", "Key metadata profiles", "Stored only; key creation does not apply or validate them."},
 	{"keycore.edge", "keycore", "Edge & IoT agents, leases and receipts", "Stored only; there is no edge runtime."},
 	{"keycore.advanced_encryption_modes", "keycore", "Homomorphic / functional encryption modes", "Registered as controls; no homomorphic or functional encryption is performed. Searchable HMAC tokens are available."},
-	{"backup.scheduler", "backup", "Backup policies, runs and restore points (Backup tab)", "Policies are stored but no backup is executed or restored. Real encrypted backups: System Administration > Backups."},
 }
 
 // controlCategories maps keycore enterprise control categories to features.

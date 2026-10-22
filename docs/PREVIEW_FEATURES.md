@@ -21,7 +21,6 @@ reflects it:
 | `keycore.metadata_profile` | Key metadata profiles | Stored only; key creation does not apply or validate them. |
 | `keycore.edge` | Edge & IoT agents, leases and receipts | Stored only; there is no edge runtime. |
 | `keycore.advanced_encryption_modes` | Homomorphic / functional encryption modes | Registered as controls; no homomorphic or functional encryption is performed. Searchable HMAC tokens are available. |
-| `backup.scheduler` | Backup policies, runs and restore points (Backup tab) | Policies are stored but no backup is executed or restored. |
 
 ## Corrections made on 2026-09-25
 
@@ -37,6 +36,9 @@ reflects it:
   - **Where real backup lives:** governance (System Administration → Backups):
     AES-256-GCM artifacts, a separate key package, restore with tamper and
     scope (AAD) checks. Integration-tested against Postgres.
+  - **Removed in 13.43.0-beta:** the service, its routes and its tables
+    (governance migration 019). Scheduled backups are governance's own
+    (Backup & Restore → Schedules; [SECURITY/BACKUP_KEYS.md](SECURITY/BACKUP_KEYS.md#scheduled-backups-13430-beta)).
 - **Audit-chain anchors:**
   - **What they did:** reported a tree root computed from
     tenant/type/reference/time, with status `anchored`.

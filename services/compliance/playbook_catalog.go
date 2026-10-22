@@ -89,6 +89,7 @@ var playbookTriggers = []TriggerSpec{
 	{Type: "credential_test_failed", Label: "Credential test failed", Group: "Credentials", Subjects: []string{"audit.compliance.credential_test_failed"}},
 	{Type: "fips_mode_changed", Label: "Platform FIPS mode changed", Group: "Platform", Subjects: []string{"audit.governance.fips_mode_changed"}},
 	{Type: "backup_restored", Label: "Backup restored", Group: "Platform", Subjects: []string{"audit.governance.backup_restored"}},
+	{Type: "scheduled_backup_failed", Label: "Scheduled backup failed or paused", Group: "Platform", Subjects: []string{"audit.governance.scheduled_backup_failed", "audit.governance.scheduled_backup_refused"}},
 	{Type: "cluster_member_joined", Label: "Cluster member joined", Group: "Platform", Subjects: []string{"audit.cluster.member_joined"}},
 	{Type: "service_health_degraded", Label: "Platform service unhealthy (watchdog incident)", Group: "Platform", Subjects: []string{"audit.health.incident"}, Platform: true},
 	{Type: customTrigger, Label: "Any audit event (custom subject)", Group: "Custom"},

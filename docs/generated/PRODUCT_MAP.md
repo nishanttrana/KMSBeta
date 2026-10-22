@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-21T19:48:10Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-22T04:37:09Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `25`
 - Tab/component mappings: `32`
 - Sub-pane groups: `14`
-- Backend HTTP routes discovered: `913` across `28` services
-- Backend routes on the `pkg/route` kernel: `537` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `516`
-- Frontend call sites with exact backend route match: `486`
+- Backend HTTP routes discovered: `907` across `27` services
+- Backend routes on the `pkg/route` kernel: `542` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `509`
+- Frontend call sites with exact backend route match: `479`
 - Frontend call sites needing review or dynamic/runtime confirmation: `30`
 - Clickable controls with static `onClick` handlers: `750`
-- Backend request flows with handler/service/package summaries: `913`
+- Backend request flows with handler/service/package summaries: `907`
 
 ## How To Use This For Launch
 
@@ -145,7 +145,7 @@ flowchart LR
   svc_confidential["confidential (7 routes)"]
   svc_discovery["discovery (24 routes)"]
   svc_ekm["ekm (56 routes)"]
-  svc_governance["governance (35 routes)"]
+  svc_governance["governance (40 routes)"]
   svc_hyok["hyok (25 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
   svc_keycore["keycore (178 routes)"]
@@ -205,7 +205,6 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | audit | 32 | 18 |
 | auth | 90 | 47 |
 | autokey | 15 | 11 |
-| backup | 11 | 10 |
 | certs | 70 | 54 |
 | cloud | 28 | 15 |
 | cluster-manager | 28 | 12 |
@@ -214,7 +213,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | dataprotect | 49 | 28 |
 | discovery | 24 | 22 |
 | ekm | 56 | 29 |
-| governance | 35 | 23 |
+| governance | 40 | 26 |
 | hsm-connector | 14 | 0 |
 | hyok | 25 | 7 |
 | keyaccess | 9 | 6 |
@@ -339,7 +338,6 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | autokey | PUT | /autokey/templates/{id} | route.Legacy(h.handleUpsertTemplate) | autokey.write | services/autokey/handler.go | 40 |
 | autokey | POST | /autokey/service-policies | route.Legacy(h.handleUpsertServicePolicy) | autokey.write | services/autokey/handler.go | 43 |
 | autokey | PUT | /autokey/service-policies/{service} | route.Legacy(h.handleUpsertServicePolicy) | autokey.write | services/autokey/handler.go | 44 |
-| backup | GET | /healthz | h.handleHealth |  | services/backup/handler.go | 48 |
 | certs | GET | /certs/{id} | h.handleGetCert |  | services/certs/handler.go | 47 |
 | certs | POST | /certs/profiles | h.handleCreateProfile |  | services/certs/handler.go | 52 |
 | certs | GET | /certs/profiles/{id} | h.handleGetProfile |  | services/certs/handler.go | 54 |
@@ -396,8 +394,9 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/keys/orphaned | h.handleOrphaned |  | services/compliance/handler.go | 78 |
 | compliance | GET | /compliance/keys/expired | h.handleExpired |  | services/compliance/handler.go | 79 |
 | compliance | GET | /compliance/cbom | h.handleCBOM |  | services/compliance/handler.go | 83 |
+| compliance | GET | /compliance/cbom/summary | h.handleCBOMSummary |  | services/compliance/handler.go | 84 |
 
-Showing `120` of `421`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `422`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

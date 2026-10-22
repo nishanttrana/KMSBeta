@@ -1286,28 +1286,6 @@ services:
       timeout: 5s
       retries: 10
 
-  backup:
-    <<: *kms-service
-    build:
-      context: .
-      dockerfile: services/backup/Dockerfile
-    image: vecta/backup:${VECTA_VERSION:-latest}
-    environment:
-      <<: *kms-common-env
-      HTTP_PORT: "8290"
-      GRPC_PORT: "18290"
-    ports:
-      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8290:8290"
-      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18290:18290"
-    volumes:
-      - internal-trust:/run/vecta/trust:ro
-      - platform-state:/run/vecta/platform:ro
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 18290"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-
   hsm-connector:
     <<: *kms-service
     profiles: ["hsm_hardware"]

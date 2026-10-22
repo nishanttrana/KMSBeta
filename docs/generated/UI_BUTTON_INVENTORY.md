@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-21T19:48:10Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-22T04:37:09Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -77,14 +77,6 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 513 | byok | Btn | setModal(null)}>Close |  |
 | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 514 | byok | Btn | void submitRegionMapping()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 549 | byok | Btn | setModal(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/BackupTab.tsx | 127 | - | button | Refresh | load} style={{ background: "transparent", border: `1px solid ${C.border |
-| web/dashboard/src/components/v3/tabs/BackupTab.tsx | 131 | - | button | setShowCreate(true)} style={ }> New Policy |  |
-| web/dashboard/src/components/v3/tabs/BackupTab.tsx | 149 | - | button | setSection(s.id as any)} style={{ padding: "8px 16px", border: "none", backgr... |  |
-| web/dashboard/src/components/v3/tabs/BackupTab.tsx | 197 | - | button | handleTrigger(p.id)} disabled title= style={{ padding: "4px 8px", borderRadiu... |  |
-| web/dashboard/src/components/v3/tabs/BackupTab.tsx | 200 | - | button | deletePolicy(session, p.id).then(load)} style={{ padding: "4px 6px", borderRa... |  |
-| web/dashboard/src/components/v3/tabs/BackupTab.tsx | 279 | - | button | handleRestore(p.id)} disabled title= style={{ padding: "4px 10px", borderRadi... |  |
-| web/dashboard/src/components/v3/tabs/BackupTab.tsx | 337 | - | button | setShowCreate(false)} style={{ padding: "7px 16px", borderRadius: 3, border:... |  |
-| web/dashboard/src/components/v3/tabs/BackupTab.tsx | 338 | - | button | (icon or dynamic label) | handleCreate} disabled={creating \|\| !form.name |
 | web/dashboard/src/components/v3/tabs/CanaryKeysPanel.tsx | 85 | - | Btn | Create canary | create} disabled={busy \|\| !name.trim() |
 | web/dashboard/src/components/v3/tabs/CanaryKeysPanel.tsx | 105 | - | Btn | showTrips(k)}>Trips |  |
 | web/dashboard/src/components/v3/tabs/CanaryKeysPanel.tsx | 106 | - | Btn | deactivate(k)}>Deactivate |  |
@@ -734,19 +726,27 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/modules/admin/user-admin/UserManagementSection.tsx | 56 | - | Btn | } > Reset Password |  |
 | web/dashboard/src/modules/admin/user-admin/UserManagementSection.tsx | 100 | - | Btn | void model.createUser()} disabled= > |  |
 | web/dashboard/src/modules/admin/user-admin/UserManagementSection.tsx | 120 | - | Btn | void model.resetPassword()} disabled= > |  |
-| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 114 | - | Btn | inputRef.current?.click()} style={{ padding: "8px 14px", borderRadius: 4, box... |  |
-| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 128 | - | Btn | { onFileChange(null); if (inputRef.current) }} style={ } > Clear |  |
-| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 285 | - | Btn | void loadJobs()}> |  |
-| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 298 | - | Btn | { if(!session?.token) return; if(backupScope==="tenant"&&!String(backupTenant... |  |
-| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 322 | - | Btn | dl(sh.file_name,sh.content_base64,sh.content_type)}>Download |  |
-| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 325 | - | Btn | setBackupCreatedShares([])}>All shares handed out: close |  |
-| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 353 | - | Btn | backupShareInputRef.current?.click()}> |  |
-| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 354 | - | Btn | }>Clear |  |
-| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 359 | - | Btn | void verifyBackup()} disabled= > |  |
-| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 360 | - | Btn | void restoreBackup()} disabled= > |  |
-| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 374 | - | Btn | {if(!session?.token\|\|!id) return; setBackupDownloading(`$ :artifact`); try ca... |  |
-| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 374 | - | Btn | {if(!session?.token\|\|!id) return; setBackupDownloading(`$ :key`); try catch(e... |  |
-| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 374 | - | Btn | {if(!session?.token\|\|!id) return; setBackupDeleting(id); try catch(error){if(... |  |
+| web/dashboard/src/modules/backup/BackupSchedulesPanel.tsx | 71 | - | Btn | void load()}>Refresh |  |
+| web/dashboard/src/modules/backup/BackupSchedulesPanel.tsx | 72 | - | Btn | { setEditing(""); setForm( ); }}>New schedule |  |
+| web/dashboard/src/modules/backup/BackupSchedulesPanel.tsx | 118 | - | Btn | setForm(null)}>Cancel |  |
+| web/dashboard/src/modules/backup/BackupSchedulesPanel.tsx | 119 | - | Btn | void save()} disabled= > |  |
+| web/dashboard/src/modules/backup/BackupSchedulesPanel.tsx | 144 | - | Btn | void act(`run:$ `, () => runBackupSchedule(session!, s.id), "Backup taken.")}... |  |
+| web/dashboard/src/modules/backup/BackupSchedulesPanel.tsx | 145 | - | Btn | }> |  |
+| web/dashboard/src/modules/backup/BackupSchedulesPanel.tsx | 146 | - | Btn | void act(`toggle:$ `, () => saveBackupSchedule(session!, s.id, ), s.enabled ?... |  |
+| web/dashboard/src/modules/backup/BackupSchedulesPanel.tsx | 147 | - | Btn | void act(`del:$ `, () => deleteBackupSchedule(session!, s.id), "Schedule dele... |  |
+| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 116 | - | Btn | inputRef.current?.click()} style={{ padding: "8px 14px", borderRadius: 4, box... |  |
+| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 130 | - | Btn | { onFileChange(null); if (inputRef.current) }} style={ } > Clear |  |
+| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 303 | - | Btn | void loadJobs()}> |  |
+| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 316 | - | Btn | { if(!session?.token) return; if(backupScope==="tenant"&&!String(backupTenant... |  |
+| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 340 | - | Btn | dl(sh.file_name,sh.content_base64,sh.content_type)}>Download |  |
+| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 343 | - | Btn | setBackupCreatedShares([])}>All shares handed out: close |  |
+| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 380 | - | Btn | backupShareInputRef.current?.click()}> |  |
+| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 381 | - | Btn | }>Clear |  |
+| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 386 | - | Btn | void verifyBackup()} disabled= > |  |
+| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 387 | - | Btn | void restoreBackup()} disabled= > |  |
+| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 401 | - | Btn | {if(!session?.token\|\|!id) return; setBackupDownloading(`$ :artifact`); try ca... |  |
+| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 401 | - | Btn | {if(!session?.token\|\|!id) return; setBackupDownloading(`$ :key`); try catch(e... |  |
+| web/dashboard/src/modules/backup/EncryptedBackupsPanel.tsx | 401 | - | Btn | {if(!session?.token\|\|!id) return; setBackupDeleting(id); try catch(error){if(... |  |
 | web/dashboard/src/modules/hsm/HSMActivityPanel.tsx | 40 | - | Btn | void load()} disabled= > |  |
 | web/dashboard/src/modules/hsm/HSMIntegrationCard.tsx | 75 | - | Btn | void load()} disabled= > |  |
 | web/dashboard/src/modules/hsm/HSMIntegrationCard.tsx | 95 | - | Btn | void save()} disabled= > |  |

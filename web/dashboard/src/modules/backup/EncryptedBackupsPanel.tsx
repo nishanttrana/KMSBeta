@@ -8,6 +8,7 @@ import {
   deleteGovernanceBackup,
   downloadGovernanceBackupArtifact,
   downloadGovernanceBackupKey,
+  governanceBackupKeyDownloadable,
   governanceBackupKeyRetained,
   listGovernanceBackups,
   restoreGovernanceBackup,
@@ -16,6 +17,7 @@ import {
   type GovernanceBackupKeyFile,
   type GovernanceVerifyBackupResult
 } from "../../lib/governance";
+import { isSealedKeyFile, unsealKeyFile } from "../../lib/backupSchedules";
 
 // Encrypted backups: create, verify, restore, download and delete
 // (governance; root administrators only). Their one home is Backup & Restore
@@ -193,6 +195,16 @@ export function EncryptedBackupsPanel({ session, onToast, onLogout }: {
   const [backupRestoring,setBackupRestoring]=useState(false);
   const [backupVerifying,setBackupVerifying]=useState(false);
   const [backupVerifyResult,setBackupVerifyResult]=useState<GovernanceVerifyBackupResult|null>(null);
+  // A scheduled backup's key file is sealed to the administrator's public
+  // key: the private key opens it here, in the browser, and is never sent.
+  const [keySealed,setKeySealed]=useState(false);
+  const [privateKeyFile,setPrivateKeyFile]=useState<File|null>(null);
+  useEffect(()=>{
+    let live=true;
+    setKeySealed(false);
+    if(backupRestoreKeyFile) void fileToBase64(backupRestoreKeyFile).then((b64)=>{if(live) setKeySealed(isSealedKeyFile(b64));});
+    return ()=>{live=false;};
+  },[backupRestoreKeyFile]);
 
   const sessionGuard=useCallback((error:unknown)=>{
     const msg=errMsg(error).toLowerCase();
@@ -231,6 +243,11 @@ export function EncryptedBackupsPanel({ session, onToast, onLogout }: {
       return null;
     }
     const [artifactB64,...keyB64s]=await Promise.all([fileToBase64(backupRestoreArtifactFile),...keyFiles.map(fileToBase64)]);
+    if(!useShares&&isSealedKeyFile(String(keyB64s[0]||""))){
+      if(!privateKeyFile){onToast("This key file is sealed: choose the private key that opens it."); return null;}
+      try{keyB64s[0]=await unsealKeyFile(String(keyB64s[0]||""),await privateKeyFile.text());}
+      catch(error){onToast(errMsg(error)); return null;}
+    }
     return {
       artifact_file_name:artifactName,
       artifact_content_base64:artifactB64,
@@ -238,7 +255,7 @@ export function EncryptedBackupsPanel({ session, onToast, onLogout }: {
         ?{key_shares:keyFiles.map((f,i)=>({file_name:String(f.name||"").trim(),content_base64:String(keyB64s[i]||"")}))}
         :{key_file_name:String(keyFiles[0]?.name||"").trim(),key_content_base64:String(keyB64s[0]||"")})
     };
-  },[backupRestoreArtifactFile,backupRestoreKeyFile,backupRestoreShareFiles,onToast]);
+  },[backupRestoreArtifactFile,backupRestoreKeyFile,backupRestoreShareFiles,onToast,privateKeyFile]);
 
   const restoreBackup=useCallback(async()=>{
     if(!session?.token){return;}
@@ -250,6 +267,7 @@ export function EncryptedBackupsPanel({ session, onToast, onLogout }: {
       setBackupRestoreArtifactFile(null);
       setBackupRestoreKeyFile(null);
       setBackupRestoreShareFiles([]);
+      setPrivateKeyFile(null);
       setBackupVerifyResult(null);
       onToast(`Backup restored. Rows: ${Number(out.rows_restored||0)} | Tables: ${Number(out.tables_processed||0)}.`);
       await loadJobs();
@@ -347,6 +365,15 @@ export function EncryptedBackupsPanel({ session, onToast, onLogout }: {
             />
           </FG>
         </Row2>
+        {keySealed&&<div style={{marginTop:8}}><FG label="Private key (PEM): opened in this browser, never sent">
+          <BackupRestoreFilePicker
+            accept=".pem,.key"
+            file={privateKeyFile}
+            onFileChange={setPrivateKeyFile}
+            emptyLabel="Upload the private key the schedule's backups are sealed to"
+            hint="PKCS#8 (BEGIN PRIVATE KEY)"
+          />
+        </FG></div>}
         <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8,fontSize:10,color:C.dim}}>
           <input ref={backupShareInputRef} type="file" accept=".json,.key.json" multiple style={{display:"none"}} onChange={(e)=>setBackupRestoreShareFiles(Array.from(e.target.files||[]))}/>
           <span>Split key? Upload the guardians' share files instead of a key package.</span>
@@ -371,7 +398,7 @@ export function EncryptedBackupsPanel({ session, onToast, onLogout }: {
       </Card>
       <Card style={{marginTop:8,padding:10,borderRadius:4}}>
         <div style={{display:"grid",gridTemplateColumns:"1.2fr 0.8fr 0.8fr 0.8fr 1fr",gap:8,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>{["Backup","Scope","Status","Rows","Actions"].map((h)=><div key={h} style={{fontSize: 10,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>{h}</div>)}</div>
-        {sortedJobs.map((job)=>{const id=String(job.id||""); const st=String(job.status||"unknown"); return <div key={id} style={{display:"grid",gridTemplateColumns:"1.2fr 0.8fr 0.8fr 0.8fr 1fr",gap:8,alignItems:"center",borderBottom:`1px solid ${C.border}`,padding:"9px 0"}}><div style={{minWidth:0}}><div style={{fontSize:12,color:C.text,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{id}</div><div style={{fontSize:10,color:C.dim}}>{String(job.created_at||"-")}</div></div><div style={{fontSize:11,color:C.text}}>{String(job.scope||"-")}</div><div style={{fontSize:11,color:C[tone(st)]}}>{st}</div><div style={{fontSize:11,color:C.text}}>{Number(job.row_count_total||0)}</div><div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}><Btn small onClick={async()=>{if(!session?.token||!id) return; setBackupDownloading(`${id}:artifact`); try{const p=await downloadGovernanceBackupArtifact(session,id); dl(p.file_name,p.content_base64,p.content_type); onToast("Backup artifact downloaded.");}catch(error){if(!sessionGuard(error)) onToast(`Backup download failed: ${errMsg(error)}`);} finally{setBackupDownloading("");}}} disabled={backupDownloading===`${id}:artifact`}>Artifact</Btn>{governanceBackupKeyRetained(job)&&<Btn small onClick={async()=>{if(!session?.token||!id) return; setBackupDownloading(`${id}:key`); try{const p=await downloadGovernanceBackupKey(session,id); dl(p.file_name,p.content_base64,p.content_type); onToast("Backup key package downloaded.");}catch(error){if(!sessionGuard(error)) onToast(`Backup download failed: ${errMsg(error)}`);} finally{setBackupDownloading("");}}} disabled={backupDownloading===`${id}:key`}>Key</Btn>}<Btn small danger onClick={async()=>{if(!session?.token||!id) return; setBackupDeleting(id); try{await deleteGovernanceBackup(session,id,session.username); onToast("Backup deleted."); await loadJobs();}catch(error){if(!sessionGuard(error)) onToast(`Backup delete failed: ${errMsg(error)}`);} finally{setBackupDeleting("");}}} disabled={backupDeleting===id}>Delete</Btn></div></div>;})}
+        {sortedJobs.map((job)=>{const id=String(job.id||""); const st=String(job.status||"unknown"); return <div key={id} style={{display:"grid",gridTemplateColumns:"1.2fr 0.8fr 0.8fr 0.8fr 1fr",gap:8,alignItems:"center",borderBottom:`1px solid ${C.border}`,padding:"9px 0"}}><div style={{minWidth:0}}><div style={{fontSize:12,color:C.text,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{id}</div><div style={{fontSize:10,color:C.dim}}>{`${String(job.created_at||"-")}${job.schedule_id?" · scheduled":""}`}</div></div><div style={{fontSize:11,color:C.text}}>{String(job.scope||"-")}</div><div style={{fontSize:11,color:C[tone(st)]}}>{st}</div><div style={{fontSize:11,color:C.text}}>{Number(job.row_count_total||0)}</div><div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}><Btn small onClick={async()=>{if(!session?.token||!id) return; setBackupDownloading(`${id}:artifact`); try{const p=await downloadGovernanceBackupArtifact(session,id); dl(p.file_name,p.content_base64,p.content_type); onToast("Backup artifact downloaded.");}catch(error){if(!sessionGuard(error)) onToast(`Backup download failed: ${errMsg(error)}`);} finally{setBackupDownloading("");}}} disabled={backupDownloading===`${id}:artifact`}>Artifact</Btn>{governanceBackupKeyDownloadable(job)&&<Btn small onClick={async()=>{if(!session?.token||!id) return; setBackupDownloading(`${id}:key`); try{const p=await downloadGovernanceBackupKey(session,id); dl(p.file_name,p.content_base64,p.content_type); onToast("Backup key package downloaded.");}catch(error){if(!sessionGuard(error)) onToast(`Backup download failed: ${errMsg(error)}`);} finally{setBackupDownloading("");}}} disabled={backupDownloading===`${id}:key`}>Key</Btn>}<Btn small danger onClick={async()=>{if(!session?.token||!id) return; setBackupDeleting(id); try{await deleteGovernanceBackup(session,id,session.username); onToast("Backup deleted."); await loadJobs();}catch(error){if(!sessionGuard(error)) onToast(`Backup delete failed: ${errMsg(error)}`);} finally{setBackupDeleting("");}}} disabled={backupDeleting===id}>Delete</Btn></div></div>;})}
         {!sortedJobs.length?<div style={{fontSize:10,color:C.muted,paddingTop:10}}>No backups found.</div>:null}
       </Card>
     </Section>

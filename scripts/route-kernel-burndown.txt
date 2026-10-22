@@ -9,7 +9,6 @@
 # can't be added, and a migrated file left here fails the check.
 services/audit/handler.go
 services/auth/handler.go
-services/backup/handler.go
 services/certs/handler.go
 services/cloud/handler.go
 services/cluster-manager/handler.go

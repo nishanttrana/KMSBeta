@@ -4,7 +4,32 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
-## [13.42.0-beta] — 2026-10-22
+## [13.43.0-beta] — 2026-10-22
+
+### Added
+- **Scheduled encrypted backups** (Backup & Restore → Schedules, root
+  administrators). A schedule takes a governance backup every N hours (1 to
+  720) and keeps the newest M it took (1 to 90). Older ones are deleted and
+  audited. Its key is either wrapped in the tenant's HSM, or sealed to an
+  RSA public key (3072 bits or more) whose private key you keep offline.
+  Restore and Verify open a sealed key file with the private key in the
+  browser; it is never sent. `openssl` does the same offline
+  (docs/SECURITY/BACKUP_KEYS.md). A schedule runs on the authority of the
+  administrator who saved it, re-checked with auth before every run, and
+  pauses if they lose it. Every run is audited, and failed or paused runs
+  can start a playbook. Routes: `/governance/backups/schedules`.
+
+### Removed
+- **The backup scheduler preview** (`services/backup`, its container,
+  routes and tables). It stored policies and never took a backup.
+
+### Fixed
+- Backup & Restore is listed only for platform administrators: both its
+  views are root-administrator routes.
+- Governance's kernel routes record a bad bearer token as an invalid token,
+  not a missing one.
+
+ — 2026-10-22
 
 ### Added
 - **Audit Log → Investigate** (replaces Forensics). Start from anyone or

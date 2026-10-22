@@ -136,6 +136,11 @@ export function canAccessModule(tabID: string, features: Set<FeatureKey>, sessio
   if (isSystemAdminSession(session)) {
     return true;
   }
+  // Backup & Restore is system administration: both its views (Encrypted
+  // Backups, Schedules) are root administrators' routes (13.43.0-beta).
+  if (normalizedTab === "backup") {
+    return false;
+  }
 
   // Optional explicit module-level RBAC overrides. They match only when
   // granted by name: "*" grants every permission, and read as a deny rule

@@ -5,6 +5,23 @@ Newest entries on top.
 
 ## 2026-10-22
 
+### An unattended job must say where a secret goes (13.43.0-beta)
+- A governance backup with `bind_to_hsm` and no enabled HSM quietly becomes
+  a software-mode backup, whose key is returned once, to the caller. A
+  schedule calling the same function would have taken backups whose only
+  key went nowhere. The schedule now states its key protection, and the
+  HSM path refuses (`RequireHSM`) instead of falling back.
+  **Work that runs with nobody present never takes a path that hands a
+  secret to a person: it names where the secret goes, and refuses when
+  that place isn't there.**
+- `pkg/crypto` already had a recipient seal (`SealToRecipient`, for
+  attested key release). Its AES-GCM layer can't be opened with the openssl
+  command line, the path a disaster recovery needs, so the backup reuses
+  its key parser, fingerprint and RSA-OAEP wrap instead. Search
+  `pkg/crypto` before adding a primitive.
+- `gofmt -w` on a whole directory rewrites files the change never touched;
+  format the files you edited.
+
 ### The audit trail's links were never tested end to end (13.42.0-beta)
 - Building Investigate meant reading what the trail can actually link, on
   the live database. Four faults showed up, none of them caught by a test:

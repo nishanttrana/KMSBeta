@@ -23,6 +23,7 @@ func NewHandler(svc *Service) *Handler {
 	h := &Handler{svc: svc}
 	h.mux = h.routes()
 	h.mountKernel(h.mux, h.notifyRouter())
+	h.mountKernel(h.mux, h.backupScheduleRouter())
 	return h
 }
 

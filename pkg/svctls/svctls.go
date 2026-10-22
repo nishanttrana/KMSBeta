@@ -49,7 +49,6 @@ var Services = map[string]string{
 	"kms-audit":             "audit",
 	"kms-auth":              "auth",
 	"kms-autokey":           "autokey",
-	"kms-backup":            "backup",
 	"kms-certs":             "certs",
 	"kms-cloud":             "cloud",
 	"kms-cluster-manager":   "cluster-manager",

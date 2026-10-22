@@ -1054,6 +1054,8 @@ func TestTriggerSubjectsAreEmitted(t *testing.T) {
 		"audit.compliance.credential_test_failed":   {"services/compliance/credentials.go", `emit("credential_test_failed"`},
 		"audit.governance.fips_mode_changed":        {"services/governance/fips_mode.go", `"audit.governance.fips_mode_changed"`},
 		"audit.governance.backup_restored":          {"services/governance/backup.go", `"audit.governance.backup_restored"`},
+		"audit.governance.scheduled_backup_failed":  {"services/governance/backup_schedule.go", `"audit.governance.scheduled_backup_failed"`},
+		"audit.governance.scheduled_backup_refused": {"services/governance/backup_schedule.go", `"audit.governance.scheduled_backup_refused"`},
 		"audit.cluster.member_joined":               {"services/cluster-manager/join.go", `"audit.cluster.member_joined"`},
 		"audit.health.incident":                     {"services/watchdog/playbook.go", `Emit(ctx, "incident"`},
 	}

@@ -1904,10 +1904,29 @@ described in [SECURITY/BACKUP_KEYS.md](SECURITY/BACKUP_KEYS.md).
 | `GET /governance/backups` | List jobs. `job.key_package` holds only `mode`, `key_retained`, coverage and the HSM binding summary, never key material. |
 | `GET /governance/backups/{id}` | One job. |
 | `GET /governance/backups/{id}/artifact` | The encrypted `.vbk` artifact (`artifact.content_base64`). |
-| `GET /governance/backups/{id}/key` | The key file again, **HSM-bound backups only** (the key is wrapped by the tenant's key inside the HSM). A software-mode backup, or one whose stored key was removed, answers `410 backup_key_not_retained`. |
+| `GET /governance/backups/{id}/key` | The key file again: HSM-bound backups (the key is wrapped by the tenant's key inside the HSM), and scheduled backups sealed to a recipient key (`mode: recipient_sealed`; only the private key opens it). A software-mode backup, or one whose stored key was removed, answers `410 backup_key_not_retained`. |
 | `POST /governance/backups/restore` | Body: `artifact_file_name` (`.vbk`), `artifact_content_base64`, and either `key_file_name` (`.key.json`) with `key_content_base64`, or `key_shares` (`[{file_name, content_base64}]`, at least the split's threshold, all from the same backup; the rebuilt key must match the backup's key fingerprint). A single share given as `key_file_name` is refused. HSM-bound key files restore only when wrapped by the HSM (`key_wrap: "hsm_tenant_key"`), through the hsm-connector. |
 | `POST /governance/backups/verify` | Root admin only. Same body as restore (a key file or `key_shares`). Opens the backup exactly as restore does (key resolution, guardian shares, AES-GCM under its AAD, snapshot parse) and returns `result`: `verified`, `scope`, `target_tenant_id`, `backup_captured_at`, `table_count`, `row_count_total`, `table_row_counts`, `key_source`, `share_guardians`, `elapsed_ms`, `data_modified: false`. Changes no data. It doesn't check that services can re-wrap retired-key rows; restore does that before applying. |
 | `DELETE /governance/backups/{id}` | Delete a job and its artifact. |
+
+#### Backup schedules (13.43.0-beta)
+
+Route kernel; root tenant only (`403 not_root_tenant` otherwise). Reads
+need `auth.tenant.read`, writes `auth.tenant.write`. Kernel events
+`audit.governance.backup_schedules_listed`, `backup_schedule_created`,
+`backup_schedule_updated`, `backup_schedule_deleted`,
+`backup_schedule_run_requested` (refusals `result: refused` with `reason`).
+
+| Route | Behavior |
+|---|---|
+| `GET /governance/backups/schedules` | `{"items": [schedule]}`: `id`, `name`, `enabled`, `scope`, `target_tenant_id`, `interval_hours`, `retain_count`, `key_protection`, `recipient_public_key`, `recipient_key_sha256`, `authorized_by`, `paused_reason`, `next_run_at`, `last_run_at`, `last_result` (`succeeded`/`failed`/`refused`), `last_backup_id`, `last_error`. |
+| `POST /governance/backups/schedules` | Body exactly: `name`, `enabled`, `scope` (`system`/`tenant`), `target_tenant_id`, `interval_hours` (1–720), `retain_count` (1–90), `key_protection` (`hsm`: needs an enabled HSM profile; `recipient`: needs `recipient_public_key`, a PEM RSA public key of 3072 bits or more, never a private key). Anything else, a software key included, is `400 invalid_schedule`. The caller becomes `authorized_by`; the first run is one interval later. `201 {"schedule": ...}`. |
+| `PUT /governance/backups/schedules/{id}` | Same body; replaces the schedule, makes the caller `authorized_by` and clears a pause. |
+| `DELETE /governance/backups/schedules/{id}` | Removes the schedule; the backups it took stay. |
+| `POST /governance/backups/schedules/{id}/run` | Takes the backup now, on the schedule's authority, as a scheduled run would: `200 {"job": ...}`, or `409 schedule_paused` / `409 backup_not_taken` with the reason. |
+
+How a scheduled backup's key is kept and restored, and the events each run
+emits: [SECURITY/BACKUP_KEYS.md](SECURITY/BACKUP_KEYS.md#scheduled-backups-13430-beta).
 
 HSM-bound backups need the tenant's HSM profile (HSM tab) and the
 hsm-connector: the backup key is wrapped inside that HSM under the tenant's
@@ -4373,6 +4392,7 @@ Selected events with dedicated audit classification:
 - `audit.governance.approval_requested`, `audit.governance.approved`, `audit.governance.rejected`, `audit.governance.bypassed`
 - `audit.governance.backup_created` (`key_mode`, `key_retained`), `audit.governance.backup_deleted`, `audit.governance.backup_restored`, `audit.governance.backup_restore_refused` (tampered artifact, wrong key, changed scope, wrong file type, retired v1 key package; carries `reason`)
 - `audit.governance.backup_verified` (`table_count`, `row_count_total`, `key_source`, `elapsed_ms`, `verified_by`), `audit.governance.backup_verify_refused` (`reason`, `result: refused`). Restore and verify name the caller from the verified token (`restored_by`, `requested_by`), never from `created_by` in the body
+- `audit.governance.scheduled_backup_taken` (`schedule_id`, `backup_id`, `pruned`), `audit.governance.scheduled_backup_failed` (`result: failure`, `reason` `backup_refused` or `recipient_key_invalid`, `error`; high), `audit.governance.scheduled_backup_refused` (`result: refused`, `reason` `authority_unknown` or `authority_revoked`; high): a backup schedule's unattended runs (13.43.0-beta)
 - `audit.governance.backup_key_split` (`threshold`, `shares_total`, `guardians`; high), `audit.governance.backup_restored` carries `key_source` (`key_file`/`guardian_shares`) and `share_guardians`; `backup_restore_refused` carries `key_shares_given`
 - `audit.governance.backup_create_refused` (`reason`), `audit.governance.backup_key_downloaded`, `audit.governance.backup_key_download_refused` (`reason: key_not_retained`)
 - `audit.hsm.*` (connector: `key_generated`, `tenant_key_ensured`, `encrypt`, `decrypt`, `sign`, `verify`, `key_destroyed`, `status_read`), `audit.key.hsm_settings_updated`, `audit.key.hsm_refused` (`reason`), `audit.key.hsm_objects_destroyed`, `audit.key.hsm_destroy_failed`, `audit.key.hsm_status_read`, `audit.key.hsm_settings_update`, `audit.hsm.key_inspected`, `audit.hsm.objects_listed`, `audit.key.hsm_objects_listed`, `audit.key.hsm_key_inspected`, `audit.key.hsm_device_changed`, `audit.cert.crl_generation_failed`: HSM integration (docs/SECURITY/HSM_INTEGRATION.md)
@@ -4586,20 +4606,6 @@ from the code; do not edit by hand.
 - `POST /svc/autokey/autokey/templates`
 - `DELETE /svc/autokey/autokey/templates/{id}`
 - `PUT /svc/autokey/autokey/templates/{id}`
-
-### backup (`/svc/backup/`)
-
-- `GET /svc/backup/backup/metrics`
-- `GET /svc/backup/backup/policies`
-- `POST /svc/backup/backup/policies`
-- `DELETE /svc/backup/backup/policies/{id}`
-- `PATCH /svc/backup/backup/policies/{id}`
-- `POST /svc/backup/backup/policies/{id}/trigger`
-- `GET /svc/backup/backup/restore-points`
-- `POST /svc/backup/backup/restore-points/{id}/restore`
-- `GET /svc/backup/backup/runs`
-- `GET /svc/backup/backup/runs/{id}`
-- `GET /svc/backup/healthz`
 
 ### certs (`/svc/certs/`)
 
@@ -4969,6 +4975,11 @@ from the code; do not edit by hand.
 - `GET /svc/governance/governance/backups`
 - `POST /svc/governance/governance/backups`
 - `POST /svc/governance/governance/backups/restore`
+- `GET /svc/governance/governance/backups/schedules`
+- `POST /svc/governance/governance/backups/schedules`
+- `DELETE /svc/governance/governance/backups/schedules/{id}`
+- `PUT /svc/governance/governance/backups/schedules/{id}`
+- `POST /svc/governance/governance/backups/schedules/{id}/run`
 - `POST /svc/governance/governance/backups/verify`
 - `DELETE /svc/governance/governance/backups/{id}`
 - `GET /svc/governance/governance/backups/{id}`

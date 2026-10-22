@@ -194,8 +194,6 @@ static_resources:
                 route: { cluster: signing_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
               - match: { prefix: "/svc/policy/" }
                 route: { cluster: policy_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
-              - match: { prefix: "/svc/backup/" }
-                route: { cluster: backup_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
               - match: { prefix: "/svc/certs/" }
                 route: { cluster: certs_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
               - match: { prefix: "/svc/audit/" }
@@ -1015,35 +1013,6 @@ static_resources:
             match_typed_subject_alt_names:
             - san_type: DNS
               matcher: { exact: signing }
-  - name: backup_http
-    connect_timeout: 1s
-    type: STRICT_DNS
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: backup_http
-      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: backup, port_value: 8290 }}}}]}]
-    transport_socket:
-      name: envoy.transport_sockets.tls
-      typed_config:
-        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-        sni: backup
-        common_tls_context:
-          tls_params:
-            tls_minimum_protocol_version: TLSv1_3
-            tls_maximum_protocol_version: TLSv1_3
-            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
-          tls_certificate_sds_secret_configs:
-          - name: internal_client
-            sds_config:
-              path_config_source:
-                path: /etc/envoy/sds/internal_client.yaml
-                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
-              resource_api_version: V3
-          validation_context:
-            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
-            match_typed_subject_alt_names:
-            - san_type: DNS
-              matcher: { exact: backup }
   - name: watchdog_http
     connect_timeout: 1s
     type: STRICT_DNS

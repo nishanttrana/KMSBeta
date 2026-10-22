@@ -18,7 +18,6 @@ var Services = map[string]string{
 	"kms-audit":             "https://audit:8070",
 	"kms-auth":              "https://auth:8001",
 	"kms-autokey":           "https://autokey:8260",
-	"kms-backup":            "https://backup:8290",
 	"kms-certs":             "https://certs:8030",
 	"kms-cloud":             "https://cloud:8080",
 	"kms-compliance":        "https://compliance:8110",

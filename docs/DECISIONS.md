@@ -7,6 +7,29 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-22 — Scheduled backups keep their key in the HSM or seal it to the administrator
+**Decision:** a backup schedule names its key protection: `hsm` (the
+HSM-bound mode, refused when no HSM is enabled) or `recipient` (the key
+sealed with RSA-OAEP-SHA256 to the administrator's RSA public key; the
+private key opens it in the browser or with openssl, never on the
+platform). The preview scheduler (`services/backup`) is removed with its
+tables.
+**Why:** a software key file is returned once to the person creating the
+backup; an unattended run has nobody to give it to, and the platform must
+not keep it (BACKUP_KEYS.md, standing rule). The owner asked for scheduled
+backups to be built (2026-10-22).
+**Rejected:** keeping the key under a keycore key (a backup must restore
+after losing keycore); guardian shares (nobody is there to receive them);
+the hybrid `pkg/crypto.SealToRecipient` (its AES-GCM layer can't be opened
+with the openssl command line, the offline path a disaster needs); cron
+expressions (an interval, as discovery's schedules, covers the need with
+nothing to misparse); fixing up the preview service (it never took a
+backup, and two engines for one job are not kept).
+**Enforced:** `TestBackupSchedulePostgres`, `TestBackupScheduleRoutes`,
+`backupUnseal.test.ts`, `backup-schedules.spec.ts`.
+
+---
+
 ## 2026-10-22 — Investigate: pivot on any field, counted by the audit service
 **Decision:** Audit Log → Investigate replaces Forensics. The user starts
 from any value (a person, object, address, client, sign-in or request) and

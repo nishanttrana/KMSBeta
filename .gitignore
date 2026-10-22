@@ -74,7 +74,6 @@ services/*/__debug_bin*
 services/audit/audit
 services/auth/auth
 services/autokey/autokey
-services/backup/backup
 services/certs/certs
 services/cloud/cloud
 services/cluster-manager/cluster-manager

@@ -112,6 +112,8 @@ export type GovernanceBackupJob = {
   created_at?: string;
   completed_at?: string;
   failure_reason?: string;
+  // The schedule that took it (13.43.0-beta); absent for one taken by hand.
+  schedule_id?: string;
 };
 
 export type GovernanceRestoreBackupResult = {
@@ -258,6 +260,12 @@ export type GovernanceBackupKeySplit = { threshold: number; guardians: string[] 
 // HSM-bound backup). A software-mode key is never stored.
 export function governanceBackupKeyRetained(job: GovernanceBackupJob): boolean {
   return job?.key_package?.key_retained === true;
+}
+
+// Whether its key file can be downloaded again: an HSM-bound key, or a key
+// sealed to a schedule's recipient (only the private key opens it).
+export function governanceBackupKeyDownloadable(job: GovernanceBackupJob): boolean {
+  return governanceBackupKeyRetained(job) || job?.key_package?.mode === "recipient_sealed";
 }
 
 export async function listGovernanceBackups(

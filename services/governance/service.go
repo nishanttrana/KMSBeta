@@ -49,6 +49,11 @@ type Service struct {
 	// smtpReported: tenants whose mail relay migration refusal was audited.
 	smtpMu       sync.Mutex
 	smtpReported map[string]bool
+	// authority asks auth whether a backup schedule's administrator still
+	// holds its permission (backup_schedule.go); now is the clock, set by
+	// tests.
+	authority backupAuthority
+	now       func() time.Time
 }
 
 var runtimeCryptoLibraryLabel, runtimeCryptoLibraryValidated = detectRuntimeCryptoLibrary()
@@ -122,6 +127,11 @@ func detectRuntimeCryptoLibrary() (string, bool) {
 }
 
 type ServiceOption func(*Service)
+
+// WithBackupAuthority sets how a backup schedule's authority is checked.
+func WithBackupAuthority(a backupAuthority) ServiceOption {
+	return func(s *Service) { s.authority = a }
+}
 
 func WithCertsURL(raw string) ServiceOption {
 	return func(s *Service) {

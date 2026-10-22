@@ -112,7 +112,7 @@ export const SUB_PANES: Record<string, SubPane[]> = {
   // Backups have one home, Backup & Restore (owner, 2026-10-20).
   backup: [
     { id: "encrypted", label: "Encrypted Backups", hint: "Create, verify, restore and download encrypted backups", icon: DatabaseBackup, platformOnly: true },
-    { id: "schedules", label: "Schedules", hint: "Backup scheduler (preview)", icon: RefreshCw }
+    { id: "schedules", label: "Schedules", hint: "Encrypted backups on a schedule, with retention", icon: RefreshCw, platformOnly: true }
   ],
   home: [
     { id: "overview", label: "Overview", hint: "Posture score, KPIs, top recommended actions and control coverage", icon: Activity },

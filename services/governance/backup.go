@@ -178,10 +178,22 @@ func (s *Service) createBackup(ctx context.Context, in CreateBackupInput) (Backu
 	}
 	binding := store.loadHSMBinding(ctx, hsmTenantID)
 	hsmBound := bindToHSM && binding.Enabled
+	if in.RequireHSM && !hsmBound {
+		return BackupJob{}, nil, errors.New("this schedule keeps the backup key in the HSM, and the tenant has no enabled HSM profile")
+	}
+	if in.Recipient != nil && (hsmBound || guardians != nil) {
+		return BackupJob{}, nil, errors.New("a backup key sealed to a recipient is neither HSM-bound nor split")
+	}
 	if guardians != nil && hsmBound {
 		return BackupJob{}, nil, errors.New("key_split applies to software-mode backups; an HSM-bound backup key never leaves the HSM (set bind_to_hsm false to split)")
 	}
-	keyFilePackage, keyPackage, err := s.buildBackupKeyPackage(ctx, backupKey, hsmBound, binding, hsmTenantID, in.TenantID, targetTenantID, coverage)
+	var keyFilePackage, keyPackage map[string]interface{}
+	if in.Recipient != nil {
+		keyFilePackage, err = sealBackupKeyToRecipient(backupKey, *in.Recipient, in.TenantID, targetTenantID, coverage)
+		keyPackage = keyFilePackage
+	} else {
+		keyFilePackage, keyPackage, err = s.buildBackupKeyPackage(ctx, backupKey, hsmBound, binding, hsmTenantID, in.TenantID, targetTenantID, coverage)
+	}
 	if err != nil {
 		return BackupJob{}, nil, err
 	}
@@ -224,6 +236,7 @@ func (s *Service) createBackup(ctx context.Context, in CreateBackupInput) (Backu
 		KeyPackageRaw:         keyPackageRaw,
 		CreatedBy:             createdBy,
 		CompletedAt:           time.Now().UTC(),
+		ScheduleID:            strings.TrimSpace(in.ScheduleID),
 	}
 	var keyFiles []BackupKeyFile
 	if guardians != nil {
@@ -249,6 +262,7 @@ func (s *Service) createBackup(ctx context.Context, in CreateBackupInput) (Backu
 		"key_retained":        hsmBound,
 		"row_count_total":     job.RowCountTotal,
 		"table_count":         job.TableCount,
+		"schedule_id":         job.ScheduleID,
 	})
 	if guardians != nil {
 		_ = s.publishAudit(ctx, "audit.governance.backup_key_split", in.TenantID, map[string]interface{}{
@@ -426,7 +440,7 @@ func (s *Service) GetBackupKeyDownload(ctx context.Context, tenantID string, bac
 		return BackupKeyFile{}, err
 	}
 	details := map[string]interface{}{"backup_id": item.ID, "requested_by": strings.TrimSpace(requestedBy), "key_mode": item.KeyPackage["mode"]}
-	if !backupKeyRetained(item.KeyPackage) {
+	if !backupKeyRetained(item.KeyPackage) && fmt.Sprint(item.KeyPackage["mode"]) != backupKeyModeRecipient {
 		details["reason"] = "key_not_retained"
 		details["result"] = "refused"
 		details["severity"] = "warning"
@@ -699,6 +713,8 @@ func (s *Service) resolveRestoreBackupKey(ctx context.Context, store *SQLStore, 
 		return key, nil
 	case backupKeyModeSplit:
 		return nil, errors.New("this key file is one guardian's share of a split backup key: restore with the threshold number of share files (key_shares)")
+	case backupKeyModeRecipient:
+		return unsealedRecipientKey(keyPackage)
 	case "hsm_bound":
 		return s.unwrapHSMBoundKey(ctx, keyPackage)
 	default:
@@ -908,6 +924,9 @@ func sanitizeBackupJobSummary(job *BackupJob) {
 			summary["key_split"] = split
 		}
 		summary["key_retained"] = backupKeyRetained(job.KeyPackage)
+		if fp := strings.TrimSpace(fmt.Sprint(job.KeyPackage["recipient_key_sha256"])); mode == backupKeyModeRecipient && fp != "" {
+			summary["recipient_key_sha256"] = fp
+		}
 		job.KeyPackage = summary
 	}
 	job.ArtifactCiphertext = nil
@@ -921,14 +940,14 @@ INSERT INTO governance_backup_jobs (
     id, tenant_id, scope, target_tenant_id, status, backup_format, encryption_algorithm,
     ciphertext_sha256, artifact_ciphertext, artifact_nonce, artifact_size_bytes, row_count_total, table_count,
     hsm_bound, hsm_provider_name, hsm_slot_id, hsm_partition_label, hsm_token_label, hsm_binding_fingerprint,
-    key_package_json, created_by, created_at, completed_at, failure_reason
+    key_package_json, created_by, created_at, completed_at, failure_reason, schedule_id
 ) VALUES (
-    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20::jsonb,$21,CURRENT_TIMESTAMP,$22,$23
+    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20::jsonb,$21,CURRENT_TIMESTAMP,$22,$23,$24
 )
 `, job.ID, job.TenantID, job.Scope, strings.TrimSpace(job.TargetTenantID), job.Status, job.BackupFormat, job.EncryptionAlgorithm,
 		job.CiphertextSHA256, job.ArtifactCiphertext, job.ArtifactNonce, job.ArtifactSizeBytes, job.RowCountTotal, job.TableCount,
 		job.HSMBound, nullable(job.HSMProviderName), nullable(job.HSMSlotID), nullable(job.HSMPartitionLabel), nullable(job.HSMTokenLabel), nullable(job.HSMBindingFingerprint),
-		string(job.KeyPackageRaw), nullable(job.CreatedBy), nullableTime(job.CompletedAt), nullable(job.FailureReason))
+		string(job.KeyPackageRaw), nullable(job.CreatedBy), nullableTime(job.CompletedAt), nullable(job.FailureReason), job.ScheduleID)
 	return err
 }
 

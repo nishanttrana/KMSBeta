@@ -55,6 +55,10 @@ func (h *Handler) mountKernel(mux *http.ServeMux, r *route.Router) {
 		if raw := strings.TrimSpace(strings.TrimPrefix(req.Header.Get("Authorization"), "Bearer")); raw != "" && h.parseToken != nil {
 			if claims, err := h.parseToken(raw); err == nil {
 				req = req.WithContext(pkgauth.ContextWithClaims(req.Context(), claims))
+			} else {
+				// The kernel refuses and audits it as an invalid token,
+				// not as a missing one.
+				req = req.WithContext(route.WithInvalidToken(req.Context()))
 			}
 		}
 		r.ServeHTTP(w, req)

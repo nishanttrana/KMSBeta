@@ -151,7 +151,6 @@ func knownBackendTargets() []serviceTarget {
 		{name: "kms-hsm-connector", address: "hsm-connector:18430"},
 		{name: "kms-kmip", address: "kmip:15696"},
 		{name: "kms-posture", address: "posture:18220"},
-		{name: "kms-backup", address: "backup:18290"},
 		// Not in Consul: these register no service, so the probe is the only
 		// source that lists them.
 		{name: "kms-reconciler", address: "reconciler:8470"},
