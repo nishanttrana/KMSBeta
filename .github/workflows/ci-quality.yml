@@ -103,6 +103,8 @@ jobs:
 
       - name: go test -race
         run: scripts/ci-go-test.sh -race ./pkg/... ./services/...
+      - name: Go SDK (sdk/go is its own module; the root ./... doesn't reach it)
+        run: cd sdk/go && go vet ./... && go test -race -count=1 ./...
 
   cluster-replication:
     # Three real Postgres 17 servers: selective per-component logical
@@ -198,7 +200,7 @@ jobs:
           echo "$HOME/softhsm/bin" >> "$GITHUB_PATH"
 
       - name: Integration tests (run serially; they share the database)
-        run: scripts/ci-go-test.sh -count=1 -p 1 -run 'Postgres|Preview|Simulated' ./services/auth ./services/dataprotect ./services/discovery ./services/compliance ./services/cloud ./services/ekm ./services/governance ./services/signing ./services/secrets ./services/keycore ./services/audit ./services/workload ./services/posture ./services/reporting ./pkg/mek ./pkg/clusterstate
+        run: scripts/ci-go-test.sh -count=1 -p 1 -run 'Postgres|Preview|Simulated' ./services/auth ./services/certs ./services/dataprotect ./services/discovery ./services/compliance ./services/cloud ./services/ekm ./services/governance ./services/signing ./services/secrets ./services/keycore ./services/audit ./services/workload ./services/posture ./services/reporting ./pkg/mek ./pkg/clusterstate
 
       # Needs a NATS server, so it skipped in every other job: until
       # 13.4.0-beta nothing in CI ran it.

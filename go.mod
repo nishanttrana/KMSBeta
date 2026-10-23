@@ -4,6 +4,10 @@ go 1.27
 
 toolchain go1.27.3
 
+// The Go SDK is its own module (sdk/go) so customers can fetch it; the
+// platform's tests use it from this tree to check it against the real routes.
+replace github.com/nishanttrana/KMSBeta/sdk/go => ./sdk/go
+
 require (
 	cloud.google.com/go/iam v1.14.0
 	cloud.google.com/go/kms v1.35.0
@@ -29,6 +33,7 @@ require (
 	github.com/microsoft/go-mssqldb v1.11.2
 	github.com/miekg/pkcs11 v1.1.2
 	github.com/nats-io/nats.go v1.54.0
+	github.com/nishanttrana/KMSBeta/sdk/go v0.0.0-00010101000000-000000000000
 	github.com/oracle/oci-go-sdk/v65 v65.128.0
 	github.com/ovh/kmip-go v0.9.2
 	github.com/redis/go-redis/v9 v9.23.0

@@ -176,3 +176,5 @@ All API calls use the proxy path `http://{host}/svc/{service}/...`.
 - [HSM Integration](../services/hsm-integration/README.md)
 - [EKM Agent](../services/ekm-agent/README.md)
 - [JCA Provider](../services/jca-provider/README.md)
+- [Go SDK](../sdk/go/README.md)
+- [Edge agent](SECURITY/EDGE_DEVICES.md)

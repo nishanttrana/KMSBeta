@@ -4,6 +4,24 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.54.0-beta] — 2026-10-23
+
+### Added
+- **Go SDK** (`github.com/nishanttrana/KMSBeta/sdk/go`). A Go program can
+  now use the KMS without writing HTTP calls: it authenticates as a REST
+  client (exchanging and renewing tokens itself), and encrypts, decrypts,
+  generates data keys, signs, verifies, lists, reads, creates and rotates
+  keys, and reads secret values. HTTPS and TLS 1.3 only. Refusals come back
+  with the KMS's reason and the request ID it audited them under. Standard
+  library only, Go 1.22 or later. The platform's tests run it against
+  keycore's and auth's real routes, so neither side can drift from the
+  other unnoticed.
+
+### Fixed
+- certs' Postgres tests (SSH CAs, the root wrapping key rotation, internal
+  mTLS) never ran in CI: `services/certs` was missing from the
+  integration list.
+
 ## [13.53.0-beta] — 2026-10-23
 
 ### Added

@@ -5,6 +5,18 @@ Newest entries on top.
 
 ## 2026-10-23
 
+### A local module replace reaches every Dockerfile (13.54.0-beta)
+- The SDK is its own module so customers can fetch it, and the main module
+  replaces it from `./sdk/go` so the platform's tests can run it against
+  the real routes. Every service Dockerfile copies `go.mod` and `go.sum`
+  and runs `go mod download` before copying the tree: without
+  `sdk/go/go.mod` that fails ("reading sdk/go/go.mod: no such file"). All
+  28 now copy it; a keycore image build proved it.
+- `go test ./...` from the root doesn't enter a nested module; CI runs the
+  SDK's tests as their own step.
+- Reading the CI integration list for that step showed `services/certs`
+  missing: its Postgres tests had never run in CI.
+
 ### Check what a token kind carries before keying a rule on it (13.53.0-beta)
 - A client token sets `UserID` to the client's subject, not just
   `ClientID`. The first version of the client grant matcher treated "has a

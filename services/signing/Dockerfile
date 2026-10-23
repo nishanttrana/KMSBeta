@@ -4,6 +4,8 @@ FROM golang:1.27.3-bookworm AS build
 ENV GOFIPS140=v1.0.0
 WORKDIR /src
 COPY go.mod go.sum ./
+# The Go SDK is a local module the main module replaces (go.mod).
+COPY sdk/go/go.mod sdk/go/go.mod
 RUN go mod download
 COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -trimpath -ldflags="-s -w" -o /out/kms-signing ./services/signing

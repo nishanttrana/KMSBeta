@@ -111,6 +111,9 @@ Every change is audited as `audit.auth.client_role_set` (refusals
 included), and each token's `audit.auth.client_token_issued` names its
 `role`.
 
+In Go, the SDK (`sdk/go`, 13.54.0-beta) does the token exchange and renewal
+for you: [sdk/go/README.md](../sdk/go/README.md).
+
 A registration can instead bind the token to the caller with `oauth_mtls`,
 `dpop` or `http_message_signature` (`auth_mode`). Documentation →
 API: Auth covers the extra proof each mode sends.

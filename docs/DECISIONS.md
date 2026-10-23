@@ -7,6 +7,24 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-23 — The SDKs are thin, standard-library clients tested against the real routes
+**Decision:** the Go SDK is a separate module in this repository
+(`sdk/go`), standard library only, authenticating as a REST client with
+automatic token renewal. The main module replaces it locally so keycore's
+and auth's tests drive their real handlers through it.
+**Why:** the owner's list (2026-10-22): "No client tooling: no Terraform
+provider, no Go, Python or Node SDK, and no PKCS#11 library". A client
+written by hand against documentation drifts; one exercised by the
+services' own tests can't.
+**Rejected:** generating the SDK from OpenAPI (keycore has no OpenAPI
+description; four services do); a separate repository (the contract tests
+couldn't run on every change); depending on third-party HTTP or retry
+libraries (an SDK every customer vendors should add no dependencies).
+**Enforced:** `TestGoSDKAgainstKeycore`, `TestGoSDKTokenExchangeAgainstAuth`,
+`TestGoSDKReadsASecret`, the SDK's own tests (CI step "Go SDK").
+
+---
+
 ## 2026-10-23 — Machine identities get their permissions from a granted role
 **Decision:** a REST client can be granted one tenant role; its tokens hold
 the role's permissions as they are when each token is issued. Granting
