@@ -260,7 +260,12 @@ type DecryptRequest struct {
 	Version int `json:"version"`
 	// WrapAlgorithm unwraps output of wrap with that algorithm. Unwrap only.
 	WrapAlgorithm string `json:"wrap_algorithm,omitempty"`
-	Operation     string `json:"-"`
+	// AnyVersion, with Version 0, decrypts with the newest version that
+	// opens the ciphertext (13.58.0-beta): for callers with nowhere to keep
+	// the version, such as PKCS#11 applications. AES-GCM's tag tells a
+	// wrong version from the right one.
+	AnyVersion bool   `json:"any_version,omitempty"`
+	Operation  string `json:"-"`
 }
 
 type SignRequest struct {
@@ -3174,28 +3179,58 @@ func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest)
 			return CryptoResponse{}, errors.New("aad must be base64")
 		}
 	}
-	result, err := s.runCryptoTxAt(ctx, req.TenantID, keyID, operation, req.Version, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
-		if kv.Protection == protectionHSMResident {
-			plain, err := s.hsmOf(k).Decrypt(ctx, req.TenantID, kv.HSMLabel, iv, cipherRaw, aad)
+	trial := req.AnyVersion && req.Version == 0
+	attempt := func(version int) (CryptoTxResult, error) {
+		return s.runCryptoTxAt(ctx, req.TenantID, keyID, operation, version, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+			if kv.Protection == protectionHSMResident {
+				plain, err := s.hsmOf(k).Decrypt(ctx, req.TenantID, kv.HSMLabel, iv, cipherRaw, aad)
+				if err != nil {
+					if trial && !errors.Is(err, hsm.ErrNotConfigured) && !errors.Is(err, hsm.ErrUnavailable) && !errors.Is(err, hsm.ErrNotFound) {
+						return CryptoTxResult{}, fmt.Errorf("%w: %v", errDecryptMismatch, err)
+					}
+					return CryptoTxResult{}, s.hsmKeyFailure(ctx, k, operation, err)
+				}
+				return CryptoTxResult{Payload: plain, IV: iv}, nil
+			}
+			if err := s.enforceVersionAlgorithm(ctx, req.TenantID, key, k, "key.decrypt"); err != nil {
+				return CryptoTxResult{}, err
+			}
+			raw, err := s.decryptMaterial(kv)
 			if err != nil {
-				return CryptoTxResult{}, s.hsmKeyFailure(ctx, k, operation, err)
+				return CryptoTxResult{}, err
+			}
+			defer crypto.Zeroize(raw)
+			plain, err := decryptWithKeyAlgorithm(k.Algorithm, k.KeyType, raw, iv, cipherRaw, aad)
+			if err != nil {
+				if trial {
+					return CryptoTxResult{}, fmt.Errorf("%w: %v", errDecryptMismatch, err)
+				}
+				return CryptoTxResult{}, err
 			}
 			return CryptoTxResult{Payload: plain, IV: iv}, nil
+		})
+	}
+	var result CryptoTxResult
+	if !trial {
+		result, err = attempt(req.Version)
+	} else {
+		// Newest first; a version that doesn't open it, or may no longer
+		// decrypt, passes to the next. Anything else (a refusal, the
+		// operations limit, an unavailable HSM) ends the search.
+		err = errDecryptMismatch
+		for v := key.CurrentVersion; v >= 1 && err != nil; v-- {
+			result, err = attempt(v)
+			if err != nil && !errors.Is(err, errDecryptMismatch) && !errors.Is(err, errVersionRefused) && !errors.Is(err, errStoreNotFound) {
+				break
+			}
 		}
-		if err := s.enforceVersionAlgorithm(ctx, req.TenantID, key, k, "key.decrypt"); err != nil {
-			return CryptoTxResult{}, err
+		if err != nil && (errors.Is(err, errVersionRefused) || errors.Is(err, errStoreNotFound)) {
+			err = errDecryptMismatch
 		}
-		raw, err := s.decryptMaterial(kv)
-		if err != nil {
-			return CryptoTxResult{}, err
+		if err == nil {
+			extra["any_version"] = true
 		}
-		defer crypto.Zeroize(raw)
-		plain, err := decryptWithKeyAlgorithm(k.Algorithm, k.KeyType, raw, iv, cipherRaw, aad)
-		if err != nil {
-			return CryptoTxResult{}, err
-		}
-		return CryptoTxResult{Payload: plain, IV: iv}, nil
-	})
+	}
 	if errors.Is(err, errOpsLimit) {
 		return CryptoResponse{}, errOpsLimit
 	}
@@ -3274,14 +3309,18 @@ func (s *Service) Sign(ctx context.Context, keyID string, req SignRequest) (_ Cr
 			}
 			return CryptoTxResult{Payload: signature}, nil
 		}
-		if req.Prehashed {
-			return CryptoTxResult{}, errors.New("prehashed signing is supported for HSM keys only")
-		}
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
 		}
 		defer crypto.Zeroize(raw)
+		if req.Prehashed {
+			signature, err := signDigestWithKeyAlgorithm(k.Algorithm, k.KeyType, raw, req.Algorithm, data)
+			if err != nil {
+				return CryptoTxResult{}, err
+			}
+			return CryptoTxResult{Payload: signature}, nil
+		}
 		signature, err := signWithKeyAlgorithm(k.Algorithm, k.KeyType, raw, data, req.Algorithm)
 		if err != nil {
 			return CryptoTxResult{}, err
@@ -4504,6 +4543,41 @@ func signWithKeyAlgorithm(keyAlgorithm string, keyType string, keyMaterial []byt
 		return priv.Sign(rand.Reader, data, stdcrypto.Hash(0))
 	default:
 		return nil, fmt.Errorf("sign is not supported for algorithm %s", keyAlgorithm)
+	}
+}
+
+// signDigestWithKeyAlgorithm signs a digest the caller computed
+// (prehashed, 13.58.0-beta), as X.509 signers and PKCS#11's CKM_ECDSA and
+// CKM_RSA_PKCS_PSS hand it over: RSA keys with PSS (salt the hash's
+// length, as signWithKeyAlgorithm), ECDSA keys in ASN.1. Other algorithms
+// sign the message itself, so they have no prehashed form.
+func signDigestWithKeyAlgorithm(keyAlgorithm, keyType string, keyMaterial []byte, hashHint string, digest []byte) ([]byte, error) {
+	if isPublicKeyType(keyType) {
+		return nil, errors.New("sign requires private key material")
+	}
+	digest, name, err := prehashedDigest(hashHint, digest)
+	if err != nil {
+		return nil, err
+	}
+	hashAlg := map[string]stdcrypto.Hash{"SHA-256": stdcrypto.SHA256, "SHA-384": stdcrypto.SHA384, "SHA-512": stdcrypto.SHA512}[name]
+	alg := strings.ToUpper(strings.TrimSpace(keyAlgorithm))
+	switch {
+	case compositeSigParts(alg) != nil:
+		return nil, errors.New("prehashed signing is for RSA and ECDSA keys")
+	case isRSAKeyAlgorithm(alg):
+		priv, err := parseRSAPrivateMaterial(keyMaterial)
+		if err != nil {
+			return nil, err
+		}
+		return rsa.SignPSS(rand.Reader, priv, hashAlg, digest, &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash})
+	case isECDSAKeyAlgorithm(alg):
+		priv, err := parseECDSAPrivateMaterial(keyMaterial)
+		if err != nil {
+			return nil, err
+		}
+		return ecdsa.SignASN1(rand.Reader, priv, digest)
+	default:
+		return nil, errors.New("prehashed signing is for RSA and ECDSA keys")
 	}
 }
 

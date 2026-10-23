@@ -7,6 +7,24 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-24 — keycore finds the version for a version-less decrypt
+**Decision:** `any_version` on decrypt makes keycore try the key's versions
+newest-first, stopping at the first that opens the ciphertext (AES-GCM's tag
+decides). A refusal, the operations limit or an unavailable HSM ends the
+search. Prehashed signing covers software ECDSA and RSA keys.
+**Why:** the PKCS#11 module (the owner's list, 2026-10-22: "no PKCS#11
+library") has no place to keep a key version, and keys rotate. Without
+this, every rotation would make earlier PKCS#11 ciphertext unreadable.
+**Rejected:** trying versions in the client (one audited failure per wrong
+version, and every client would reimplement it); a non-standard ciphertext
+format with the version prefixed (PKCS#11 applications expect plain
+AES-GCM output); making version 0 search by default (it would change an
+existing route's meaning).
+**Enforced:** `TestDecryptAnyVersionFindsTheVersion`,
+`TestPrehashedSigningWithSoftwareKeys`, `TestGoSDKAgainstKeycore`.
+
+---
+
 ## 2026-10-24 — Terraform deactivates keys; it never destroys them
 **Decision:** the Terraform provider (`sdk/terraform-provider-vecta`, on
 the Go SDK) maps a resource's destroy to deactivation. Destroying key

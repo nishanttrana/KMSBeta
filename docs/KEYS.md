@@ -833,9 +833,9 @@ curl -X POST \
 - `ECDSA-SHA256` — Use with EC-P256. Standard choice.
 - `ECDSA-SHA384` — Use with EC-P384. Required for NSA Suite B.
 - `ECDSA-SHA512` — Use with EC-P521.
-- Vecta KMS uses **deterministic ECDSA (RFC 6979)** by default — the signature for the same data + key is always the same, eliminating the random-nonce vulnerability that compromised early Bitcoin wallets.
+- Signatures are randomized (hedged with the module's random source), so signing the same data twice gives different signatures; both verify.
 
-**Important:** `data_b64` should be the raw data to sign (Vecta KMS applies the hash internally). Do not pre-hash unless you are sending a digest and set `prehashed: true`.
+**Important:** `data` is the raw data to sign; Vecta KMS hashes it. To sign a digest you computed (an X.509 or PKCS#11 signer does this), send the digest with `prehashed: true` and the hash in `algorithm` (`SHA-256`, `SHA-384` or `SHA-512`). Prehashed signing is for ECDSA and RSA keys (13.58.0-beta for software keys); Ed25519 and the post-quantum algorithms sign the message itself.
 
 #### EdDSA — Ed25519
 
@@ -1752,27 +1752,25 @@ curl -X POST "https://localhost/svc/keycore/keys?tenant_id=platform" \
 # Step 2: Distribute public key to receiving service (publish to internal JWKS endpoint)
 # The private key never leaves Vecta KMS
 
-# Step 3: Sign each request payload (hash of request body)
-PAYLOAD_HASH_B64=$(echo -n '{"order_id": "ORD-123", "amount": 9900}' | sha256sum | cut -d' ' -f1 | xxd -r -p | base64)
+# Step 3: Sign each request payload (Ed25519 signs the message itself, not a hash)
+PAYLOAD_B64=$(echo -n '{"order_id": "ORD-123", "amount": 9900}' | base64)
 
 curl -X POST "https://localhost/svc/keycore/keys/key_SIGN_01J.../sign?tenant_id=platform" \
   -H "Authorization: Bearer $SVC_TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"data_b64\": \"$PAYLOAD_HASH_B64\", \"algorithm\": \"Ed25519\", \"prehashed\": true}"
-# → signature_b64: "..."
-# Add to request as header: X-Signature: <signature_b64>
+  -d "{\"data\": \"$PAYLOAD_B64\"}"
+# → signature: "..."
+# Add to request as header: X-Signature: <signature>
 
 # Step 4: Receiving service verifies
 curl -X POST "https://localhost/svc/keycore/keys/key_SIGN_01J.../verify?tenant_id=platform" \
   -H "Authorization: Bearer $SVC_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"data_b64\": \"$PAYLOAD_HASH_B64\",
-    \"signature_b64\": \"$REQUEST_SIGNATURE\",
-    \"algorithm\": \"Ed25519\",
-    \"prehashed\": true
+    \"data\": \"$PAYLOAD_B64\",
+    \"signature\": \"$REQUEST_SIGNATURE\"
   }"
-# → {"valid": true, ...}
+# → {"verified": true, ...}
 ```
 
 ---
@@ -1957,12 +1955,12 @@ curl -X POST "https://localhost/svc/keycore/keys?tenant_id=platform" \
   }'
 
 # Step 2: CI/CD signs image digest
-IMAGE_DIGEST_B64=$(docker inspect myimage:latest --format='{{index .RepoDigests 0}}' | sha256sum | cut -d' ' -f1 | xxd -r -p | base64)
+IMAGE_DIGEST_B64=$(docker inspect myimage:latest --format='{{index .RepoDigests 0}}' | base64)
 
 curl -X POST "https://localhost/svc/keycore/keys/{SIGN_KEY_ID}/sign?tenant_id=platform" \
   -H "Authorization: Bearer $CICD_TOKEN" \
-  -d "{\"data_b64\": \"$IMAGE_DIGEST_B64\", \"algorithm\": \"Ed25519\", \"prehashed\": true}"
-# → signature_b64
+  -d "{\"data\": \"$IMAGE_DIGEST_B64\"}"
+# → signature (Ed25519 signs the digest string as its message)
 
     \"artifact_digest_b64\": \"$IMAGE_DIGEST_B64\",
     \"signature_b64\": \"$SIGNATURE_B64\",
@@ -1976,13 +1974,11 @@ curl -X POST "https://localhost/svc/keycore/keys/{SIGN_KEY_ID}/sign?tenant_id=pl
 curl -X POST "https://localhost/svc/keycore/keys/{SIGN_KEY_ID}/verify?tenant_id=platform" \
   -H "Authorization: Bearer $DEPLOY_TOKEN" \
   -d "{
-    \"data_b64\": \"$IMAGE_DIGEST_B64\",
-    \"signature_b64\": \"$SIGNATURE_FROM_ATTESTATION\",
-    \"algorithm\": \"Ed25519\",
-    \"prehashed\": true
+    \"data\": \"$IMAGE_DIGEST_B64\",
+    \"signature\": \"$SIGNATURE_FROM_ATTESTATION\"
   }"
-# → {"valid": true} — allow deployment
-# → {"valid": false} — block deployment, alert security team
+# → {"verified": true} — allow deployment
+# → {"verified": false} — block deployment, alert security team
 ```
 
 ---
@@ -2094,27 +2090,27 @@ Body: {"old_version_action": "retain|deactivate|destroy", "reason": "string"}
 ```bash
 # Encrypt
 POST /svc/keycore/keys/{key_id}/encrypt?tenant_id={tenant_id}
-Body: {"plaintext_b64": "...", "aad_b64": "...(opt)", "mode": "...(opt)", "key_version": N (opt)}
+Body: {"plaintext": "<base64>", "aad": "<base64>(opt)", "iv": "<base64>(opt)", "iv_mode": "external (opt: with iv)"}
 
 # Decrypt
 POST /svc/keycore/keys/{key_id}/decrypt?tenant_id={tenant_id}
-Body: {"ciphertext_b64": "...", "iv_b64": "...", "tag_b64": "...", "aad_b64": "...(opt)", "key_version": N}
+Body: {"ciphertext": "<base64>", "iv": "<base64>", "aad": "<base64>(opt)", "version": N (opt), "any_version": true (opt)}
 
 # Sign
 POST /svc/keycore/keys/{key_id}/sign?tenant_id={tenant_id}
-Body: {"data_b64": "...", "algorithm": "...", "prehashed": false}
+Body: {"data": "<base64>", "algorithm": "...", "prehashed": false}
 
 # Verify
 POST /svc/keycore/keys/{key_id}/verify?tenant_id={tenant_id}
-Body: {"data_b64": "...", "signature_b64": "...", "algorithm": "...", "prehashed": false}
+Body: {"data": "<base64>", "signature": "<base64>", "algorithm": "...", "version": N (opt)}
 
 # Wrap
 POST /svc/keycore/keys/{key_id}/wrap?tenant_id={tenant_id}
-Body: {"key_to_wrap_b64": "...", "wrap_algorithm": "...", "aad_b64": "...(opt)"}
+Body: {"plaintext": "<base64 key to wrap>", "wrap_algorithm": "...(opt)", "aad": "<base64>(opt)"}
 
 # Unwrap
 POST /svc/keycore/keys/{key_id}/unwrap?tenant_id={tenant_id}
-Body: {"wrapped_key_b64": "...", "wrap_algorithm": "...", "kek_version": N, "aad_b64": "...(opt)"}
+Body: {"ciphertext": "<base64>", "iv": "<base64>", "wrap_algorithm": "...(opt)", "version": N (opt), "aad": "<base64>(opt)"}
 
 # Derive
 POST /svc/keycore/keys/{key_id}/derive?tenant_id={tenant_id}

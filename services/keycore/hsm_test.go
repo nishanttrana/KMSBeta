@@ -377,7 +377,7 @@ func TestHSMKeyProvenance(t *testing.T) {
 		t.Fatal("a short digest was signed")
 	}
 	if _, err := svc.Sign(ctx, soft.ID, SignRequest{TenantID: "t3", DataB64: b64(digest[:]), Algorithm: "SHA-256", Prehashed: true}); err == nil {
-		t.Fatal("prehashed signing on a software key")
+		t.Fatal("prehashed signing with an encryption key")
 	}
 
 	// The object disappears from the HSM: the refusal names the device.

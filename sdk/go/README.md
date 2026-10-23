@@ -40,12 +40,18 @@ dk, err := c.GenerateDataKey(ctx, keyID, nil) // envelope encryption
 // encrypt locally with dk.Plaintext, keep only dk.Wrapped
 key, err := c.Decrypt(ctx, dk.Wrapped, nil)
 
-sig, err := c.Sign(ctx, signingKeyID, digestOrData, "")
-ok, err := c.Verify(ctx, sig, digestOrData, "")
+sig, err := c.Sign(ctx, signingKeyID, data, "")
+ok, err := c.Verify(ctx, sig, data, "")
 
 err = c.ListKeys(ctx, func(k vecta.Key) bool { fmt.Println(k.ID, k.Name); return true })
 v, err := c.GetSecretValue(ctx, secretID)
 ```
+
+`SignDigest` signs a digest you computed (ECDSA and RSA keys), `PublicKey`
+reads a key pair's public key, `Random` returns bytes from the KMS's random
+source, and `EncryptWithIV` encrypts with your own IV, for interfaces that
+require one (HSM keys and FIPS strict mode refuse it); never reuse an IV with a key. `Decrypt` with `Version` 0 uses
+the newest key version that opens the ciphertext (13.58.0-beta).
 
 `CreateKey`, `GetKey`, `UpdateKey` (only the fields you set change),
 `RotateKey`, `DeactivateKey`, `GetKeyAccess` and `SetKeyAccess` manage keys

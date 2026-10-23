@@ -4,6 +4,25 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.58.0-beta] — 2026-10-24
+
+### Added
+- **Prehashed signing with software keys.** `POST /keys/{id}/sign` with
+  `prehashed: true` now signs a digest the caller computed with software
+  ECDSA and RSA keys too, not only HSM keys. X.509 and PKCS#11 signers hand
+  over a digest, never the message.
+- **Decrypt without knowing the version.** `POST /keys/{id}/decrypt` with
+  `any_version: true` uses the newest key version that opens the
+  ciphertext. A caller that keeps only ciphertext and IV, such as a PKCS#11
+  application, can still decrypt after the key rotates.
+- Go SDK: `SignDigest`, `PublicKey`, `EncryptWithIV` and `Random`;
+  `Decrypt` with no version finds the version.
+
+### Fixed
+- The key guide's examples sent fields keycore doesn't read (`data_b64`,
+  `signature_b64`), prehashed Ed25519 (refused), and claimed deterministic
+  ECDSA signatures, which keycore doesn't make.
+
 ## [13.57.0-beta] — 2026-10-24
 
 ### Added

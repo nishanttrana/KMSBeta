@@ -3,6 +3,10 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/fips140"
+	"crypto/sha256"
+	"crypto/x509"
 	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
@@ -103,6 +107,36 @@ func TestGoSDKAgainstKeycore(t *testing.T) {
 	if ok, _ := c.Verify(ctx, sig, []byte("release v2"), ""); ok {
 		t.Fatal("a signature verified for other data")
 	}
+	// What the PKCS#11 module needs (13.58.0-beta): a digest signed as the
+	// message would be, the public key, a caller's IV, random bytes.
+	digest := sha256.Sum256([]byte("release v1"))
+	dsig, err := c.SignDigest(ctx, signer.ID, digest[:], "SHA-256")
+	if err != nil {
+		t.Fatalf("sign digest: %v", err)
+	}
+	if ok, err := c.Verify(ctx, dsig, []byte("release v1"), "SHA-256"); err != nil || !ok {
+		t.Fatalf("the digest's signature doesn't verify over the message: %v %v", ok, err)
+	}
+	pub, err := c.PublicKey(ctx, signer.ID)
+	if err != nil {
+		t.Fatalf("public key: %v", err)
+	}
+	if pk, err := x509.ParsePKIXPublicKey(pub.DER); err != nil || !ecdsa.VerifyASN1(pk.(*ecdsa.PublicKey), digest[:], dsig.Signature) {
+		t.Fatalf("the public key doesn't verify the signature: %v", err)
+	}
+	iv := []byte("0123456789ab")
+	ivct, err := c.EncryptWithIV(ctx, aes.ID, []byte("row 9"), iv, nil)
+	if fips140.Enforced() {
+		// FIPS strict mode refuses a caller's AES-GCM IV (SP 800-38D).
+		if err == nil || !strings.Contains(err.Error(), "FIPS") {
+			t.Fatalf("FIPS strict mode took a caller's IV: %v", err)
+		}
+	} else if err != nil || !bytes.Equal(ivct.IV, iv) {
+		t.Fatalf("encrypt with IV: %+v %v", ivct, err)
+	}
+	if rnd, err := c.Random(ctx, 48); err != nil || len(rnd) != 48 {
+		t.Fatalf("random: %d %v", len(rnd), err)
+	}
 
 	var seen []string
 	if err := c.ListKeys(ctx, func(k vecta.Key) bool { seen = append(seen, k.ID); return true }); err != nil {
@@ -116,8 +150,16 @@ func TestGoSDKAgainstKeycore(t *testing.T) {
 	if err != nil || newID == "" {
 		t.Fatalf("create: %q %v", newID, err)
 	}
+	before, err := c.Encrypt(ctx, newID, []byte("written before rotation"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if v, err := c.RotateKey(ctx, newID, "scheduled"); err != nil || v != 2 {
 		t.Fatalf("rotate: %d %v", v, err)
+	}
+	// Without the version, decrypt finds the one that opens it.
+	if plain, err := c.Decrypt(ctx, vecta.Ciphertext{KeyID: newID, Ciphertext: before.Ciphertext, IV: before.IV}, nil); err != nil || string(plain) != "written before rotation" {
+		t.Fatalf("decrypt without the version after rotation: %q %v", plain, err)
 	}
 	if k, err := c.GetKey(ctx, newID); err != nil || k.CurrentVersion != 2 || k.Labels["team"] != "release" {
 		t.Fatalf("created key: %+v %v", k, err)

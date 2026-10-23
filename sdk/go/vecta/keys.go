@@ -3,6 +3,8 @@ package vecta
 import (
 	"context"
 	"encoding/base64"
+	"encoding/pem"
+	"errors"
 	"net/http"
 	"net/url"
 	"time"
@@ -211,12 +213,37 @@ func (c *Client) Encrypt(ctx context.Context, keyID string, plaintext, aad []byt
 	return Ciphertext{KeyID: out.KeyID, Version: out.Version, Ciphertext: ct, IV: iv}, err
 }
 
-// Decrypt decrypts what Encrypt returned, with the same aad.
+// EncryptWithIV encrypts with an IV the caller chose (12 bytes for
+// AES-GCM), as PKCS#11 and other standard interfaces require. Never reuse
+// an IV with the same key: AES-GCM loses its security when an IV repeats.
+// Prefer Encrypt, where the KMS generates it. HSM keys, and FIPS strict
+// mode (SP 800-38D), refuse a caller's IV.
+func (c *Client) EncryptWithIV(ctx context.Context, keyID string, plaintext, iv, aad []byte) (Ciphertext, error) {
+	var out struct {
+		KeyID      string `json:"key_id"`
+		Version    int    `json:"version"`
+		Ciphertext string `json:"ciphertext"`
+		IV         string `json:"iv"`
+	}
+	in := map[string]string{"tenant_id": c.tenant, "plaintext": b64(plaintext), "aad": b64(aad), "iv": b64(iv), "iv_mode": "external"}
+	if err := c.call(ctx, http.MethodPost, "/svc/keycore/keys/"+url.PathEscape(keyID)+"/encrypt"+c.query(nil), in, &out); err != nil {
+		return Ciphertext{}, err
+	}
+	ct, err := unb64(out.Ciphertext)
+	if err != nil {
+		return Ciphertext{}, err
+	}
+	got, err := unb64(out.IV)
+	return Ciphertext{KeyID: out.KeyID, Version: out.Version, Ciphertext: ct, IV: got}, err
+}
+
+// Decrypt decrypts what Encrypt returned, with the same aad. With Version
+// 0 the KMS uses the newest version that opens the ciphertext.
 func (c *Client) Decrypt(ctx context.Context, ct Ciphertext, aad []byte) ([]byte, error) {
 	var out struct {
 		Plaintext string `json:"plaintext"`
 	}
-	in := map[string]any{"tenant_id": c.tenant, "ciphertext": b64(ct.Ciphertext), "iv": b64(ct.IV), "aad": b64(aad), "version": ct.Version}
+	in := map[string]any{"tenant_id": c.tenant, "ciphertext": b64(ct.Ciphertext), "iv": b64(ct.IV), "aad": b64(aad), "version": ct.Version, "any_version": ct.Version == 0}
 	if err := c.call(ctx, http.MethodPost, "/svc/keycore/keys/"+url.PathEscape(ct.KeyID)+"/decrypt"+c.query(nil), in, &out); err != nil {
 		return nil, err
 	}
@@ -244,6 +271,65 @@ func (c *Client) Sign(ctx context.Context, keyID string, data []byte, algorithm 
 	}
 	sig, err := unb64(out.Signature)
 	return Signature{KeyID: out.KeyID, Version: out.Version, Signature: sig}, err
+}
+
+// SignDigest signs a digest the caller computed with hash (SHA-256,
+// SHA-384 or SHA-512): ECDSA keys in ASN.1, RSA keys with PSS (salt the
+// hash's length). It is the signature Sign makes over the message.
+func (c *Client) SignDigest(ctx context.Context, keyID string, digest []byte, hash string) (Signature, error) {
+	var out struct {
+		KeyID     string `json:"key_id"`
+		Version   int    `json:"version"`
+		Signature string `json:"signature"`
+	}
+	in := map[string]any{"tenant_id": c.tenant, "data": b64(digest), "algorithm": hash, "prehashed": true}
+	if err := c.call(ctx, http.MethodPost, "/svc/keycore/keys/"+url.PathEscape(keyID)+"/sign"+c.query(nil), in, &out); err != nil {
+		return Signature{}, err
+	}
+	sig, err := unb64(out.Signature)
+	return Signature{KeyID: out.KeyID, Version: out.Version, Signature: sig}, err
+}
+
+// PublicKey is a key pair's current public key.
+type PublicKey struct {
+	KeyID     string
+	Version   int
+	Algorithm string
+	// DER is the SubjectPublicKeyInfo (x509.ParsePKIXPublicKey reads it).
+	DER []byte
+}
+
+// PublicKey reads the key's current public key.
+func (c *Client) PublicKey(ctx context.Context, keyID string) (PublicKey, error) {
+	var out struct {
+		KeyID     string `json:"key_id"`
+		Version   int    `json:"version"`
+		Algorithm string `json:"algorithm"`
+		PEM       string `json:"public_key_pem"`
+	}
+	if err := c.call(ctx, http.MethodGet, "/svc/keycore/keys/"+url.PathEscape(keyID)+"/public-key"+c.query(nil), nil, &out); err != nil {
+		return PublicKey{}, err
+	}
+	block, _ := pem.Decode([]byte(out.PEM))
+	if block == nil || block.Type != "PUBLIC KEY" {
+		return PublicKey{}, errors.New("vecta: the public key isn't PEM")
+	}
+	return PublicKey{KeyID: out.KeyID, Version: out.Version, Algorithm: out.Algorithm, DER: block.Bytes}, nil
+}
+
+// Random returns n bytes (at most 4096) from the KMS's random source.
+func (c *Client) Random(ctx context.Context, n int) ([]byte, error) {
+	var out struct {
+		Bytes string `json:"bytes"`
+	}
+	if err := c.call(ctx, http.MethodPost, "/svc/keycore/crypto/random"+c.query(nil), map[string]any{"tenant_id": c.tenant, "length": n}, &out); err != nil {
+		return nil, err
+	}
+	b, err := unb64(out.Bytes)
+	if err == nil && len(b) != n {
+		err = errors.New("vecta: the KMS returned a different number of random bytes")
+	}
+	return b, err
 }
 
 // Verify checks a signature Sign made.

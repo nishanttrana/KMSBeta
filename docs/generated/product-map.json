@@ -34477,7 +34477,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-23T19:21:29Z",
+  "generated_at": "2026-10-23T19:33:22Z",
   "navigation": [
     {
       "group": "Home",
@@ -71824,7 +71824,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 2972,
+          "line": 2977,
           "name": "Encrypt",
           "receiver_calls": [
             "s.meter.IncrementOps"
@@ -72016,7 +72016,7 @@
             "normalizeLifecycleStatus"
           ],
           "internal_package_calls": [],
-          "line": 2089,
+          "line": 2094,
           "name": "SearchKeys",
           "receiver_calls": [],
           "store_calls": [
@@ -72030,7 +72030,7 @@
             "listKeysPage"
           ],
           "internal_package_calls": [],
-          "line": 2082,
+          "line": 2087,
           "name": "ListKeysCursor",
           "receiver_calls": [],
           "store_calls": []
@@ -72042,7 +72042,7 @@
             "listKeysPage"
           ],
           "internal_package_calls": [],
-          "line": 2078,
+          "line": 2083,
           "name": "ListKeys",
           "receiver_calls": [],
           "store_calls": []
@@ -72113,7 +72113,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 2145,
+          "line": 2150,
           "name": "GetKey",
           "receiver_calls": [
             "s.exists.TestString",
@@ -72313,7 +72313,7 @@
             "pkg/crypto.ConstantTimeEqual",
             "pkg/cryptocatalog.Lookup"
           ],
-          "line": 1693,
+          "line": 1698,
           "name": "ExportPublicComponentPlaintext",
           "receiver_calls": [
             "s.cache.Delete",
@@ -72361,7 +72361,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 1772,
+          "line": 1777,
           "name": "ExportCurrentVersionWrapped",
           "receiver_calls": [],
           "store_calls": []
@@ -72434,7 +72434,7 @@
           "file": "services/keycore/keycore.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2870,
+          "line": 2875,
           "name": "ListVersions",
           "receiver_calls": [],
           "store_calls": [
@@ -72491,7 +72491,7 @@
             "GetKey"
           ],
           "internal_package_calls": [],
-          "line": 2874,
+          "line": 2879,
           "name": "GetVersion",
           "receiver_calls": [],
           "store_calls": [
@@ -72563,7 +72563,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 2145,
+          "line": 2150,
           "name": "GetKey",
           "receiver_calls": [
             "s.exists.TestString",
@@ -72624,7 +72624,7 @@
           "file": "services/keycore/keycore.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2754,
+          "line": 2759,
           "name": "GetUsage",
           "receiver_calls": [],
           "store_calls": [
@@ -72673,7 +72673,7 @@
           "file": "services/keycore/keycore.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2866,
+          "line": 2871,
           "name": "GetApproval",
           "receiver_calls": [],
           "store_calls": [
@@ -72814,7 +72814,7 @@
             "tagUsageCounts"
           ],
           "internal_package_calls": [],
-          "line": 2607,
+          "line": 2612,
           "name": "ListTagCatalog",
           "receiver_calls": [],
           "store_calls": [
@@ -73026,7 +73026,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3307,
+          "line": 3346,
           "name": "Verify",
           "receiver_calls": [
             "s.meter.IncrementOps"
@@ -73222,7 +73222,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3762,
+          "line": 3801,
           "name": "Derive",
           "receiver_calls": [],
           "store_calls": []
@@ -73589,7 +73589,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3875,
+          "line": 3914,
           "name": "KEMEncapsulate",
           "receiver_calls": [],
           "store_calls": []
@@ -73687,7 +73687,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3958,
+          "line": 3997,
           "name": "KEMDecapsulate",
           "receiver_calls": [],
           "store_calls": []
@@ -73756,7 +73756,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 3666,
+          "line": 3705,
           "name": "Hash",
           "receiver_calls": [],
           "store_calls": []
@@ -73841,7 +73841,7 @@
             "pkg/crypto.Zeroize",
             "pkg/hsm.Random"
           ],
-          "line": 3701,
+          "line": 3740,
           "name": "Random",
           "receiver_calls": [
             "s.hsm.Random"
@@ -75966,7 +75966,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 844,
+          "line": 849,
           "name": "CreateKey",
           "receiver_calls": [],
           "store_calls": []
@@ -76047,7 +76047,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 890,
+          "line": 895,
           "name": "ImportKey",
           "receiver_calls": [],
           "store_calls": []
@@ -76148,7 +76148,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 1601,
+          "line": 1606,
           "name": "FormKey",
           "receiver_calls": [],
           "store_calls": []
@@ -76216,7 +76216,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 890,
+          "line": 895,
           "name": "ImportKey",
           "receiver_calls": [],
           "store_calls": []
@@ -76266,7 +76266,7 @@
             "RotateKeyTo"
           ],
           "internal_package_calls": [],
-          "line": 1841,
+          "line": 1846,
           "name": "RotateKey",
           "receiver_calls": [],
           "store_calls": []
@@ -76350,7 +76350,7 @@
             "cloneKeyLabels"
           ],
           "internal_package_calls": [],
-          "line": 2344,
+          "line": 2349,
           "name": "ScheduleKeyDestroy",
           "receiver_calls": [
             "s.cache.Delete"
@@ -76592,6 +76592,7 @@
             "Sign",
             "hsmDigest",
             "prehashedDigest",
+            "signDigestWithKeyAlgorithm",
             "signWithKeyAlgorithm",
             "Verify",
             "verifyWithKeyAlgorithm",
@@ -76688,7 +76689,7 @@
             "pkg/crypto.OpenDetached",
             "pkg/hsm.Random"
           ],
-          "line": 2178,
+          "line": 2183,
           "name": "UpdateKey",
           "receiver_calls": [
             "s.cache.Delete",
@@ -76870,7 +76871,7 @@
             "pkg/crypto.Zeroize",
             "pkg/crypto.ConstantTimeEqual"
           ],
-          "line": 1871,
+          "line": 1876,
           "name": "RotateKeyTo",
           "receiver_calls": [
             "s.cache.Delete"
@@ -76974,7 +76975,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2212,
+          "line": 2217,
           "name": "ConfigureKeyActivation",
           "receiver_calls": [
             "s.cache.Delete"
@@ -77157,7 +77158,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 2145,
+          "line": 2150,
           "name": "GetKey",
           "receiver_calls": [
             "s.exists.TestString",
@@ -77194,7 +77195,7 @@
             "cloneKeyLabels"
           ],
           "internal_package_calls": [],
-          "line": 2344,
+          "line": 2349,
           "name": "ScheduleKeyDestroy",
           "receiver_calls": [
             "s.cache.Delete"
@@ -77227,7 +77228,7 @@
             "buildDeletedItemsAudit"
           ],
           "internal_package_calls": [],
-          "line": 2420,
+          "line": 2425,
           "name": "DestroyKeyImmediately",
           "receiver_calls": [
             "s.cache.Delete"
@@ -77322,7 +77323,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2521,
+          "line": 2526,
           "name": "SetExportAllowed",
           "receiver_calls": [
             "s.cache.Delete"
@@ -77451,7 +77452,7 @@
             "Publish"
           ],
           "internal_package_calls": [],
-          "line": 2885,
+          "line": 2890,
           "name": "publishAudit",
           "receiver_calls": [
             "s.cluster.Publish"
@@ -77514,7 +77515,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2509,
+          "line": 2514,
           "name": "SetUsageLimit",
           "receiver_calls": [
             "s.cache.Delete"
@@ -77573,7 +77574,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2712,
+          "line": 2717,
           "name": "ResetUsage",
           "receiver_calls": [
             "s.cache.Delete"
@@ -77646,7 +77647,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2721,
+          "line": 2726,
           "name": "SetApproval",
           "receiver_calls": [
             "s.cache.Delete"
@@ -77720,7 +77721,7 @@
             "Publish"
           ],
           "internal_package_calls": [],
-          "line": 2885,
+          "line": 2890,
           "name": "publishAudit",
           "receiver_calls": [
             "s.cluster.Publish"
@@ -77843,7 +77844,7 @@
             "ListTagCatalog"
           ],
           "internal_package_calls": [],
-          "line": 2629,
+          "line": 2634,
           "name": "UpsertTag",
           "receiver_calls": [],
           "store_calls": [
@@ -77919,7 +77920,7 @@
             "tagUsageCounts"
           ],
           "internal_package_calls": [],
-          "line": 2659,
+          "line": 2664,
           "name": "DeleteTag",
           "receiver_calls": [],
           "store_calls": [
@@ -78343,7 +78344,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2812,
+          "line": 2817,
           "name": "MeterUsage",
           "receiver_calls": [
             "s.cache.Delete"
@@ -79419,7 +79420,7 @@
             "Publish"
           ],
           "internal_package_calls": [],
-          "line": 2885,
+          "line": 2890,
           "name": "publishAudit",
           "receiver_calls": [
             "s.cluster.Publish"
@@ -79656,7 +79657,7 @@
             "RotateKeyTo"
           ],
           "internal_package_calls": [],
-          "line": 1841,
+          "line": 1846,
           "name": "RotateKey",
           "receiver_calls": [],
           "store_calls": []
@@ -81286,6 +81287,7 @@
             "Sign",
             "hsmDigest",
             "prehashedDigest",
+            "signDigestWithKeyAlgorithm",
             "signWithKeyAlgorithm",
             "Verify",
             "verifyWithKeyAlgorithm",
@@ -81382,7 +81384,7 @@
             "pkg/crypto.OpenDetached",
             "pkg/hsm.Random"
           ],
-          "line": 2178,
+          "line": 2183,
           "name": "UpdateKey",
           "receiver_calls": [
             "s.cache.Delete",
@@ -128286,7 +128288,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-23T19:21:29Z",
+    "generatedAt": "2026-10-23T19:33:22Z",
     "methods": [
       "DELETE",
       "GET",

@@ -5,6 +5,17 @@ Newest entries on top.
 
 ## 2026-10-24
 
+### Standard interfaces don't carry what our API assumes (13.58.0-beta)
+- PKCS#11 and X.509 signers pass a digest, never the message, so a KMS
+  that signs only messages can't serve them. Prehashed signing had been
+  HSM-only because the HSM CA needed it first. Software keys need only the
+  digest step skipped.
+- A PKCS#11 ciphertext is just ciphertext and tag: there is nowhere to keep
+  the key version, and keys rotate on a schedule. Trying versions
+  newest-first is safe with AES-GCM, whose tag rejects a wrong key, and
+  keycore already did this for JWA unwrap. It belongs in keycore (one call,
+  one audit event), not in every client.
+
 ### A Terraform provider must not turn a KMS refusal into success (13.57.0-beta)
 - keycore answers 409 both for "already deactivated" and for "protected
   system key". A destroy that ignored every 409 would drop a still-active

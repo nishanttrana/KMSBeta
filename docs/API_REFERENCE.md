@@ -609,6 +609,14 @@ version encrypt returned; `0` or absent = current). Response: `plaintext`
 or `deactivated` (SP 800-57 processing use); a deleted version, or a version
 above the current one, answers `400` (`key version refused`).
 
+`any_version: true` with no `version` (13.58.0-beta) decrypts with the
+newest version that opens the ciphertext, for callers that keep only
+ciphertext and IV (the PKCS#11 module). AES-GCM's tag tells the right
+version from a wrong one; the response's `version` names the one that
+opened it, and the `audit.key.decrypt` event carries `any_version`. A
+ciphertext no version opens answers `400 decrypt_failed`. A refusal,
+the operations limit or an unavailable HSM ends the search.
+
 ---
 
 ### POST /svc/keycore/keys/{id}/rewrap
@@ -656,10 +664,12 @@ key's type), `prehashed` (optional, below).
 Response: `signature` (base64), `version`, `key_id`. The public key is at
 `GET /svc/keycore/keys/{id}/public-key`.
 
-`prehashed: true` signs `data` as an already computed digest (the HSM CA
-path). HSM keys only; the hash (`algorithm` SHA-256/384/512) must match the
-digest length, else `400`. A software key answers `400` ("prehashed signing
-is supported for HSM keys only").
+`prehashed: true` signs `data` as an already computed digest (X.509 and
+PKCS#11 signers). The hash (`algorithm` SHA-256/384/512) must match the
+digest length, else `400`. ECDSA and RSA keys, HSM and (13.58.0-beta)
+software: ECDSA signs in ASN.1, RSA with PSS, salt the hash's length; the
+signature is the one signing the message would make. Ed25519, ML-DSA,
+SLH-DSA and composite keys sign the message itself and answer `400`.
 
 ---
 

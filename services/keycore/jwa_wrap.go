@@ -23,6 +23,10 @@ import (
 
 var errJWAMismatch = errors.New("the wrapped key does not open under this key version")
 
+// errDecryptMismatch: an any-version decrypt (DecryptRequest.AnyVersion)
+// found no version of the key that opens the ciphertext.
+var errDecryptMismatch = errors.New("the ciphertext does not open under any version of this key")
+
 // checkWrapAlgorithm validates a wrap_algorithm for an operation, and
 // refuses one that strict FIPS mode doesn't allow.
 func checkWrapAlgorithm(operation, alg string) error {
