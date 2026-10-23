@@ -20,6 +20,10 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
 - [EKM_CLIENTS.md](EKM_CLIENTS.md): how a database client is registered
   (one-time token, then its own client key), what its health states mean,
   and why a tenant token can no longer register a client or keep it alive.
+- [EDGE_DEVICES.md](EDGE_DEVICES.md): edge devices lease data keys sealed
+  to their own ML-KEM key, work offline, and report signed, numbered
+  receipts; enrolment, revocation, and what the receipts can't prove
+  (13.52.0-beta).
 - [FAIL_CLOSED_AND_VERIFICATION.md](FAIL_CLOSED_AND_VERIFICATION.md): no
   fail-open switch or random key fallback; every token and assertion tested
   forged, tampered, expired, mis-addressed and replayed; credentials dropped

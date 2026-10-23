@@ -4,6 +4,32 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.52.0-beta] — 2026-10-23
+
+### Added
+- **Edge devices.** A device that has to encrypt while it can't reach the
+  KMS now leases data keys (Enterprise KM → Edge devices, and the new
+  `edge-agent`). An administrator adds the device with the keys it may
+  lease (checked as the administrator) and issues a one-use registration
+  token. The device enrols with its own ECDSA P-256 and ML-KEM-768 keys. A
+  lease is a data key from keycore sealed to the device's ML-KEM key; only
+  keycore's wrapped copy is kept, so the data stays decryptable centrally.
+  The device encrypts and decrypts offline until the lease expires, and
+  reports numbered receipts signed with its P-256 key: replays are refused
+  and gaps recorded. Revoking a device or a lease stops new leases, and the
+  agent deletes them at its next sync. Routes under `/ekm/edge/`.
+- `pkg/crypto`: an ML-KEM recipient can be restored from its seed, for a
+  holder that opens sealed secrets across restarts.
+
+### Removed
+- The edge preview in keycore (`/enterprise/edge/agents`, `/leases`,
+  `/receipts`), which only stored records. New records of those categories
+  are refused (`410 feature_retired`); old ones list as `retired`.
+
+### Fixed
+- ekm read times SQLite returns in Go's own text format as empty (the same
+  fix as certs in 13.49.0-beta).
+
 ## [13.51.0-beta] — 2026-10-23
 
 ### Added

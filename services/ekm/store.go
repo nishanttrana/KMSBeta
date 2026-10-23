@@ -30,6 +30,22 @@ type Store interface {
 	RecordClientCheckIn(ctx context.Context, in ClientCheckIn) error
 	ListClientCheckIns(ctx context.Context, tenantID, clientID string, limit int) ([]ClientCheckIn, error)
 
+	// Edge devices, leases and receipts (store_edge.go, 13.52.0-beta)
+	CreateEdgeDevice(ctx context.Context, d edgeDevice) error
+	GetEdgeDevice(ctx context.Context, tenantID, id string) (edgeDevice, error)
+	ListEdgeDevices(ctx context.Context, tenantID string) ([]edgeDevice, error)
+	UpdateEdgeDevicePolicy(ctx context.Context, tenantID, id string, keys []string, maxLease int64) error
+	SetEdgeDeviceToken(ctx context.Context, tenantID, id, tokenHash string, expires time.Time) error
+	ConsumeEdgeDeviceToken(ctx context.Context, d edgeDevice, tokenHash string) (bool, error)
+	TouchEdgeDevice(ctx context.Context, tenantID, id, ip, version string, at time.Time) error
+	RevokeEdgeDevice(ctx context.Context, tenantID, id, by, reason string, at time.Time) error
+	CreateEdgeLease(ctx context.Context, l edgeLease) error
+	GetEdgeLease(ctx context.Context, tenantID, id string) (edgeLease, error)
+	ListEdgeLeases(ctx context.Context, tenantID, deviceID string, limit int) ([]edgeLease, error)
+	RevokeEdgeLease(ctx context.Context, tenantID, id string, at time.Time) error
+	AddEdgeReceipts(ctx context.Context, tenantID, deviceID string, from int64, receipts []edgeReceipt, at time.Time) (bool, error)
+	ListEdgeReceipts(ctx context.Context, tenantID, deviceID string, limit int) ([]edgeReceipt, error)
+
 	UpsertDatabase(ctx context.Context, db DatabaseInstance) error
 	GetDatabase(ctx context.Context, tenantID string, databaseID string) (DatabaseInstance, error)
 	ListDatabases(ctx context.Context, tenantID string, agentID string) ([]DatabaseInstance, error)

@@ -160,7 +160,7 @@ func TestBindingPolicyValidationAndRetiredPreviews(t *testing.T) {
 	ops := &routetest.Recorder{}
 	opsRouter := h.keyOpsRouter(ops)
 	admin := &pkgauth.Claims{UserID: "u-e", TenantID: "t1", Permissions: []string{"key.enterprise.write"}}
-	for _, cat := range []string{"binding_policy", "sharing"} {
+	for _, cat := range []string{"binding_policy", "sharing", "edge_agent", "edge_lease", "edge_receipt"} {
 		if w := metaCall(t, opsRouter, admin, http.MethodPost, "/enterprise/controls", map[string]any{"category": cat, "name": "x"}); w.Code != http.StatusGone {
 			t.Fatalf("%s: %d %s", cat, w.Code, w.Body)
 		}
@@ -168,7 +168,7 @@ func TestBindingPolicyValidationAndRetiredPreviews(t *testing.T) {
 			t.Fatalf("%s: %+v", cat, ev.Event)
 		}
 	}
-	for _, path := range []string{"/enterprise/binding/policies", "/enterprise/sharing/grants"} {
+	for _, path := range []string{"/enterprise/binding/policies", "/enterprise/sharing/grants", "/enterprise/edge/agents", "/enterprise/edge/leases", "/enterprise/edge/receipts"} {
 		if w := metaCall(t, h, admin, http.MethodPost, path, map[string]any{"name": "x"}); w.Code != http.StatusNotFound && w.Code != http.StatusMethodNotAllowed {
 			t.Fatalf("%s still answers: %d", path, w.Code)
 		}

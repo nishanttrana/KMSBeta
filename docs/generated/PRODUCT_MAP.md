@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-23T16:22:12Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-23T17:41:17Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `25`
 - Tab/component mappings: `32`
 - Sub-pane groups: `14`
-- Backend HTTP routes discovered: `928` across `27` services
-- Backend routes on the `pkg/route` kernel: `563` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `529`
-- Frontend call sites with exact backend route match: `499`
+- Backend HTTP routes discovered: `937` across `27` services
+- Backend routes on the `pkg/route` kernel: `572` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `536`
+- Frontend call sites with exact backend route match: `506`
 - Frontend call sites needing review or dynamic/runtime confirmation: `30`
-- Clickable controls with static `onClick` handlers: `782`
-- Backend request flows with handler/service/package summaries: `928`
+- Clickable controls with static `onClick` handlers: `788`
+- Backend request flows with handler/service/package summaries: `937`
 
 ## How To Use This For Launch
 
@@ -144,11 +144,11 @@ flowchart LR
   svc_compliance["compliance (60 routes)"]
   svc_confidential["confidential (7 routes)"]
   svc_discovery["discovery (28 routes)"]
-  svc_ekm["ekm (56 routes)"]
+  svc_ekm["ekm (68 routes)"]
   svc_governance["governance (40 routes)"]
   svc_hyok["hyok (25 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (185 routes)"]
+  svc_keycore["keycore (182 routes)"]
   svc_posture["posture (13 routes)"]
   svc_pqc["pqc (14 routes)"]
   svc_reporting["reporting (34 routes)"]
@@ -212,12 +212,12 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | confidential | 7 | 6 |
 | dataprotect | 49 | 28 |
 | discovery | 28 | 26 |
-| ekm | 56 | 29 |
+| ekm | 68 | 36 |
 | governance | 40 | 26 |
 | hsm-connector | 14 | 0 |
 | hyok | 25 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 185 | 81 |
+| keycore | 182 | 81 |
 | kmip | 12 | 11 |
 | policy | 12 | 0 |
 | posture | 13 | 10 |
@@ -396,7 +396,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/cbom | h.handleCBOM |  | services/compliance/handler.go | 83 |
 | compliance | GET | /compliance/cbom/summary | h.handleCBOMSummary |  | services/compliance/handler.go | 84 |
 
-Showing `120` of `423`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `425`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

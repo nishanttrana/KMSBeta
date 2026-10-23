@@ -131,6 +131,9 @@ var Replicated = map[string][]string{
 		"ekm_google_cse_keys",
 		"ekm_mek_exposure",
 		"ekm_mek_state",
+		"ekm_edge_devices",
+		"ekm_edge_leases",
+		"ekm_edge_receipts",
 		"ekm_tde_keys",
 	},
 	"governance": {

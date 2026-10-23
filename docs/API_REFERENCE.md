@@ -1119,9 +1119,6 @@ These endpoints provide the Tier 1 enterprise audit surface for rotation analyti
 | POST | `/svc/keycore/enterprise/federation/providers` | Register multi-KMS provider metadata. |
 | POST | `/svc/keycore/enterprise/federation/mappings` | Register cross-KMS key mappings. |
 | POST | `/svc/keycore/enterprise/federation/failovers` | Record cross-region/provider failover state. |
-| POST | `/svc/keycore/enterprise/edge/agents` | Register Edge/IoT KMS agents. |
-| POST | `/svc/keycore/enterprise/edge/leases` | Register offline key lease state. |
-| POST | `/svc/keycore/enterprise/edge/receipts` | Register edge operation receipts. |
 | POST | `/svc/keycore/enterprise/threat/signals` | Register advanced threat signals such as side-channel/DPA alerts. |
 
 Example compromise event:
@@ -3312,6 +3309,25 @@ CLIENT_ID=$(curl -sS --fail-with-body --cacert vecta-root-ca.pem -X POST https:/
 rm -f "$HDR"
 ```
 
+### Edge devices (13.52.0-beta)
+
+[SECURITY/EDGE_DEVICES.md](SECURITY/EDGE_DEVICES.md). Kernel events
+`audit.ekm.<action>`.
+
+| Route | Auth | Notes |
+|---|---|---|
+| `GET /svc/ekm/ekm/edge/devices` | `ekm.read` | `items[]`: `id`, `name`, `status` (`pending`, `active`, `revoked`), `allowed_key_ids`, `max_lease_seconds`, `token_pending`, `last_receipt_seq`, `last_seen_at`, `last_source_ip`, `agent_version`, `enrolled_at`, `revoked_*` (`edge_devices_listed`) |
+| `POST /svc/ekm/ekm/edge/devices` | `ekm.write` | Body `name`, `allowed_key_ids`, `max_lease_seconds`; each key checked as the caller. Refusals `invalid_name`, `allowed_keys_required`, `invalid_lease_length`, `key_not_usable` (403), `name_taken` (`edge_device_created`) |
+| `PUT /svc/ekm/ekm/edge/devices/{id}` | `ekm.write` | Body `allowed_key_ids`, `max_lease_seconds` (`edge_device_updated`) |
+| `POST /svc/ekm/ekm/edge/devices/{id}/registration-token` | `ekm.write` | `{"token", "expires_at", "device_id"}`, once; `device_revoked` (409) (`edge_device_token_issued`) |
+| `POST /svc/ekm/ekm/edge/devices/{id}/revoke` | `ekm.write` | Body `reason`; every lease revoked (`edge_device_revoked`) |
+| `GET /svc/ekm/ekm/edge/devices/{id}/leases`, `/receipts` | `ekm.read` | Newest first, `limit` up to 500 (`edge_leases_listed`, `edge_receipts_listed`) |
+| `POST /svc/ekm/ekm/edge/leases/{id}/revoke` | `ekm.write` | (`edge_lease_revoked`) |
+| `POST /svc/ekm/ekm/edge/enroll` | registration token | Body `tenant_id`, `token`, `signing_public_key` (PEM, P-256), `proof`, `kem_public_key` (base64 ML-KEM-768), `version`. `{"device_id", "device_key"}`. Refusals `invalid_registration_token`, `registration_token_expired` (401), `signing_key_invalid`, `kem_key_invalid` (400) (`edge_device_enrolled`) |
+| `POST /svc/ekm/ekm/edge/devices/{id}/leases` | `X-Edge-Device-Key` | Body `tenant_id`, `key_id`, `ttl_seconds`. `201 {"lease", "sealed_dek", "aad"}`. Refusals `invalid_device_key` (401), `device_revoked`, `device_not_active`, `key_not_allowed` (403), `too_many_leases` (409), keycore's refusal (`edge_lease_issued`) |
+| `POST /svc/ekm/ekm/edge/devices/{id}/receipts` | `X-Edge-Device-Key` | Body `tenant_id`, `receipts` (JSON list as a string), `signature` (base64 ECDSA P-256 over that string). `{"received", "gap", "last_receipt_seq"}`. Refusals `receipt_signature_invalid`, `receipts_replayed`, `receipts_invalid`, `receipt_lease_unknown`, `receipts_conflict` (`edge_receipts_received`) |
+| `POST /svc/ekm/ekm/edge/devices/{id}/check-in` | `X-Edge-Device-Key` | `{"status", "revoked_lease_ids", "last_receipt_seq", "server_time"}` (`edge_device_check_in`) |
+
 ---
 
 ## Service 19: KMIP (`/svc/kmip/`)
@@ -5055,6 +5071,18 @@ from the code; do not edit by hand.
 - `POST /svc/ekm/ekm/databases`
 - `GET /svc/ekm/ekm/databases/{id}`
 - `POST /svc/ekm/ekm/databases/{id}/revoke-tde`
+- `GET /svc/ekm/ekm/edge/devices`
+- `POST /svc/ekm/ekm/edge/devices`
+- `PUT /svc/ekm/ekm/edge/devices/{id}`
+- `POST /svc/ekm/ekm/edge/devices/{id}/check-in`
+- `GET /svc/ekm/ekm/edge/devices/{id}/leases`
+- `POST /svc/ekm/ekm/edge/devices/{id}/leases`
+- `GET /svc/ekm/ekm/edge/devices/{id}/receipts`
+- `POST /svc/ekm/ekm/edge/devices/{id}/receipts`
+- `POST /svc/ekm/ekm/edge/devices/{id}/registration-token`
+- `POST /svc/ekm/ekm/edge/devices/{id}/revoke`
+- `POST /svc/ekm/ekm/edge/enroll`
+- `POST /svc/ekm/ekm/edge/leases/{id}/revoke`
 - `GET /svc/ekm/ekm/google-cse/configs`
 - `POST /svc/ekm/ekm/google-cse/configs`
 - `DELETE /svc/ekm/ekm/google-cse/configs/{id}`
@@ -5234,9 +5262,6 @@ from the code; do not edit by hand.
 - `GET /svc/keycore/enterprise/dspm/events`
 - `GET /svc/keycore/enterprise/dspm/findings`
 - `POST /svc/keycore/enterprise/dspm/findings`
-- `POST /svc/keycore/enterprise/edge/agents`
-- `POST /svc/keycore/enterprise/edge/leases`
-- `POST /svc/keycore/enterprise/edge/receipts`
 - `POST /svc/keycore/enterprise/federation/failovers`
 - `POST /svc/keycore/enterprise/federation/mappings`
 - `POST /svc/keycore/enterprise/federation/providers`

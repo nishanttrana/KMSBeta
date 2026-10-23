@@ -30,6 +30,7 @@ import {
 import { EKMClients } from "./ekm/Clients";
 import { KMIPTab } from "./KMIPTab";
 import { Kubernetes } from "./ekm/Kubernetes";
+import { EdgeDevices } from "./ekm/EdgeDevices";
 
 /* ── Setup guide content per DB engine ── */
 /* ── Setup guide per DB engine ──
@@ -704,6 +705,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange,onNavigate,keyCata
     {/* ═══════════════════════ KMIP SUBTAB ═══════════════════════ */}
     {subView==="kmip"&&(<KMIPTab session={session} onToast={onToast}/>)}
     {subView==="kubernetes"&&(<Kubernetes session={session} keyCatalog={keyCatalog} onNavigate={onNavigate}/>)}
+    {subView==="edge"&&(<EdgeDevices session={session}/>)}
 
 
     {/* ═══════════════════════ MODALS ═══════════════════════ */}

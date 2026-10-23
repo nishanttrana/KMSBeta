@@ -7,6 +7,30 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-23 — Edge devices lease data keys sealed to their own ML-KEM key
+**Decision:** edge devices are ekm clients of a new kind. A device enrols
+with a one-use token and two keys of its own (P-256 for receipts, proven by
+a signature; ML-KEM-768 for leases). A lease is a keycore data key sealed to
+the device with `pkg/crypto` `KEMSeal`; ekm keeps only keycore's wrapped
+copy. Receipts are signed and numbered. The allowed keys are checked as the
+administrator who sets them.
+**Why:** the owner's list (2026-10-22): "Four more features only store
+settings", edge agents among them; the keycore preview stored records and
+ran nothing.
+**Rejected:** handing the device the key itself (an exported key outlives
+every lease); RSA-OAEP to a device key (ML-KEM-768 is in the certified
+module, post-quantum, and already used for cluster key transfer); trusting
+receipts without signatures or numbers (anyone with the credential could
+write history); building it into keycore (device enrolment, credentials and
+check-ins already live in ekm).
+**Enforced:** `TestEdgeDeviceLifecycle`,
+`TestEdgeDeviceKeysCheckedAsTheAdministrator`, `TestEdgeDevicesPostgres`
+(token and receipt races), `TestEdgeAgentCycle` (the agent over TLS),
+`TestEdgeAgentExpiredLease`, `TestKEMRecipientSeedRoundTrip`, smoke
+`edge-devices.spec.ts`.
+
+---
+
 ## 2026-10-23 — Binding policies bind a key to channels, networks and workloads; sharing grants are access grants
 **Decision:** a key binding policy limits how a key may be reached: the
 channel (`rest` or a verified platform service identity), a direct

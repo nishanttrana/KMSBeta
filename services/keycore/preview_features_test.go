@@ -20,7 +20,7 @@ func TestEnterpriseControlsCarryFeatureStatus(t *testing.T) {
 		serveAsAdmin(h, rr, httptest.NewRequest(http.MethodPost, path+"?tenant_id=t1", bytes.NewReader(raw)))
 		return rr
 	}
-	for _, path := range []string{"/enterprise/federation/providers", "/enterprise/edge/agents", "/enterprise/advanced-encryption/modes"} {
+	for _, path := range []string{"/enterprise/federation/providers", "/enterprise/advanced-encryption/modes"} {
 		rr := post(path, map[string]any{"name": "x", "status": "active"})
 		if rr.Code != http.StatusCreated {
 			t.Fatalf("%s: %d %s", path, rr.Code, rr.Body.String())

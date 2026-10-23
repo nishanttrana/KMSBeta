@@ -120,6 +120,7 @@ func main() {
 	kernel := route.New("ekm", audit, logger)
 	keyring.Routes(kernel, "ekm")
 	handler.clientRoutes(kernel)
+	handler.edgeRoutes(kernel)
 	kernel.MountOn(handler.mux)
 
 	httpPort := envOr("HTTP_PORT", "8130")

@@ -179,6 +179,8 @@ func parseTimeString(v string) time.Time {
 		"2006-01-02 15:04:05.999999999-07:00",
 		"2006-01-02 15:04:05.999999999",
 		"2006-01-02 15:04:05",
+		// time.Time's String(), as SQLite returns a time it was given.
+		"2006-01-02 15:04:05.999999999 -0700 MST",
 	}
 	for _, f := range formats {
 		if ts, err := time.Parse(f, v); err == nil {

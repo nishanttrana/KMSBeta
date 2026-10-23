@@ -21,6 +21,18 @@ type KeyCoreClient interface {
 	DestroyKeyImmediately(ctx context.Context, tenantID string, keyID string, keyName string, justification string) error
 	Wrap(ctx context.Context, tenantID string, keyID string, plaintextB64 string, ivB64 string, referenceID string) (map[string]interface{}, error)
 	Unwrap(ctx context.Context, tenantID string, keyID string, ciphertextB64 string, ivB64 string) (map[string]interface{}, error)
+	// GenerateDataKey asks for a 256-bit data key under keyID, as the user
+	// ctx serves when usage is set (pkg/delegation), else as ekm.
+	GenerateDataKey(ctx context.Context, tenantID, keyID, aadB64 string, includePlaintext bool, usage string) (edgeDataKey, error)
+}
+
+// edgeDataKey is keycore's generate-data-key answer.
+type edgeDataKey struct {
+	KeyID        string `json:"key_id"`
+	Version      int64  `json:"version"`
+	WrappedDEK   string `json:"wrapped_dek"`
+	WrappedDEKIV string `json:"wrapped_dek_iv"`
+	PlaintextDEK string `json:"plaintext_dek"`
 }
 
 type HTTPKeyCoreClient struct {
@@ -154,6 +166,25 @@ func (c *HTTPKeyCoreClient) Unwrap(ctx context.Context, tenantID string, keyID s
 		"ciphertext": strings.TrimSpace(ciphertextB64),
 		"iv":         strings.TrimSpace(ivB64),
 	})
+}
+
+func (c *HTTPKeyCoreClient) GenerateDataKey(ctx context.Context, tenantID, keyID, aadB64 string, includePlaintext bool, usage string) (edgeDataKey, error) {
+	path := "/keys/" + url.PathEscape(strings.TrimSpace(keyID)) + "/generate-data-key?tenant_id=" + url.QueryEscape(strings.TrimSpace(tenantID))
+	out, err := c.do(ctx, http.MethodPost, path, map[string]interface{}{
+		"tenant_id": strings.TrimSpace(tenantID), "key_bytes": 32, "aad": aadB64, "include_plaintext": includePlaintext,
+	}, usage)
+	if err != nil {
+		return edgeDataKey{}, err
+	}
+	var dk edgeDataKey
+	raw, _ := json.Marshal(out)
+	if err := json.Unmarshal(raw, &dk); err != nil {
+		return edgeDataKey{}, err
+	}
+	if dk.WrappedDEK == "" || (includePlaintext && dk.PlaintextDEK == "") {
+		return edgeDataKey{}, errors.New("keycore returned no data key")
+	}
+	return dk, nil
 }
 
 func (c *HTTPKeyCoreClient) doJSON(ctx context.Context, method string, path string, payload interface{}) (map[string]interface{}, error) {

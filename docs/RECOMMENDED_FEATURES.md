@@ -36,7 +36,7 @@ The remaining feature areas were started as backend enterprise-control APIs. Sev
 | Cost & Optimization Dashboard | Implemented | `/enterprise/cost/optimization` |
 | Advanced Encryption Modes | Searchable HMAC tokens implemented; homomorphic/functional modes **Preview** (registered, not performed) | Searchable HMAC tokens; homomorphic/functional modes registered as governed controls until reviewed providers are integrated |
 | Enhanced Key Binding | **Available** (13.51.0-beta): binding policies (channel, network, workload) enforced on every key operation | `/binding-policies`, [KEYS.md 5.6](KEYS.md#56-binding-policies-13510-beta) |
-| Edge & IoT Key Management | **Preview**: records only; there is no edge runtime | `/enterprise/edge/agents`, `/leases`, `/receipts` |
+| Edge & IoT Key Management | **Available** (13.52.0-beta): devices lease data keys sealed to their own ML-KEM key, work offline with `edge-agent`, and report signed receipts | `/ekm/edge/devices`, [SECURITY/EDGE_DEVICES.md](SECURITY/EDGE_DEVICES.md) |
 | Fine-Grained Key Sharing | **Available** as key access grants (users, groups, operations, time windows); the stored-only preview was retired in 13.51.0-beta | `PUT /keys/{id}/access-policy` |
 | Key Metadata Management | **Available** (13.50.0-beta): metadata profiles enforced on create, import and update | `/metadata-profiles`, [KEYS.md 5.5](KEYS.md#55-metadata-profiles-13500-beta) |
 | Advanced Threat Protection | Implemented: signal intake, scheduled key-usage threat detection and canary keys raised as Posture findings and Reporting alerts, compromise workflow, DSPM findings | `/enterprise/threat/signals`, `/canary/keys`, `audit.keycore.threat_signal_raised`, compromise workflow, DSPM findings |

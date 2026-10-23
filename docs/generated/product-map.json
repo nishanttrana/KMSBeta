@@ -6121,6 +6121,186 @@
       "service": "ekm"
     },
     {
+      "action": "edge_devices_listed",
+      "code_scope": "ekm",
+      "file": "services/ekm/edge.go",
+      "handler": "h.listEdgeDevices",
+      "line": 301,
+      "match_key": "ekm|GET|/ekm/edge/devices",
+      "method": "GET",
+      "normalized_path": "/ekm/edge/devices",
+      "path": "/ekm/edge/devices",
+      "permission": "ekm.read",
+      "registration": "kernel",
+      "resource": "edge_device",
+      "service": "ekm"
+    },
+    {
+      "action": "edge_device_created",
+      "code_scope": "ekm",
+      "file": "services/ekm/edge.go",
+      "handler": "h.createEdgeDevice",
+      "line": 302,
+      "match_key": "ekm|POST|/ekm/edge/devices",
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices",
+      "path": "/ekm/edge/devices",
+      "permission": "ekm.write",
+      "registration": "kernel",
+      "resource": "edge_device",
+      "service": "ekm"
+    },
+    {
+      "action": "edge_device_updated",
+      "code_scope": "ekm",
+      "file": "services/ekm/edge.go",
+      "handler": "h.updateEdgeDevice",
+      "line": 303,
+      "match_key": "ekm|PUT|/ekm/edge/devices/{param}",
+      "method": "PUT",
+      "normalized_path": "/ekm/edge/devices/{param}",
+      "path": "/ekm/edge/devices/{id}",
+      "permission": "ekm.write",
+      "registration": "kernel",
+      "resource": "edge_device",
+      "service": "ekm"
+    },
+    {
+      "action": "edge_device_token_issued",
+      "code_scope": "ekm",
+      "file": "services/ekm/edge.go",
+      "handler": "h.issueEdgeToken",
+      "line": 304,
+      "match_key": "ekm|POST|/ekm/edge/devices/{param}/registration-token",
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices/{param}/registration-token",
+      "path": "/ekm/edge/devices/{id}/registration-token",
+      "permission": "ekm.write",
+      "registration": "kernel",
+      "resource": "edge_device",
+      "service": "ekm"
+    },
+    {
+      "action": "edge_device_revoked",
+      "code_scope": "ekm",
+      "file": "services/ekm/edge.go",
+      "handler": "h.revokeEdgeDevice",
+      "line": 305,
+      "match_key": "ekm|POST|/ekm/edge/devices/{param}/revoke",
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices/{param}/revoke",
+      "path": "/ekm/edge/devices/{id}/revoke",
+      "permission": "ekm.write",
+      "registration": "kernel",
+      "resource": "edge_device",
+      "service": "ekm"
+    },
+    {
+      "action": "edge_leases_listed",
+      "code_scope": "ekm",
+      "file": "services/ekm/edge.go",
+      "handler": "h.listEdgeLeases",
+      "line": 306,
+      "match_key": "ekm|GET|/ekm/edge/devices/{param}/leases",
+      "method": "GET",
+      "normalized_path": "/ekm/edge/devices/{param}/leases",
+      "path": "/ekm/edge/devices/{id}/leases",
+      "permission": "ekm.read",
+      "registration": "kernel",
+      "resource": "edge_device",
+      "service": "ekm"
+    },
+    {
+      "action": "edge_receipts_listed",
+      "code_scope": "ekm",
+      "file": "services/ekm/edge.go",
+      "handler": "h.listEdgeReceipts",
+      "line": 307,
+      "match_key": "ekm|GET|/ekm/edge/devices/{param}/receipts",
+      "method": "GET",
+      "normalized_path": "/ekm/edge/devices/{param}/receipts",
+      "path": "/ekm/edge/devices/{id}/receipts",
+      "permission": "ekm.read",
+      "registration": "kernel",
+      "resource": "edge_device",
+      "service": "ekm"
+    },
+    {
+      "action": "edge_lease_revoked",
+      "code_scope": "ekm",
+      "file": "services/ekm/edge.go",
+      "handler": "h.revokeEdgeLease",
+      "line": 308,
+      "match_key": "ekm|POST|/ekm/edge/leases/{param}/revoke",
+      "method": "POST",
+      "normalized_path": "/ekm/edge/leases/{param}/revoke",
+      "path": "/ekm/edge/leases/{id}/revoke",
+      "permission": "ekm.write",
+      "registration": "kernel",
+      "resource": "edge_lease",
+      "service": "ekm"
+    },
+    {
+      "action": "edge_device_enrolled",
+      "code_scope": "ekm",
+      "file": "services/ekm/edge.go",
+      "handler": "h.enrollEdgeDevice",
+      "line": 310,
+      "match_key": "ekm|POST|/ekm/edge/enroll",
+      "method": "POST",
+      "normalized_path": "/ekm/edge/enroll",
+      "path": "/ekm/edge/enroll",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "edge_device",
+      "service": "ekm"
+    },
+    {
+      "action": "edge_lease_issued",
+      "code_scope": "ekm",
+      "file": "services/ekm/edge.go",
+      "handler": "h.edgeLease",
+      "line": 311,
+      "match_key": "ekm|POST|/ekm/edge/devices/{param}/leases",
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices/{param}/leases",
+      "path": "/ekm/edge/devices/{id}/leases",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "edge_device",
+      "service": "ekm"
+    },
+    {
+      "action": "edge_receipts_received",
+      "code_scope": "ekm",
+      "file": "services/ekm/edge.go",
+      "handler": "h.edgeReceipts",
+      "line": 312,
+      "match_key": "ekm|POST|/ekm/edge/devices/{param}/receipts",
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices/{param}/receipts",
+      "path": "/ekm/edge/devices/{id}/receipts",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "edge_device",
+      "service": "ekm"
+    },
+    {
+      "action": "edge_device_check_in",
+      "code_scope": "ekm",
+      "file": "services/ekm/edge.go",
+      "handler": "h.edgeCheckIn",
+      "line": 313,
+      "match_key": "ekm|POST|/ekm/edge/devices/{param}/check-in",
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices/{param}/check-in",
+      "path": "/ekm/edge/devices/{id}/check-in",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "edge_device",
+      "service": "ekm"
+    },
+    {
       "action": "",
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
@@ -9901,56 +10081,11 @@
       "service": "keycore"
     },
     {
-      "action": "enterprise_edge_agent_upserted",
-      "code_scope": "keycore",
-      "file": "services/keycore/handler_key_ops.go",
-      "handler": "legacy(h.handleUpsertEnterpriseControlCategory(controlCategoryEdgeAgent))",
-      "line": 52,
-      "match_key": "keycore|POST|/enterprise/edge/agents",
-      "method": "POST",
-      "normalized_path": "/enterprise/edge/agents",
-      "path": "/enterprise/edge/agents",
-      "permission": "key.enterprise.write",
-      "registration": "kernel",
-      "resource": "key",
-      "service": "keycore"
-    },
-    {
-      "action": "enterprise_edge_lease_upserted",
-      "code_scope": "keycore",
-      "file": "services/keycore/handler_key_ops.go",
-      "handler": "legacy(h.handleUpsertEnterpriseControlCategory(controlCategoryEdgeLease))",
-      "line": 53,
-      "match_key": "keycore|POST|/enterprise/edge/leases",
-      "method": "POST",
-      "normalized_path": "/enterprise/edge/leases",
-      "path": "/enterprise/edge/leases",
-      "permission": "key.enterprise.write",
-      "registration": "kernel",
-      "resource": "key",
-      "service": "keycore"
-    },
-    {
-      "action": "enterprise_edge_receipt_upserted",
-      "code_scope": "keycore",
-      "file": "services/keycore/handler_key_ops.go",
-      "handler": "legacy(h.handleUpsertEnterpriseControlCategory(controlCategoryEdgeReceipt))",
-      "line": 54,
-      "match_key": "keycore|POST|/enterprise/edge/receipts",
-      "method": "POST",
-      "normalized_path": "/enterprise/edge/receipts",
-      "path": "/enterprise/edge/receipts",
-      "permission": "key.enterprise.write",
-      "registration": "kernel",
-      "resource": "key",
-      "service": "keycore"
-    },
-    {
       "action": "enterprise_threat_signal_upserted",
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "legacy(h.handleUpsertEnterpriseControlCategory(controlCategoryThreatSignal))",
-      "line": 55,
+      "line": 52,
       "match_key": "keycore|POST|/enterprise/threat/signals",
       "method": "POST",
       "normalized_path": "/enterprise/threat/signals",
@@ -9965,7 +10100,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "legacy(h.handleTriggerOrchestrationRun)",
-      "line": 57,
+      "line": 54,
       "match_key": "keycore|POST|/enterprise/orchestration/runs",
       "method": "POST",
       "normalized_path": "/enterprise/orchestration/runs",
@@ -9980,7 +10115,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "legacy(h.handleListSchedulingJobs)",
-      "line": 58,
+      "line": 55,
       "match_key": "keycore|GET|/scheduling/jobs",
       "method": "GET",
       "normalized_path": "/scheduling/jobs",
@@ -9995,7 +10130,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "legacy(h.handleCreateSchedulingJob)",
-      "line": 59,
+      "line": 56,
       "match_key": "keycore|POST|/scheduling/jobs",
       "method": "POST",
       "normalized_path": "/scheduling/jobs",
@@ -10010,7 +10145,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "legacy(h.handleUpdateSchedulingJob)",
-      "line": 60,
+      "line": 57,
       "match_key": "keycore|PATCH|/scheduling/jobs/{param}",
       "method": "PATCH",
       "normalized_path": "/scheduling/jobs/{param}",
@@ -10025,7 +10160,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "legacy(h.handleDeleteSchedulingJob)",
-      "line": 61,
+      "line": 58,
       "match_key": "keycore|DELETE|/scheduling/jobs/{param}",
       "method": "DELETE",
       "normalized_path": "/scheduling/jobs/{param}",
@@ -10040,7 +10175,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "legacy(h.visibleKeyRoute(h.handleAttestKey))",
-      "line": 62,
+      "line": 59,
       "match_key": "keycore|POST|/keys/{param}/attest",
       "method": "POST",
       "normalized_path": "/keys/{param}/attest",
@@ -10055,7 +10190,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "legacy(h.visibleKeyRoute(h.handleVerifyKeyMaterial))",
-      "line": 63,
+      "line": 60,
       "match_key": "keycore|POST|/keys/{param}/verify-material",
       "method": "POST",
       "normalized_path": "/keys/{param}/verify-material",
@@ -10070,7 +10205,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "h.handleDestructionCheck",
-      "line": 64,
+      "line": 61,
       "match_key": "keycore|POST|/keys/{param}/destruction-check",
       "method": "POST",
       "normalized_path": "/keys/{param}/destruction-check",
@@ -10085,7 +10220,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "legacy(h.handleFIPSSelfTest)",
-      "line": 65,
+      "line": 62,
       "match_key": "keycore|POST|/fips/self-test",
       "method": "POST",
       "normalized_path": "/fips/self-test",
@@ -16443,6 +16578,81 @@
       "service": "ekm"
     },
     {
+      "action": "edge_device_updated",
+      "code_scope": "ekm",
+      "file": "services/ekm/edge.go",
+      "handler": "h.updateEdgeDevice",
+      "line": 303,
+      "match_key": "ekm|PUT|/ekm/edge/devices/{param}",
+      "method": "PUT",
+      "normalized_path": "/ekm/edge/devices/{param}",
+      "path": "/ekm/edge/devices/{id}",
+      "permission": "ekm.write",
+      "registration": "kernel",
+      "resource": "edge_device",
+      "service": "ekm"
+    },
+    {
+      "action": "edge_device_enrolled",
+      "code_scope": "ekm",
+      "file": "services/ekm/edge.go",
+      "handler": "h.enrollEdgeDevice",
+      "line": 310,
+      "match_key": "ekm|POST|/ekm/edge/enroll",
+      "method": "POST",
+      "normalized_path": "/ekm/edge/enroll",
+      "path": "/ekm/edge/enroll",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "edge_device",
+      "service": "ekm"
+    },
+    {
+      "action": "edge_lease_issued",
+      "code_scope": "ekm",
+      "file": "services/ekm/edge.go",
+      "handler": "h.edgeLease",
+      "line": 311,
+      "match_key": "ekm|POST|/ekm/edge/devices/{param}/leases",
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices/{param}/leases",
+      "path": "/ekm/edge/devices/{id}/leases",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "edge_device",
+      "service": "ekm"
+    },
+    {
+      "action": "edge_receipts_received",
+      "code_scope": "ekm",
+      "file": "services/ekm/edge.go",
+      "handler": "h.edgeReceipts",
+      "line": 312,
+      "match_key": "ekm|POST|/ekm/edge/devices/{param}/receipts",
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices/{param}/receipts",
+      "path": "/ekm/edge/devices/{id}/receipts",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "edge_device",
+      "service": "ekm"
+    },
+    {
+      "action": "edge_device_check_in",
+      "code_scope": "ekm",
+      "file": "services/ekm/edge.go",
+      "handler": "h.edgeCheckIn",
+      "line": 313,
+      "match_key": "ekm|POST|/ekm/edge/devices/{param}/check-in",
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices/{param}/check-in",
+      "path": "/ekm/edge/devices/{id}/check-in",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "edge_device",
+      "service": "ekm"
+    },
+    {
       "action": "",
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
@@ -18423,56 +18633,11 @@
       "service": "keycore"
     },
     {
-      "action": "enterprise_edge_agent_upserted",
-      "code_scope": "keycore",
-      "file": "services/keycore/handler_key_ops.go",
-      "handler": "legacy(h.handleUpsertEnterpriseControlCategory(controlCategoryEdgeAgent))",
-      "line": 52,
-      "match_key": "keycore|POST|/enterprise/edge/agents",
-      "method": "POST",
-      "normalized_path": "/enterprise/edge/agents",
-      "path": "/enterprise/edge/agents",
-      "permission": "key.enterprise.write",
-      "registration": "kernel",
-      "resource": "key",
-      "service": "keycore"
-    },
-    {
-      "action": "enterprise_edge_lease_upserted",
-      "code_scope": "keycore",
-      "file": "services/keycore/handler_key_ops.go",
-      "handler": "legacy(h.handleUpsertEnterpriseControlCategory(controlCategoryEdgeLease))",
-      "line": 53,
-      "match_key": "keycore|POST|/enterprise/edge/leases",
-      "method": "POST",
-      "normalized_path": "/enterprise/edge/leases",
-      "path": "/enterprise/edge/leases",
-      "permission": "key.enterprise.write",
-      "registration": "kernel",
-      "resource": "key",
-      "service": "keycore"
-    },
-    {
-      "action": "enterprise_edge_receipt_upserted",
-      "code_scope": "keycore",
-      "file": "services/keycore/handler_key_ops.go",
-      "handler": "legacy(h.handleUpsertEnterpriseControlCategory(controlCategoryEdgeReceipt))",
-      "line": 54,
-      "match_key": "keycore|POST|/enterprise/edge/receipts",
-      "method": "POST",
-      "normalized_path": "/enterprise/edge/receipts",
-      "path": "/enterprise/edge/receipts",
-      "permission": "key.enterprise.write",
-      "registration": "kernel",
-      "resource": "key",
-      "service": "keycore"
-    },
-    {
       "action": "enterprise_threat_signal_upserted",
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "legacy(h.handleUpsertEnterpriseControlCategory(controlCategoryThreatSignal))",
-      "line": 55,
+      "line": 52,
       "match_key": "keycore|POST|/enterprise/threat/signals",
       "method": "POST",
       "normalized_path": "/enterprise/threat/signals",
@@ -18487,7 +18652,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "legacy(h.handleTriggerOrchestrationRun)",
-      "line": 57,
+      "line": 54,
       "match_key": "keycore|POST|/enterprise/orchestration/runs",
       "method": "POST",
       "normalized_path": "/enterprise/orchestration/runs",
@@ -18502,7 +18667,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "legacy(h.handleListSchedulingJobs)",
-      "line": 58,
+      "line": 55,
       "match_key": "keycore|GET|/scheduling/jobs",
       "method": "GET",
       "normalized_path": "/scheduling/jobs",
@@ -18517,7 +18682,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "legacy(h.handleCreateSchedulingJob)",
-      "line": 59,
+      "line": 56,
       "match_key": "keycore|POST|/scheduling/jobs",
       "method": "POST",
       "normalized_path": "/scheduling/jobs",
@@ -18532,7 +18697,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "legacy(h.handleUpdateSchedulingJob)",
-      "line": 60,
+      "line": 57,
       "match_key": "keycore|PATCH|/scheduling/jobs/{param}",
       "method": "PATCH",
       "normalized_path": "/scheduling/jobs/{param}",
@@ -18547,7 +18712,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "legacy(h.handleDeleteSchedulingJob)",
-      "line": 61,
+      "line": 58,
       "match_key": "keycore|DELETE|/scheduling/jobs/{param}",
       "method": "DELETE",
       "normalized_path": "/scheduling/jobs/{param}",
@@ -18562,7 +18727,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "h.handleDestructionCheck",
-      "line": 64,
+      "line": 61,
       "match_key": "keycore|POST|/keys/{param}/destruction-check",
       "method": "POST",
       "normalized_path": "/keys/{param}/destruction-check",
@@ -18577,7 +18742,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
       "handler": "legacy(h.handleFIPSSelfTest)",
-      "line": 65,
+      "line": 62,
       "match_key": "keycore|POST|/fips/self-test",
       "method": "POST",
       "normalized_path": "/fips/self-test",
@@ -20417,7 +20582,7 @@
       "file": "web/dashboard/src/components/v3/SidebarSubNav.tsx",
       "handler": "",
       "label": "onSelect(item.id)} style={ } >",
-      "line": 152,
+      "line": 153,
       "tabs": [],
       "tag": "button"
     },
@@ -22391,16 +22556,6 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "openDbRegister} disabled={!agents.length",
       "label": "Register Database",
-      "line": 448,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "setModal(\"setup-guide\")}>Setup Guide",
       "line": 449,
       "tabs": [
         "ekm"
@@ -22410,8 +22565,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "setExpandedTdeGuide(prev=>( ))} style={ }>Guide",
-      "line": 469,
+      "label": "setModal(\"setup-guide\")}>Setup Guide",
+      "line": 450,
       "tabs": [
         "ekm"
       ],
@@ -22420,7 +22575,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "runRevokeTDE(db)} disabled= style={ }>",
+      "label": "setExpandedTdeGuide(prev=>( ))} style={ }>Guide",
       "line": 470,
       "tabs": [
         "ekm"
@@ -22430,8 +22585,18 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
+      "label": "runRevokeTDE(db)} disabled= style={ }>",
+      "line": 471,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
       "label": "setBitLockerView(bitLockerView===\"cards\"?\"list\":\"cards\")} style={ }>{bitLocke...",
-      "line": 501,
+      "line": 502,
       "tabs": [
         "ekm"
       ],
@@ -22441,7 +22606,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "openBitLockerDeploy",
       "label": "Register Client",
-      "line": 502,
+      "line": 503,
       "tabs": [
         "ekm"
       ],
@@ -22451,16 +22616,6 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "openBitLockerScan",
       "label": "Network Scan",
-      "line": 503,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "refresh(false)} disabled= >",
       "line": 504,
       "tabs": [
         "ekm"
@@ -22470,8 +22625,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "runBitLockerOperation(client,op)} disabled={bitLockerOpClientID===`$ :$ `} st...",
-      "line": 528,
+      "label": "refresh(false)} disabled= >",
+      "line": 505,
       "tabs": [
         "ekm"
       ],
@@ -22480,7 +22635,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "openBitLockerActivity(client)} style={ }>Activity",
+      "label": "runBitLockerOperation(client,op)} disabled={bitLockerOpClientID===`$ :$ `} st...",
       "line": 529,
       "tabs": [
         "ekm"
@@ -22490,7 +22645,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "openBitLockerDelete(client)} style={ }>Delete",
+      "label": "openBitLockerActivity(client)} style={ }>Activity",
       "line": 530,
       "tabs": [
         "ekm"
@@ -22500,8 +22655,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "openBitLockerActivity(client)} style={ }>Activity",
-      "line": 551,
+      "label": "openBitLockerDelete(client)} style={ }>Delete",
+      "line": 531,
       "tabs": [
         "ekm"
       ],
@@ -22510,7 +22665,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "openBitLockerOptions(client)} style={ }>Ops",
+      "label": "openBitLockerActivity(client)} style={ }>Activity",
       "line": 552,
       "tabs": [
         "ekm"
@@ -22520,7 +22675,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "openBitLockerDelete(client)} style={ }>Del",
+      "label": "openBitLockerOptions(client)} style={ }>Ops",
       "line": 553,
       "tabs": [
         "ekm"
@@ -22530,8 +22685,18 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
+      "label": "openBitLockerDelete(client)} style={ }>Del",
+      "line": 554,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
       "label": "{ setGoogleCSELoading(true); try{ const domains=googleCSEConfigForm.allowed_d...",
-      "line": 585,
+      "line": 586,
       "tabs": [
         "ekm"
       ],
@@ -22541,7 +22706,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ const v=await promptDialog.prompt( ); if(v===null) return; try{await update...",
-      "line": 617,
+      "line": 618,
       "tabs": [
         "ekm"
       ],
@@ -22551,7 +22716,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ if(!confirm(\"Delete this Google CSE config?\")) return; try catch(e){onToast...",
-      "line": 622,
+      "line": 623,
       "tabs": [
         "ekm"
       ],
@@ -22561,7 +22726,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setGoogleCSELoading(true); try{ await createGoogleCSEKey(session, ); onToas...",
-      "line": 651,
+      "line": 652,
       "tabs": [
         "ekm"
       ],
@@ -22571,7 +22736,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ if(!confirm(\"Delete this CSE key?\")) return; try catch(e){onToast?.(`Delete...",
-      "line": 679,
+      "line": 680,
       "tabs": [
         "ekm"
       ],
@@ -22581,7 +22746,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setGuideEngine(eng)} style={ }>",
-      "line": 714,
+      "line": 716,
       "tabs": [
         "ekm"
       ],
@@ -22591,7 +22756,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "submitDbRegister} disabled={dbRegistering",
       "label": "(icon or dynamic label)",
-      "line": 757,
+      "line": 759,
       "tabs": [
         "ekm"
       ],
@@ -22601,7 +22766,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 758,
+      "line": 760,
       "tabs": [
         "ekm"
       ],
@@ -22611,7 +22776,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "submitBitLockerDeploy} disabled={bitLockerDeploying",
       "label": "(icon or dynamic label)",
-      "line": 775,
+      "line": 777,
       "tabs": [
         "ekm"
       ],
@@ -22621,7 +22786,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 776,
+      "line": 778,
       "tabs": [
         "ekm"
       ],
@@ -22631,7 +22796,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "downloadText(file.path,file.content)} style={ }>Download",
-      "line": 783,
+      "line": 785,
       "tabs": [
         "ekm"
       ],
@@ -22641,7 +22806,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "submitBitLockerDelete} disabled={bitLockerDeleteSubmitting||!bitLockerDeleteConfirmBackup",
       "label": "(icon or dynamic label)",
-      "line": 801,
+      "line": 803,
       "tabs": [
         "ekm"
       ],
@@ -22651,7 +22816,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 802,
+      "line": 804,
       "tabs": [
         "ekm"
       ],
@@ -22661,7 +22826,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "runBitLockerScan} disabled={bitLockerScanRunning",
       "label": "(icon or dynamic label)",
-      "line": 819,
+      "line": 821,
       "tabs": [
         "ekm"
       ],
@@ -22671,7 +22836,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "onboardScannedBitLocker} disabled={bitLockerOnboarding",
       "label": "(icon or dynamic label)",
-      "line": 835,
+      "line": 837,
       "tabs": [
         "ekm"
       ],
@@ -22681,7 +22846,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{const all= ;bitLockerScanCandidates.forEach(r=> );setBitLockerScanSelected(a...",
-      "line": 836,
+      "line": 838,
       "tabs": [
         "ekm"
       ],
@@ -22691,7 +22856,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "} disabled={bitLockerOpClientID===`$ :$ `} style={ }>",
-      "line": 878,
+      "line": 880,
       "tabs": [
         "ekm"
       ],
@@ -26060,6 +26225,54 @@
       "handler": "",
       "label": "}>{c.registration === \"registered\" ? <>Health : \"Continue setup\"}",
       "line": 139,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/EdgeDevices.tsx",
+      "handler": "",
+      "label": "setAdding(!adding)}>",
+      "line": 68,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/EdgeDevices.tsx",
+      "handler": "",
+      "label": "setToken(null)}>Done",
+      "line": 77,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/EdgeDevices.tsx",
+      "handler": "",
+      "label": "void issue(d)}>",
+      "line": 89,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/EdgeDevices.tsx",
+      "handler": "",
+      "label": "void revoke(d)}>Revoke",
+      "line": 90,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/EdgeDevices.tsx",
+      "handler": "",
+      "label": "void submit()}>",
+      "line": 130,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ekm/EdgeDevices.tsx",
+      "handler": "",
+      "label": "void revoke(l)}>Revoke",
+      "line": 166,
       "tabs": [],
       "tag": "Btn"
     },
@@ -30518,6 +30731,97 @@
     },
     {
       "dynamic": true,
+      "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices?${q(session)}`)",
+      "file": "web/dashboard/src/lib/edge.ts",
+      "line": 33,
+      "match_key": "ekm|GET|/ekm/edge/devices",
+      "method": "GET",
+      "normalized_path": "/ekm/edge/devices",
+      "path": "/ekm/edge/devices?{param}",
+      "service": "ekm",
+      "service_key": "ekm",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices?${q(session)}`)",
+      "file": "web/dashboard/src/lib/edge.ts",
+      "line": 39,
+      "match_key": "ekm|POST|/ekm/edge/devices",
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices",
+      "path": "/ekm/edge/devices?{param}",
+      "service": "ekm",
+      "service_key": "ekm",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices/${encodeURIComponent(id)}/registration-token?${q(session)}`)",
+      "file": "web/dashboard/src/lib/edge.ts",
+      "line": 44,
+      "match_key": "ekm|POST|/ekm/edge/devices/{param}/registration-token",
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices/{param}/registration-token",
+      "path": "/ekm/edge/devices/{param}/registration-token?{param}",
+      "service": "ekm",
+      "service_key": "ekm",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices/${encodeURIComponent(id)}/revoke?${q(session)}`)",
+      "file": "web/dashboard/src/lib/edge.ts",
+      "line": 48,
+      "match_key": "ekm|POST|/ekm/edge/devices/{param}/revoke",
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices/{param}/revoke",
+      "path": "/ekm/edge/devices/{param}/revoke?{param}",
+      "service": "ekm",
+      "service_key": "ekm",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices/${encodeURIComponent(id)}/leases?${q(session)}`)",
+      "file": "web/dashboard/src/lib/edge.ts",
+      "line": 52,
+      "match_key": "ekm|GET|/ekm/edge/devices/{param}/leases",
+      "method": "GET",
+      "normalized_path": "/ekm/edge/devices/{param}/leases",
+      "path": "/ekm/edge/devices/{param}/leases?{param}",
+      "service": "ekm",
+      "service_key": "ekm",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices/${encodeURIComponent(id)}/receipts?limit=100&${q(session)}`)",
+      "file": "web/dashboard/src/lib/edge.ts",
+      "line": 57,
+      "match_key": "ekm|GET|/ekm/edge/devices/{param}/receipts",
+      "method": "GET",
+      "normalized_path": "/ekm/edge/devices/{param}/receipts",
+      "path": "/ekm/edge/devices/{param}/receipts?limit=100&{param}",
+      "service": "ekm",
+      "service_key": "ekm",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"ekm\", `/ekm/edge/leases/${encodeURIComponent(id)}/revoke?${q(session)}`)",
+      "file": "web/dashboard/src/lib/edge.ts",
+      "line": 62,
+      "match_key": "ekm|POST|/ekm/edge/leases/{param}/revoke",
+      "method": "POST",
+      "normalized_path": "/ekm/edge/leases/{param}/revoke",
+      "path": "/ekm/edge/leases/{param}/revoke?{param}",
+      "service": "ekm",
+      "service_key": "ekm",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/agents?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
       "line": 241,
@@ -34079,7 +34383,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-23T16:22:12Z",
+  "generated_at": "2026-10-23T17:41:17Z",
   "navigation": [
     {
       "group": "Home",
@@ -60730,6 +61034,654 @@
       "service_store_calls": []
     },
     {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices?${q(session)}`)",
+          "file": "web/dashboard/src/lib/edge.ts",
+          "line": 33,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.listEdgeDevices",
+      "handler_external_package_calls": [
+        "time.Now"
+      ],
+      "handler_file": "services/ekm/edge.go",
+      "handler_helper_calls": [
+        "ListEdgeDevices",
+        "edgeFail",
+        "edgeView"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 335,
+      "handler_name": "listEdgeDevices",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "ListEdgeDevices"
+      ],
+      "method": "GET",
+      "normalized_path": "/ekm/edge/devices",
+      "path": "/ekm/edge/devices",
+      "route_file": "services/ekm/edge.go",
+      "route_line": 301,
+      "service": "ekm",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices?${q(session)}`)",
+          "file": "web/dashboard/src/lib/edge.ts",
+          "line": 39,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.createEdgeDevice",
+      "handler_external_package_calls": [
+        "strings.TrimSpace",
+        "time.Now"
+      ],
+      "handler_file": "services/ekm/edge.go",
+      "handler_helper_calls": [
+        "edgeMaxLeaseSeconds",
+        "edgeFail",
+        "checkEdgeKeys",
+        "newID",
+        "CreateEdgeDevice",
+        "edgeView"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 350,
+      "handler_name": "createEdgeDevice",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "checkEdgeKeys"
+      ],
+      "handler_store_calls": [
+        "CreateEdgeDevice"
+      ],
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices",
+      "path": "/ekm/edge/devices",
+      "route_file": "services/ekm/edge.go",
+      "route_line": 302,
+      "service": "ekm",
+      "service_external_package_calls": [
+        "errors.As",
+        "fmt.Sprintf",
+        "fmt.Errorf",
+        "strings.TrimSpace"
+      ],
+      "service_helper_calls": [
+        "newServiceError",
+        "GenerateDataKey"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "errors.As",
+            "fmt.Sprintf",
+            "fmt.Errorf",
+            "strings.TrimSpace"
+          ],
+          "file": "services/ekm/edge.go",
+          "helper_calls": [
+            "newServiceError",
+            "GenerateDataKey"
+          ],
+          "internal_package_calls": [],
+          "line": 157,
+          "name": "checkEdgeKeys",
+          "receiver_calls": [
+            "s.keycore.GenerateDataKey"
+          ],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [
+        "s.keycore.GenerateDataKey"
+      ],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.updateEdgeDevice",
+      "handler_external_package_calls": [
+        "time.Now"
+      ],
+      "handler_file": "services/ekm/edge.go",
+      "handler_helper_calls": [
+        "GetEdgeDevice",
+        "edgeFail",
+        "edgeMaxLeaseSeconds",
+        "checkEdgeKeys",
+        "UpdateEdgeDevicePolicy",
+        "edgeView"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 387,
+      "handler_name": "updateEdgeDevice",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "checkEdgeKeys"
+      ],
+      "handler_store_calls": [
+        "GetEdgeDevice",
+        "UpdateEdgeDevicePolicy"
+      ],
+      "method": "PUT",
+      "normalized_path": "/ekm/edge/devices/{param}",
+      "path": "/ekm/edge/devices/{id}",
+      "route_file": "services/ekm/edge.go",
+      "route_line": 303,
+      "service": "ekm",
+      "service_external_package_calls": [
+        "errors.As",
+        "fmt.Sprintf",
+        "fmt.Errorf",
+        "strings.TrimSpace"
+      ],
+      "service_helper_calls": [
+        "newServiceError",
+        "GenerateDataKey"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "errors.As",
+            "fmt.Sprintf",
+            "fmt.Errorf",
+            "strings.TrimSpace"
+          ],
+          "file": "services/ekm/edge.go",
+          "helper_calls": [
+            "newServiceError",
+            "GenerateDataKey"
+          ],
+          "internal_package_calls": [],
+          "line": 157,
+          "name": "checkEdgeKeys",
+          "receiver_calls": [
+            "s.keycore.GenerateDataKey"
+          ],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [
+        "s.keycore.GenerateDataKey"
+      ],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices/${encodeURIComponent(id)}/registration-token?${q(session)}`)",
+          "file": "web/dashboard/src/lib/edge.ts",
+          "line": 44,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.issueEdgeToken",
+      "handler_external_package_calls": [
+        "strings.Join",
+        "time.Now"
+      ],
+      "handler_file": "services/ekm/edge.go",
+      "handler_helper_calls": [
+        "GetEdgeDevice",
+        "edgeFail",
+        "newClientSecret",
+        "SetEdgeDeviceToken",
+        "verifierHash"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 418,
+      "handler_name": "issueEdgeToken",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "GetEdgeDevice",
+        "SetEdgeDeviceToken"
+      ],
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices/{param}/registration-token",
+      "path": "/ekm/edge/devices/{id}/registration-token",
+      "route_file": "services/ekm/edge.go",
+      "route_line": 304,
+      "service": "ekm",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices/${encodeURIComponent(id)}/revoke?${q(session)}`)",
+          "file": "web/dashboard/src/lib/edge.ts",
+          "line": 48,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.revokeEdgeDevice",
+      "handler_external_package_calls": [
+        "strings.TrimSpace",
+        "time.Now"
+      ],
+      "handler_file": "services/ekm/edge.go",
+      "handler_helper_calls": [
+        "GetEdgeDevice",
+        "RevokeEdgeDevice",
+        "edgeFail",
+        "edgeView"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 447,
+      "handler_name": "revokeEdgeDevice",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "GetEdgeDevice",
+        "RevokeEdgeDevice"
+      ],
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices/{param}/revoke",
+      "path": "/ekm/edge/devices/{id}/revoke",
+      "route_file": "services/ekm/edge.go",
+      "route_line": 305,
+      "service": "ekm",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices/${encodeURIComponent(id)}/leases?${q(session)}`)",
+          "file": "web/dashboard/src/lib/edge.ts",
+          "line": 52,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.listEdgeLeases",
+      "handler_external_package_calls": [],
+      "handler_file": "services/ekm/edge.go",
+      "handler_helper_calls": [
+        "GetEdgeDevice",
+        "edgeFail",
+        "ListEdgeLeases",
+        "edgeLimit"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 486,
+      "handler_name": "listEdgeLeases",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "GetEdgeDevice",
+        "ListEdgeLeases"
+      ],
+      "method": "GET",
+      "normalized_path": "/ekm/edge/devices/{param}/leases",
+      "path": "/ekm/edge/devices/{id}/leases",
+      "route_file": "services/ekm/edge.go",
+      "route_line": 306,
+      "service": "ekm",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices/${encodeURIComponent(id)}/receipts?limit=100&${q(session)}`)",
+          "file": "web/dashboard/src/lib/edge.ts",
+          "line": 57,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.listEdgeReceipts",
+      "handler_external_package_calls": [],
+      "handler_file": "services/ekm/edge.go",
+      "handler_helper_calls": [
+        "GetEdgeDevice",
+        "edgeFail",
+        "ListEdgeReceipts",
+        "edgeLimit"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 502,
+      "handler_name": "listEdgeReceipts",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "GetEdgeDevice",
+        "ListEdgeReceipts"
+      ],
+      "method": "GET",
+      "normalized_path": "/ekm/edge/devices/{param}/receipts",
+      "path": "/ekm/edge/devices/{id}/receipts",
+      "route_file": "services/ekm/edge.go",
+      "route_line": 307,
+      "service": "ekm",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"ekm\", `/ekm/edge/leases/${encodeURIComponent(id)}/revoke?${q(session)}`)",
+          "file": "web/dashboard/src/lib/edge.ts",
+          "line": 62,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.revokeEdgeLease",
+      "handler_external_package_calls": [
+        "time.Now"
+      ],
+      "handler_file": "services/ekm/edge.go",
+      "handler_helper_calls": [
+        "GetEdgeLease",
+        "RevokeEdgeLease",
+        "edgeFail"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 518,
+      "handler_name": "revokeEdgeLease",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "GetEdgeLease",
+        "RevokeEdgeLease"
+      ],
+      "method": "POST",
+      "normalized_path": "/ekm/edge/leases/{param}/revoke",
+      "path": "/ekm/edge/leases/{id}/revoke",
+      "route_file": "services/ekm/edge.go",
+      "route_line": 308,
+      "service": "ekm",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.enrollEdgeDevice",
+      "handler_external_package_calls": [
+        "strings.TrimSpace",
+        "time.Now"
+      ],
+      "handler_file": "services/ekm/edge.go",
+      "handler_helper_calls": [
+        "parseEdgeToken",
+        "GetEdgeDevice",
+        "sameVerifier",
+        "Error",
+        "newClientSecret",
+        "edgeFail",
+        "verifierHash",
+        "ConsumeEdgeDeviceToken"
+      ],
+      "handler_internal_package_calls": [
+        "pkg/clientip.From",
+        "pkg/crypto.ParsePublicKeyPEM",
+        "pkg/crypto.Verify",
+        "pkg/crypto.KEMSeal"
+      ],
+      "handler_line": 537,
+      "handler_name": "enrollEdgeDevice",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "GetEdgeDevice",
+        "ConsumeEdgeDeviceToken"
+      ],
+      "method": "POST",
+      "normalized_path": "/ekm/edge/enroll",
+      "path": "/ekm/edge/enroll",
+      "route_file": "services/ekm/edge.go",
+      "route_line": 310,
+      "service": "ekm",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.edgeLease",
+      "handler_external_package_calls": [
+        "strings.TrimSpace",
+        "time.Now"
+      ],
+      "handler_file": "services/ekm/edge.go",
+      "handler_helper_calls": [
+        "edgeCaller",
+        "issueEdgeLease",
+        "edgeFail",
+        "TouchEdgeDevice",
+        "edgeLeaseAAD"
+      ],
+      "handler_internal_package_calls": [
+        "pkg/clientip.From"
+      ],
+      "handler_line": 638,
+      "handler_name": "edgeLease",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "issueEdgeLease"
+      ],
+      "handler_store_calls": [
+        "TouchEdgeDevice"
+      ],
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices/{param}/leases",
+      "path": "/ekm/edge/devices/{id}/leases",
+      "route_file": "services/ekm/edge.go",
+      "route_line": 311,
+      "service": "ekm",
+      "service_external_package_calls": [
+        "errors.As",
+        "errors.New",
+        "fmt.Sprintf",
+        "time.Duration"
+      ],
+      "service_helper_calls": [
+        "newServiceError",
+        "ListEdgeLeases",
+        "newID",
+        "edgeLeaseAAD",
+        "GenerateDataKey",
+        "defaultString",
+        "CreateEdgeLease"
+      ],
+      "service_internal_package_calls": [
+        "pkg/crypto.Zeroize",
+        "pkg/crypto.KEMSeal"
+      ],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "errors.As",
+            "errors.New",
+            "fmt.Sprintf",
+            "time.Duration"
+          ],
+          "file": "services/ekm/edge.go",
+          "helper_calls": [
+            "newServiceError",
+            "ListEdgeLeases",
+            "newID",
+            "edgeLeaseAAD",
+            "GenerateDataKey",
+            "defaultString",
+            "CreateEdgeLease"
+          ],
+          "internal_package_calls": [
+            "pkg/crypto.Zeroize",
+            "pkg/crypto.KEMSeal"
+          ],
+          "line": 192,
+          "name": "issueEdgeLease",
+          "receiver_calls": [
+            "s.keycore.GenerateDataKey"
+          ],
+          "store_calls": [
+            "ListEdgeLeases",
+            "CreateEdgeLease"
+          ]
+        }
+      ],
+      "service_receiver_calls": [
+        "s.keycore.GenerateDataKey"
+      ],
+      "service_store_calls": [
+        "ListEdgeLeases",
+        "CreateEdgeLease"
+      ]
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.edgeReceipts",
+      "handler_external_package_calls": [
+        "time.Now"
+      ],
+      "handler_file": "services/ekm/edge.go",
+      "handler_helper_calls": [
+        "edgeCaller",
+        "acceptEdgeReceipts",
+        "edgeFail",
+        "TouchEdgeDevice"
+      ],
+      "handler_internal_package_calls": [
+        "pkg/clientip.From"
+      ],
+      "handler_line": 669,
+      "handler_name": "edgeReceipts",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "acceptEdgeReceipts"
+      ],
+      "handler_store_calls": [
+        "TouchEdgeDevice"
+      ],
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices/{param}/receipts",
+      "path": "/ekm/edge/devices/{id}/receipts",
+      "route_file": "services/ekm/edge.go",
+      "route_line": 312,
+      "service": "ekm",
+      "service_external_package_calls": [
+        "encoding/json.Unmarshal",
+        "fmt.Sprintf",
+        "strings.TrimSpace"
+      ],
+      "service_helper_calls": [
+        "newServiceError",
+        "GetEdgeLease",
+        "AddEdgeReceipts"
+      ],
+      "service_internal_package_calls": [
+        "pkg/crypto.ParsePublicKeyPEM",
+        "pkg/crypto.Verify"
+      ],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "encoding/json.Unmarshal",
+            "fmt.Sprintf",
+            "strings.TrimSpace"
+          ],
+          "file": "services/ekm/edge.go",
+          "helper_calls": [
+            "newServiceError",
+            "GetEdgeLease",
+            "AddEdgeReceipts"
+          ],
+          "internal_package_calls": [
+            "pkg/crypto.ParsePublicKeyPEM",
+            "pkg/crypto.Verify"
+          ],
+          "line": 253,
+          "name": "acceptEdgeReceipts",
+          "receiver_calls": [],
+          "store_calls": [
+            "GetEdgeLease",
+            "AddEdgeReceipts"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "GetEdgeLease",
+        "AddEdgeReceipts"
+      ]
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.edgeCheckIn",
+      "handler_external_package_calls": [
+        "strings.TrimSpace",
+        "time.Now"
+      ],
+      "handler_file": "services/ekm/edge.go",
+      "handler_helper_calls": [
+        "edgeCaller",
+        "TouchEdgeDevice",
+        "ListEdgeLeases",
+        "edgeFail"
+      ],
+      "handler_internal_package_calls": [
+        "pkg/clientip.From"
+      ],
+      "handler_line": 698,
+      "handler_name": "edgeCheckIn",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "TouchEdgeDevice",
+        "ListEdgeLeases"
+      ],
+      "method": "POST",
+      "normalized_path": "/ekm/edge/devices/{param}/check-in",
+      "path": "/ekm/edge/devices/{id}/check-in",
+      "route_file": "services/ekm/edge.go",
+      "route_line": 313,
+      "service": "ekm",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
       "frontend_call_sites": [],
       "handler": "h.handleRegisterAgent",
       "handler_external_package_calls": [],
@@ -78435,87 +79387,6 @@
     },
     {
       "frontend_call_sites": [],
-      "handler": "legacy(h.handleUpsertEnterpriseControlCategory(controlCategoryEdgeAgent))",
-      "handler_external_package_calls": [],
-      "handler_file": "services/keycore/handler_enterprise_controls.go",
-      "handler_helper_calls": [
-        "upsertEnterpriseControl"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 85,
-      "handler_name": "handleUpsertEnterpriseControlCategory",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [],
-      "method": "POST",
-      "normalized_path": "/enterprise/edge/agents",
-      "path": "/enterprise/edge/agents",
-      "route_file": "services/keycore/handler_key_ops.go",
-      "route_line": 52,
-      "service": "keycore",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "legacy(h.handleUpsertEnterpriseControlCategory(controlCategoryEdgeLease))",
-      "handler_external_package_calls": [],
-      "handler_file": "services/keycore/handler_enterprise_controls.go",
-      "handler_helper_calls": [
-        "upsertEnterpriseControl"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 85,
-      "handler_name": "handleUpsertEnterpriseControlCategory",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [],
-      "method": "POST",
-      "normalized_path": "/enterprise/edge/leases",
-      "path": "/enterprise/edge/leases",
-      "route_file": "services/keycore/handler_key_ops.go",
-      "route_line": 53,
-      "service": "keycore",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "legacy(h.handleUpsertEnterpriseControlCategory(controlCategoryEdgeReceipt))",
-      "handler_external_package_calls": [],
-      "handler_file": "services/keycore/handler_enterprise_controls.go",
-      "handler_helper_calls": [
-        "upsertEnterpriseControl"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 85,
-      "handler_name": "handleUpsertEnterpriseControlCategory",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [],
-      "method": "POST",
-      "normalized_path": "/enterprise/edge/receipts",
-      "path": "/enterprise/edge/receipts",
-      "route_file": "services/keycore/handler_key_ops.go",
-      "route_line": 54,
-      "service": "keycore",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
       "handler": "legacy(h.handleUpsertEnterpriseControlCategory(controlCategoryThreatSignal))",
       "handler_external_package_calls": [],
       "handler_file": "services/keycore/handler_enterprise_controls.go",
@@ -78532,7 +79403,7 @@
       "normalized_path": "/enterprise/threat/signals",
       "path": "/enterprise/threat/signals",
       "route_file": "services/keycore/handler_key_ops.go",
-      "route_line": 55,
+      "route_line": 52,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -78573,7 +79444,7 @@
       "normalized_path": "/enterprise/orchestration/runs",
       "path": "/enterprise/orchestration/runs",
       "route_file": "services/keycore/handler_key_ops.go",
-      "route_line": 57,
+      "route_line": 54,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -78663,7 +79534,7 @@
       "normalized_path": "/scheduling/jobs",
       "path": "/scheduling/jobs",
       "route_file": "services/keycore/handler_key_ops.go",
-      "route_line": 58,
+      "route_line": 55,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -78702,7 +79573,7 @@
       "normalized_path": "/scheduling/jobs",
       "path": "/scheduling/jobs",
       "route_file": "services/keycore/handler_key_ops.go",
-      "route_line": 59,
+      "route_line": 56,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -78741,7 +79612,7 @@
       "normalized_path": "/scheduling/jobs/{param}",
       "path": "/scheduling/jobs/{id}",
       "route_file": "services/keycore/handler_key_ops.go",
-      "route_line": 60,
+      "route_line": 57,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -78774,7 +79645,7 @@
       "normalized_path": "/scheduling/jobs/{param}",
       "path": "/scheduling/jobs/{id}",
       "route_file": "services/keycore/handler_key_ops.go",
-      "route_line": 61,
+      "route_line": 58,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -78814,7 +79685,7 @@
       "normalized_path": "/keys/{param}/attest",
       "path": "/keys/{id}/attest",
       "route_file": "services/keycore/handler_key_ops.go",
-      "route_line": 62,
+      "route_line": 59,
       "service": "keycore",
       "service_external_package_calls": [
         "encoding/hex.EncodeToString",
@@ -78891,7 +79762,7 @@
       "normalized_path": "/keys/{param}/verify-material",
       "path": "/keys/{id}/verify-material",
       "route_file": "services/keycore/handler_key_ops.go",
-      "route_line": 63,
+      "route_line": 60,
       "service": "keycore",
       "service_external_package_calls": [
         "time.Now"
@@ -78965,7 +79836,7 @@
       "normalized_path": "/keys/{param}/destruction-check",
       "path": "/keys/{id}/destruction-check",
       "route_file": "services/keycore/handler_key_ops.go",
-      "route_line": 64,
+      "route_line": 61,
       "service": "keycore",
       "service_external_package_calls": [
         "strings.HasPrefix",
@@ -79035,7 +79906,7 @@
       "normalized_path": "/fips/self-test",
       "path": "/fips/self-test",
       "route_file": "services/keycore/handler_key_ops.go",
-      "route_line": 65,
+      "route_line": 62,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -93102,12 +93973,12 @@
       "confidential": 7,
       "dataprotect": 49,
       "discovery": 28,
-      "ekm": 56,
+      "ekm": 68,
       "governance": 40,
       "hsm-connector": 14,
       "hyok": 25,
       "keyaccess": 9,
-      "keycore": 185,
+      "keycore": 182,
       "kmip": 12,
       "policy": 12,
       "posture": 13,
@@ -93133,7 +94004,7 @@
       "confidential": 6,
       "dataprotect": 28,
       "discovery": 26,
-      "ekm": 29,
+      "ekm": 36,
       "governance": 26,
       "hyok": 7,
       "keyaccess": 6,
@@ -93357,6 +94228,10 @@
       {
         "id": "kubernetes",
         "label": "Kubernetes"
+      },
+      {
+        "id": "edge",
+        "label": "Edge devices"
       }
     ],
     "home": [
@@ -93459,17 +94334,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 928,
+    "backend_routes": 937,
     "backend_services": 27,
-    "button_inventory": 782,
-    "frontend_call_sites": 529,
-    "matched_frontend_call_sites": 499,
+    "button_inventory": 788,
+    "frontend_call_sites": 536,
+    "matched_frontend_call_sites": 506,
     "nav_items": 25,
-    "request_flows": 928,
-    "request_flows_with_frontend": 505,
-    "request_flows_with_internal_package_calls": 202,
-    "request_flows_with_service_calls": 556,
-    "request_flows_with_store_calls": 656,
+    "request_flows": 937,
+    "request_flows_with_frontend": 512,
+    "request_flows_with_internal_package_calls": 206,
+    "request_flows_with_service_calls": 560,
+    "request_flows_with_store_calls": 668,
     "subpane_groups": 14,
     "tab_components": 32,
     "unmatched_frontend_call_sites": 30
@@ -108804,6 +109679,436 @@
         ]
       },
       {
+        "complexity": 1,
+        "externalPackages": [
+          "time.Now"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices?${q(session)}`)",
+            "file": "web/dashboard/src/lib/edge.ts",
+            "line": 33,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "listEdgeDevices",
+        "handlerFile": "services/ekm/edge.go",
+        "handlerLine": 335,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/ekm/edge/devices",
+        "path": "/ekm/edge/devices",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "ekm|GET|/ekm/edge/devices",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [],
+        "storeCalls": [
+          "ListEdgeDevices"
+        ],
+        "uiLabels": [
+          "edge"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [
+          "strings.TrimSpace",
+          "time.Now",
+          "errors.As",
+          "fmt.Sprintf",
+          "fmt.Errorf"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices?${q(session)}`)",
+            "file": "web/dashboard/src/lib/edge.ts",
+            "line": 39,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "createEdgeDevice",
+        "handlerFile": "services/ekm/edge.go",
+        "handlerLine": 350,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/ekm/edge/devices",
+        "path": "/ekm/edge/devices",
+        "receiverCalls": [
+          "s.keycore.GenerateDataKey"
+        ],
+        "risk": "medium",
+        "routeKey": "ekm|POST|/ekm/edge/devices",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [
+          "checkEdgeKeys"
+        ],
+        "storeCalls": [
+          "CreateEdgeDevice"
+        ],
+        "uiLabels": [
+          "edge"
+        ]
+      },
+      {
+        "complexity": 3,
+        "externalPackages": [
+          "time.Now",
+          "errors.As",
+          "fmt.Sprintf",
+          "fmt.Errorf",
+          "strings.TrimSpace"
+        ],
+        "frontendSites": [],
+        "handler": "updateEdgeDevice",
+        "handlerFile": "services/ekm/edge.go",
+        "handlerLine": 387,
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "PUT",
+        "normalizedPath": "/ekm/edge/devices/{param}",
+        "path": "/ekm/edge/devices/{id}",
+        "receiverCalls": [
+          "s.keycore.GenerateDataKey"
+        ],
+        "risk": "medium",
+        "routeKey": "ekm|PUT|/ekm/edge/devices/{param}",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [
+          "checkEdgeKeys"
+        ],
+        "storeCalls": [
+          "GetEdgeDevice",
+          "UpdateEdgeDevicePolicy"
+        ],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [
+          "strings.Join",
+          "time.Now"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices/${encodeURIComponent(id)}/registration-token?${q(session)}`)",
+            "file": "web/dashboard/src/lib/edge.ts",
+            "line": 44,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "issueEdgeToken",
+        "handlerFile": "services/ekm/edge.go",
+        "handlerLine": 418,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/ekm/edge/devices/{param}/registration-token",
+        "path": "/ekm/edge/devices/{id}/registration-token",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "ekm|POST|/ekm/edge/devices/{param}/registration-token",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [],
+        "storeCalls": [
+          "GetEdgeDevice",
+          "SetEdgeDeviceToken"
+        ],
+        "uiLabels": [
+          "edge"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [
+          "strings.TrimSpace",
+          "time.Now"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices/${encodeURIComponent(id)}/revoke?${q(session)}`)",
+            "file": "web/dashboard/src/lib/edge.ts",
+            "line": 48,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "revokeEdgeDevice",
+        "handlerFile": "services/ekm/edge.go",
+        "handlerLine": 447,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/ekm/edge/devices/{param}/revoke",
+        "path": "/ekm/edge/devices/{id}/revoke",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "ekm|POST|/ekm/edge/devices/{param}/revoke",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [],
+        "storeCalls": [
+          "GetEdgeDevice",
+          "RevokeEdgeDevice"
+        ],
+        "uiLabels": [
+          "edge"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices/${encodeURIComponent(id)}/leases?${q(session)}`)",
+            "file": "web/dashboard/src/lib/edge.ts",
+            "line": 52,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "listEdgeLeases",
+        "handlerFile": "services/ekm/edge.go",
+        "handlerLine": 486,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/ekm/edge/devices/{param}/leases",
+        "path": "/ekm/edge/devices/{id}/leases",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "ekm|GET|/ekm/edge/devices/{param}/leases",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [],
+        "storeCalls": [
+          "GetEdgeDevice",
+          "ListEdgeLeases"
+        ],
+        "uiLabels": [
+          "edge"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"ekm\", `/ekm/edge/devices/${encodeURIComponent(id)}/receipts?limit=100&${q(session)}`)",
+            "file": "web/dashboard/src/lib/edge.ts",
+            "line": 57,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "listEdgeReceipts",
+        "handlerFile": "services/ekm/edge.go",
+        "handlerLine": 502,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/ekm/edge/devices/{param}/receipts",
+        "path": "/ekm/edge/devices/{id}/receipts",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "ekm|GET|/ekm/edge/devices/{param}/receipts",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [],
+        "storeCalls": [
+          "GetEdgeDevice",
+          "ListEdgeReceipts"
+        ],
+        "uiLabels": [
+          "edge"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [
+          "time.Now"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"ekm\", `/ekm/edge/leases/${encodeURIComponent(id)}/revoke?${q(session)}`)",
+            "file": "web/dashboard/src/lib/edge.ts",
+            "line": 62,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "revokeEdgeLease",
+        "handlerFile": "services/ekm/edge.go",
+        "handlerLine": 518,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/ekm/edge/leases/{param}/revoke",
+        "path": "/ekm/edge/leases/{id}/revoke",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "ekm|POST|/ekm/edge/leases/{param}/revoke",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [],
+        "storeCalls": [
+          "GetEdgeLease",
+          "RevokeEdgeLease"
+        ],
+        "uiLabels": [
+          "edge"
+        ]
+      },
+      {
+        "complexity": 6,
+        "externalPackages": [
+          "strings.TrimSpace",
+          "time.Now"
+        ],
+        "frontendSites": [],
+        "handler": "enrollEdgeDevice",
+        "handlerFile": "services/ekm/edge.go",
+        "handlerLine": 537,
+        "hasFrontend": false,
+        "internalPackages": [
+          "pkg/clientip.From",
+          "pkg/crypto.ParsePublicKeyPEM",
+          "pkg/crypto.Verify",
+          "pkg/crypto.KEMSeal"
+        ],
+        "method": "POST",
+        "normalizedPath": "/ekm/edge/enroll",
+        "path": "/ekm/edge/enroll",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "ekm|POST|/ekm/edge/enroll",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [],
+        "storeCalls": [
+          "GetEdgeDevice",
+          "ConsumeEdgeDeviceToken"
+        ],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 7,
+        "externalPackages": [
+          "strings.TrimSpace",
+          "time.Now",
+          "errors.As",
+          "errors.New",
+          "fmt.Sprintf",
+          "time.Duration"
+        ],
+        "frontendSites": [],
+        "handler": "edgeLease",
+        "handlerFile": "services/ekm/edge.go",
+        "handlerLine": 638,
+        "hasFrontend": false,
+        "internalPackages": [
+          "pkg/clientip.From",
+          "pkg/crypto.Zeroize",
+          "pkg/crypto.KEMSeal"
+        ],
+        "method": "POST",
+        "normalizedPath": "/ekm/edge/devices/{param}/leases",
+        "path": "/ekm/edge/devices/{id}/leases",
+        "receiverCalls": [
+          "s.keycore.GenerateDataKey"
+        ],
+        "risk": "medium",
+        "routeKey": "ekm|POST|/ekm/edge/devices/{param}/leases",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [
+          "issueEdgeLease"
+        ],
+        "storeCalls": [
+          "TouchEdgeDevice",
+          "ListEdgeLeases",
+          "CreateEdgeLease"
+        ],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 6,
+        "externalPackages": [
+          "time.Now",
+          "encoding/json.Unmarshal",
+          "fmt.Sprintf",
+          "strings.TrimSpace"
+        ],
+        "frontendSites": [],
+        "handler": "edgeReceipts",
+        "handlerFile": "services/ekm/edge.go",
+        "handlerLine": 669,
+        "hasFrontend": false,
+        "internalPackages": [
+          "pkg/clientip.From",
+          "pkg/crypto.ParsePublicKeyPEM",
+          "pkg/crypto.Verify"
+        ],
+        "method": "POST",
+        "normalizedPath": "/ekm/edge/devices/{param}/receipts",
+        "path": "/ekm/edge/devices/{id}/receipts",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "ekm|POST|/ekm/edge/devices/{param}/receipts",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [
+          "acceptEdgeReceipts"
+        ],
+        "storeCalls": [
+          "TouchEdgeDevice",
+          "GetEdgeLease",
+          "AddEdgeReceipts"
+        ],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 3,
+        "externalPackages": [
+          "strings.TrimSpace",
+          "time.Now"
+        ],
+        "frontendSites": [],
+        "handler": "edgeCheckIn",
+        "handlerFile": "services/ekm/edge.go",
+        "handlerLine": 698,
+        "hasFrontend": false,
+        "internalPackages": [
+          "pkg/clientip.From"
+        ],
+        "method": "POST",
+        "normalizedPath": "/ekm/edge/devices/{param}/check-in",
+        "path": "/ekm/edge/devices/{id}/check-in",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "ekm|POST|/ekm/edge/devices/{param}/check-in",
+        "sensitive": true,
+        "service": "ekm",
+        "serviceCalls": [],
+        "storeCalls": [
+          "TouchEdgeDevice",
+          "ListEdgeLeases"
+        ],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
         "complexity": 2,
         "externalPackages": [
           "errors.Is",
@@ -117619,75 +118924,6 @@
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
-        "normalizedPath": "/enterprise/edge/agents",
-        "path": "/enterprise/edge/agents",
-        "receiverCalls": [],
-        "risk": "high",
-        "routeKey": "keycore|POST|/enterprise/edge/agents",
-        "sensitive": true,
-        "service": "keycore",
-        "serviceCalls": [],
-        "storeCalls": [],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
-        "complexity": 0,
-        "externalPackages": [],
-        "frontendSites": [],
-        "handler": "handleUpsertEnterpriseControlCategory",
-        "handlerFile": "services/keycore/handler_enterprise_controls.go",
-        "handlerLine": 85,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "POST",
-        "normalizedPath": "/enterprise/edge/leases",
-        "path": "/enterprise/edge/leases",
-        "receiverCalls": [],
-        "risk": "high",
-        "routeKey": "keycore|POST|/enterprise/edge/leases",
-        "sensitive": true,
-        "service": "keycore",
-        "serviceCalls": [],
-        "storeCalls": [],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
-        "complexity": 0,
-        "externalPackages": [],
-        "frontendSites": [],
-        "handler": "handleUpsertEnterpriseControlCategory",
-        "handlerFile": "services/keycore/handler_enterprise_controls.go",
-        "handlerLine": 85,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "POST",
-        "normalizedPath": "/enterprise/edge/receipts",
-        "path": "/enterprise/edge/receipts",
-        "receiverCalls": [],
-        "risk": "high",
-        "routeKey": "keycore|POST|/enterprise/edge/receipts",
-        "sensitive": true,
-        "service": "keycore",
-        "serviceCalls": [],
-        "storeCalls": [],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
-        "complexity": 0,
-        "externalPackages": [],
-        "frontendSites": [],
-        "handler": "handleUpsertEnterpriseControlCategory",
-        "handlerFile": "services/keycore/handler_enterprise_controls.go",
-        "handlerLine": 85,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "POST",
         "normalizedPath": "/enterprise/threat/signals",
         "path": "/enterprise/threat/signals",
         "receiverCalls": [],
@@ -126304,7 +127540,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-23T16:22:12Z",
+    "generatedAt": "2026-10-23T17:41:17Z",
     "methods": [
       "DELETE",
       "GET",
@@ -126343,9 +127579,9 @@
       "workload"
     ],
     "summary": {
-      "flows": 928,
-      "frontendBacked": 505,
-      "highRisk": 358,
+      "flows": 937,
+      "frontendBacked": 512,
+      "highRisk": 355,
       "services": 27
     }
   }

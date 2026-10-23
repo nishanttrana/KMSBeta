@@ -16,7 +16,6 @@ reflects it:
 | ID | Feature | What does not happen |
 |---|---|---|
 | `keycore.federation` | Key federation / multi-KMS failover | Providers, mappings and failovers are stored; no key is replicated and no failover happens. |
-| `keycore.edge` | Edge & IoT agents, leases and receipts | Stored only; there is no edge runtime. |
 | `keycore.advanced_encryption_modes` | Homomorphic / functional encryption modes | Registered as controls; no homomorphic or functional encryption is performed. Searchable HMAC tokens are available. |
 
 ## Corrections made on 2026-09-25
@@ -60,6 +59,13 @@ reflects it:
     already enforced. Both preview routes are removed, new records of
     either category are refused (`410 feature_retired`), old ones list as
     `retired`.
+- **Edge agents, leases and receipts** (13.52.0-beta):
+  - **What they did:** stored records in keycore; nothing ran on a device.
+  - **Now:** edge devices enrol, lease data keys sealed to their own
+    ML-KEM key, work offline with the `edge-agent`, and report signed
+    receipts ([SECURITY/EDGE_DEVICES.md](SECURITY/EDGE_DEVICES.md)). The
+    preview routes are removed, new records are refused (`410
+    feature_retired`), old ones list as `retired`.
 
 ## Leaving preview
 

@@ -5,6 +5,25 @@ Newest entries on top.
 
 ## 2026-10-23
 
+### An offline device needs keys it can prove, not a promise (13.52.0-beta)
+- An edge lease puts a data key on a device that may never call back. The
+  KMS can bound it (lease length, revocation at next contact, keys checked
+  as the administrator who allowed them) and can make what the device
+  reports verifiable (signed, numbered receipts that show gaps), but it
+  can't prove the device reported everything. The docs say so.
+- `crypto/ecdsa` is banned in services, so the service can't type-check a
+  device's public key. A signature with it over the token proves the key
+  type and possession at once, and is what enrolment asks for.
+- The tables were first named `edge_devices`, `edge_leases`,
+  `edge_receipts`. `TestCatalogHasNoStaleOrDuplicateEntries` caught that
+  keycore once had an `edge_devices` (migration 012) that its migration 013
+  drops: on a fresh install where ekm migrates first, keycore would have
+  dropped ekm's table. A service's new table carries its prefix
+  (`ekm_edge_*`).
+- A receipt batch moves the device's sequence only from the number it was
+  checked against (`WHERE last_receipt_seq = $from`), so two batches racing
+  can't both be stored; the Postgres test runs the race.
+
 ### Find what the request really carries before naming a condition (13.51.0-beta)
 - keycore sets every HTTP caller's interface to `rest`: KMIP, EKM and the
   other front-ends reach it as verified service identities, and a header

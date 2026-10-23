@@ -32,7 +32,6 @@ type Feature struct {
 // them.
 var Preview = []Feature{
 	{"keycore.federation", "keycore", "Key federation / multi-KMS failover", "Providers, mappings and failovers are stored; no key is replicated and no failover happens."},
-	{"keycore.edge", "keycore", "Edge & IoT agents, leases and receipts", "Stored only; there is no edge runtime."},
 	{"keycore.advanced_encryption_modes", "keycore", "Homomorphic / functional encryption modes", "Registered as controls; no homomorphic or functional encryption is performed. Searchable HMAC tokens are available."},
 }
 
@@ -41,9 +40,6 @@ var controlCategories = map[string]string{
 	"federation_provider": "keycore.federation",
 	"federation_mapping":  "keycore.federation",
 	"federation_failover": "keycore.federation",
-	"edge_agent":          "keycore.edge",
-	"edge_lease":          "keycore.edge",
-	"edge_receipt":        "keycore.edge",
 	"advanced_encryption": "keycore.advanced_encryption_modes",
 }
 
@@ -53,6 +49,9 @@ var Retired = map[string]string{
 	"metadata_profile": "key metadata profiles: /metadata-profiles in keycore, Keys → Metadata Profiles (13.50.0-beta)",
 	"binding_policy":   "key binding policies: /binding-policies in keycore, Keys → Binding policies (13.51.0-beta)",
 	"sharing_grant":    "key access grants: PUT /keys/{id}/access-policy, which keycore enforces (13.51.0-beta)",
+	"edge_agent":       "edge devices: /ekm/edge/devices and the edge-agent, Enterprise KM → Edge devices (13.52.0-beta)",
+	"edge_lease":       "edge devices: leases are issued to enrolled devices at /ekm/edge/devices/{id}/leases (13.52.0-beta)",
+	"edge_receipt":     "edge devices: signed receipts at /ekm/edge/devices/{id}/receipts (13.52.0-beta)",
 }
 
 // ControlCategoryStatus returns the status of a keycore enterprise control

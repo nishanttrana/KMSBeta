@@ -254,6 +254,13 @@ discovery,discovery,GET,/discovery/distrusted-cas?{param},/discovery/distrusted-
 discovery,discovery,POST,/discovery/distrusted-cas?{param},/discovery/distrusted-cas,True,serviceRequest,web/dashboard/src/lib/discoveryTrust.ts,31,discovery|POST|/discovery/distrusted-cas
 discovery,discovery,DELETE,/discovery/distrusted-cas/{param}?{param},/discovery/distrusted-cas/{param},True,serviceRequest,web/dashboard/src/lib/discoveryTrust.ts,40,discovery|DELETE|/discovery/distrusted-cas/{param}
 discovery,discovery,GET,/discovery/distrusted?{param},/discovery/distrusted,True,serviceRequest,web/dashboard/src/lib/discoveryTrust.ts,48,discovery|GET|/discovery/distrusted
+ekm,ekm,GET,/ekm/edge/devices?{param},/ekm/edge/devices,True,serviceRequest,web/dashboard/src/lib/edge.ts,33,ekm|GET|/ekm/edge/devices
+ekm,ekm,POST,/ekm/edge/devices?{param},/ekm/edge/devices,True,serviceRequest,web/dashboard/src/lib/edge.ts,39,ekm|POST|/ekm/edge/devices
+ekm,ekm,POST,/ekm/edge/devices/{param}/registration-token?{param},/ekm/edge/devices/{param}/registration-token,True,serviceRequest,web/dashboard/src/lib/edge.ts,44,ekm|POST|/ekm/edge/devices/{param}/registration-token
+ekm,ekm,POST,/ekm/edge/devices/{param}/revoke?{param},/ekm/edge/devices/{param}/revoke,True,serviceRequest,web/dashboard/src/lib/edge.ts,48,ekm|POST|/ekm/edge/devices/{param}/revoke
+ekm,ekm,GET,/ekm/edge/devices/{param}/leases?{param},/ekm/edge/devices/{param}/leases,True,serviceRequest,web/dashboard/src/lib/edge.ts,52,ekm|GET|/ekm/edge/devices/{param}/leases
+ekm,ekm,GET,/ekm/edge/devices/{param}/receipts?limit=100&{param},/ekm/edge/devices/{param}/receipts,True,serviceRequest,web/dashboard/src/lib/edge.ts,57,ekm|GET|/ekm/edge/devices/{param}/receipts
+ekm,ekm,POST,/ekm/edge/leases/{param}/revoke?{param},/ekm/edge/leases/{param}/revoke,True,serviceRequest,web/dashboard/src/lib/edge.ts,62,ekm|POST|/ekm/edge/leases/{param}/revoke
 ekm,ekm,GET,/ekm/agents?{param},/ekm/agents,True,serviceRequest,web/dashboard/src/lib/ekm.ts,241,ekm|GET|/ekm/agents
 ekm,ekm,GET,/ekm/agents/{param}/logs?{param}&limit={param},/ekm/agents/{param}/logs,True,serviceRequest,web/dashboard/src/lib/ekm.ts,246,ekm|GET|/ekm/agents/{param}/logs
 ekm,ekm,POST,/ekm/agents/{param}/rotate,/ekm/agents/{param}/rotate,True,serviceRequest,web/dashboard/src/lib/ekm.ts,255,ekm|POST|/ekm/agents/{param}/rotate

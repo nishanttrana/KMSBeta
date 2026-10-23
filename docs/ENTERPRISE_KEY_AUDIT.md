@@ -376,9 +376,9 @@ The second implementation pass turns the remaining roadmap items into backend ca
 
 ### Enterprise Control Records
 
-Enterprise control records are the common persistence model for orchestration, federation, edge agents, threat signals, and advanced encryption mode governance.
+Enterprise control records are the common persistence model for orchestration, federation, threat signals, and advanced encryption mode governance.
 
-> **Preview:** federation, edge agents/leases/receipts and advanced-encryption modes only **store** records. Nothing enforces or executes them. Their records carry `feature_status: "preview"`, and responses carry `X-Vecta-Feature-Status: preview`. See [PREVIEW_FEATURES.md](PREVIEW_FEATURES.md).
+> **Preview:** federation and advanced-encryption modes only **store** records. Nothing enforces or executes them. Their records carry `feature_status: "preview"`, and responses carry `X-Vecta-Feature-Status: preview`. See [PREVIEW_FEATURES.md](PREVIEW_FEATURES.md).
 
 ```bash
 curl -X POST "$BASE/enterprise/federation/providers?tenant_id=$TENANT" \
@@ -411,7 +411,7 @@ Supported categories include:
 | `federation_provider`, `federation_mapping`, `federation_failover` | Multi-KMS registry, cross-KMS mappings, and failover evidence. |
 | `advanced_encryption` | Searchable token mode plus governed research-mode controls. |
 | `binding_policy` | Retired (13.51.0-beta): binding policies are enforced at `/binding-policies` ([KEYS.md 5.6](KEYS.md#56-binding-policies-13510-beta)). |
-| `edge_agent`, `edge_lease`, `edge_receipt` | Edge/IoT agent, offline lease, and receipt records. |
+| `edge_agent`, `edge_lease`, `edge_receipt` | Retired (13.52.0-beta): edge devices are in ekm ([SECURITY/EDGE_DEVICES.md](SECURITY/EDGE_DEVICES.md)). |
 | `sharing_grant` | Retired (13.51.0-beta): share a key with key access grants (`PUT /keys/{id}/access-policy`). |
 | `metadata_profile` | Retired (13.50.0-beta): metadata profiles are enforced at `/metadata-profiles` ([KEYS.md 5.5](KEYS.md#55-metadata-profiles-13500-beta)). |
 | `threat_signal` | Side-channel, DPA, canary, or other advanced threat signals. |

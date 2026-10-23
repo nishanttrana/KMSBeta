@@ -79,3 +79,21 @@ func (r *KEMRecipient) Open(sealed, aad []byte, label string) ([]byte, error) {
 	}
 	return out, nil
 }
+
+// KEMRecipientFromSeed restores a recipient from its 64-byte seed, for a
+// holder that must open secrets sealed to it across restarts (an edge
+// device's lease key, docs/SECURITY/EDGE_DEVICES.md). Keep the seed as
+// secret as the key.
+func KEMRecipientFromSeed(seed []byte) (*KEMRecipient, error) {
+	dk, err := mlkem.NewDecapsulationKey768(seed)
+	if err != nil {
+		return nil, err
+	}
+	return &KEMRecipient{dk: dk}, nil
+}
+
+// Seed is the recipient's 64-byte seed, from which KEMRecipientFromSeed
+// restores it.
+func (r *KEMRecipient) Seed() []byte {
+	return r.dk.Bytes()
+}

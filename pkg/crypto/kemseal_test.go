@@ -37,3 +37,25 @@ func TestKEMSealRoundTripAndBinding(t *testing.T) {
 		t.Fatal("an invalid encapsulation key must be rejected")
 	}
 }
+
+// A recipient restored from its seed opens what was sealed to the original.
+func TestKEMRecipientSeedRoundTrip(t *testing.T) {
+	r, err := NewKEMRecipient()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sealed, err := KEMSeal(r.EncapsulationKey(), []byte("lease"), []byte("aad"), "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	again, err := KEMRecipientFromSeed(r.Seed())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out, err := again.Open(sealed, []byte("aad"), "test"); err != nil || string(out) != "lease" {
+		t.Fatalf("restored recipient: %q %v", out, err)
+	}
+	if _, err := KEMRecipientFromSeed(make([]byte, 10)); err == nil {
+		t.Fatal("a short seed was accepted")
+	}
+}

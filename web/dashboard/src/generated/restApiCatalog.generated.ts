@@ -9635,6 +9635,90 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "ekm-get-ekm-edge-devices",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "GET /ekm/edge/devices",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/edge/devices?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "GET /svc/ekm/ekm/edge/devices?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-get-ekm-edge-devices-id-leases",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "GET /ekm/edge/devices/{id}/leases",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/edge/devices/{id}/leases?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "GET /svc/ekm/ekm/edge/devices/{id}/leases?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-get-ekm-edge-devices-id-receipts",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "GET /ekm/edge/devices/{id}/receipts",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/edge/devices/{id}/receipts?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "GET /svc/ekm/ekm/edge/devices/{id}/receipts?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "ekm-get-ekm-google-cse-configs",
     "group": "Enterprise Key Management (ekm)",
     "title": "GET /ekm/google-cse/configs",
@@ -10279,6 +10363,230 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "ekm-post-ekm-edge-devices",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/edge/devices",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/edge/devices?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/edge/devices?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-edge-devices-id-check-in",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/edge/devices/{id}/check-in",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/edge/devices/{id}/check-in?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/edge/devices/{id}/check-in?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-edge-devices-id-leases",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/edge/devices/{id}/leases",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/edge/devices/{id}/leases?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/edge/devices/{id}/leases?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-edge-devices-id-receipts",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/edge/devices/{id}/receipts",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/edge/devices/{id}/receipts?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/edge/devices/{id}/receipts?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-edge-devices-id-registration-token",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/edge/devices/{id}/registration-token",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/edge/devices/{id}/registration-token?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/edge/devices/{id}/registration-token?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-edge-devices-id-revoke",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/edge/devices/{id}/revoke",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/edge/devices/{id}/revoke?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/edge/devices/{id}/revoke?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-edge-enroll",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/edge/enroll",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/edge/enroll?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/edge/enroll?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-edge-leases-id-revoke",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/edge/leases/{id}/revoke",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/edge/leases/{id}/revoke?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/edge/leases/{id}/revoke?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "ekm-post-ekm-google-cse-configs",
     "group": "Enterprise Key Management (ekm)",
     "title": "POST /ekm/google-cse/configs",
@@ -10540,6 +10848,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from EKM service.",
     "requestExample": "POST /svc/ekm/ekm/tde/keys/{id}/wrap?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-put-ekm-edge-devices-id",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "PUT /ekm/edge/devices/{id}",
+    "service": "ekm",
+    "method": "PUT",
+    "pathTemplate": "/ekm/edge/devices/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "PUT /svc/ekm/ekm/edge/devices/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -18184,90 +18520,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "POST /svc/keycore/enterprise/dspm/findings?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-post-enterprise-edge-agents",
-    "group": "Key Management (keycore)",
-    "title": "POST /enterprise/edge/agents",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/enterprise/edge/agents?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/enterprise/edge/agents?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-post-enterprise-edge-leases",
-    "group": "Key Management (keycore)",
-    "title": "POST /enterprise/edge/leases",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/enterprise/edge/leases?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/enterprise/edge/leases?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-post-enterprise-edge-receipts",
-    "group": "Key Management (keycore)",
-    "title": "POST /enterprise/edge/receipts",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/enterprise/edge/receipts?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/enterprise/edge/receipts?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

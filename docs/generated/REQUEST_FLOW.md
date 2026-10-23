@@ -1,16 +1,16 @@
 # Generated Request Flow Map
 
-Generated at `2026-10-23T16:22:12Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-23T17:41:17Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `928`
-- Routes with exact frontend call sites: `505`
-- Routes whose handlers call `h.svc.*`: `556`
-- Routes with detected store calls: `656`
-- Routes with detected internal `pkg/*` calls: `202`
+- Backend routes analyzed: `937`
+- Routes with exact frontend call sites: `512`
+- Routes whose handlers call `h.svc.*`: `560`
+- Routes with detected store calls: `668`
+- Routes with detected internal `pkg/*` calls: `206`
 
 ## How To Trace One Frontend Click
 
@@ -264,6 +264,13 @@ This file connects frontend requests to backend Go processing. It is static anal
 | ekm\|POST\|/ekm/clients | POST /ekm/clients | createClient (services/ekm/clients.go:344) | createTDEKey | ListClients, CreatePendingClient, PurgeAgent, GetClient, CreateTDEKey, GetTDEKey, BumpAgentConfigVersion, RecordKeyAccess, +7 more | s.keycore.CreateAsymmetricKey, s.keycore.GetKey, s.keycore.PublicKey, s.keycore.Wrap, s.keycore.Unwrap, s.keycore.RotateKey, s.keycore.DestroyKeyImmediately | pkg/crypto.Zeroize | web/dashboard/src/lib/ekmClients.ts:71 |
 | ekm\|GET\|/ekm/clients/{param} | GET /ekm/clients/{id} | getClient (services/ekm/clients.go:295) |  | GetClient, ListClientCheckIns, GetTDEKey, ListKeyAccessByAgent, ListDatabases |  |  | web/dashboard/src/lib/ekmClients.ts:66 |
 | ekm\|POST\|/ekm/clients/{param}/registration-token | POST /ekm/clients/{id}/registration-token | issueClientToken (services/ekm/clients.go:414) |  | GetClient, SetClientToken |  |  | web/dashboard/src/lib/ekmClients.ts:80 |
+| ekm\|GET\|/ekm/edge/devices | GET /ekm/edge/devices | listEdgeDevices (services/ekm/edge.go:335) |  | ListEdgeDevices |  |  | web/dashboard/src/lib/edge.ts:33 |
+| ekm\|POST\|/ekm/edge/devices | POST /ekm/edge/devices | createEdgeDevice (services/ekm/edge.go:350) | checkEdgeKeys | CreateEdgeDevice | s.keycore.GenerateDataKey |  | web/dashboard/src/lib/edge.ts:39 |
+| ekm\|POST\|/ekm/edge/devices/{param}/registration-token | POST /ekm/edge/devices/{id}/registration-token | issueEdgeToken (services/ekm/edge.go:418) |  | GetEdgeDevice, SetEdgeDeviceToken |  |  | web/dashboard/src/lib/edge.ts:44 |
+| ekm\|POST\|/ekm/edge/devices/{param}/revoke | POST /ekm/edge/devices/{id}/revoke | revokeEdgeDevice (services/ekm/edge.go:447) |  | GetEdgeDevice, RevokeEdgeDevice |  |  | web/dashboard/src/lib/edge.ts:48 |
+| ekm\|GET\|/ekm/edge/devices/{param}/leases | GET /ekm/edge/devices/{id}/leases | listEdgeLeases (services/ekm/edge.go:486) |  | GetEdgeDevice, ListEdgeLeases |  |  | web/dashboard/src/lib/edge.ts:52 |
+| ekm\|GET\|/ekm/edge/devices/{param}/receipts | GET /ekm/edge/devices/{id}/receipts | listEdgeReceipts (services/ekm/edge.go:502) |  | GetEdgeDevice, ListEdgeReceipts |  |  | web/dashboard/src/lib/edge.ts:57 |
+| ekm\|POST\|/ekm/edge/leases/{param}/revoke | POST /ekm/edge/leases/{id}/revoke | revokeEdgeLease (services/ekm/edge.go:518) |  | GetEdgeLease, RevokeEdgeLease |  |  | web/dashboard/src/lib/edge.ts:62 |
 | ekm\|GET\|/ekm/agents | GET /ekm/agents | handleListAgents (services/ekm/handler.go:140) | ListAgents | ListAgents |  |  | web/dashboard/src/lib/ekm.ts:241 |
 | ekm\|GET\|/ekm/agents/{param}/logs | GET /ekm/agents/{id}/logs | handleAgentLogs (services/ekm/handler.go:185) | ListAgentLogs | GetAgent, ListKeyAccessByAgent |  |  | web/dashboard/src/lib/ekm.ts:246 |
 | ekm\|POST\|/ekm/agents/{param}/rotate | POST /ekm/agents/{id}/rotate | handleRotateAgent (services/ekm/handler.go:206) | RotateAgentAssignedKey | GetAgent, ListDatabases, BumpAgentConfigVersion |  | pkg/tenantcheck.Requester | web/dashboard/src/lib/ekm.ts:255 |
@@ -942,6 +949,18 @@ This file connects frontend requests to backend Go processing. It is static anal
 | ekm\|POST\|/ekm/clients/{param}/registration-token | POST /ekm/clients/{id}/registration-token | issueClientToken (services/ekm/clients.go:414) |  | GetClient, SetClientToken |  |  | web/dashboard/src/lib/ekmClients.ts:80 |
 | ekm\|POST\|/ekm/clients/enroll | POST /ekm/clients/enroll | enrollClient (services/ekm/clients.go:448) |  | GetClient, ConsumeClientToken, RecordClientCheckIn |  | pkg/clientip.From |  |
 | ekm\|POST\|/ekm/clients/{param}/check-in | POST /ekm/clients/{id}/check-in | clientCheckIn (services/ekm/clients.go:519) |  | GetClient, UpdateAgentHeartbeat, RecordClientCheckIn |  | pkg/clientip.From |  |
+| ekm\|GET\|/ekm/edge/devices | GET /ekm/edge/devices | listEdgeDevices (services/ekm/edge.go:335) |  | ListEdgeDevices |  |  | web/dashboard/src/lib/edge.ts:33 |
+| ekm\|POST\|/ekm/edge/devices | POST /ekm/edge/devices | createEdgeDevice (services/ekm/edge.go:350) | checkEdgeKeys | CreateEdgeDevice | s.keycore.GenerateDataKey |  | web/dashboard/src/lib/edge.ts:39 |
+| ekm\|PUT\|/ekm/edge/devices/{param} | PUT /ekm/edge/devices/{id} | updateEdgeDevice (services/ekm/edge.go:387) | checkEdgeKeys | GetEdgeDevice, UpdateEdgeDevicePolicy | s.keycore.GenerateDataKey |  |  |
+| ekm\|POST\|/ekm/edge/devices/{param}/registration-token | POST /ekm/edge/devices/{id}/registration-token | issueEdgeToken (services/ekm/edge.go:418) |  | GetEdgeDevice, SetEdgeDeviceToken |  |  | web/dashboard/src/lib/edge.ts:44 |
+| ekm\|POST\|/ekm/edge/devices/{param}/revoke | POST /ekm/edge/devices/{id}/revoke | revokeEdgeDevice (services/ekm/edge.go:447) |  | GetEdgeDevice, RevokeEdgeDevice |  |  | web/dashboard/src/lib/edge.ts:48 |
+| ekm\|GET\|/ekm/edge/devices/{param}/leases | GET /ekm/edge/devices/{id}/leases | listEdgeLeases (services/ekm/edge.go:486) |  | GetEdgeDevice, ListEdgeLeases |  |  | web/dashboard/src/lib/edge.ts:52 |
+| ekm\|GET\|/ekm/edge/devices/{param}/receipts | GET /ekm/edge/devices/{id}/receipts | listEdgeReceipts (services/ekm/edge.go:502) |  | GetEdgeDevice, ListEdgeReceipts |  |  | web/dashboard/src/lib/edge.ts:57 |
+| ekm\|POST\|/ekm/edge/leases/{param}/revoke | POST /ekm/edge/leases/{id}/revoke | revokeEdgeLease (services/ekm/edge.go:518) |  | GetEdgeLease, RevokeEdgeLease |  |  | web/dashboard/src/lib/edge.ts:62 |
+| ekm\|POST\|/ekm/edge/enroll | POST /ekm/edge/enroll | enrollEdgeDevice (services/ekm/edge.go:537) |  | GetEdgeDevice, ConsumeEdgeDeviceToken |  | pkg/clientip.From, pkg/crypto.ParsePublicKeyPEM, pkg/crypto.Verify, pkg/crypto.KEMSeal |  |
+| ekm\|POST\|/ekm/edge/devices/{param}/leases | POST /ekm/edge/devices/{id}/leases | edgeLease (services/ekm/edge.go:638) | issueEdgeLease | TouchEdgeDevice, ListEdgeLeases, CreateEdgeLease | s.keycore.GenerateDataKey | pkg/clientip.From, pkg/crypto.Zeroize, pkg/crypto.KEMSeal |  |
+| ekm\|POST\|/ekm/edge/devices/{param}/receipts | POST /ekm/edge/devices/{id}/receipts | edgeReceipts (services/ekm/edge.go:669) | acceptEdgeReceipts | TouchEdgeDevice, GetEdgeLease, AddEdgeReceipts |  | pkg/clientip.From, pkg/crypto.ParsePublicKeyPEM, pkg/crypto.Verify |  |
+| ekm\|POST\|/ekm/edge/devices/{param}/check-in | POST /ekm/edge/devices/{id}/check-in | edgeCheckIn (services/ekm/edge.go:698) |  | TouchEdgeDevice, ListEdgeLeases |  | pkg/clientip.From |  |
 | ekm\|POST\|/ekm/agents/register | POST /ekm/agents/register | handleRegisterAgent (services/ekm/handler.go:115) | RegisterAgent | GetAgent, UpsertAgent |  |  |  |
 | ekm\|GET\|/ekm/agents | GET /ekm/agents | handleListAgents (services/ekm/handler.go:140) | ListAgents | ListAgents |  |  | web/dashboard/src/lib/ekm.ts:241 |
 | ekm\|GET\|/ekm/agents/{param}/status | GET /ekm/agents/{id}/status | handleAgentStatus (services/ekm/handler.go:155) | GetAgentStatus | GetAgent, ListDatabases, GetTDEKey |  |  |  |
@@ -1194,9 +1213,6 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|POST\|/enterprise/federation/providers | POST /enterprise/federation/providers | handleUpsertEnterpriseControlCategory (services/keycore/handler_enterprise_controls.go:85) |  |  |  |  |  |
 | keycore\|POST\|/enterprise/federation/mappings | POST /enterprise/federation/mappings | handleUpsertEnterpriseControlCategory (services/keycore/handler_enterprise_controls.go:85) |  |  |  |  |  |
 | keycore\|POST\|/enterprise/federation/failovers | POST /enterprise/federation/failovers | handleUpsertEnterpriseControlCategory (services/keycore/handler_enterprise_controls.go:85) |  |  |  |  |  |
-| keycore\|POST\|/enterprise/edge/agents | POST /enterprise/edge/agents | handleUpsertEnterpriseControlCategory (services/keycore/handler_enterprise_controls.go:85) |  |  |  |  |  |
-| keycore\|POST\|/enterprise/edge/leases | POST /enterprise/edge/leases | handleUpsertEnterpriseControlCategory (services/keycore/handler_enterprise_controls.go:85) |  |  |  |  |  |
-| keycore\|POST\|/enterprise/edge/receipts | POST /enterprise/edge/receipts | handleUpsertEnterpriseControlCategory (services/keycore/handler_enterprise_controls.go:85) |  |  |  |  |  |
 | keycore\|POST\|/enterprise/threat/signals | POST /enterprise/threat/signals | handleUpsertEnterpriseControlCategory (services/keycore/handler_enterprise_controls.go:85) |  |  |  |  |  |
 | keycore\|POST\|/enterprise/orchestration/runs | POST /enterprise/orchestration/runs | handleTriggerOrchestrationRun (services/keycore/handler_enterprise_controls.go:307) | RotateKey, UpsertEnterpriseControl | UpsertEnterpriseControlRecord |  | pkg/features.ControlCategoryStatus |  |
 | keycore\|GET\|/scheduling/jobs | GET /scheduling/jobs | handleListSchedulingJobs (services/keycore/handler_advanced.go:11) |  | ListSchedulingJobs |  |  |  |

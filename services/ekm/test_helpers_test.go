@@ -6,10 +6,12 @@ import (
 	"encoding/pem"
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"testing"
 	pkgauth "vecta-kms/pkg/auth"
+	pkgcrypto "vecta-kms/pkg/crypto"
 
 	pkgdb "vecta-kms/pkg/db"
 	pkgkeyaccess "vecta-kms/pkg/keyaccess"
@@ -61,6 +63,10 @@ type fakeEKMKeyCore struct {
 	// publicKeyToken is the verified user token ctx carried on the last
 	// PublicKey call: what delegation.Attach forwards to keycore.
 	publicKeyToken string
+	// dataKeyCalls records each GenerateDataKey: key, usage and the user
+	// token forwarded ("" for ekm itself); refuseDataKey refuses a key.
+	dataKeyCalls  []string
+	refuseDataKey map[string]*keycoreError
 }
 
 type fakeEKMKey struct {
@@ -374,6 +380,22 @@ func createEKMSchemaForTest(conn *pkgdb.DB) error {
 			PRIMARY KEY (tenant_id, id)
 		);`,
 	}
+	// Edge devices (migration 012): its own CREATE statements.
+	raw, err := os.ReadFile("migrations/012_edge_devices.sql")
+	if err != nil {
+		return err
+	}
+	var sqlOnly []string
+	for _, line := range strings.Split(string(raw), "\n") {
+		if !strings.HasPrefix(strings.TrimSpace(line), "--") {
+			sqlOnly = append(sqlOnly, line)
+		}
+	}
+	for _, stmt := range strings.Split(strings.Join(sqlOnly, "\n"), ";") {
+		if strings.Contains(stmt, "CREATE") {
+			stmts = append(stmts, stmt)
+		}
+	}
 	for _, stmt := range stmts {
 		if _, err := conn.SQL().Exec(stmt); err != nil {
 			return err
@@ -397,4 +419,28 @@ func authed(r *http.Request) *http.Request {
 		r.Header.Set("Authorization", "Bearer jwt:tenant-h1:admin")
 	}
 	return r
+}
+
+// GenerateDataKey answers as keycore's generate-data-key: a random 256-bit
+// key and a stand-in wrapped copy, or the refusal set for the key.
+func (f *fakeEKMKeyCore) GenerateDataKey(ctx context.Context, tenantID, keyID, aadB64 string, includePlaintext bool, usage string) (edgeDataKey, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	token, _ := pkgauth.VerifiedTokenFromContext(ctx)
+	if usage == "" {
+		token = ""
+	}
+	f.dataKeyCalls = append(f.dataKeyCalls, keyID+"|"+usage+"|"+token)
+	if r := f.refuseDataKey[keyID]; r != nil {
+		return edgeDataKey{}, r
+	}
+	dek, err := pkgcrypto.RandomBytes(32)
+	if err != nil {
+		return edgeDataKey{}, err
+	}
+	out := edgeDataKey{KeyID: keyID, Version: 3, WrappedDEK: base64.StdEncoding.EncodeToString(append([]byte("wrapped:"+aadB64+":"), dek...)), WrappedDEKIV: "aXY="}
+	if includePlaintext {
+		out.PlaintextDEK = base64.StdEncoding.EncodeToString(dek)
+	}
+	return out, nil
 }
