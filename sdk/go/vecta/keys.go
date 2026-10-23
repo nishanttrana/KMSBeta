@@ -17,6 +17,7 @@ type Key struct {
 	KeyType        string            `json:"key_type"`
 	Purpose        string            `json:"purpose"`
 	Status         string            `json:"status"`
+	Owner          string            `json:"owner"`
 	Tags           []string          `json:"tags"`
 	Labels         map[string]string `json:"labels"`
 	CurrentVersion int               `json:"current_version"`
@@ -90,6 +91,72 @@ func (c *Client) ListKeys(ctx context.Context, fn func(Key) bool) error {
 		q.Set("after_created_at", out.NextCursor.AfterCreatedAt)
 		q.Set("after_id", out.NextCursor.AfterID)
 	}
+}
+
+// KeyUpdate names the metadata to change; a nil field is left as stored
+// (PATCH /keys/{id}). The client must manage the key: its creator, a
+// key-access administrator, or a holder of a grant of "all".
+type KeyUpdate struct {
+	Name        *string            `json:"name,omitempty"`
+	Description *string            `json:"description,omitempty"`
+	Purpose     *string            `json:"purpose,omitempty"`
+	Owner       *string            `json:"owner,omitempty"`
+	Tags        *[]string          `json:"tags,omitempty"`
+	Labels      *map[string]string `json:"labels,omitempty"`
+}
+
+// UpdateKey changes the named metadata and returns the key as stored.
+func (c *Client) UpdateKey(ctx context.Context, id string, u KeyUpdate) (Key, error) {
+	var out struct {
+		Key Key `json:"key"`
+	}
+	err := c.call(ctx, http.MethodPatch, "/svc/keycore/keys/"+url.PathEscape(id)+c.query(nil), u, &out)
+	return out.Key, err
+}
+
+// DeactivateKey stops new encryption and signing with the key; existing
+// ciphertext still decrypts and signatures still verify.
+func (c *Client) DeactivateKey(ctx context.Context, id string) error {
+	return c.call(ctx, http.MethodPost, "/svc/keycore/keys/"+url.PathEscape(id)+"/deactivate"+c.query(nil), struct{}{}, nil)
+}
+
+// Grant is a key access assignment: SubjectType "user", "group" or "client".
+type Grant struct {
+	SubjectType string   `json:"subject_type"`
+	SubjectID   string   `json:"subject_id"`
+	Operations  []string `json:"operations"`
+	NotBefore   *string  `json:"not_before,omitempty"`
+	ExpiresAt   *string  `json:"expires_at,omitempty"`
+}
+
+// GetKeyAccess reads the key's grants.
+func (c *Client) GetKeyAccess(ctx context.Context, id string) ([]Grant, error) {
+	var out struct {
+		Policy struct {
+			Grants []Grant `json:"grants"`
+		} `json:"policy"`
+	}
+	err := c.call(ctx, http.MethodGet, "/svc/keycore/keys/"+url.PathEscape(id)+"/access-policy"+c.query(nil), nil, &out)
+	return out.Policy.Grants, err
+}
+
+// SetKeyAccess replaces the key's grants. An approval-gated tenant answers
+// with a pending approval, returned as an APIError with Status 202.
+func (c *Client) SetKeyAccess(ctx context.Context, id string, grants []Grant) error {
+	if grants == nil {
+		grants = []Grant{}
+	}
+	var out struct {
+		Status            string `json:"status"`
+		ApprovalRequestID string `json:"approval_request_id"`
+	}
+	if err := c.call(ctx, http.MethodPut, "/svc/keycore/keys/"+url.PathEscape(id)+"/access-policy"+c.query(nil), map[string]any{"grants": grants}, &out); err != nil {
+		return err
+	}
+	if out.Status == "pending_approval" {
+		return &APIError{Status: http.StatusAccepted, Code: "pending_approval", Message: "the change waits for approval " + out.ApprovalRequestID}
+	}
+	return nil
 }
 
 // RotateKey makes a new version current and returns its number.

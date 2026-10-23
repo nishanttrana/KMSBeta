@@ -7,6 +7,23 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-24 — Key metadata changes are partial and need the key's manager
+**Decision:** `PATCH /keys/{id}` changes only the fields sent. Both it and
+`PUT /keys/{id}` require the caller to see the key and manage it (creator,
+`key.access.admin`, platform service, or a grant of `all`), the rule that
+already guarded grant changes.
+**Why:** the Terraform provider (the owner's list, 2026-10-22: "No client
+tooling") needs to update labels without clearing what it doesn't manage,
+and building it showed `PUT` checked nothing per key.
+**Rejected:** a new `update` grant operation (a grant model change for one
+route; managing a key is already defined); making `PUT` merge (it would
+silently change the meaning of an existing route for every caller).
+**Enforced:** `TestKeyPatchKeepsWhatItDoesntName`,
+`TestKeyUpdateNeedsToManageTheKey`, `TestKeyPatchFollowsMetadataProfiles`,
+the SDK contract tests.
+
+---
+
 ## 2026-10-23 — The SDKs are thin, standard-library clients tested against the real routes
 **Decision:** the Go SDK is a separate module in this repository
 (`sdk/go`), standard library only, authenticating as a REST client with

@@ -4,6 +4,23 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.56.0-beta] — 2026-10-24
+
+### Security
+- **Changing a key's metadata needs to manage the key.** `PUT /keys/{id}`
+  checked only the `key.update` permission, so its holder could rename or
+  relabel any key in the tenant, including keys it couldn't see. Now the
+  caller must see the key and manage it (its creator, `key.access.admin`, a
+  platform service, or a grant of `all`); others are refused and audited.
+
+### Added
+- **`PATCH /keys/{id}`**: a partial metadata update. Only the fields sent
+  change. `PUT` replaces owner, cloud, region and compliance along with the
+  rest, and the API didn't return all of them, so any client updating a key
+  cleared fields it never knew about. The key read now includes `owner`.
+- The SDKs (Go, Python, Node) can update a key's metadata, deactivate a key,
+  and read and replace its grants, checked against keycore's real routes.
+
 ## [13.55.0-beta] — 2026-10-24
 
 ### Added

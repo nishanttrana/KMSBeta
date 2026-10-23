@@ -642,7 +642,24 @@ func (h *Handler) handleUpdateKey(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
 		return
 	}
-	if err := h.svc.UpdateKey(r.Context(), tenantID, r.PathValue("id"), req); err != nil {
+	// The caller must see the key and may update it (key_patch.go).
+	ctx := r.Context()
+	if !accessActorFromContext(ctx).Authenticated {
+		ctx = contextWithAccessActor(ctx, accessActorFromHTTPRequest(r))
+	}
+	if _, err := h.svc.authorizeKeyUpdate(ctx, tenantID, r.PathValue("id")); err != nil {
+		var refusal *accessRefusal
+		switch {
+		case errors.Is(err, errStoreNotFound):
+			writeErr(w, http.StatusNotFound, "not_found", "key not found", reqID, tenantID)
+		case errors.As(err, &refusal):
+			writeErr(w, http.StatusForbidden, refusal.reason, refusal.Error(), reqID, tenantID)
+		default:
+			writeErr(w, http.StatusInternalServerError, "get_failed", "failed to retrieve key", reqID, tenantID)
+		}
+		return
+	}
+	if err := h.svc.UpdateKey(ctx, tenantID, r.PathValue("id"), req); err != nil {
 		if writeMetadataViolation(w, err, reqID, tenantID) {
 			return
 		}
@@ -2303,6 +2320,7 @@ func renderKey(k Key) map[string]any {
 		"tenant_id":          k.TenantID,
 		"name":               k.Name,
 		"description":        k.Description,
+		"owner":              k.Owner,
 		"algorithm":          k.Algorithm,
 		"key_type":           k.KeyType,
 		"purpose":            k.Purpose,

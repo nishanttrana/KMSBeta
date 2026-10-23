@@ -21,8 +21,9 @@ export interface Signature { keyId: string; version: number; signature: Buffer }
 export interface DataKey { plaintext: Buffer; wrapped: Ciphertext }
 export interface Key {
   id: string; name: string; description: string; algorithm: string; key_type: string; purpose: string;
-  status: string; tags: string[]; labels: Record<string, string>; current_version: number; kcv: string; created_at: string;
+  status: string; owner: string; tags: string[]; labels: Record<string, string>; current_version: number; kcv: string; created_at: string;
 }
+export interface Grant { subject_type: "user" | "group" | "client"; subject_id: string; operations: string[]; not_before?: string; expires_at?: string }
 export interface SecretValue { value: string; version: number; format: string; content_type: string }
 
 export class APIError extends Error {
@@ -40,6 +41,10 @@ export class Client {
   getKey(id: string): Promise<Key>;
   listKeys(): AsyncGenerator<Key>;
   rotateKey(id: string, reason?: string): Promise<number>;
+  updateKey(id: string, fields: { name?: string; description?: string; purpose?: string; owner?: string; tags?: string[]; labels?: Record<string, string> }): Promise<Key>;
+  deactivateKey(id: string): Promise<void>;
+  getKeyAccess(id: string): Promise<Grant[]>;
+  setKeyAccess(id: string, grants: Grant[]): Promise<void>;
   encrypt(keyId: string, plaintext: Uint8Array, aad?: Uint8Array): Promise<Ciphertext>;
   decrypt(ct: Ciphertext, aad?: Uint8Array): Promise<Buffer>;
   sign(keyId: string, data: Uint8Array, algorithm?: string): Promise<Signature>;

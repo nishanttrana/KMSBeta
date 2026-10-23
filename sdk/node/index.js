@@ -138,6 +138,25 @@ export class Client {
     }
   }
 
+  /** Changes only the named metadata (name, description, purpose, owner, tags, labels). */
+  async updateKey(id, fields) {
+    const allowed = ["name", "description", "purpose", "owner", "tags", "labels"];
+    const unknown = Object.keys(fields || {}).filter((k) => !allowed.includes(k));
+    if (unknown.length) throw new Error(`updateKey takes ${allowed.join(", ")}, not ${unknown.join(", ")}`);
+    return (await this._call("PATCH", this._key(id), fields)).key;
+  }
+
+  /** Stops new encryption and signing; old ciphertext still decrypts. */
+  async deactivateKey(id) { await this._call("POST", this._key(id, "deactivate"), {}); }
+
+  async getKeyAccess(id) { return (await this._call("GET", this._key(id, "access-policy"))).policy?.grants || []; }
+
+  /** Replaces the key's grants ({subject_type: user|group|client, subject_id, operations}). */
+  async setKeyAccess(id, grants) {
+    const out = await this._call("PUT", this._key(id, "access-policy"), { grants: grants || [] });
+    if (out.status === "pending_approval") throw new APIError(202, "pending_approval", `the change waits for approval ${out.approval_request_id || ""}`);
+  }
+
   async rotateKey(id, reason = "") { return Number((await this._call("POST", this._key(id, "rotate"), { reason })).version); }
 
   async encrypt(keyId, plaintext, aad) {

@@ -5,6 +5,19 @@ Newest entries on top.
 
 ## 2026-10-24
 
+### Building a client shows what the API lets clients break (13.56.0-beta)
+- Planning the Terraform provider's key update showed that `PUT /keys/{id}`
+  replaces owner, cloud, region and compliance while the API returned none
+  of them: every client update, the dashboard's included, could clear
+  them. A partial `PATCH` is the safe shape for a client that manages only
+  some fields.
+- The same reading showed `PUT /keys/{id}` never checked the key itself.
+  Every key route should go through the per-key decision; metadata routes
+  had slipped past it.
+- There is no `update` grant operation, whatever the operation-group table
+  suggests; the existing "manages the key" rule (creator, administrator,
+  `all`) is the one to reuse.
+
 ### Each runtime has its own way of being old (13.55.0-beta)
 - macOS's system Python 3.9 links LibreSSL 2.8, which has no TLS 1.3: it
   can't reach the KMS at all, and even setting the minimum version raises.

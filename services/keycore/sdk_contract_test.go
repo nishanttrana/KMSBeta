@@ -50,7 +50,7 @@ func newSDKRig(t *testing.T) sdkRig {
 			return
 		}
 		claims := &pkgauth.Claims{ClientID: "release-pipeline", UserID: "release-pipeline", TenantID: "t1", Role: "client-service",
-			Permissions: []string{"key.encrypt", "key.decrypt", "key.wrap", "key.unwrap", "key.sign", "key.verify", "key.read", "key.rotate", "key.create"}}
+			Permissions: []string{"key.encrypt", "key.decrypt", "key.wrap", "key.unwrap", "key.sign", "key.verify", "key.read", "key.rotate", "key.create", "key.update", "key.deactivate", "key.access.read", "key.access.manage"}}
 		claims.Subject = "release-pipeline"
 		r.URL.Path = strings.TrimPrefix(r.URL.Path, "/svc/keycore")
 		h.ServeHTTP(w, r.WithContext(pkgauth.ContextWithClaims(r.Context(), claims)))
@@ -121,6 +121,24 @@ func TestGoSDKAgainstKeycore(t *testing.T) {
 	}
 	if k, err := c.GetKey(ctx, newID); err != nil || k.CurrentVersion != 2 || k.Labels["team"] != "release" {
 		t.Fatalf("created key: %+v %v", k, err)
+	}
+	// Partial update, grants, deactivation (13.56.0-beta).
+	desc, labels := "release artifacts", map[string]string{"team": "release", "tier": "gold"}
+	if k, err := c.UpdateKey(ctx, newID, vecta.KeyUpdate{Description: &desc, Labels: &labels}); err != nil || k.Description != desc || k.Labels["tier"] != "gold" || k.Name != "pipeline-key" {
+		t.Fatalf("update: %+v %v", k, err)
+	}
+	grants := []vecta.Grant{{SubjectType: "client", SubjectID: "release-pipeline", Operations: []string{"encrypt", "decrypt"}}}
+	if err := c.SetKeyAccess(ctx, newID, grants); err != nil {
+		t.Fatalf("set access: %v", err)
+	}
+	if got, err := c.GetKeyAccess(ctx, newID); err != nil || len(got) != 1 || got[0].SubjectType != "client" || len(got[0].Operations) != 2 {
+		t.Fatalf("get access: %+v %v", got, err)
+	}
+	if err := c.DeactivateKey(ctx, newID); err != nil {
+		t.Fatalf("deactivate: %v", err)
+	}
+	if _, err := c.Encrypt(ctx, newID, []byte("x"), nil); err == nil {
+		t.Fatal("encrypted with a deactivated key")
 	}
 	if _, err := c.GetKey(ctx, hidden.ID); !vecta.IsNotFound(err) {
 		t.Fatalf("a key not granted: %v", err)

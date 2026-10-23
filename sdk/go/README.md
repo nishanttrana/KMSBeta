@@ -47,8 +47,9 @@ err = c.ListKeys(ctx, func(k vecta.Key) bool { fmt.Println(k.ID, k.Name); return
 v, err := c.GetSecretValue(ctx, secretID)
 ```
 
-`CreateKey`, `GetKey` and `RotateKey` manage keys when the client's role
-allows it.
+`CreateKey`, `GetKey`, `UpdateKey` (only the fields you set change),
+`RotateKey`, `DeactivateKey`, `GetKeyAccess` and `SetKeyAccess` manage keys
+when the client's role allows it and the client manages the key.
 
 ## Errors
 

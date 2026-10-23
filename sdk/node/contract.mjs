@@ -25,5 +25,11 @@ assert.ok(seen.includes(aes) && seen.includes(signer) && !seen.includes(hidden),
 await assert.rejects(c.getKey(hidden), (e) => e instanceof APIError && e.notFound, "a key not granted");
 const created = await c.createKey({ name: "node-pipeline-key", algorithm: "AES-256", purpose: "encrypt", keyType: "symmetric", labels: { team: "release" } });
 assert.equal(await c.rotateKey(created, "scheduled"), 2, "rotate");
+const updated = await c.updateKey(created, { description: "release artifacts", labels: { team: "release", tier: "gold" } });
+assert.ok(updated.description === "release artifacts" && updated.labels.tier === "gold" && updated.name === "node-pipeline-key", "updateKey");
+await c.setKeyAccess(created, [{ subject_type: "client", subject_id: "release-pipeline", operations: ["encrypt"] }]);
+assert.equal((await c.getKeyAccess(created))[0].subject_type, "client", "key access");
+await c.deactivateKey(created);
+await assert.rejects(c.encrypt(created, Buffer.from("x")), APIError, "encrypt with a deactivated key");
 c.close();
 console.log("node contract ok");

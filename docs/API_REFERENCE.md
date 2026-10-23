@@ -1042,6 +1042,25 @@ stored). 400 `description_invalid`, 404 for a key the caller cannot see, 409
 `length`, never the text. The metadata update `PUT /keys/{id}` does not
 carry a description.
 
+### PATCH /svc/keycore/keys/{id} (13.56.0-beta)
+
+Permission `key.update`. Body: any of `name`, `description`, `purpose`,
+`owner`, `cloud`, `region`, `compliance`, `tags`, `labels`; only the fields
+sent change, every other stays as stored. (`PUT /keys/{id}` replaces name,
+purpose, owner, cloud, region, compliance, tags and labels together, so a
+client that can't read them all clears the ones it doesn't send.) Responds
+`{"key"}` as stored, now with `owner`. Audited as `audit.key.metadata_patched`
+with the `changed` fields. 400 `invalid_name`, `description_invalid`,
+`metadata_profile_violation`; 404 for a key the caller can't see; 409
+`key_deleted`.
+
+**Who may update a key** (both `PATCH` and `PUT /keys/{id}`, since
+13.56.0-beta): the caller must see the key and manage it: its creator, a
+holder of `key.access.admin`, a platform service, or a grantee with the
+operation `all`. Anything else is `403` and `audit.key.access_refused`.
+Before, `key.update` alone let a caller change any key's metadata in the
+tenant, including keys it couldn't see.
+
 ---
 
 ### POST /svc/keycore/keys/{id}/export
@@ -1175,7 +1194,8 @@ roles need the permission named here. Service principals are allowed.
 | `POST /keys` | `key.create` | `create_requested` |
 | `POST /keys/import`, `POST /keys/bulk-import` | `key.import` | `import_requested`, `bulk_import_requested` |
 | `POST /keys/form` | `key.form` | `form_requested` |
-| `PUT /keys/{id}`, `PUT /keys/{id}/iv-mode` | `key.update` | `update_requested`, `iv_mode_update_requested` |
+| `PUT /keys/{id}`, `PUT /keys/{id}/iv-mode` | `key.update`, and the caller manages the key (13.56.0-beta) | `update_requested`, `iv_mode_update_requested` |
+| `PATCH /keys/{id}` | `key.update`, and the caller manages the key (13.56.0-beta) | `metadata_patched` |
 | `PUT /keys/{id}/description` | `key.update` | `description_updated` |
 | `POST /keys/{id}/rotate`, `POST /keys/bulk-rotate` | `key.rotate` | `rotate_requested`, `bulk_rotate_requested` |
 | `POST /keys/{id}/activate`, `POST /keys/{id}/versions/{ver}/activate` | `key.activate` | `activate_requested`, `version_activate_requested` |
@@ -5298,6 +5318,7 @@ from the code; do not edit by hand.
 - `GET /svc/keycore/keys/hsm/credential-usage`
 - `POST /svc/keycore/keys/import`
 - `GET /svc/keycore/keys/{id}`
+- `PATCH /svc/keycore/keys/{id}`
 - `PUT /svc/keycore/keys/{id}`
 - `GET /svc/keycore/keys/{id}/access-policy`
 - `PUT /svc/keycore/keys/{id}/access-policy`

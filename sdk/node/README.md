@@ -31,8 +31,9 @@ const { value } = await kms.getSecretValue(secretId);
 kms.close();
 ```
 
-`createKey`, `getKey` and `rotateKey` manage keys when the client's role
-allows. A refused or failed call rejects with `APIError` (`status`, `code`,
+`createKey`, `getKey`, `updateKey` (only the fields you name change),
+`rotateKey`, `deactivateKey`, `getKeyAccess` and `setKeyAccess` manage keys
+when the client's role allows and the client manages the key. A refused or failed call rejects with `APIError` (`status`, `code`,
 `requestId`; `refused` for 401/403, `notFound` for 404). HTTPS and TLS 1.3
 only.
 

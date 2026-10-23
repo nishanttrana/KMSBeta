@@ -30,6 +30,7 @@ func (h *Handler) keyAdminRouter(audit route.Emitter) *route.Router {
 	r.Handle("POST /keys/bulk-rotate", route.Spec{Action: "bulk_rotate_requested", Permission: "key.rotate", Resource: "key", Severity: "warning"}, legacy(h.handleBulkRotate))
 	r.Handle("POST /keys/bulk-delete", route.Spec{Action: "bulk_delete_requested", Permission: "key.destroy", Resource: "key", Severity: "critical"}, legacy(h.handleBulkDelete))
 	r.Handle("PUT /keys/{id}", route.Spec{Action: "update_requested", Permission: "key.update", Resource: "key", TargetParam: "id"}, legacy(h.handleUpdateKey))
+	h.keyPatchRoutes(r)
 	r.Handle("POST /keys/{id}/rotate", route.Spec{Action: "rotate_requested", Permission: "key.rotate", Resource: "key", TargetParam: "id", Severity: "warning"}, legacy(h.handleRotateKey))
 	r.Handle("POST /keys/{id}/activate", route.Spec{Action: "activate_requested", Permission: "key.activate", Resource: "key", TargetParam: "id"}, legacy(h.handleActivateKey))
 	r.Handle("POST /keys/{id}/deactivate", route.Spec{Action: "deactivate_requested", Permission: "key.deactivate", Resource: "key", TargetParam: "id", Severity: "warning"}, legacy(h.handleDeactivateKey))

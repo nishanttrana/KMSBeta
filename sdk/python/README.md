@@ -31,8 +31,9 @@ for key in kms.list_keys():
 value = kms.get_secret_value(secret_id)["value"]
 ```
 
-`create_key`, `get_key` and `rotate_key` manage keys when the client's role
-allows. A refused or failed call raises `APIError` with `status`, the KMS's
+`create_key`, `get_key`, `update_key` (only the fields you name change),
+`rotate_key`, `deactivate_key`, `get_key_access` and `set_key_access` manage
+keys when the client's role allows and the client manages the key. A refused or failed call raises `APIError` with `status`, the KMS's
 `code` (for example `no_matching_grant`) and the `request_id` it was audited
 under; `e.refused` is a 401 or 403, `e.not_found` a 404.
 

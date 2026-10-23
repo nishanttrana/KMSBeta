@@ -13,6 +13,7 @@ services/keycore/handler.go handleDestroyKey RequesterEmail  # as above
 services/keycore/handler.go handleDestroyKey RequesterIP     # as above
 services/keycore/handler.go handleCreateKey Owner            # a label the tenant gives the key, not who acted
 services/keycore/handler.go handleUpdateKey Owner            # as above
+services/keycore/key_patch.go patchKey Owner              # the same key owner label, in the partial update (13.56.0-beta)
 services/keycore/handler_caraf.go createCarafAsset Owner     # the asset's owner, a label
 services/keycore/handler_caraf.go updateCarafAsset Owner     # as above
 services/keycore/handler_caraf.go setCarafDecision Owner     # who the decision is assigned to; who decided is c.Actor()

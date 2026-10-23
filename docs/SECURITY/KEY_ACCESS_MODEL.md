@@ -306,7 +306,7 @@ as `audit.key.request_refused` (`reason: unauthenticated`).
 | groups, access settings, interface policies, ports, TLS config (writes) | `key.access.admin` | |
 | `POST /keys`, `/keys/import`, `/keys/form`, `/keys/bulk-import` | `key.create`, `key.import`, `key.form` | tenant in the body must match the token |
 | rotate, activate, deactivate, disable, destroy, versions, bulk rotate/delete | `key.rotate`, `key.activate`, `key.deactivate`, `key.disable`, `key.destroy` | |
-| `PUT /keys/{id}`, `PUT /keys/{id}/iv-mode` | `key.update` | |
+| `PUT /keys/{id}`, `PUT /keys/{id}/iv-mode`, `PATCH /keys/{id}` | `key.update` | the caller manages the key: creator, `key.access.admin`, a platform service, or a grant of `all` (`TestKeyUpdateNeedsToManageTheKey`, 13.56.0-beta) |
 | export policy, approval, usage limit and reset | `key.export_policy_update`, `key.approval_update`, `key.usage_limit_update` | |
 | tag writes | `key.tags.write` | |
 | crypto operations | any verified identity | the per-key decision (section 3) |

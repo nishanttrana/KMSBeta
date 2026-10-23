@@ -177,6 +177,30 @@ class Client:
                 return
             query = {"limit": "200", "after_created_at": cursor["after_created_at"], "after_id": cursor["after_id"]}
 
+    def update_key(self, key_id: str, **fields: Any) -> Dict[str, Any]:
+        """Changes only the named metadata (name, description, purpose, owner,
+        tags, labels) and returns the key as stored. The client must manage
+        the key (its creator, a key-access administrator, or a grant of "all")."""
+        allowed = {"name", "description", "purpose", "owner", "tags", "labels"}
+        unknown = set(fields) - allowed
+        if unknown:
+            raise ValueError(f"update_key takes {sorted(allowed)}, not {sorted(unknown)}")
+        return self._call("PATCH", self._key_path(key_id), fields)["key"]
+
+    def deactivate_key(self, key_id: str) -> None:
+        """Stops new encryption and signing; old ciphertext still decrypts."""
+        self._call("POST", self._key_path(key_id, "deactivate"), {})
+
+    def get_key_access(self, key_id: str) -> list:
+        """The key's grants: subject_type (user, group, client), subject_id, operations."""
+        return self._call("GET", self._key_path(key_id, "access-policy"))["policy"].get("grants") or []
+
+    def set_key_access(self, key_id: str, grants: list) -> None:
+        """Replaces the key's grants."""
+        out = self._call("PUT", self._key_path(key_id, "access-policy"), {"grants": grants})
+        if out.get("status") == "pending_approval":
+            raise APIError(202, "pending_approval", "the change waits for approval " + out.get("approval_request_id", ""))
+
     def rotate_key(self, key_id: str, reason: str = "") -> int:
         return int(self._call("POST", self._key_path(key_id, "rotate"), {"reason": reason})["version"])
 

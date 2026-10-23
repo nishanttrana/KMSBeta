@@ -36,6 +36,16 @@ def main() -> None:
         assert e.not_found, e
     new = c.create_key("py-pipeline-key", "AES-256", "encrypt", key_type="symmetric", labels={"team": "release"})
     assert c.rotate_key(new, "scheduled") == 2, "rotate"
+    k = c.update_key(new, description="release artifacts", labels={"team": "release", "tier": "gold"})
+    assert k["description"] == "release artifacts" and k["labels"]["tier"] == "gold" and k["name"] == "py-pipeline-key", k
+    c.set_key_access(new, [{"subject_type": "client", "subject_id": "release-pipeline", "operations": ["encrypt"]}])
+    assert c.get_key_access(new)[0]["subject_type"] == "client", "key access"
+    c.deactivate_key(new)
+    try:
+        c.encrypt(new, b"x")
+        raise AssertionError("encrypted with a deactivated key")
+    except APIError:
+        pass
     print("python contract ok")
 
 
