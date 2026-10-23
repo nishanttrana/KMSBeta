@@ -238,3 +238,52 @@ func TestKeyAdminIsAPermissionNotARoleName(t *testing.T) {
 		}
 	}
 }
+
+// A key grant can name a REST client: the verified token's client_id
+// matches it, another client's doesn't, and a person whose ID happens to be
+// the client's name gets nothing from it (13.53.0-beta).
+func TestKeyGrantToAClient(t *testing.T) {
+	h, svc, rec := newActorTestHandler(t)
+	key := ownedKey(t, svc)
+	if err := svc.store.ReplaceKeyAccessGrants(context.Background(), "t1", key.ID, []KeyAccessGrant{
+		{SubjectType: AccessSubjectClient, SubjectID: "release-pipeline", Operations: []string{"encrypt"}},
+	}, "owner-1"); err != nil {
+		t.Fatal(err)
+	}
+	client := func(id string) *pkgauth.Claims {
+		c := &pkgauth.Claims{ClientID: id, UserID: id, TenantID: "t1", Role: "client-service", Permissions: []string{"key.encrypt"}}
+		c.Subject = id
+		return c
+	}
+	if w := encryptAs(h, key.ID, client("release-pipeline"), nil); w.Code != http.StatusOK {
+		t.Fatalf("the granted client was refused: %d %s", w.Code, w.Body)
+	}
+	if w := encryptAs(h, key.ID, client("other-pipeline"), nil); w.Code != http.StatusForbidden {
+		t.Fatalf("another client used the key: %d", w.Code)
+	}
+	if d := refusalDetails(t, rec, "audit.key.access_refused"); d["reason"] != "no_matching_grant" {
+		t.Fatalf("refusal: %+v", d)
+	}
+	person := &pkgauth.Claims{UserID: "u-9", TenantID: "t1", Role: "operator", Permissions: []string{"key.encrypt"}}
+	person.Subject = "release-pipeline"
+	if w := encryptAs(h, key.ID, person, nil); w.Code != http.StatusForbidden {
+		t.Fatalf("a person matched a client grant: %d", w.Code)
+	}
+	// The grant also makes the key visible to that client, and only to it.
+	read := func(c *pkgauth.Claims) int {
+		req := httptest.NewRequest(http.MethodGet, "/keys/"+key.ID+"?tenant_id=t1", nil)
+		req = req.WithContext(pkgauth.ContextWithClaims(req.Context(), c))
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		return w.Code
+	}
+	if code := read(client("release-pipeline")); code != http.StatusOK {
+		t.Fatalf("the granted client can't see the key: %d", code)
+	}
+	if code := read(client("other-pipeline")); code != http.StatusNotFound {
+		t.Fatalf("another client sees the key: %d", code)
+	}
+	if _, err := normalizeAccessSubjectType("robot"); err == nil {
+		t.Fatal("an unknown subject type was accepted")
+	}
+}

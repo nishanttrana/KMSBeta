@@ -22,6 +22,9 @@ policies (`tenant_id` on `/auth/...`) belong to a **platform
 administrator**: a person whose verified token is for the `root` tenant
 (`tenantcheck.InternalServiceTenant`) and holds `auth.tenant.read` or
 `auth.tenant.write` (`platformAdministrator` in `services/auth/handler.go`).
+A REST client's or workload's token (it carries `client_id`) is never one,
+whatever role it was granted (13.53.0-beta; the same holds for System
+Administration in governance).
 Every other caller is refused (`403`, `reason: not_platform_administrator`,
 audited `audit.auth.request_refused`).
 

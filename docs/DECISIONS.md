@@ -7,6 +7,27 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-23 — Machine identities get their permissions from a granted role
+**Decision:** a REST client can be granted one tenant role; its tokens hold
+the role's permissions as they are when each token is issued. Granting
+requires holding every permission of the role. Key grants gain a `client`
+subject matched on the verified `client_id`. Client and workload tokens are
+never platform administrators.
+**Why:** the owner's list (2026-10-22): "No client tooling". An SDK,
+Terraform provider or PKCS#11 library needs a non-human identity that can
+use keys; client tokens could only touch secrets.
+**Rejected:** copying the role's permissions into the API key at grant time
+(a role edit or deletion wouldn't reach the client); letting clients use
+user grants by name (a person and a client could share a name); a separate
+client permission editor (roles already exist, are audited and reviewed).
+**Enforced:** `TestClientRoleGrantsItsPermissions`,
+`TestClientIsNeverPlatformAdministrator`, `TestKeyGrantToAClient`,
+`TestKeyVisibilityPostgres`, `TestClientRolePostgres`, governance
+`TestSystemAdminRoutesRequireVerifiedToken` (client case), smoke
+`client-role.spec.ts`.
+
+---
+
 ## 2026-10-23 — Edge devices lease data keys sealed to their own ML-KEM key
 **Decision:** edge devices are ekm clients of a new kind. A device enrols
 with a one-use token and two keys of its own (P-256 for receipts, proven by

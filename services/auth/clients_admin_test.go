@@ -16,6 +16,7 @@ import (
 
 type clientAdminHarness struct {
 	h     *Handler
+	logic *AuthLogic
 	store *SQLStore
 	pub   *mockPublisher
 	rec   *routetest.Recorder
@@ -31,7 +32,7 @@ func newClientAdminHarness(t *testing.T) *clientAdminHarness {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &clientAdminHarness{h: h, store: store, pub: pub, rec: rec, admin: admin}
+	return &clientAdminHarness{h: h, logic: logic, store: store, pub: pub, rec: rec, admin: admin}
 }
 
 func (c *clientAdminHarness) do(t *testing.T, method, path string, header map[string]string, body string) *httptest.ResponseRecorder {

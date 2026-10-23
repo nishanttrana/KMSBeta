@@ -27,6 +27,10 @@ type AccessSubjectType string
 const (
 	AccessSubjectUser  AccessSubjectType = "user"
 	AccessSubjectGroup AccessSubjectType = "group"
+	// AccessSubjectClient is a REST client (auth registration ID), matched on
+	// the verified token's client_id (13.53.0-beta). Platform services are
+	// never matched: they act for a request's tenant without grants.
+	AccessSubjectClient AccessSubjectType = "client"
 )
 
 type KeyAccessGrant struct {
@@ -137,6 +141,16 @@ func actorIsAdmin(actor AccessActor) bool {
 	return route.Allowed(&pkgauth.Claims{Permissions: actor.Permissions}, permAccessAdmin)
 }
 
+// actorClientSubject is the REST client a verified token was issued to (its
+// client_id; a person's token has none), or "" for a person or a platform
+// service.
+func actorClientSubject(actor AccessActor) string {
+	if !actor.Authenticated || actorIsServicePrincipal(actor) {
+		return ""
+	}
+	return strings.TrimSpace(actor.ClientID)
+}
+
 func actorMatchesCreator(actor AccessActor, createdBy string) bool {
 	createdBy = strings.TrimSpace(createdBy)
 	if createdBy == "" {
@@ -157,8 +171,10 @@ func normalizeAccessSubjectType(raw AccessSubjectType) (AccessSubjectType, error
 		return AccessSubjectUser, nil
 	case "group":
 		return AccessSubjectGroup, nil
+	case "client":
+		return AccessSubjectClient, nil
 	default:
-		return "", errors.New("subject_type must be user or group")
+		return "", errors.New("subject_type must be user, group or client")
 	}
 }
 
@@ -457,6 +473,10 @@ func (s *Service) evaluateKeyAccess(ctx context.Context, key Key, operation stri
 			}
 		case AccessSubjectGroup:
 			if slices.Contains(groupIDs, strings.TrimSpace(grant.SubjectID)) {
+				return nil
+			}
+		case AccessSubjectClient:
+			if id := actorClientSubject(actor); id != "" && strings.EqualFold(strings.TrimSpace(grant.SubjectID), id) {
 				return nil
 			}
 		}

@@ -103,4 +103,14 @@ func TestKeyVisibilityPostgres(t *testing.T) {
 	if err := svc.ensureKeyVisible(actx, viaGroup); err != nil {
 		t.Fatalf("group-granted key hidden: %v", err)
 	}
+	// A grant to a REST client is found for that client only (13.53.0-beta).
+	if err := svc.store.ReplaceKeyAccessGrants(ctx, tenant, hidden.ID, []KeyAccessGrant{{SubjectType: AccessSubjectClient, SubjectID: "Release-Pipeline", Operations: []string{"encrypt"}}}, "owner"); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := svc.store.ListGrantedKeyIDs(ctx, tenant, nil, nil, []string{"release-pipeline"}); err != nil || len(got[hidden.ID]) != 1 {
+		t.Fatalf("client grant: %v %v", got, err)
+	}
+	if got, _ := svc.store.ListGrantedKeyIDs(ctx, tenant, []string{"release-pipeline"}, nil, nil); len(got[hidden.ID]) != 0 {
+		t.Fatalf("a user matched a client grant: %v", got)
+	}
 }

@@ -85,6 +85,13 @@ A grant names **operations**; a key's usage mask names **usages**. A grant can
 never exceed the mask: the UI offers only operations the mask allows, and the
 decision checks both.
 
+**Grant subjects.** A grant names a `user` (matched on the verified user ID
+or subject), a `group`, or, since 13.53.0-beta, a `client`: a REST client,
+matched only on a verified token's `client_id`, never on a person's ID or a
+platform service (`actorClientSubject`; `TestKeyGrantToAClient`). The
+client also needs the route's permission, from a role granted to it
+([CI_CD_AUTOMATION.md](../CI_CD_AUTOMATION.md#a-role-for-a-client-13530-beta)).
+
 ### Operation groups (grants)
 
 | Group | Operations |

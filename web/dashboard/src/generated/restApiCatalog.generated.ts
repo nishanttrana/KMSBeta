@@ -13051,6 +13051,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "auth-get-auth-clients-id-role",
+    "group": "Identity & Access (auth)",
+    "title": "GET /auth/clients/{id}/role",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/clients/{id}/role?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Auth service.",
+    "requestExample": "GET /svc/auth/auth/clients/{id}/role?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "auth-get-auth-groups-roles",
     "group": "Identity & Access (auth)",
     "title": "GET /auth/groups/roles",
@@ -14852,6 +14880,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Auth service.",
     "requestExample": "PUT /svc/auth/auth/clients/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "auth-put-auth-clients-id-role",
+    "group": "Identity & Access (auth)",
+    "title": "PUT /auth/clients/{id}/role",
+    "service": "auth",
+    "method": "PUT",
+    "pathTemplate": "/auth/clients/{id}/role?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Auth service.",
+    "requestExample": "PUT /svc/auth/auth/clients/{id}/role?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

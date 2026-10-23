@@ -79,11 +79,37 @@ one active.
 
 **What a client token can do.** Activation grants the key `kms.read` and
 `kms.write`. The route kernel honours those two broad grants only in the
-`secrets` domain (`pkg/route.CoarseDomains`). The token can therefore read
-secret values and create, update, rotate or delete secrets, and it can call
-artifact signing, where the signing profile's identity rules decide. It
-**cannot** create, rotate or use keys in keycore: those routes need
-`key.*` permissions, which a client token never holds.
+`secrets` domain (`pkg/route.CoarseDomains`). Without a role the token can
+therefore read secret values and create, update, rotate or delete secrets,
+and it can call artifact signing, where the signing profile's identity
+rules decide. It can't create, rotate or use keys in keycore: those need
+`key.*` permissions. For that, give the client a role (below).
+
+### A role for a client (13.53.0-beta)
+
+An administrator can grant a REST client one of the tenant's roles
+(Workbench → REST API → the client → **Granted role**, or
+`PUT /svc/auth/auth/clients/{id}/role` with `{"role": "<name>"}`,
+`auth.client.write`). The client's tokens then hold that role's
+permissions **as the role is when each token is issued**: edit the role and
+the next token follows; delete it and the client holds nothing until it is
+given another. `{"role": ""}` returns it to the default.
+
+- **No escalation.** The administrator must hold every permission the role
+  grants (`403 role_exceeds_caller`, naming the missing ones).
+- **Never a platform administrator.** A client's token (it carries
+  `client_id`) is refused tenant administration and System Administration
+  whatever it holds: those belong to a person.
+- **Key access still applies.** A role with `key.encrypt` lets the client
+  call the route; keycore still decides per key. Grant the key to the
+  client: a key access assignment for **REST client** (`subject_type:
+  client`, `subject_id` the client's registration ID).
+- `requested_role` on the registration is what the requester asked for. It
+  grants nothing.
+
+Every change is audited as `audit.auth.client_role_set` (refusals
+included), and each token's `audit.auth.client_token_issued` names its
+`role`.
 
 A registration can instead bind the token to the caller with `oauth_mtls`,
 `dpop` or `http_message_signature` (`auth_mode`). Documentation →

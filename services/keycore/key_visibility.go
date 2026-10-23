@@ -76,7 +76,11 @@ func (s *Service) keyViewFor(ctx context.Context, tenantID string) (keyView, err
 		}
 		groups = normalizeActorGroups(append(groups, stored...))
 	}
-	granted, err := s.store.ListGrantedKeyIDs(ctx, tenantID, users, groups)
+	var clients []string
+	if id := actorClientSubject(actor); id != "" {
+		clients = []string{id}
+	}
+	granted, err := s.store.ListGrantedKeyIDs(ctx, tenantID, users, groups, clients)
 	if err != nil {
 		return keyView{}, err
 	}

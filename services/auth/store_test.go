@@ -37,6 +37,7 @@ func createSQLiteSchema(conn *pkgdb.DB) error {
 		`CREATE TABLE auth_tenants (id TEXT PRIMARY KEY, name TEXT NOT NULL, status TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,
 		`CREATE TABLE auth_tenant_roles (tenant_id TEXT NOT NULL, role_name TEXT NOT NULL, permissions BLOB NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(tenant_id, role_name));`,
 		`CREATE TABLE auth_users (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, username TEXT NOT NULL, email TEXT NOT NULL, pwd_hash BLOB NOT NULL, totp_secret TEXT, role TEXT NOT NULL, status TEXT NOT NULL, must_change_password INTEGER NOT NULL DEFAULT 0, node_local INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(tenant_id, username));`,
+		`CREATE TABLE auth_client_roles (tenant_id TEXT NOT NULL, client_id TEXT NOT NULL, role_name TEXT NOT NULL, granted_by TEXT NOT NULL DEFAULT '', granted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, client_id));`,
 		`CREATE TABLE auth_client_registrations (
 			id TEXT PRIMARY KEY,
 			node_local INTEGER NOT NULL DEFAULT 0,

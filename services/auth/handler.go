@@ -207,7 +207,9 @@ const reasonNotPlatformAdmin = "not_platform_administrator"
 // give a user any role name, and holds "*" inside that tenant. Platform
 // services don't administer tenants (they list IDs at /internal/tenant-ids).
 func platformAdministrator(claims *pkgauth.Claims, perm string) bool {
-	if claims == nil || tenantcheck.IsServicePrincipal(claims) {
+	// A REST client's token (client_id set) is never a platform
+	// administrator, whatever role it was granted (13.53.0-beta).
+	if claims == nil || tenantcheck.IsServicePrincipal(claims) || strings.TrimSpace(claims.ClientID) != "" {
 		return false
 	}
 	if !strings.EqualFold(strings.TrimSpace(claims.TenantID), tenantcheck.InternalServiceTenant()) {
@@ -639,7 +641,17 @@ func (h *Handler) handleClientToken(w http.ResponseWriter, r *http.Request) {
 	allowedSet := map[string]struct{}{}
 	internalService := strings.HasPrefix(clientID, "kms-") && tenantID == tenantcheck.InternalServiceTenant() &&
 		strings.EqualFold(strings.TrimSpace(reg.ClientType), "service")
-	for _, p := range apiKey.Permissions {
+	granted := apiKey.Permissions
+	grantedRole := ""
+	if !internalService {
+		// A granted role replaces the default client permissions
+		// (client_roles.go), as the role is now.
+		if granted, grantedRole, err = h.clientTokenPermissions(r.Context(), tenantID, clientID, apiKey.Permissions); err != nil {
+			writeErr(w, http.StatusInternalServerError, "store_error", "failed to read the client's role", reqID, tenantID)
+			return
+		}
+	}
+	for _, p := range granted {
 		perm := strings.TrimSpace(p)
 		if perm == "" {
 			continue
@@ -704,6 +716,7 @@ func (h *Handler) handleClientToken(w http.ResponseWriter, r *http.Request) {
 		"ttl_seconds":        ttlSeconds,
 		"auth_mode":          authMode,
 		"sender_constrained": authMode != "api_key",
+		"role":               grantedRole,
 	}); err != nil {
 		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, tenantID)
 		return

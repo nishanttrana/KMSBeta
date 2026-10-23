@@ -9,7 +9,7 @@ import { listCertificates } from "../../../lib/certs";
 import { listSecrets } from "../../../lib/secrets";
 import { REST_API_CATALOG_FULL, normalizeRestPathTemplate } from "../../../lib/restCatalog";
 import { executeRestPlaygroundRequest } from "../../../lib/restPlayground";
-import { RestClientLifecycle, RestClientRegister } from "./RestClientLifecycle";
+import { RestClientLifecycle, RestClientRegister, RestClientRole } from "./RestClientLifecycle";
 import { B, Btn, Card, Chk, FG, Inp, Row2, Row3, Section, Sel, Stat, Txt } from "../legacyPrimitives";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
@@ -513,7 +513,7 @@ export const RestAPITab=({session,keyCatalog,onToast}: RestAPITabProps)=>{
             </div>
             <div>
               {clientDraft?<div style={{display:"grid",gap:8}}>
-                {session&&selectedClient&&<RestClientLifecycle session={session} client={selectedClient} onChanged={()=>void loadClientSecurity(true)} onToast={onToast}/>}
+                {session&&selectedClient&&<><RestClientLifecycle session={session} client={selectedClient} onChanged={()=>void loadClientSecurity(true)} onToast={onToast}/><RestClientRole session={session} client={selectedClient} onToast={onToast}/></>}
                 <Row2>
                   <FG label="Client"><Inp value={String(clientDraft?.client_name||"")} readOnly/></FG>
                   <FG label="Requested Role"><Inp value={String(clientDraft?.requested_role||"")} readOnly/></FG>

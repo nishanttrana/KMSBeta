@@ -108,3 +108,6 @@ export function RestClientLifecycle({ session, client, onChanged, onToast }: { s
     {issued && issued.clientID === id && <OneTimeKeyPanel issued={issued} onDismiss={() => setIssued(null)} />}
   </div>;
 }
+
+// The granted role control sits with the client's lifecycle (13.53.0-beta).
+export { RestClientRole } from "./RestClientRole";

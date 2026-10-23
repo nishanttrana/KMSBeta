@@ -28,6 +28,7 @@ func (h *Handler) clientAdminRouter() *route.Router {
 	r.Handle("POST /auth/clients/{id}/revoke", route.Spec{Action: "client_revoked", Permission: "auth.client.write", Resource: "client", TargetParam: "id", Severity: "warning"}, h.revokeClient)
 	r.Handle("POST /auth/clients/{id}/rotate-key", route.Spec{Action: "client_key_rotated", Permission: "auth.client.write", Resource: "client", TargetParam: "id", Severity: "warning"}, h.rotateClientKey)
 	r.Handle("DELETE /auth/api-keys/{id}", route.Spec{Action: "api_key_revoked", Permission: "auth.api_key.write", Resource: "api_key", TargetParam: "id", Severity: "warning"}, h.deleteAPIKey)
+	h.clientRoleRoutes(r)
 	return r
 }
 

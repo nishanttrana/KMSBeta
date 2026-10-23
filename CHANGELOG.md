@@ -4,6 +4,25 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.53.0-beta] — 2026-10-23
+
+### Added
+- **A REST client can be given a role.** Until now a client's tokens could
+  only read and write secrets and sign; no machine identity could use a
+  key. An administrator can now grant a client one of the tenant's roles
+  (Workbench → REST API → Granted role). Its tokens hold that role's
+  permissions as the role is when each is issued. The administrator must
+  hold every permission the role grants. A client is never a platform
+  administrator, whatever it holds.
+- **Key access assignments can name a REST client** (`subject_type:
+  client`), matched only on a verified token's client ID, for use and for
+  seeing the key.
+
+### Fixed
+- `requested_role` on a client registration was stored and shown but
+  granted nothing, and nothing said so; the page now shows the granted
+  role and what the client's tokens hold.
+
 ## [13.52.0-beta] — 2026-10-23
 
 ### Added

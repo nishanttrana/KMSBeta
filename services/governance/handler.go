@@ -960,7 +960,9 @@ func (h *Handler) refuseSystemAdmin(w http.ResponseWriter, r *http.Request, reqI
 // roles hold "*". A service principal is never an administrator here;
 // systemAdminServiceCallers names what each may call.
 func claimsAllowSystemAdmin(claims *pkgauth.Claims, write bool) bool {
-	if claims == nil || tenantcheck.IsServicePrincipal(claims) {
+	// A person only: a REST client's token (client_id set) isn't an
+	// administrator here, whatever role it was granted (13.53.0-beta).
+	if claims == nil || tenantcheck.IsServicePrincipal(claims) || strings.TrimSpace(claims.ClientID) != "" {
 		return false
 	}
 	perms := []string{"auth.tenant.write", "auth.policy.write"}

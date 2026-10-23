@@ -5,6 +5,20 @@ Newest entries on top.
 
 ## 2026-10-23
 
+### Check what a token kind carries before keying a rule on it (13.53.0-beta)
+- A client token sets `UserID` to the client's subject, not just
+  `ClientID`. The first version of the client grant matcher treated "has a
+  user ID" as "is a person" and would never have matched a client. The
+  discriminator is `client_id`: person logins never set it; client and
+  workload tokens always do.
+- Giving machines roles reopened a door 13.48 had closed with
+  permissions: a root-tenant client granted `*` would have passed the
+  platform-administrator checks. Those checks now also require no
+  `client_id`.
+- KeysTab and RestAPITab may not grow (`component-size-burndown.json`). New
+  UI goes in its own module, and `--tighten` lowers the ceilings of files
+  that shrank.
+
 ### An offline device needs keys it can prove, not a promise (13.52.0-beta)
 - An edge lease puts a data key on a device that may never call back. The
   KMS can bound it (lease length, revocation at next contact, keys checked

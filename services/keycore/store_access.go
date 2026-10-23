@@ -504,7 +504,7 @@ WHERE tenant_id=$7 AND id=$8
 	})
 }
 
-func (s *SQLStore) ListGrantedKeyIDs(ctx context.Context, tenantID string, users []string, groups []string) (map[string][]KeyAccessGrant, error) {
+func (s *SQLStore) ListGrantedKeyIDs(ctx context.Context, tenantID string, users []string, groups []string, clients []string) (map[string][]KeyAccessGrant, error) {
 	out := map[string][]KeyAccessGrant{}
 	args := []any{tenantID}
 	marks := func(values []string, lower bool) string {
@@ -524,6 +524,9 @@ func (s *SQLStore) ListGrantedKeyIDs(ctx context.Context, tenantID string, users
 	}
 	if len(groups) > 0 {
 		match = append(match, "(subject_type='group' AND subject_id IN ("+marks(groups, false)+"))")
+	}
+	if len(clients) > 0 {
+		match = append(match, "(subject_type='client' AND LOWER(subject_id) IN ("+marks(clients, true)+"))")
 	}
 	if len(match) == 0 {
 		return out, nil

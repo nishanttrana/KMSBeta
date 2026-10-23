@@ -21,6 +21,11 @@ var errNotFound = errors.New("not found")
 var errClientState = errors.New("client registration state")
 
 type Store interface {
+	// A REST client's granted role (client_roles.go, 13.53.0-beta).
+	GetClientRole(ctx context.Context, tenantID, clientID string) (string, error)
+	SetClientRole(ctx context.Context, tenantID, clientID, role, by string, at time.Time) error
+	DeleteClientRole(ctx context.Context, tenantID, clientID string) error
+
 	// Cluster-wide lockout (cluster_lockout.go).
 	RecordLoginAttempt(ctx context.Context, a LoginAttempt) error
 	RecentLoginAttempts(ctx context.Context, keyHash string, since time.Time, limit int) ([]LoginAttempt, error)

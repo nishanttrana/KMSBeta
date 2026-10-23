@@ -157,6 +157,8 @@ func TestSystemAdminRefusalReasons(t *testing.T) {
 		{"non-root tenant", "tenant-a", &pkgauth.Claims{TenantID: "tenant-a", Role: "admin"}, http.StatusForbidden, "not_root_tenant"},
 		{"not an admin", "root", &pkgauth.Claims{TenantID: "root", Role: "viewer", UserID: "v1"}, http.StatusForbidden, "insufficient_privileges"},
 		// A role's name grants nothing; its permissions do (CLAUDE.md rule 4).
+		// A REST client's token, whatever it holds, is not an administrator (13.53.0-beta).
+		{"client token with *", "root", &pkgauth.Claims{TenantID: "root", ClientID: "release", UserID: "release", Permissions: []string{"*"}}, http.StatusForbidden, "insufficient_privileges"},
 		{"admin role name only", "root", &pkgauth.Claims{TenantID: "root", Role: "admin", UserID: "a1"}, http.StatusForbidden, "insufficient_privileges"},
 		{"super-admin role name only", "root", &pkgauth.Claims{TenantID: "root", Role: "super-admin", UserID: "a2", Permissions: []string{"key.read"}}, http.StatusForbidden, "insufficient_privileges"},
 	}

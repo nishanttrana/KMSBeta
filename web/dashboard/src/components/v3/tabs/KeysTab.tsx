@@ -25,7 +25,8 @@ import {
   setKeyUsageLimit,
   updateKeyActivation
 } from "../../../lib/keycore";
-import { listAuthUsers } from "../../../lib/authAdmin";
+import { listAuthClients, listAuthUsers } from "../../../lib/authAdmin";
+import { GrantSubjectPicker, grantSubjectLabel, grantSubjectType } from "./keyGrantSubjects";
 import { DEFAULT_KEY_COLUMN_VISIBILITY, KEY_ACCESS_OPERATION_OPTIONS, KEY_TABLE_COLUMNS } from "../constants";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
@@ -484,6 +485,7 @@ export const KeysTab=({session,keyCatalog,keyCatalogError,setKeyCatalog,tagCatal
   const [policyLoading,setPolicyLoading]=useState(false);
   const [policyUsers,setPolicyUsers]=useState([]);
   const [policyGroups,setPolicyGroups]=useState([]);
+  const [policyClients,setPolicyClients]=useState([]);
   const [policyGrants,setPolicyGrants]=useState([]);
   const [policyNewSubjectType,setPolicyNewSubjectType]=useState("user");
   const [policyNewSubjectId,setPolicyNewSubjectId]=useState("");
@@ -1429,15 +1431,17 @@ export const KeysTab=({session,keyCatalog,keyCatalogError,setKeyCatalog,tagCatal
     }
     setPolicyLoading(true);
     try{
-      const [users,groups,policy]=await Promise.all([
+      const [users,groups,policy,clients]=await Promise.all([
         listAuthUsers(session,session.tenantId),
         listKeyAccessGroups(session),
-        getKeyAccessPolicy(session,targetKey.id)
+        getKeyAccessPolicy(session,targetKey.id),
+        listAuthClients(session).catch(()=>[])
       ]);
+      setPolicyClients((Array.isArray(clients)?clients:[]).filter((c)=>String(c?.status||"")==="approved"&&!String(c?.id||"").startsWith("kms-")));
       setPolicyUsers(Array.isArray(users)?users:[]);
       setPolicyGroups(Array.isArray(groups)?groups:[]);
       setPolicyGrants(Array.isArray(policy?.grants)?policy.grants.map((grant)=>({
-        subject_type:String(grant?.subject_type||"user")==="group"?"group":"user",
+        subject_type:grantSubjectType(grant?.subject_type),
         subject_id:String(grant?.subject_id||"").trim(),
         operations:Array.isArray(grant?.operations)&&grant.operations.length
           ?Array.from(new Set(grant.operations.map((op)=>String(op||"").trim().toLowerCase()).filter(Boolean)))
@@ -1510,13 +1514,13 @@ export const KeysTab=({session,keyCatalog,keyCatalogError,setKeyCatalog,tagCatal
   };
 
   const addPolicyGrant=()=>{
-    const subjectType=policyNewSubjectType==="group"?"group":"user";
+    const subjectType=grantSubjectType(policyNewSubjectType);
     const subjectId=String(policyNewSubjectId||"").trim();
     const operations=Array.from(new Set((Array.isArray(policyNewOperations)?policyNewOperations:["encrypt"]).map((op)=>String(op||"").trim().toLowerCase()).filter(Boolean)));
     const notBeforeISO=policyNewNotBefore?toISODateTime(policyNewNotBefore):"";
     const expiresISO=policyNewExpiresAt?toISODateTime(policyNewExpiresAt):"";
     if(!subjectId){
-      onToast?.("Select a user or group to assign.");
+      onToast?.("Select a user, group or client to assign.");
       return;
     }
     if(!operations.length){
@@ -1596,7 +1600,7 @@ export const KeysTab=({session,keyCatalog,keyCatalogError,setKeyCatalog,tagCatal
       await setKeyUsageLimit(session,selectedKey.id,parsedLimit,policyOpsWindow==="daily"?"daily":policyOpsWindow==="monthly"?"monthly":"total");
       await setKeyExportPolicy(session,selectedKey.id,policyExportAllowed);
       await setKeyAccessPolicy(session,selectedKey.id,(Array.isArray(policyGrants)?policyGrants:[]).map((grant)=>({
-        subject_type:String(grant?.subject_type||"user")==="group"?"group":"user",
+        subject_type:grantSubjectType(grant?.subject_type),
         subject_id:String(grant?.subject_id||"").trim(),
         operations:Array.from(new Set((Array.isArray(grant?.operations)?grant.operations:[]).map((op)=>String(op||"").trim().toLowerCase()).filter(Boolean))),
         not_before:String(grant?.not_before||"").trim()||undefined,
@@ -2509,20 +2513,11 @@ export const KeysTab=({session,keyCatalog,keyCatalogError,setKeyCatalog,tagCatal
       <FG label="Export Policy">
         <Chk label="Allow key export (wrapped)" checked={policyExportAllowed} onChange={()=>setPolicyExportAllowed(!policyExportAllowed)}/>
       </FG>
-      <FG label="Key Access Assignments" hint="Only assigned users/groups can perform selected operations on this key.">
+      <FG label="Key Access Assignments" hint="Only assigned users, groups and REST clients can perform selected operations on this key.">
         {policyLoading&&<div style={{fontSize:10,color:C.dim}}>Loading key access policy...</div>}
         {!policyLoading&&<>
           <Row2>
-            <Sel value={policyNewSubjectType} onChange={(e)=>{setPolicyNewSubjectType(e.target.value==="group"?"group":"user");setPolicyNewSubjectId("");}}>
-              <option value="user">User</option>
-              <option value="group">Group</option>
-            </Sel>
-            <Sel value={policyNewSubjectId} onChange={(e)=>setPolicyNewSubjectId(e.target.value)}>
-              <option value="">{policyNewSubjectType==="group"?"Select group":"Select user"}</option>
-              {policyNewSubjectType==="group"
-                ?(Array.isArray(policyGroups)?policyGroups:[]).map((group)=><option key={group.id} value={group.id}>{`${group.name}${Number(group.member_count||0)>0?` (${group.member_count})`:""}`}</option>)
-                :(Array.isArray(policyUsers)?policyUsers:[]).map((user)=><option key={user.id} value={user.id}>{`${user.username} (${user.role})`}</option>)}
-            </Sel>
+            <GrantSubjectPicker type={grantSubjectType(policyNewSubjectType)} id={policyNewSubjectId} onType={setPolicyNewSubjectType} onId={setPolicyNewSubjectId} users={policyUsers} groups={policyGroups} clients={policyClients}/>
           </Row2>
           <div style={{marginTop:8,display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:6}}>
             {KEY_ACCESS_OPERATION_OPTIONS.map((item)=><Chk
@@ -2553,11 +2548,9 @@ export const KeysTab=({session,keyCatalog,keyCatalogError,setKeyCatalog,tagCatal
           </div>
           <div style={{display:"grid",gap:6,marginTop:10}}>
             {(Array.isArray(policyGrants)?policyGrants:[]).map((grant)=>{
-              const subjectType=String(grant?.subject_type||"user")==="group"?"group":"user";
+              const subjectType=grantSubjectType(grant?.subject_type);
               const subjectID=String(grant?.subject_id||"").trim();
-              const subjectLabel=subjectType==="group"
-                ?((Array.isArray(policyGroups)?policyGroups:[]).find((group)=>String(group?.id||"")===subjectID)?.name||subjectID)
-                :((Array.isArray(policyUsers)?policyUsers:[]).find((user)=>String(user?.id||"")===subjectID)?.username||subjectID);
+              const subjectLabel=grantSubjectLabel(subjectType,subjectID,{users:policyUsers,groups:policyGroups,clients:policyClients});
               const operations=(Array.isArray(grant?.operations)?grant.operations:[]).map((op)=>KEY_ACCESS_OPERATION_OPTIONS.find((item)=>item.id===String(op||"").toLowerCase())?.label||String(op||"").toUpperCase()).join(", ");
               const windowParts=[
                 String(grant?.not_before||"").trim()?`from ${new Date(String(grant?.not_before)).toLocaleString()}`:"",
@@ -2568,7 +2561,7 @@ export const KeysTab=({session,keyCatalog,keyCatalogError,setKeyCatalog,tagCatal
               const extra=[windowParts,reason?`reason: ${reason}`:"",ticket?`ticket: ${ticket}`:""].filter(Boolean).join(" | ");
               return <div key={`${subjectType}:${subjectID}`} style={{display:"grid",gridTemplateColumns:"1fr auto",alignItems:"center",gap:8,padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:4,background:C.surface}}>
                 <div>
-                  <div style={{fontSize:10,color:C.text,fontWeight:700}}>{`${subjectType==="group"?"Group":"User"}: ${subjectLabel}`}</div>
+                  <div style={{fontSize:10,color:C.text,fontWeight:700}}>{subjectType==="client"?subjectLabel:`${subjectType==="group"?"Group":"User"}: ${subjectLabel}`}</div>
                   <div style={{fontSize: 10,color:C.muted}}>{operations||"No operations"}{extra?` | ${extra}`:""}</div>
                 </div>
                 <Btn danger small onClick={()=>removePolicyGrant(subjectType,subjectID)}>Remove</Btn>

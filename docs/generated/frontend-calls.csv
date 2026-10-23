@@ -37,29 +37,31 @@ auth,auth,PUT,/auth/password-policy{param},/auth/password-policy{param},True,ser
 auth,auth,GET,/auth/security-policy{param},/auth/security-policy{param},True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,762,auth|GET|/auth/security-policy{param}
 auth,auth,PUT,/auth/security-policy{param},/auth/security-policy{param},True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,771,auth|PUT|/auth/security-policy{param}
 auth,auth,GET,/auth/roles{param},/auth/roles{param},True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,782,auth|GET|/auth/roles{param}
-auth,auth,GET,/auth/cli/status,/auth/cli/status,False,serviceRequest,web/dashboard/src/lib/authAdmin.ts,787,auth|GET|/auth/cli/status
-auth,auth,POST,/auth/cli/session,/auth/cli/session,False,serviceRequest,web/dashboard/src/lib/authAdmin.ts,794,auth|POST|/auth/cli/session
-auth,auth,GET,/auth/cli/hsm/partitions?{param},/auth/cli/hsm/partitions,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,813,auth|GET|/auth/cli/hsm/partitions
-auth,auth,GET,/auth/cli/hsm/config,/auth/cli/hsm/config,False,serviceRequest,web/dashboard/src/lib/authAdmin.ts,827,auth|GET|/auth/cli/hsm/config
-auth,auth,PUT,/auth/cli/hsm/config,/auth/cli/hsm/config,False,serviceRequest,web/dashboard/src/lib/authAdmin.ts,835,auth|PUT|/auth/cli/hsm/config
-auth,auth,GET,/auth/identity/providers?tenant_id={param},/auth/identity/providers,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,848,auth|GET|/auth/identity/providers
-auth,auth,PUT,/auth/identity/providers/{param}?tenant_id={param},/auth/identity/providers/{param},True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,866,auth|PUT|/auth/identity/providers/{param}
-auth,auth,POST,/auth/identity/providers/{param}/test?tenant_id={param},/auth/identity/providers/{param}/test,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,897,auth|POST|/auth/identity/providers/{param}/test
-auth,auth,GET,"/auth/identity/providers/{param}/users{param}` : """"}","/auth/identity/providers/{param}/users{param}` : """"}",True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,936,"auth|GET|/auth/identity/providers/{param}/users{param}` : """"}"
-auth,auth,GET,"/auth/identity/providers/{param}/groups{param}` : """"}","/auth/identity/providers/{param}/groups{param}` : """"}",True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,966,"auth|GET|/auth/identity/providers/{param}/groups{param}` : """"}"
-auth,auth,GET,"/auth/identity/providers/{param}/groups/{param}/members{param}` : """"}","/auth/identity/providers/{param}/groups/{param}/members{param}` : """"}",True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,992,"auth|GET|/auth/identity/providers/{param}/groups/{param}/members{param}` : """"}"
-auth,auth,POST,/auth/identity/import/users,/auth/identity/import/users,False,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1013,auth|POST|/auth/identity/import/users
-auth,auth,GET,/auth/groups/roles?tenant_id={param},/auth/groups/roles,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1034,auth|GET|/auth/groups/roles
-auth,auth,PUT,/auth/groups/{param}/role?tenant_id={param},/auth/groups/{param}/role,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1046,auth|PUT|/auth/groups/{param}/role
-auth,auth,DELETE,/auth/groups/{param}/role?tenant_id={param},/auth/groups/{param}/role,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1065,auth|DELETE|/auth/groups/{param}/role
-auth,auth,GET,/auth/scim/settings?tenant_id={param},/auth/scim/settings,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1076,auth|GET|/auth/scim/settings
-auth,auth,PUT,/auth/scim/settings,/auth/scim/settings,False,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1084,auth|PUT|/auth/scim/settings
-auth,auth,POST,/auth/scim/settings/rotate-token,/auth/scim/settings/rotate-token,False,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1103,auth|POST|/auth/scim/settings/rotate-token
-auth,auth,GET,/auth/scim/summary?tenant_id={param},/auth/scim/summary,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1114,auth|GET|/auth/scim/summary
-auth,auth,GET,/auth/scim/users?tenant_id={param},/auth/scim/users,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1121,auth|GET|/auth/scim/users
-auth,auth,GET,/auth/scim/groups?tenant_id={param},/auth/scim/groups,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1128,auth|GET|/auth/scim/groups
-auth,auth,GET,/auth/sso/providers,/auth/sso/providers,True,fetch,web/dashboard/src/lib/authAdmin.ts,1136,auth|GET|/auth/sso/providers
-auth,auth,GET,/auth/sso/{param}/login,/auth/sso/{param}/login,True,fetch,web/dashboard/src/lib/authAdmin.ts,1144,auth|GET|/auth/sso/{param}/login
+auth,auth,GET,/auth/clients/{param}/role?tenant_id={param},/auth/clients/{param}/role,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,791,auth|GET|/auth/clients/{param}/role
+auth,auth,PUT,/auth/clients/{param}/role?tenant_id={param},/auth/clients/{param}/role,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,795,auth|PUT|/auth/clients/{param}/role
+auth,auth,GET,/auth/cli/status,/auth/cli/status,False,serviceRequest,web/dashboard/src/lib/authAdmin.ts,802,auth|GET|/auth/cli/status
+auth,auth,POST,/auth/cli/session,/auth/cli/session,False,serviceRequest,web/dashboard/src/lib/authAdmin.ts,809,auth|POST|/auth/cli/session
+auth,auth,GET,/auth/cli/hsm/partitions?{param},/auth/cli/hsm/partitions,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,828,auth|GET|/auth/cli/hsm/partitions
+auth,auth,GET,/auth/cli/hsm/config,/auth/cli/hsm/config,False,serviceRequest,web/dashboard/src/lib/authAdmin.ts,842,auth|GET|/auth/cli/hsm/config
+auth,auth,PUT,/auth/cli/hsm/config,/auth/cli/hsm/config,False,serviceRequest,web/dashboard/src/lib/authAdmin.ts,850,auth|PUT|/auth/cli/hsm/config
+auth,auth,GET,/auth/identity/providers?tenant_id={param},/auth/identity/providers,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,863,auth|GET|/auth/identity/providers
+auth,auth,PUT,/auth/identity/providers/{param}?tenant_id={param},/auth/identity/providers/{param},True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,881,auth|PUT|/auth/identity/providers/{param}
+auth,auth,POST,/auth/identity/providers/{param}/test?tenant_id={param},/auth/identity/providers/{param}/test,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,912,auth|POST|/auth/identity/providers/{param}/test
+auth,auth,GET,"/auth/identity/providers/{param}/users{param}` : """"}","/auth/identity/providers/{param}/users{param}` : """"}",True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,951,"auth|GET|/auth/identity/providers/{param}/users{param}` : """"}"
+auth,auth,GET,"/auth/identity/providers/{param}/groups{param}` : """"}","/auth/identity/providers/{param}/groups{param}` : """"}",True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,981,"auth|GET|/auth/identity/providers/{param}/groups{param}` : """"}"
+auth,auth,GET,"/auth/identity/providers/{param}/groups/{param}/members{param}` : """"}","/auth/identity/providers/{param}/groups/{param}/members{param}` : """"}",True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1007,"auth|GET|/auth/identity/providers/{param}/groups/{param}/members{param}` : """"}"
+auth,auth,POST,/auth/identity/import/users,/auth/identity/import/users,False,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1028,auth|POST|/auth/identity/import/users
+auth,auth,GET,/auth/groups/roles?tenant_id={param},/auth/groups/roles,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1049,auth|GET|/auth/groups/roles
+auth,auth,PUT,/auth/groups/{param}/role?tenant_id={param},/auth/groups/{param}/role,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1061,auth|PUT|/auth/groups/{param}/role
+auth,auth,DELETE,/auth/groups/{param}/role?tenant_id={param},/auth/groups/{param}/role,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1080,auth|DELETE|/auth/groups/{param}/role
+auth,auth,GET,/auth/scim/settings?tenant_id={param},/auth/scim/settings,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1091,auth|GET|/auth/scim/settings
+auth,auth,PUT,/auth/scim/settings,/auth/scim/settings,False,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1099,auth|PUT|/auth/scim/settings
+auth,auth,POST,/auth/scim/settings/rotate-token,/auth/scim/settings/rotate-token,False,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1118,auth|POST|/auth/scim/settings/rotate-token
+auth,auth,GET,/auth/scim/summary?tenant_id={param},/auth/scim/summary,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1129,auth|GET|/auth/scim/summary
+auth,auth,GET,/auth/scim/users?tenant_id={param},/auth/scim/users,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1136,auth|GET|/auth/scim/users
+auth,auth,GET,/auth/scim/groups?tenant_id={param},/auth/scim/groups,True,serviceRequest,web/dashboard/src/lib/authAdmin.ts,1143,auth|GET|/auth/scim/groups
+auth,auth,GET,/auth/sso/providers,/auth/sso/providers,True,fetch,web/dashboard/src/lib/authAdmin.ts,1151,auth|GET|/auth/sso/providers
+auth,auth,GET,/auth/sso/{param}/login,/auth/sso/{param}/login,True,fetch,web/dashboard/src/lib/authAdmin.ts,1159,auth|GET|/auth/sso/{param}/login
 autokey,autokey,GET,/autokey/settings?{param},/autokey/settings,True,serviceRequest,web/dashboard/src/lib/autokey.ts,159,autokey|GET|/autokey/settings
 autokey,autokey,PUT,/autokey/settings?{param},/autokey/settings,True,serviceRequest,web/dashboard/src/lib/autokey.ts,164,autokey|PUT|/autokey/settings
 autokey,autokey,GET,/autokey/summary?{param},/autokey/summary,True,serviceRequest,web/dashboard/src/lib/autokey.ts,172,autokey|GET|/autokey/summary

@@ -783,6 +783,21 @@ export async function listAuthRoles(session: AuthSession, tenantID?: string): Pr
   return Array.isArray(out?.items) ? out.items : [];
 }
 
+export type ClientRole = { client_id: string; role: string; permissions: string[]; requested_role?: string };
+
+// A REST client's granted role (13.53.0-beta): its tokens hold the role's
+// permissions; "" is the default (secrets and signing only).
+export async function getClientRole(session: AuthSession, clientID: string): Promise<ClientRole> {
+  return serviceRequest<ClientRole>(session, "auth", `/auth/clients/${encodeURIComponent(clientID)}/role?tenant_id=${encodeURIComponent(session.tenantId)}`);
+}
+
+export async function setClientRole(session: AuthSession, clientID: string, role: string): Promise<ClientRole> {
+  return serviceRequest<ClientRole>(session, "auth", `/auth/clients/${encodeURIComponent(clientID)}/role?tenant_id=${encodeURIComponent(session.tenantId)}`, {
+    method: "PUT",
+    body: JSON.stringify({ role })
+  });
+}
+
 export async function getAuthCLIStatus(session: AuthSession): Promise<CLIStatus> {
   return serviceRequest<CLIStatus>(session, "auth", "/auth/cli/status");
 }

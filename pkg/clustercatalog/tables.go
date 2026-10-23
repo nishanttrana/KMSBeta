@@ -18,6 +18,7 @@ var Replicated = map[string][]string{
 	"auth": {
 		"auth_api_keys",
 		"auth_client_registrations",
+		"auth_client_roles",
 		"auth_group_role_bindings",
 		"auth_identity_provider_configs",
 		"auth_mek_exposure",

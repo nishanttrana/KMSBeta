@@ -190,6 +190,8 @@ dashboard: Workbench → REST API → REST Client Security.
 | `POST /svc/auth/auth/register` | public | `tenant_id`, `client_name` (required), `interface_name` (default `rest`), `auth_mode` (`api_key`, `oauth_mtls`, `dpop`, `http_message_signature`), `subject_id`, `description`, `contact_email`, `requested_role` → `registration_id`, `status: pending` | `audit.auth.client_registered` |
 | `POST /svc/auth/auth/register/{id}/activate` | `auth.client.activate` | `tenant_id`, `approval_id` (when governance requires it), `ip_whitelist[]`, `rate_limit` → `api_key` (**shown once**), `api_key_prefix` | `audit.auth.client_activated`; refused (`governance_required`, `client_state` when not pending, `not_found`): `audit.auth.client_activation_refused` |
 | `POST /svc/auth/auth/client-token` | public, API key in `X-API-Key` (or `Authorization: ApiKey ...`) | `tenant_id`, `client_id` (the registration ID), optional `permissions[]` (a subset of the key's), `ttl_seconds` (60–3600, default 300) → `access_token`, `token_type`, `expires_at`, `client_id`, `subject_id`, `interface_name`. `oauth_mtls`, `dpop` and `http_message_signature` clients also present their certificate, `DPoP` proof or signature | binding and replay refusals: `audit.auth.mtls_binding_failed`, `client_dpop_failed`, `dpop_replay_detected`, `client_http_signature_failed`, `http_signature_replay_detected`; every other refusal, including 403 `ip_not_allowed` from an address outside the client's `ip_whitelist`: `audit.auth.client_token_refused` |
+| `GET /svc/auth/auth/clients/{id}/role` | `auth.client.read` | → `role` (`""` for none), `permissions` its next token holds, `requested_role` (13.53.0-beta) | `audit.auth.client_role_read` |
+| `PUT /svc/auth/auth/clients/{id}/role` | `auth.client.write` | Body exactly `role` (a tenant role, or `""` for the default `kms.read`/`kms.write`). → `role`, `permissions`. The caller must hold every permission of the role | `audit.auth.client_role_set`; refused `role_exceeds_caller` (403), `role_not_found` (400), `client_state` (revoked), `service_identity_protected` |
 | `POST /svc/auth/auth/clients/{id}/rotate-key` | `auth.client.write` | → `api_key` (**shown once**), `api_key_prefix`. The previous key is deleted in the same transaction and stops working immediately | `audit.auth.client_key_rotated`; refused `client_state` (not approved), `service_identity_protected` (409) |
 | `POST /svc/auth/auth/clients/{id}/revoke` | `auth.client.write` | status becomes `revoked` and the client's API keys are deleted | `audit.auth.client_revoked`; refused `service_identity_protected` (409) |
 | `DELETE /svc/auth/auth/api-keys/{id}` | `auth.api_key.write` | deletes one API key; platform service keys are refused | `audit.auth.api_key_revoked`; refused `service_identity_protected` (409) |
@@ -1164,7 +1166,7 @@ roles need the permission named here. Service principals are allowed.
 | Route | Permission | Audit subject |
 |---|---|---|
 | `GET /keys/{id}/access-policy` | `key.access.read` | `access_policy_read` |
-| `PUT /keys/{id}/access-policy` | `key.access.manage`, and the caller created the key or is a tenant admin (else `403 not_key_owner`) | `access_policy_updated` |
+| `PUT /keys/{id}/access-policy` | `key.access.manage`, and the caller created the key or is a tenant admin (else `403 not_key_owner`). A grant's `subject_type` is `user`, `group` or `client` (a REST client's registration ID, 13.53.0-beta) | `access_policy_updated` |
 | `GET /access/groups`, `/access/settings`, `/access/interface-policies` | `key.access.read` | `access_groups_listed`, `access_settings_read`, `interface_policies_listed` |
 | `GET /access/users/{user_id}/groups` | `key.access.read` | `access_user_groups_read`: `group_ids[]` the user belongs to (7.30.0-beta; the secrets service resolves group access rules with it) |
 | `POST /access/groups`, `DELETE /access/groups/{id}`, `PUT /access/groups/{id}/members` | `key.access.admin` | `access_group_created`, `access_group_deleted`, `access_group_members_updated` |
@@ -4625,6 +4627,8 @@ from the code; do not edit by hand.
 - `GET /svc/auth/auth/clients/{id}`
 - `PUT /svc/auth/auth/clients/{id}`
 - `POST /svc/auth/auth/clients/{id}/revoke`
+- `GET /svc/auth/auth/clients/{id}/role`
+- `PUT /svc/auth/auth/clients/{id}/role`
 - `POST /svc/auth/auth/clients/{id}/rotate-key`
 - `POST /svc/auth/auth/cluster/mint`
 - `POST /svc/auth/auth/delegated/api-keys/{id}/revoke`

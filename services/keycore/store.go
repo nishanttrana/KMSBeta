@@ -30,7 +30,7 @@ type Store interface {
 	SearchKeys(ctx context.Context, tenantID string, scope *KeyScope, q string, limit int) ([]Key, error)
 	// ListGrantedKeyIDs returns, per key, the grants held by any of the user
 	// subjects (matched case-insensitively) or groups.
-	ListGrantedKeyIDs(ctx context.Context, tenantID string, users []string, groups []string) (map[string][]KeyAccessGrant, error)
+	ListGrantedKeyIDs(ctx context.Context, tenantID string, users []string, groups []string, clients []string) (map[string][]KeyAccessGrant, error)
 	GetKey(ctx context.Context, tenantID string, keyID string) (Key, error)
 	UpdateKeyMetadata(ctx context.Context, tenantID string, keyID string, req UpdateKeyRequest) error
 	UpdateIVMode(ctx context.Context, tenantID string, keyID string, ivMode string) error

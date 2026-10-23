@@ -73,3 +73,38 @@ func TestClientKeyLifecyclePostgres(t *testing.T) {
 		t.Fatalf("rotating a revoked client: %v", err)
 	}
 }
+
+// A client's granted role on Postgres: set, replaced (ON CONFLICT), read,
+// cleared (13.53.0-beta).
+func TestClientRolePostgres(t *testing.T) {
+	dsn := strings.TrimSpace(os.Getenv("VECTA_TEST_POSTGRES_DSN"))
+	if dsn == "" {
+		t.Skip("set VECTA_TEST_POSTGRES_DSN to a disposable Postgres database")
+	}
+	ctx := context.Background()
+	conn, err := pkgdb.Open(ctx, pkgdb.Config{PostgresDSN: dsn, MaxOpen: 2, MaxIdle: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	if err := conn.RunMigrations(ctx, "migrations"); err != nil {
+		t.Fatalf("migrations: %v", err)
+	}
+	s := NewSQLStore(conn)
+	tenant := "t-cr-" + strconv.FormatInt(time.Now().UnixNano(), 36)
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	for _, role := range []string{"key-operator", "signer"} {
+		if err := s.SetClientRole(ctx, tenant, "reg-1", role, "admin", now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if role, err := s.GetClientRole(ctx, tenant, "reg-1"); err != nil || role != "signer" {
+		t.Fatalf("role %q %v", role, err)
+	}
+	if err := s.DeleteClientRole(ctx, tenant, "reg-1"); err != nil {
+		t.Fatal(err)
+	}
+	if role, err := s.GetClientRole(ctx, tenant, "reg-1"); err != nil || role != "" {
+		t.Fatalf("cleared role %q %v", role, err)
+	}
+}
