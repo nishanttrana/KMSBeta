@@ -125,7 +125,7 @@ func TestCRWKMigratesOffThePublicDefaultPostgres(t *testing.T) {
 	if err := conn.RunMigrations(ctx, "migrations"); err != nil {
 		t.Fatalf("migrations: %v", err)
 	}
-	if _, err := conn.SQL().ExecContext(ctx, `TRUNCATE cert_cas, cert_certificates CASCADE`); err != nil {
+	if _, err := conn.SQL().ExecContext(ctx, `TRUNCATE cert_cas, cert_certificates, cert_ssh_cas, cert_ssh_certificates CASCADE`); err != nil {
 		t.Fatalf("reset: %v", err)
 	}
 	exerciseCRWKMigration(t, conn)
@@ -150,6 +150,10 @@ func exerciseCRWKMigration(t *testing.T, conn *pkgdb.DB) {
 	}
 	tenantCA, err := svc.CreateCA(ctx, CreateCARequest{TenantID: "acme", Name: "acme-root", CALevel: "root",
 		Algorithm: "ECDSA-P256", KeyBackend: "software", Subject: "CN=Acme Root"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sshCA, err := svc.CreateSSHCA(ctx, "acme", "admin-1", CreateSSHCARequest{Name: "acme-ssh", AllowedPrincipals: []string{"deploy"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -193,7 +197,7 @@ func exerciseCRWKMigration(t *testing.T, conn *pkgdb.DB) {
 		t.Fatal(err)
 	}
 	ev, ok := em.last("crwk_rotated")
-	if !ok || ev.Result != "success" || ev.Details["reason"] != "public_default_passphrase" || ev.Details["ca_signers_rewrapped"] != 3 {
+	if !ok || ev.Result != "success" || ev.Details["reason"] != "public_default_passphrase" || ev.Details["ca_signers_rewrapped"] != 4 {
 		t.Fatalf("the rotation must be audited: %+v", ev)
 	}
 
@@ -239,6 +243,14 @@ func exerciseCRWKMigration(t *testing.T, conn *pkgdb.DB) {
 	got, _ := svc.store.GetCA(ctx, "acme", tenantCA.ID)
 	if _, err := svc.loadCASigner(got); err != nil {
 		t.Fatalf("tenant CA signer: %v", err)
+	}
+	// The SSH CA's key moved too, and still signs.
+	gotSSH, _ := svc.store.GetSSHCA(ctx, "acme", sshCA.ID)
+	if gotSSH.signer.KeyVersion != to {
+		t.Fatalf("SSH CA still wrapped under %s", gotSSH.signer.KeyVersion)
+	}
+	if _, _, err := svc.SignSSH(ctx, "acme", sshCA.ID, "admin-1", SignSSHRequest{PublicKey: testSSHPublicKey(t), Principals: []string{"deploy"}}); err != nil {
+		t.Fatalf("SSH CA signer after the rotation: %v", err)
 	}
 }
 

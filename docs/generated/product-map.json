@@ -2986,6 +2986,126 @@
       "service": "certs"
     },
     {
+      "action": "ssh_cas_listed",
+      "code_scope": "certs",
+      "file": "services/certs/ssh_ca.go",
+      "handler": "h.listSSHCAs",
+      "line": 639,
+      "match_key": "certs|GET|/certs/ssh/cas",
+      "method": "GET",
+      "normalized_path": "/certs/ssh/cas",
+      "path": "/certs/ssh/cas",
+      "permission": "cert.ssh.read",
+      "registration": "kernel",
+      "resource": "ssh_ca",
+      "service": "certs"
+    },
+    {
+      "action": "ssh_ca_created",
+      "code_scope": "certs",
+      "file": "services/certs/ssh_ca.go",
+      "handler": "h.createSSHCA",
+      "line": 640,
+      "match_key": "certs|POST|/certs/ssh/cas",
+      "method": "POST",
+      "normalized_path": "/certs/ssh/cas",
+      "path": "/certs/ssh/cas",
+      "permission": "cert.ssh.write",
+      "registration": "kernel",
+      "resource": "ssh_ca",
+      "service": "certs"
+    },
+    {
+      "action": "ssh_ca_read",
+      "code_scope": "certs",
+      "file": "services/certs/ssh_ca.go",
+      "handler": "h.getSSHCA",
+      "line": 641,
+      "match_key": "certs|GET|/certs/ssh/cas/{param}",
+      "method": "GET",
+      "normalized_path": "/certs/ssh/cas/{param}",
+      "path": "/certs/ssh/cas/{id}",
+      "permission": "cert.ssh.read",
+      "registration": "kernel",
+      "resource": "ssh_ca",
+      "service": "certs"
+    },
+    {
+      "action": "ssh_ca_updated",
+      "code_scope": "certs",
+      "file": "services/certs/ssh_ca.go",
+      "handler": "h.updateSSHCA",
+      "line": 642,
+      "match_key": "certs|PUT|/certs/ssh/cas/{param}",
+      "method": "PUT",
+      "normalized_path": "/certs/ssh/cas/{param}",
+      "path": "/certs/ssh/cas/{id}",
+      "permission": "cert.ssh.write",
+      "registration": "kernel",
+      "resource": "ssh_ca",
+      "service": "certs"
+    },
+    {
+      "action": "ssh_certificate_issued",
+      "code_scope": "certs",
+      "file": "services/certs/ssh_ca.go",
+      "handler": "h.signSSH",
+      "line": 643,
+      "match_key": "certs|POST|/certs/ssh/cas/{param}/sign",
+      "method": "POST",
+      "normalized_path": "/certs/ssh/cas/{param}/sign",
+      "path": "/certs/ssh/cas/{id}/sign",
+      "permission": "cert.ssh.sign",
+      "registration": "kernel",
+      "resource": "ssh_ca",
+      "service": "certs"
+    },
+    {
+      "action": "ssh_certificates_listed",
+      "code_scope": "certs",
+      "file": "services/certs/ssh_ca.go",
+      "handler": "h.listSSHCertificates",
+      "line": 644,
+      "match_key": "certs|GET|/certs/ssh/cas/{param}/certificates",
+      "method": "GET",
+      "normalized_path": "/certs/ssh/cas/{param}/certificates",
+      "path": "/certs/ssh/cas/{id}/certificates",
+      "permission": "cert.ssh.read",
+      "registration": "kernel",
+      "resource": "ssh_ca",
+      "service": "certs"
+    },
+    {
+      "action": "ssh_krl_read",
+      "code_scope": "certs",
+      "file": "services/certs/ssh_ca.go",
+      "handler": "h.getSSHKRL",
+      "line": 645,
+      "match_key": "certs|GET|/certs/ssh/cas/{param}/krl",
+      "method": "GET",
+      "normalized_path": "/certs/ssh/cas/{param}/krl",
+      "path": "/certs/ssh/cas/{id}/krl",
+      "permission": "cert.ssh.read",
+      "registration": "kernel",
+      "resource": "ssh_ca",
+      "service": "certs"
+    },
+    {
+      "action": "ssh_certificate_revoked",
+      "code_scope": "certs",
+      "file": "services/certs/ssh_ca.go",
+      "handler": "h.revokeSSH",
+      "line": 646,
+      "match_key": "certs|POST|/certs/ssh/certificates/{param}/revoke",
+      "method": "POST",
+      "normalized_path": "/certs/ssh/certificates/{param}/revoke",
+      "path": "/certs/ssh/certificates/{id}/revoke",
+      "permission": "cert.ssh.write",
+      "registration": "kernel",
+      "resource": "ssh_certificate",
+      "service": "certs"
+    },
+    {
       "action": "summary_read",
       "code_scope": "certs",
       "file": "services/certs/summary.go",
@@ -20177,7 +20297,7 @@
       "file": "web/dashboard/src/components/v3/SidebarSubNav.tsx",
       "handler": "",
       "label": "onSelect(item.id)} style={ } >",
-      "line": 151,
+      "line": 152,
       "tabs": [],
       "tag": "button"
     },
@@ -20709,7 +20829,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "toggleCA(caID)} style={ }> {open? : } :",
-      "line": 1451,
+      "line": 1452,
       "tabs": [
         "certs"
       ],
@@ -20719,16 +20839,6 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actCRL(ca)} disabled= >",
-      "line": 1465,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "void actDeleteCA(ca)} disabled= >",
       "line": 1466,
       "tabs": [
         "certs"
@@ -20738,8 +20848,18 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
+      "label": "void actDeleteCA(ca)} disabled= >",
+      "line": 1467,
+      "tabs": [
+        "certs"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "handler": "",
       "label": "toggleIssued(caID)} style={ }> {issuedOpen? : } Issued Certificates ( )",
-      "line": 1472,
+      "line": 1473,
       "tabs": [
         "certs"
       ],
@@ -20749,7 +20869,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "openProtocolModal(meta.name)}> Configure",
-      "line": 1614,
+      "line": 1616,
       "tabs": [
         "certs"
       ],
@@ -20759,7 +20879,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void runProtocolTest(meta.name)} >",
-      "line": 1615,
+      "line": 1617,
       "tabs": [
         "certs"
       ],
@@ -20769,26 +20889,6 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"acme-wizard\")}> ACME Wizard",
-      "line": 1623,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "setModal(\"acme-star\")}> STAR",
-      "line": 1624,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "setModal(\"est-wizard\")}> EST Enroll",
       "line": 1625,
       "tabs": [
         "certs"
@@ -20798,7 +20898,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
-      "label": "setModal(\"scep-wizard\")}> SCEP Enroll",
+      "label": "setModal(\"acme-star\")}> STAR",
       "line": 1626,
       "tabs": [
         "certs"
@@ -20808,7 +20908,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
-      "label": "setModal(\"cmpv2-wizard\")}> CMPv2 Request",
+      "label": "setModal(\"est-wizard\")}> EST Enroll",
       "line": 1627,
       "tabs": [
         "certs"
@@ -20818,27 +20918,27 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
+      "label": "setModal(\"scep-wizard\")}> SCEP Enroll",
+      "line": 1628,
+      "tabs": [
+        "certs"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "handler": "",
+      "label": "setModal(\"cmpv2-wizard\")}> CMPv2 Request",
+      "line": 1629,
+      "tabs": [
+        "certs"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "handler": "",
       "label": "setCAStatusView(\"all\")} style={ }>{`All $ `}",
-      "line": 1643,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "setCAStatusView(\"active\")} style={ }>{`Active $ `}",
-      "line": 1644,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "setCAStatusView(\"revoked\")} style={ }>{`Revoked $ `}",
       "line": 1645,
       "tabs": [
         "certs"
@@ -20848,7 +20948,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
-      "label": "void refreshCAs()} disabled= >",
+      "label": "setCAStatusView(\"active\")} style={ }>{`Active $ `}",
       "line": 1646,
       "tabs": [
         "certs"
@@ -20858,7 +20958,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
-      "label": "setModal(\"create-ca\")}> Create CA",
+      "label": "setCAStatusView(\"revoked\")} style={ }>{`Revoked $ `}",
       "line": 1647,
       "tabs": [
         "certs"
@@ -20868,8 +20968,28 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
+      "label": "void refreshCAs()} disabled= >",
+      "line": 1648,
+      "tabs": [
+        "certs"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "handler": "",
+      "label": "setModal(\"create-ca\")}> Create CA",
+      "line": 1649,
+      "tabs": [
+        "certs"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "handler": "",
       "label": "void refreshRenewalIntel()} disabled= >",
-      "line": 1739,
+      "line": 1741,
       "tabs": [
         "certs"
       ],
@@ -20879,7 +20999,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshSTARIntel()} disabled= >",
-      "line": 1765,
+      "line": 1767,
       "tabs": [
         "certs"
       ],
@@ -20889,7 +21009,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"acme-star\")}>New",
-      "line": 1766,
+      "line": 1768,
       "tabs": [
         "certs"
       ],
@@ -20899,7 +21019,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actRefreshSTARSubscription(item,true)} disabled={rowActionBusy===`star-r...",
-      "line": 1794,
+      "line": 1796,
       "tabs": [
         "certs"
       ],
@@ -20909,7 +21029,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actDeleteSTARSubscription(item)} disabled={rowActionBusy===`star-delete-...",
-      "line": 1795,
+      "line": 1797,
       "tabs": [
         "certs"
       ],
@@ -20919,26 +21039,6 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"issue\")} style={ }> Issue Certificate",
-      "line": 1822,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "setModal(\"sign-csr\")} style={ }> Sign CSR",
-      "line": 1823,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "setModal(\"upload-3p\")} style={ }> Upload 3rd-Party",
       "line": 1824,
       "tabs": [
         "certs"
@@ -20948,7 +21048,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
-      "label": "setModal(\"cert-alert-policy\")} style={ }> Alert Policy",
+      "label": "setModal(\"sign-csr\")} style={ }> Sign CSR",
       "line": 1825,
       "tabs": [
         "certs"
@@ -20958,7 +21058,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
-      "label": "setModal(\"cert-clm-policy\")} style={ }> Lifetime policy",
+      "label": "setModal(\"upload-3p\")} style={ }> Upload 3rd-Party",
       "line": 1826,
       "tabs": [
         "certs"
@@ -20968,8 +21068,28 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
+      "label": "setModal(\"cert-alert-policy\")} style={ }> Alert Policy",
+      "line": 1827,
+      "tabs": [
+        "certs"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "handler": "",
+      "label": "setModal(\"cert-clm-policy\")} style={ }> Lifetime policy",
+      "line": 1828,
+      "tabs": [
+        "certs"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "handler": "",
       "label": "setCertStatusView(\"all\")} style={ }> {`All ($ )`}",
-      "line": 1841,
+      "line": 1843,
       "tabs": [
         "certs"
       ],
@@ -20979,7 +21099,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertStatusView(\"active\")} style={ }> {`Active ($ )`}",
-      "line": 1844,
+      "line": 1846,
       "tabs": [
         "certs"
       ],
@@ -20989,7 +21109,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertStatusView(\"revoked\")} style={ }> {`Revoked ($ )`}",
-      "line": 1847,
+      "line": 1849,
       "tabs": [
         "certs"
       ],
@@ -20999,7 +21119,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshCerts()} disabled= >",
-      "line": 1851,
+      "line": 1853,
       "tabs": [
         "certs"
       ],
@@ -21009,7 +21129,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "openCertActionMenu(e,certID)} aria-label=\"Certificate actions\" style={{ backg...",
-      "line": 1882,
+      "line": 1884,
       "tabs": [
         "certs"
       ],
@@ -21019,7 +21139,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} onMouseEnter={(e)=> } onMouseLeave={(e)=> } style={ } > Download",
-      "line": 1914,
+      "line": 1916,
       "tabs": [
         "certs"
       ],
@@ -21029,7 +21149,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`renew-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } st...",
-      "line": 1928,
+      "line": 1930,
       "tabs": [
         "certs"
       ],
@@ -21039,7 +21159,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`revoke-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } s...",
-      "line": 1941,
+      "line": 1943,
       "tabs": [
         "certs"
       ],
@@ -21049,7 +21169,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`ocsp-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } sty...",
-      "line": 1954,
+      "line": 1956,
       "tabs": [
         "certs"
       ],
@@ -21059,7 +21179,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`delete-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } s...",
-      "line": 1969,
+      "line": 1971,
       "tabs": [
         "certs"
       ],
@@ -21069,16 +21189,6 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev",
-      "line": 2005,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "setCertPageIndex((prev)=>Math.min(certTotalPages-1,prev+1))} disabled= >Next",
       "line": 2007,
       "tabs": [
         "certs"
@@ -21088,8 +21198,18 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
+      "label": "setCertPageIndex((prev)=>Math.min(certTotalPages-1,prev+1))} disabled= >Next",
+      "line": 2009,
+      "tabs": [
+        "certs"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2052,
+      "line": 2054,
       "tabs": [
         "certs"
       ],
@@ -21099,7 +21219,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitCreateCA()} disabled= >",
-      "line": 2053,
+      "line": 2055,
       "tabs": [
         "certs"
       ],
@@ -21109,7 +21229,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2128,
+      "line": 2130,
       "tabs": [
         "certs"
       ],
@@ -21119,7 +21239,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitIssueCert()} disabled= >",
-      "line": 2129,
+      "line": 2131,
       "tabs": [
         "certs"
       ],
@@ -21129,7 +21249,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2189,
+      "line": 2191,
       "tabs": [
         "certs"
       ],
@@ -21139,7 +21259,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitSignCSR()} disabled= >",
-      "line": 2190,
+      "line": 2192,
       "tabs": [
         "certs"
       ],
@@ -21149,7 +21269,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2219,
+      "line": 2221,
       "tabs": [
         "certs"
       ],
@@ -21159,7 +21279,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitDownloadCert()} disabled= >",
-      "line": 2220,
+      "line": 2222,
       "tabs": [
         "certs"
       ],
@@ -21169,7 +21289,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2244,
+      "line": 2246,
       "tabs": [
         "certs"
       ],
@@ -21179,7 +21299,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitUpload()} disabled= >",
-      "line": 2245,
+      "line": 2247,
       "tabs": [
         "certs"
       ],
@@ -21189,7 +21309,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2264,
+      "line": 2266,
       "tabs": [
         "certs"
       ],
@@ -21199,7 +21319,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void saveAlertPolicy()} disabled= >",
-      "line": 2265,
+      "line": 2267,
       "tabs": [
         "certs"
       ],
@@ -21209,7 +21329,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2285,
+      "line": 2287,
       "tabs": [
         "certs"
       ],
@@ -21219,7 +21339,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void saveCLMPolicy()} disabled= >",
-      "line": 2286,
+      "line": 2288,
       "tabs": [
         "certs"
       ],
@@ -21229,16 +21349,6 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setProtocolConfigText(JSON.stringify(protocolDefaultConfigs[String(protocolNa...",
-      "line": 2312,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "setModal(null)} disabled= >Cancel",
       "line": 2314,
       "tabs": [
         "certs"
@@ -21248,8 +21358,18 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
+      "label": "setModal(null)} disabled= >Cancel",
+      "line": 2316,
+      "tabs": [
+        "certs"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "handler": "",
       "label": "void saveProtocol()} disabled= >",
-      "line": 2315,
+      "line": 2317,
       "tabs": [
         "certs"
       ],
@@ -21259,7 +21379,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2389,
+      "line": 2391,
       "tabs": [
         "certs"
       ],
@@ -21269,7 +21389,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitCreateSTARSubscription()} disabled= >",
-      "line": 2390,
+      "line": 2392,
       "tabs": [
         "certs"
       ],
@@ -21279,7 +21399,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2426,
+      "line": 2428,
       "tabs": [
         "certs"
       ],
@@ -21289,7 +21409,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ const email=String((document.getElementById(\"acme-wiz-email\") as any)?.valu...",
-      "line": 2427,
+      "line": 2429,
       "tabs": [
         "certs"
       ],
@@ -21299,7 +21419,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2485,
+      "line": 2487,
       "tabs": [
         "certs"
       ],
@@ -21309,7 +21429,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ if(!session)return; try{ const attrs=await estCSRAttributes(session); onToa...",
-      "line": 2486,
+      "line": 2488,
       "tabs": [
         "certs"
       ],
@@ -21319,7 +21439,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ const cn=String((document.getElementById(\"est-wiz-cn\") as any)?.value||\"\")....",
-      "line": 2493,
+      "line": 2495,
       "tabs": [
         "certs"
       ],
@@ -21329,7 +21449,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2546,
+      "line": 2548,
       "tabs": [
         "certs"
       ],
@@ -21339,7 +21459,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ if(!session||!activeCA)return; setSubmitting(true); try{ const msgType=scep...",
-      "line": 2547,
+      "line": 2549,
       "tabs": [
         "certs"
       ],
@@ -21349,7 +21469,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2609,
+      "line": 2611,
       "tabs": [
         "certs"
       ],
@@ -21359,7 +21479,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ const msgType=cmpMsgType as \"ir\"|\"cr\"|\"kur\"|\"rr\",cn=String((document.getEle...",
-      "line": 2610,
+      "line": 2612,
       "tabs": [
         "certs"
       ],
@@ -24257,6 +24377,86 @@
       "tabs": [
         "sbom"
       ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/SSHCADetail.tsx",
+      "handler": "",
+      "label": "void editPrincipals()}>Edit principals",
+      "line": 86,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/SSHCADetail.tsx",
+      "handler": "",
+      "label": "void downloadSSHKRL(session, ca).catch((e) => onToast?.(errMsg(e)))}>Download...",
+      "line": 87,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/SSHCADetail.tsx",
+      "handler": "",
+      "label": "void setStatus(\"disabled\")}>Disable",
+      "line": 88,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/SSHCADetail.tsx",
+      "handler": "",
+      "label": "void setStatus(\"active\")}>Enable",
+      "line": 88,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/SSHCADetail.tsx",
+      "handler": "",
+      "label": "void revoke(c)}>Revoke",
+      "line": 124,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/SSHCADetail.tsx",
+      "handler": "",
+      "label": "copy(value, onToast)}>Copy",
+      "line": 141,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/SSHCADetail.tsx",
+      "handler": "",
+      "label": "void submit()}>",
+      "line": 219,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/SSHCADetail.tsx",
+      "handler": "",
+      "label": "copy(issued, onToast)}>Copy",
+      "line": 224,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/SSHCertificatesPanel.tsx",
+      "handler": "",
+      "label": "setCreating(!creating)}>",
+      "line": 35,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/SSHCertificatesPanel.tsx",
+      "handler": "",
+      "label": "void submit()}>",
+      "line": 135,
+      "tabs": [],
       "tag": "Btn"
     },
     {
@@ -33185,6 +33385,110 @@
       "source": "serviceRequest"
     },
     {
+      "dynamic": true,
+      "expression": "serviceRequest(\"certs\", `/certs/ssh/cas?${q(session)}`)",
+      "file": "web/dashboard/src/lib/sshCerts.ts",
+      "line": 76,
+      "match_key": "certs|GET|/certs/ssh/cas",
+      "method": "GET",
+      "normalized_path": "/certs/ssh/cas",
+      "path": "/certs/ssh/cas?{param}",
+      "service": "certs",
+      "service_key": "certs",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"certs\", `/certs/ssh/cas/${encodeURIComponent(id)}?${q(session)}`)",
+      "file": "web/dashboard/src/lib/sshCerts.ts",
+      "line": 82,
+      "match_key": "certs|GET|/certs/ssh/cas/{param}",
+      "method": "GET",
+      "normalized_path": "/certs/ssh/cas/{param}",
+      "path": "/certs/ssh/cas/{param}?{param}",
+      "service": "certs",
+      "service_key": "certs",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"certs\", `/certs/ssh/cas?${q(session)}`)",
+      "file": "web/dashboard/src/lib/sshCerts.ts",
+      "line": 87,
+      "match_key": "certs|POST|/certs/ssh/cas",
+      "method": "POST",
+      "normalized_path": "/certs/ssh/cas",
+      "path": "/certs/ssh/cas?{param}",
+      "service": "certs",
+      "service_key": "certs",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"certs\", `/certs/ssh/cas/${encodeURIComponent(id)}?${q(session)}`)",
+      "file": "web/dashboard/src/lib/sshCerts.ts",
+      "line": 96,
+      "match_key": "certs|PUT|/certs/ssh/cas/{param}",
+      "method": "PUT",
+      "normalized_path": "/certs/ssh/cas/{param}",
+      "path": "/certs/ssh/cas/{param}?{param}",
+      "service": "certs",
+      "service_key": "certs",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"certs\", `/certs/ssh/cas/${encodeURIComponent(caID)}/sign?${q(session)}`)",
+      "file": "web/dashboard/src/lib/sshCerts.ts",
+      "line": 101,
+      "match_key": "certs|POST|/certs/ssh/cas/{param}/sign",
+      "method": "POST",
+      "normalized_path": "/certs/ssh/cas/{param}/sign",
+      "path": "/certs/ssh/cas/{param}/sign?{param}",
+      "service": "certs",
+      "service_key": "certs",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"certs\", `/certs/ssh/cas/${encodeURIComponent(caID)}/certificates?${q(session)}`)",
+      "file": "web/dashboard/src/lib/sshCerts.ts",
+      "line": 109,
+      "match_key": "certs|GET|/certs/ssh/cas/{param}/certificates",
+      "method": "GET",
+      "normalized_path": "/certs/ssh/cas/{param}/certificates",
+      "path": "/certs/ssh/cas/{param}/certificates?{param}",
+      "service": "certs",
+      "service_key": "certs",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"certs\", `/certs/ssh/certificates/${encodeURIComponent(id)}/revoke?${q(session)}`)",
+      "file": "web/dashboard/src/lib/sshCerts.ts",
+      "line": 115,
+      "match_key": "certs|POST|/certs/ssh/certificates/{param}/revoke",
+      "method": "POST",
+      "normalized_path": "/certs/ssh/certificates/{param}/revoke",
+      "path": "/certs/ssh/certificates/{param}/revoke?{param}",
+      "service": "certs",
+      "service_key": "certs",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequestRaw(\"certs\", `/certs/ssh/cas/${encodeURIComponent(ca.id)}/krl?${q(session)}`)",
+      "file": "web/dashboard/src/lib/sshCerts.ts",
+      "line": 124,
+      "match_key": "certs|GET|/certs/ssh/cas/{param}/krl",
+      "method": "GET",
+      "normalized_path": "/certs/ssh/cas/{param}/krl",
+      "path": "/certs/ssh/cas/{param}/krl?{param}",
+      "service": "certs",
+      "service_key": "certs",
+      "source": "serviceRequestRaw"
+    },
+    {
       "dynamic": false,
       "expression": "serviceRequest(\"reporting\", \"/telemetry/errors\")",
       "file": "web/dashboard/src/lib/telemetry.ts",
@@ -33445,7 +33749,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-23T04:37:23Z",
+  "generated_at": "2026-10-23T07:20:11Z",
   "navigation": [
     {
       "group": "Home",
@@ -41730,6 +42034,9 @@
             "Status",
             "RewrapLegacyCASigners",
             "UpdateCASignerEncryption",
+            "ListSSHCAs",
+            "sealedAsCA",
+            "UpdateSSHCASignerEncryption",
             "MaterializeRuntimeCerts",
             "ensureRuntimeRootCA",
             "writeFileAtomically",
@@ -42087,6 +42394,9 @@
             "Status",
             "RewrapLegacyCASigners",
             "UpdateCASignerEncryption",
+            "ListSSHCAs",
+            "sealedAsCA",
+            "UpdateSSHCASignerEncryption",
             "MaterializeRuntimeCerts",
             "ensureRuntimeRootCA",
             "writeFileAtomically",
@@ -42153,7 +42463,8 @@
             "ListCAs",
             "ListProfiles",
             "GetProfileByName",
-            "UpdateCASignerEncryption"
+            "UpdateCASignerEncryption",
+            "ListSSHCAs"
           ]
         },
         {
@@ -42213,7 +42524,8 @@
         "ListCAs",
         "ListProfiles",
         "GetProfileByName",
-        "UpdateCASignerEncryption"
+        "UpdateCASignerEncryption",
+        "ListSSHCAs"
       ]
     },
     {
@@ -42436,6 +42748,9 @@
             "Status",
             "RewrapLegacyCASigners",
             "UpdateCASignerEncryption",
+            "ListSSHCAs",
+            "sealedAsCA",
+            "UpdateSSHCASignerEncryption",
             "MaterializeRuntimeCerts",
             "ensureRuntimeRootCA",
             "writeFileAtomically",
@@ -42502,7 +42817,8 @@
             "ListCAs",
             "ListProfiles",
             "GetProfileByName",
-            "UpdateCASignerEncryption"
+            "UpdateCASignerEncryption",
+            "ListSSHCAs"
           ]
         },
         {
@@ -42562,7 +42878,8 @@
         "ListCAs",
         "ListProfiles",
         "GetProfileByName",
-        "UpdateCASignerEncryption"
+        "UpdateCASignerEncryption",
+        "ListSSHCAs"
       ]
     },
     {
@@ -46021,6 +46338,537 @@
       "service_method_details": [],
       "service_receiver_calls": [],
       "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"certs\", `/certs/ssh/cas?${q(session)}`)",
+          "file": "web/dashboard/src/lib/sshCerts.ts",
+          "line": 76,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.listSSHCAs",
+      "handler_external_package_calls": [],
+      "handler_file": "services/certs/ssh_ca.go",
+      "handler_helper_calls": [
+        "ListSSHCAs",
+        "sshFail"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 663,
+      "handler_name": "listSSHCAs",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "ListSSHCAs"
+      ],
+      "method": "GET",
+      "normalized_path": "/certs/ssh/cas",
+      "path": "/certs/ssh/cas",
+      "route_file": "services/certs/ssh_ca.go",
+      "route_line": 639,
+      "service": "certs",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"certs\", `/certs/ssh/cas?${q(session)}`)",
+          "file": "web/dashboard/src/lib/sshCerts.ts",
+          "line": 87,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.createSSHCA",
+      "handler_external_package_calls": [],
+      "handler_file": "services/certs/ssh_ca.go",
+      "handler_helper_calls": [
+        "CreateSSHCA",
+        "sshFail"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 673,
+      "handler_name": "createSSHCA",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "CreateSSHCA"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/certs/ssh/cas",
+      "path": "/certs/ssh/cas",
+      "route_file": "services/certs/ssh_ca.go",
+      "route_line": 640,
+      "service": "certs",
+      "service_external_package_calls": [
+        "crypto/x509.MarshalPKIXPublicKey",
+        "encoding/pem.EncodeToMemory",
+        "strings.TrimSpace",
+        "strings.ToUpper",
+        "strings.ToLower",
+        "strings.ReplaceAll",
+        "strings.Contains",
+        "time.Now",
+        "golang.org/x/crypto/ssh.NewPublicKey",
+        "golang.org/x/crypto/ssh.MarshalAuthorizedKey",
+        "golang.org/x/crypto/ssh.FingerprintSHA256"
+      ],
+      "service_helper_calls": [
+        "refuseSSH",
+        "enforceFIPS",
+        "sshPolicy",
+        "newID",
+        "hsmCAAlgorithm",
+        "newHSMCAKey",
+        "generateSigningKey",
+        "zeroizeString",
+        "encryptSigner",
+        "Public",
+        "Error"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "crypto/x509.MarshalPKIXPublicKey",
+            "encoding/pem.EncodeToMemory",
+            "strings.TrimSpace",
+            "strings.ToUpper",
+            "strings.ToLower",
+            "strings.ReplaceAll",
+            "strings.Contains",
+            "time.Now",
+            "golang.org/x/crypto/ssh.NewPublicKey",
+            "golang.org/x/crypto/ssh.MarshalAuthorizedKey",
+            "golang.org/x/crypto/ssh.FingerprintSHA256"
+          ],
+          "file": "services/certs/ssh_ca.go",
+          "helper_calls": [
+            "refuseSSH",
+            "enforceFIPS",
+            "sshPolicy",
+            "newID",
+            "hsmCAAlgorithm",
+            "newHSMCAKey",
+            "generateSigningKey",
+            "zeroizeString",
+            "encryptSigner",
+            "Public",
+            "Error"
+          ],
+          "internal_package_calls": [],
+          "line": 252,
+          "name": "CreateSSHCA",
+          "receiver_calls": [],
+          "store_calls": [
+            "CreateSSHCA"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "CreateSSHCA"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"certs\", `/certs/ssh/cas/${encodeURIComponent(id)}?${q(session)}`)",
+          "file": "web/dashboard/src/lib/sshCerts.ts",
+          "line": 82,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.getSSHCA",
+      "handler_external_package_calls": [
+        "strings.Join",
+        "strings.Fields"
+      ],
+      "handler_file": "services/certs/ssh_ca.go",
+      "handler_helper_calls": [
+        "GetSSHCA",
+        "sshFail"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 694,
+      "handler_name": "getSSHCA",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "GetSSHCA"
+      ],
+      "method": "GET",
+      "normalized_path": "/certs/ssh/cas/{param}",
+      "path": "/certs/ssh/cas/{id}",
+      "route_file": "services/certs/ssh_ca.go",
+      "route_line": 641,
+      "service": "certs",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"certs\", `/certs/ssh/cas/${encodeURIComponent(id)}?${q(session)}`)",
+          "file": "web/dashboard/src/lib/sshCerts.ts",
+          "line": 96,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.updateSSHCA",
+      "handler_external_package_calls": [],
+      "handler_file": "services/certs/ssh_ca.go",
+      "handler_helper_calls": [
+        "UpdateSSHCA",
+        "sshFail"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 708,
+      "handler_name": "updateSSHCA",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "UpdateSSHCA"
+      ],
+      "handler_store_calls": [],
+      "method": "PUT",
+      "normalized_path": "/certs/ssh/cas/{param}",
+      "path": "/certs/ssh/cas/{id}",
+      "route_file": "services/certs/ssh_ca.go",
+      "route_line": 642,
+      "service": "certs",
+      "service_external_package_calls": [
+        "strings.ToLower",
+        "strings.TrimSpace"
+      ],
+      "service_helper_calls": [
+        "GetSSHCA",
+        "refuseSSH",
+        "sshPolicy",
+        "UpdateSSHCAPolicy"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "strings.ToLower",
+            "strings.TrimSpace"
+          ],
+          "file": "services/certs/ssh_ca.go",
+          "helper_calls": [
+            "GetSSHCA",
+            "refuseSSH",
+            "sshPolicy",
+            "UpdateSSHCAPolicy"
+          ],
+          "internal_package_calls": [],
+          "line": 326,
+          "name": "UpdateSSHCA",
+          "receiver_calls": [],
+          "store_calls": [
+            "GetSSHCA",
+            "UpdateSSHCAPolicy"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "GetSSHCA",
+        "UpdateSSHCAPolicy"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"certs\", `/certs/ssh/cas/${encodeURIComponent(caID)}/sign?${q(session)}`)",
+          "file": "web/dashboard/src/lib/sshCerts.ts",
+          "line": 101,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.signSSH",
+      "handler_external_package_calls": [],
+      "handler_file": "services/certs/ssh_ca.go",
+      "handler_helper_calls": [
+        "SignSSH",
+        "sshFail"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 726,
+      "handler_name": "signSSH",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "SignSSH"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/certs/ssh/cas/{param}/sign",
+      "path": "/certs/ssh/cas/{id}/sign",
+      "route_file": "services/certs/ssh_ca.go",
+      "route_line": 643,
+      "service": "certs",
+      "service_external_package_calls": [
+        "fmt.Sprintf",
+        "fmt.Errorf",
+        "net.ParseCIDR",
+        "net.ParseIP",
+        "strconv.FormatUint",
+        "strings.ToLower",
+        "strings.TrimSpace",
+        "strings.ContainsAny",
+        "strings.Join",
+        "time.Now",
+        "time.Duration",
+        "golang.org/x/crypto/ssh.ParseAuthorizedKey",
+        "golang.org/x/crypto/ssh.FingerprintSHA256",
+        "golang.org/x/crypto/ssh.MarshalAuthorizedKey"
+      ],
+      "service_helper_calls": [
+        "GetSSHCA",
+        "refuseSSH",
+        "rsaAtLeast",
+        "validPrincipal",
+        "principalAllowed",
+        "sshExtensions",
+        "sshSerial",
+        "sshCASigner",
+        "sshSignerFor",
+        "newID",
+        "CreateSSHCertificate"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "fmt.Sprintf",
+            "fmt.Errorf",
+            "net.ParseCIDR",
+            "net.ParseIP",
+            "strconv.FormatUint",
+            "strings.ToLower",
+            "strings.TrimSpace",
+            "strings.ContainsAny",
+            "strings.Join",
+            "time.Now",
+            "time.Duration",
+            "golang.org/x/crypto/ssh.ParseAuthorizedKey",
+            "golang.org/x/crypto/ssh.FingerprintSHA256",
+            "golang.org/x/crypto/ssh.MarshalAuthorizedKey"
+          ],
+          "file": "services/certs/ssh_ca.go",
+          "helper_calls": [
+            "GetSSHCA",
+            "refuseSSH",
+            "rsaAtLeast",
+            "validPrincipal",
+            "principalAllowed",
+            "sshExtensions",
+            "sshSerial",
+            "sshCASigner",
+            "sshSignerFor",
+            "newID",
+            "CreateSSHCertificate"
+          ],
+          "internal_package_calls": [],
+          "line": 414,
+          "name": "SignSSH",
+          "receiver_calls": [],
+          "store_calls": [
+            "GetSSHCA",
+            "CreateSSHCertificate"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "GetSSHCA",
+        "CreateSSHCertificate"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"certs\", `/certs/ssh/cas/${encodeURIComponent(caID)}/certificates?${q(session)}`)",
+          "file": "web/dashboard/src/lib/sshCerts.ts",
+          "line": 109,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.listSSHCertificates",
+      "handler_external_package_calls": [
+        "strconv.Atoi"
+      ],
+      "handler_file": "services/certs/ssh_ca.go",
+      "handler_helper_calls": [
+        "GetSSHCA",
+        "sshFail",
+        "ListSSHCertificates"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 749,
+      "handler_name": "listSSHCertificates",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "GetSSHCA",
+        "ListSSHCertificates"
+      ],
+      "method": "GET",
+      "normalized_path": "/certs/ssh/cas/{param}/certificates",
+      "path": "/certs/ssh/cas/{id}/certificates",
+      "route_file": "services/certs/ssh_ca.go",
+      "route_line": 644,
+      "service": "certs",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequestRaw(\"certs\", `/certs/ssh/cas/${encodeURIComponent(ca.id)}/krl?${q(session)}`)",
+          "file": "web/dashboard/src/lib/sshCerts.ts",
+          "line": 124,
+          "source": "serviceRequestRaw"
+        }
+      ],
+      "handler": "h.getSSHKRL",
+      "handler_external_package_calls": [
+        "time.Now"
+      ],
+      "handler_file": "services/certs/ssh_ca.go",
+      "handler_helper_calls": [
+        "GetSSHCA",
+        "sshFail",
+        "sshKRL"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 767,
+      "handler_name": "getSSHKRL",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "sshKRL"
+      ],
+      "handler_store_calls": [
+        "GetSSHCA"
+      ],
+      "method": "GET",
+      "normalized_path": "/certs/ssh/cas/{param}/krl",
+      "path": "/certs/ssh/cas/{id}/krl",
+      "route_file": "services/certs/ssh_ca.go",
+      "route_line": 645,
+      "service": "certs",
+      "service_external_package_calls": [
+        "fmt.Errorf",
+        "strconv.ParseUint",
+        "golang.org/x/crypto/ssh.ParseAuthorizedKey"
+      ],
+      "service_helper_calls": [
+        "ListSSHCertificates"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "fmt.Errorf",
+            "strconv.ParseUint",
+            "golang.org/x/crypto/ssh.ParseAuthorizedKey"
+          ],
+          "file": "services/certs/ssh_ca.go",
+          "helper_calls": [
+            "ListSSHCertificates"
+          ],
+          "internal_package_calls": [],
+          "line": 594,
+          "name": "sshKRL",
+          "receiver_calls": [],
+          "store_calls": [
+            "ListSSHCertificates"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "ListSSHCertificates"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"certs\", `/certs/ssh/certificates/${encodeURIComponent(id)}/revoke?${q(session)}`)",
+          "file": "web/dashboard/src/lib/sshCerts.ts",
+          "line": 115,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.revokeSSH",
+      "handler_external_package_calls": [],
+      "handler_file": "services/certs/ssh_ca.go",
+      "handler_helper_calls": [
+        "RevokeSSHCertificate",
+        "sshFail"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 785,
+      "handler_name": "revokeSSH",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "RevokeSSHCertificate"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/certs/ssh/certificates/{param}/revoke",
+      "path": "/certs/ssh/certificates/{id}/revoke",
+      "route_file": "services/certs/ssh_ca.go",
+      "route_line": 646,
+      "service": "certs",
+      "service_external_package_calls": [
+        "strings.TrimSpace",
+        "time.Now"
+      ],
+      "service_helper_calls": [
+        "refuseSSH",
+        "GetSSHCertificate"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "strings.TrimSpace",
+            "time.Now"
+          ],
+          "file": "services/certs/ssh_ca.go",
+          "helper_calls": [
+            "refuseSSH",
+            "GetSSHCertificate"
+          ],
+          "internal_package_calls": [],
+          "line": 573,
+          "name": "RevokeSSHCertificate",
+          "receiver_calls": [],
+          "store_calls": [
+            "GetSSHCertificate",
+            "RevokeSSHCertificate"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "GetSSHCertificate",
+        "RevokeSSHCertificate"
+      ]
     },
     {
       "frontend_call_sites": [
@@ -91586,7 +92434,7 @@
       "audit": 34,
       "auth": 90,
       "autokey": 15,
-      "certs": 70,
+      "certs": 78,
       "cloud": 28,
       "cluster-manager": 28,
       "compliance": 60,
@@ -91617,7 +92465,7 @@
       "auth": 47,
       "auth-edge": 4,
       "autokey": 11,
-      "certs": 54,
+      "certs": 62,
       "cloud": 15,
       "cluster-manager": 12,
       "compliance": 27,
@@ -91772,6 +92620,10 @@
       {
         "id": "cert-service-mtls",
         "label": "Service mTLS"
+      },
+      {
+        "id": "cert-ssh",
+        "label": "SSH Certificates"
       }
     ],
     "cloudctl": [
@@ -91946,17 +92798,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 913,
+    "backend_routes": 921,
     "backend_services": 27,
-    "button_inventory": 756,
-    "frontend_call_sites": 515,
-    "matched_frontend_call_sites": 485,
+    "button_inventory": 766,
+    "frontend_call_sites": 523,
+    "matched_frontend_call_sites": 493,
     "nav_items": 25,
-    "request_flows": 913,
-    "request_flows_with_frontend": 491,
+    "request_flows": 921,
+    "request_flows_with_frontend": 499,
     "request_flows_with_internal_package_calls": 202,
-    "request_flows_with_service_calls": 550,
-    "request_flows_with_store_calls": 638,
+    "request_flows_with_service_calls": 555,
+    "request_flows_with_store_calls": 646,
     "subpane_groups": 14,
     "tab_components": 32,
     "unmatched_frontend_call_sites": 30
@@ -98074,7 +98926,7 @@
         ]
       },
       {
-        "complexity": 36,
+        "complexity": 37,
         "externalPackages": [
           "io.ReadAll",
           "strings.TrimSpace",
@@ -98159,7 +99011,8 @@
           "ListCAs",
           "ListProfiles",
           "GetProfileByName",
-          "UpdateCASignerEncryption"
+          "UpdateCASignerEncryption",
+          "ListSSHCAs"
         ],
         "uiLabels": [
           "Operations",
@@ -98168,7 +99021,7 @@
         ]
       },
       {
-        "complexity": 36,
+        "complexity": 37,
         "externalPackages": [
           "io.ReadAll",
           "strings.TrimSpace",
@@ -98246,7 +99099,8 @@
           "ListCAs",
           "ListProfiles",
           "GetProfileByName",
-          "UpdateCASignerEncryption"
+          "UpdateCASignerEncryption",
+          "ListSSHCAs"
         ],
         "uiLabels": [
           "API only"
@@ -100097,6 +100951,320 @@
         "storeCalls": [],
         "uiLabels": [
           "API only"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"certs\", `/certs/ssh/cas?${q(session)}`)",
+            "file": "web/dashboard/src/lib/sshCerts.ts",
+            "line": 76,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "listSSHCAs",
+        "handlerFile": "services/certs/ssh_ca.go",
+        "handlerLine": 663,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/certs/ssh/cas",
+        "path": "/certs/ssh/cas",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "certs|GET|/certs/ssh/cas",
+        "sensitive": true,
+        "service": "certs",
+        "serviceCalls": [],
+        "storeCalls": [
+          "ListSSHCAs"
+        ],
+        "uiLabels": [
+          "sshCerts"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [
+          "crypto/x509.MarshalPKIXPublicKey",
+          "encoding/pem.EncodeToMemory",
+          "strings.TrimSpace",
+          "strings.ToUpper",
+          "strings.ToLower",
+          "strings.ReplaceAll",
+          "strings.Contains",
+          "time.Now",
+          "golang.org/x/crypto/ssh.NewPublicKey",
+          "golang.org/x/crypto/ssh.MarshalAuthorizedKey",
+          "golang.org/x/crypto/ssh.FingerprintSHA256"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"certs\", `/certs/ssh/cas?${q(session)}`)",
+            "file": "web/dashboard/src/lib/sshCerts.ts",
+            "line": 87,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "createSSHCA",
+        "handlerFile": "services/certs/ssh_ca.go",
+        "handlerLine": 673,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/certs/ssh/cas",
+        "path": "/certs/ssh/cas",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "certs|POST|/certs/ssh/cas",
+        "sensitive": true,
+        "service": "certs",
+        "serviceCalls": [
+          "CreateSSHCA"
+        ],
+        "storeCalls": [
+          "CreateSSHCA"
+        ],
+        "uiLabels": [
+          "sshCerts"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [
+          "strings.Join",
+          "strings.Fields"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"certs\", `/certs/ssh/cas/${encodeURIComponent(id)}?${q(session)}`)",
+            "file": "web/dashboard/src/lib/sshCerts.ts",
+            "line": 82,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "getSSHCA",
+        "handlerFile": "services/certs/ssh_ca.go",
+        "handlerLine": 694,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/certs/ssh/cas/{param}",
+        "path": "/certs/ssh/cas/{id}",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "certs|GET|/certs/ssh/cas/{param}",
+        "sensitive": true,
+        "service": "certs",
+        "serviceCalls": [],
+        "storeCalls": [
+          "GetSSHCA"
+        ],
+        "uiLabels": [
+          "sshCerts"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [
+          "strings.ToLower",
+          "strings.TrimSpace"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"certs\", `/certs/ssh/cas/${encodeURIComponent(id)}?${q(session)}`)",
+            "file": "web/dashboard/src/lib/sshCerts.ts",
+            "line": 96,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "updateSSHCA",
+        "handlerFile": "services/certs/ssh_ca.go",
+        "handlerLine": 708,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "PUT",
+        "normalizedPath": "/certs/ssh/cas/{param}",
+        "path": "/certs/ssh/cas/{id}",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "certs|PUT|/certs/ssh/cas/{param}",
+        "sensitive": true,
+        "service": "certs",
+        "serviceCalls": [
+          "UpdateSSHCA"
+        ],
+        "storeCalls": [
+          "GetSSHCA",
+          "UpdateSSHCAPolicy"
+        ],
+        "uiLabels": [
+          "sshCerts"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [
+          "fmt.Sprintf",
+          "fmt.Errorf",
+          "net.ParseCIDR",
+          "net.ParseIP",
+          "strconv.FormatUint",
+          "strings.ToLower",
+          "strings.TrimSpace",
+          "strings.ContainsAny",
+          "strings.Join",
+          "time.Now",
+          "time.Duration",
+          "golang.org/x/crypto/ssh.ParseAuthorizedKey",
+          "golang.org/x/crypto/ssh.FingerprintSHA256",
+          "golang.org/x/crypto/ssh.MarshalAuthorizedKey"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"certs\", `/certs/ssh/cas/${encodeURIComponent(caID)}/sign?${q(session)}`)",
+            "file": "web/dashboard/src/lib/sshCerts.ts",
+            "line": 101,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "signSSH",
+        "handlerFile": "services/certs/ssh_ca.go",
+        "handlerLine": 726,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/certs/ssh/cas/{param}/sign",
+        "path": "/certs/ssh/cas/{id}/sign",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "certs|POST|/certs/ssh/cas/{param}/sign",
+        "sensitive": true,
+        "service": "certs",
+        "serviceCalls": [
+          "SignSSH"
+        ],
+        "storeCalls": [
+          "GetSSHCA",
+          "CreateSSHCertificate"
+        ],
+        "uiLabels": [
+          "sshCerts"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [
+          "strconv.Atoi"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"certs\", `/certs/ssh/cas/${encodeURIComponent(caID)}/certificates?${q(session)}`)",
+            "file": "web/dashboard/src/lib/sshCerts.ts",
+            "line": 109,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "listSSHCertificates",
+        "handlerFile": "services/certs/ssh_ca.go",
+        "handlerLine": 749,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/certs/ssh/cas/{param}/certificates",
+        "path": "/certs/ssh/cas/{id}/certificates",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "certs|GET|/certs/ssh/cas/{param}/certificates",
+        "sensitive": true,
+        "service": "certs",
+        "serviceCalls": [],
+        "storeCalls": [
+          "GetSSHCA",
+          "ListSSHCertificates"
+        ],
+        "uiLabels": [
+          "sshCerts"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [
+          "time.Now",
+          "fmt.Errorf",
+          "strconv.ParseUint",
+          "golang.org/x/crypto/ssh.ParseAuthorizedKey"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequestRaw(\"certs\", `/certs/ssh/cas/${encodeURIComponent(ca.id)}/krl?${q(session)}`)",
+            "file": "web/dashboard/src/lib/sshCerts.ts",
+            "line": 124,
+            "source": "serviceRequestRaw"
+          }
+        ],
+        "handler": "getSSHKRL",
+        "handlerFile": "services/certs/ssh_ca.go",
+        "handlerLine": 767,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/certs/ssh/cas/{param}/krl",
+        "path": "/certs/ssh/cas/{id}/krl",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "certs|GET|/certs/ssh/cas/{param}/krl",
+        "sensitive": true,
+        "service": "certs",
+        "serviceCalls": [
+          "sshKRL"
+        ],
+        "storeCalls": [
+          "GetSSHCA",
+          "ListSSHCertificates"
+        ],
+        "uiLabels": [
+          "sshCerts"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [
+          "strings.TrimSpace",
+          "time.Now"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"certs\", `/certs/ssh/certificates/${encodeURIComponent(id)}/revoke?${q(session)}`)",
+            "file": "web/dashboard/src/lib/sshCerts.ts",
+            "line": 115,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "revokeSSH",
+        "handlerFile": "services/certs/ssh_ca.go",
+        "handlerLine": 785,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/certs/ssh/certificates/{param}/revoke",
+        "path": "/certs/ssh/certificates/{id}/revoke",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "certs|POST|/certs/ssh/certificates/{param}/revoke",
+        "sensitive": true,
+        "service": "certs",
+        "serviceCalls": [
+          "RevokeSSHCertificate"
+        ],
+        "storeCalls": [
+          "GetSSHCertificate",
+          "RevokeSSHCertificate"
+        ],
+        "uiLabels": [
+          "sshCerts"
         ]
       },
       {
@@ -124233,7 +125401,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-23T04:37:23Z",
+    "generatedAt": "2026-10-23T07:20:11Z",
     "methods": [
       "DELETE",
       "GET",
@@ -124272,8 +125440,8 @@
       "workload"
     ],
     "summary": {
-      "flows": 913,
-      "frontendBacked": 491,
+      "flows": 921,
+      "frontendBacked": 499,
       "highRisk": 351,
       "services": 27
     }

@@ -4,6 +4,25 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.49.0-beta] — 2026-10-23
+
+### Added
+- **SSH certificates.** The KMS is now an OpenSSH certificate authority
+  (Certificates → SSH Certificates). An SSH CA's key is generated in the
+  KMS (sealed like an X.509 CA's) or in the tenant's HSM, and never
+  leaves. Each CA has a policy: user or host certificates, which
+  principals it may sign (patterns), the longest validity and the default
+  extensions. Signing a public key gives an OpenSSH certificate for
+  `~/.ssh/id_*-cert.pub` or `HostCertificate`. Every certificate is
+  recorded, and a revoked one is published in the CA's KRL for sshd's
+  `RevokedKeys`. OpenSSH's own `ssh-keygen` reads the certificates and
+  the KRL in the tests. Routes under `/certs/ssh/`; permissions
+  `cert.ssh.read`, `cert.ssh.write`, `cert.ssh.sign`.
+
+### Fixed
+- Times the certs service read back from SQLite in Go's own text format
+  were parsed as empty (a revoked certificate looked unrevoked in tests).
+
 ## [13.48.0-beta] — 2026-10-23
 
 ### Security

@@ -20,6 +20,7 @@ Vecta KMS ships a full-stack Public Key Infrastructure engine. It issues, renews
 12. [Use Cases](#12-use-cases)
 13. [Security Considerations](#13-security-considerations)
 14. [Full API Reference](#14-full-api-reference)
+15. [SSH certificates](#15-ssh-certificates)
 
 ---
 
@@ -1998,4 +1999,106 @@ Every operation generates an audit log entry:
 
 ---
 
-*Last updated: 2026-03-22 | Vecta KMS Certificate & PKI Documentation*
+## 15. SSH certificates
+
+Since 13.49.0-beta the KMS is an OpenSSH certificate authority. Servers
+trust one CA key instead of a list of user keys in every
+`authorized_keys`, clients trust host certificates instead of answering
+"unknown host" prompts, and access ends when a certificate expires or is
+revoked. Certificates → SSH Certificates in the console; code
+`services/certs/ssh_ca.go`.
+
+### 15.1 SSH CAs
+
+- **The key** is generated in the KMS and never leaves it: sealed under
+  the certs root wrapping key like an X.509 CA's (ECDSA-P256, ECDSA-P384,
+  Ed25519, RSA-3072, RSA-4096), or generated and used in the tenant's HSM
+  (`key_backend: hsm`, ECDSA). An RSA CA signs `rsa-sha2-512`, never the
+  SHA-1 `ssh-rsa`. The key is re-wrapped when the root wrapping key
+  rotates.
+- **The policy** says what the CA signs: `cert_types` (`user`, `host` or
+  both), `allowed_principals` (patterns with `*` and `?`; `*` alone allows
+  any), `max_validity_seconds` (1 minute to 366 days, default 8 hours) and
+  the user extensions a certificate gets by default. A holder of
+  `cert.ssh.sign` can't sign a principal the CA doesn't list: a
+  certificate for `root` opens every server that trusts the CA.
+- **Disabling** a CA (`status: disabled`) stops it signing; certificates
+  already issued stay valid until they expire or are revoked.
+
+### 15.2 Signing
+
+`POST /certs/ssh/cas/{id}/sign` with the user's or host's public key (the
+one line of its `.pub` file), `principals` (plain names, no wildcards) and
+optionally `valid_seconds`, `key_id`, `extensions` (`permit-pty`,
+`permit-port-forwarding`, `permit-agent-forwarding`,
+`permit-X11-forwarding`, `permit-user-rc`), `force_command` and
+`source_address` (user certificates only). The certificate starts 5
+minutes in the past to cover clock skew. Keys accepted: Ed25519, ECDSA,
+FIDO (`sk-`) keys and RSA of 2048 bits or more; DSA, short RSA, a
+certificate or the CA's own key are refused. Every certificate is
+recorded with its serial, principals, key fingerprint and validity.
+
+```sh
+# The user's key is signed; the certificate goes next to it.
+curl -s -X POST "$KMS/svc/certs/certs/ssh/cas/$CA/sign?tenant_id=$TENANT" \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d "{\"public_key\": \"$(cat ~/.ssh/id_ed25519.pub)\", \"principals\": [\"deploy\"], \"valid_seconds\": 28800}" \
+  | jq -r .certificate > ~/.ssh/id_ed25519-cert.pub
+ssh-keygen -L -f ~/.ssh/id_ed25519-cert.pub   # shows the principals, validity and signing CA
+```
+
+### 15.3 Servers and clients
+
+`GET /certs/ssh/cas/{id}` returns `trust.trusted_user_ca_keys` (the CA's
+public key) and `trust.known_hosts` (a `@cert-authority` line).
+
+```sh
+# Server: accept user certificates from the CA, and refuse revoked ones.
+echo "$TRUSTED_USER_CA_KEYS" > /etc/ssh/vecta_user_ca.pub
+cat >> /etc/ssh/sshd_config <<'EOF'
+TrustedUserCAKeys /etc/ssh/vecta_user_ca.pub
+RevokedKeys /etc/ssh/vecta_user_ca.krl
+EOF
+# Refresh the KRL (cron, every few minutes) with a token holding cert.ssh.read.
+curl -sf -o /etc/ssh/vecta_user_ca.krl.new "$KMS/svc/certs/certs/ssh/cas/$CA/krl?tenant_id=$TENANT" \
+  -H "Authorization: Bearer $TOKEN" && mv /etc/ssh/vecta_user_ca.krl.new /etc/ssh/vecta_user_ca.krl
+
+# Host certificate: sign /etc/ssh/ssh_host_ed25519_key.pub with cert_type host
+# and the host's names as principals, then in sshd_config:
+#   HostCertificate /etc/ssh/ssh_host_ed25519_key-cert.pub
+# Clients: add trust.known_hosts to ~/.ssh/known_hosts.
+```
+
+sshd reads `RevokedKeys` on each connection. If the file is missing sshd
+refuses every key, so create it (from the KRL route) before reloading.
+
+### 15.4 Revocation
+
+`POST /certs/ssh/certificates/{id}/revoke` (with an optional `reason`)
+revokes one certificate. `GET /certs/ssh/cas/{id}/krl` is the CA's OpenSSH
+key revocation list (`PROTOCOL.krl`): the serials of its revoked
+certificates that haven't expired yet. `ssh-keygen -Q -f ca.krl
+user-cert.pub` reports a revoked certificate as `REVOKED`. A revoked
+certificate is refused by a server once it has loaded the new KRL.
+
+### 15.5 Permissions and audit
+
+| Permission | Allows |
+|---|---|
+| `cert.ssh.read` | list and read CAs, their certificates and KRL |
+| `cert.ssh.write` | create CAs, change their policy or status, revoke certificates |
+| `cert.ssh.sign` | sign public keys within a CA's policy |
+
+Every call is audited (`audit.cert.ssh_*`), refusals with their reason:
+see [SECURITY/AUDIT_EVENTS_2026-09.md](SECURITY/AUDIT_EVENTS_2026-09.md).
+
+### 15.6 What is not done yet
+
+- No signing of a user's own key from a sign-in alone: an application or
+  script with a token calls the sign route.
+- No CA key rotation: make a new CA, trust both on servers, then retire
+  the old one.
+
+---
+
+*Last updated: 2026-10-23 | Vecta KMS Certificate & PKI Documentation*

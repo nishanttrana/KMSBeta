@@ -280,6 +280,7 @@ func main() {
 	keyring.Routes(kernel, "cert")
 	svc.RegisterInternalMTLSRoutes(kernel)
 	handler.RegisterSummaryRoutes(kernel)
+	handler.RegisterSSHRoutes(kernel)
 	kernel.MountOn(handler.mux)
 	if err := rt.Serve(handler); err != nil {
 		rt.Logger.Fatalf("serve failed: %v", err)

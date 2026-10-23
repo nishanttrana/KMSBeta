@@ -56,7 +56,8 @@ func (s *Service) CompleteCRWKRotation(ctx context.Context, emit route.Emitter, 
 	return err
 }
 
-// rewrapCRWKSigners rewraps each CA signer's DEK under the CRWK version to.
+// rewrapCRWKSigners rewraps each CA signer's DEK under the CRWK version to,
+// X.509 and SSH CAs alike.
 // The signer ciphertext and fingerprint are unchanged; only the envelope
 // moves. Legacy (master-key) and HSM signers aren't CRWK-wrapped.
 func (s *Service) rewrapCRWKSigners(ctx context.Context, to string) (int, error) {
@@ -92,6 +93,35 @@ func (s *Service) rewrapCRWKSigners(ctx context.Context, to string) (int, error)
 				KeyVersion: version, Fingerprint: ca.SignerFingerprint,
 			}); err != nil {
 				return n, fmt.Errorf("store rewrapped signer of CA %s: %w", ca.ID, err)
+			}
+			n++
+		}
+		sshCAs, err := s.store.ListSSHCAs(ctx, tenantID)
+		if err != nil {
+			return n, err
+		}
+		for _, ca := range sshCAs {
+			v := strings.TrimSpace(ca.signer.KeyVersion)
+			if v == to || v == signerVersionHSM || strings.HasPrefix(strings.ToLower(v), "legacy") || len(ca.signer.Ciphertext) == 0 {
+				continue
+			}
+			dek, err := s.securityProvider.UnwrapDEK(ctx, ca.signer.WrappedDEK, ca.signer.WrappedDEKIV, v)
+			if err != nil {
+				return n, fmt.Errorf("unwrap signer of SSH CA %s: %w", ca.ID, err)
+			}
+			wrapped, iv, version, err := s.securityProvider.WrapDEK(ctx, dek)
+			pkgcrypto.Zeroize(dek)
+			if err != nil {
+				return n, fmt.Errorf("rewrap signer of SSH CA %s: %w", ca.ID, err)
+			}
+			if version != to {
+				return n, fmt.Errorf("rewrap signer of SSH CA %s: wrapped under %s, want %s", ca.ID, version, to)
+			}
+			if err := s.store.UpdateSSHCASignerEncryption(ctx, tenantID, ca.ID, EncryptedSigner{
+				WrappedDEK: wrapped, WrappedDEKIV: iv, Ciphertext: ca.signer.Ciphertext, DataIV: ca.signer.DataIV,
+				KeyVersion: version, Fingerprint: ca.signer.Fingerprint,
+			}); err != nil {
+				return n, fmt.Errorf("store rewrapped signer of SSH CA %s: %w", ca.ID, err)
 			}
 			n++
 		}

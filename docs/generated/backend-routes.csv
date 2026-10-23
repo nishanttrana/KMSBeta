@@ -198,6 +198,14 @@ certs,POST,/certs/edge-tls/csr,/certs/edge-tls/csr,s.handleEdgeCSR,kernel,cert.i
 certs,POST,/certs/edge-tls/certificate/install,/certs/edge-tls/certificate/install,s.handleEdgeInstall,kernel,cert.internal_mtls.write,edge_tls_certificate_installed,edge_tls,services/certs/internal_mtls_routes.go,59,certs|POST|/certs/edge-tls/certificate/install
 certs,GET,/certs/edge-tls/measurement,/certs/edge-tls/measurement,s.handleEdgeMeasurement,kernel,authenticated,edge_tls_measurement_read,edge_tls,services/certs/internal_mtls_routes.go,65,certs|GET|/certs/edge-tls/measurement
 certs,POST,/v1/enroll,/v1/enroll,<inline func>,kernel,public,internal_enroll,internal_certificate,services/certs/internal_tls.go,185,certs|POST|/v1/enroll
+certs,GET,/certs/ssh/cas,/certs/ssh/cas,h.listSSHCAs,kernel,cert.ssh.read,ssh_cas_listed,ssh_ca,services/certs/ssh_ca.go,639,certs|GET|/certs/ssh/cas
+certs,POST,/certs/ssh/cas,/certs/ssh/cas,h.createSSHCA,kernel,cert.ssh.write,ssh_ca_created,ssh_ca,services/certs/ssh_ca.go,640,certs|POST|/certs/ssh/cas
+certs,GET,/certs/ssh/cas/{id},/certs/ssh/cas/{param},h.getSSHCA,kernel,cert.ssh.read,ssh_ca_read,ssh_ca,services/certs/ssh_ca.go,641,certs|GET|/certs/ssh/cas/{param}
+certs,PUT,/certs/ssh/cas/{id},/certs/ssh/cas/{param},h.updateSSHCA,kernel,cert.ssh.write,ssh_ca_updated,ssh_ca,services/certs/ssh_ca.go,642,certs|PUT|/certs/ssh/cas/{param}
+certs,POST,/certs/ssh/cas/{id}/sign,/certs/ssh/cas/{param}/sign,h.signSSH,kernel,cert.ssh.sign,ssh_certificate_issued,ssh_ca,services/certs/ssh_ca.go,643,certs|POST|/certs/ssh/cas/{param}/sign
+certs,GET,/certs/ssh/cas/{id}/certificates,/certs/ssh/cas/{param}/certificates,h.listSSHCertificates,kernel,cert.ssh.read,ssh_certificates_listed,ssh_ca,services/certs/ssh_ca.go,644,certs|GET|/certs/ssh/cas/{param}/certificates
+certs,GET,/certs/ssh/cas/{id}/krl,/certs/ssh/cas/{param}/krl,h.getSSHKRL,kernel,cert.ssh.read,ssh_krl_read,ssh_ca,services/certs/ssh_ca.go,645,certs|GET|/certs/ssh/cas/{param}/krl
+certs,POST,/certs/ssh/certificates/{id}/revoke,/certs/ssh/certificates/{param}/revoke,h.revokeSSH,kernel,cert.ssh.write,ssh_certificate_revoked,ssh_certificate,services/certs/ssh_ca.go,646,certs|POST|/certs/ssh/certificates/{param}/revoke
 certs,GET,/certs/summary,/certs/summary,h.handleSummary,kernel,authenticated,summary_read,certificate,services/certs/summary.go,114,certs|GET|/certs/summary
 cloud,GET,/cloud/byok/providers,/cloud/byok/providers,<inline func>,kernel,cloud.read,byok_providers_read,cloud_byok_key,services/cloud/byok_routes.go,20,cloud|GET|/cloud/byok/providers
 cloud,GET,/cloud/byok/keys,/cloud/byok/keys,h.listBYOK,kernel,cloud.read,byok_keys_listed,cloud_byok_key,services/cloud/byok_routes.go,23,cloud|GET|/cloud/byok/keys

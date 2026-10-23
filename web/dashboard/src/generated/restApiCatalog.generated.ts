@@ -2355,6 +2355,118 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "certs-get-certs-ssh-cas",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /certs/ssh/cas",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/certs/ssh/cas?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/certs/ssh/cas?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-get-certs-ssh-cas-id",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /certs/ssh/cas/{id}",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/certs/ssh/cas/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/certs/ssh/cas/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-get-certs-ssh-cas-id-certificates",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /certs/ssh/cas/{id}/certificates",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/certs/ssh/cas/{id}/certificates?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/certs/ssh/cas/{id}/certificates?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-get-certs-ssh-cas-id-krl",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /certs/ssh/cas/{id}/krl",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/certs/ssh/cas/{id}/krl?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/certs/ssh/cas/{id}/krl?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "certs-get-certs-star-subscriptions",
     "group": "Certificates / PKI (certs)",
     "title": "GET /certs/star/subscriptions",
@@ -3027,6 +3139,90 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "certs-post-certs-ssh-cas",
+    "group": "Certificates / PKI (certs)",
+    "title": "POST /certs/ssh/cas",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/certs/ssh/cas?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "POST /svc/certs/certs/ssh/cas?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-post-certs-ssh-cas-id-sign",
+    "group": "Certificates / PKI (certs)",
+    "title": "POST /certs/ssh/cas/{id}/sign",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/certs/ssh/cas/{id}/sign?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "POST /svc/certs/certs/ssh/cas/{id}/sign?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-post-certs-ssh-certificates-id-revoke",
+    "group": "Certificates / PKI (certs)",
+    "title": "POST /certs/ssh/certificates/{id}/revoke",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/certs/ssh/certificates/{id}/revoke?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "POST /svc/certs/certs/ssh/certificates/{id}/revoke?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "certs-post-certs-star-subscriptions",
     "group": "Certificates / PKI (certs)",
     "title": "POST /certs/star/subscriptions",
@@ -3428,6 +3624,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Certs service.",
     "requestExample": "PUT /svc/certs/certs/protocols/{protocol}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-put-certs-ssh-cas-id",
+    "group": "Certificates / PKI (certs)",
+    "title": "PUT /certs/ssh/cas/{id}",
+    "service": "certs",
+    "method": "PUT",
+    "pathTemplate": "/certs/ssh/cas/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "PUT /svc/certs/certs/ssh/cas/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

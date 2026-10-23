@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-23T04:37:23Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-23T07:20:11Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `25`
 - Tab/component mappings: `32`
 - Sub-pane groups: `14`
-- Backend HTTP routes discovered: `913` across `27` services
-- Backend routes on the `pkg/route` kernel: `548` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `515`
-- Frontend call sites with exact backend route match: `485`
+- Backend HTTP routes discovered: `921` across `27` services
+- Backend routes on the `pkg/route` kernel: `556` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `523`
+- Frontend call sites with exact backend route match: `493`
 - Frontend call sites needing review or dynamic/runtime confirmation: `30`
-- Clickable controls with static `onClick` handlers: `756`
-- Backend request flows with handler/service/package summaries: `913`
+- Clickable controls with static `onClick` handlers: `766`
+- Backend request flows with handler/service/package summaries: `921`
 
 ## How To Use This For Launch
 
@@ -138,7 +138,7 @@ flowchart LR
   svc_auth["auth (90 routes)"]
   svc_auth_edge["auth-edge"]
   svc_autokey["autokey (15 routes)"]
-  svc_certs["certs (70 routes)"]
+  svc_certs["certs (78 routes)"]
   svc_cloud["cloud (28 routes)"]
   svc_cluster_manager["cluster-manager (28 routes)"]
   svc_compliance["compliance (60 routes)"]
@@ -205,7 +205,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | audit | 34 | 20 |
 | auth | 90 | 47 |
 | autokey | 15 | 11 |
-| certs | 70 | 54 |
+| certs | 78 | 62 |
 | cloud | 28 | 15 |
 | cluster-manager | 28 | 12 |
 | compliance | 60 | 27 |

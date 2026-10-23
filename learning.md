@@ -5,6 +5,18 @@ Newest entries on top.
 
 ## 2026-10-23
 
+### Test a protocol format with the protocol's own tool (13.49.0-beta)
+- The KRL is a binary format written by hand from `PROTOCOL.krl`. A Go
+  round trip would only prove the writer agrees with itself; the test
+  runs `ssh-keygen -Q` against it and `ssh-keygen -L` against the
+  certificates, so OpenSSH says whether a server would honour them.
+- A new kind of sealed key must join the root wrapping key's rotation.
+  SSH CA keys are sealed like X.509 CA keys, but rotation only walked
+  `cert_cas`; without adding them, the first rotation would have left
+  every SSH CA unable to sign. The rotation test now includes one.
+- SQLite hands back a time it was given as Go's `String()` text, which
+  the certs parser didn't accept, so the revocation time read as empty.
+
 ### A rule found in one place is usually broken in others (13.48.0-beta)
 - The governance role-name check was the one noted, but a search for
   comparisons against "admin" role names found the same pattern in keycore

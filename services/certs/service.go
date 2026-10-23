@@ -2608,6 +2608,41 @@ func (s *Service) RewrapLegacyCASigners(ctx context.Context) (int, error) {
 				"security_state":     status.State,
 			})
 		}
+		sshCAs, listErr := s.store.ListSSHCAs(ctx, tenantID)
+		if listErr != nil {
+			return rewrapped, listErr
+		}
+		for _, ca := range sshCAs {
+			if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(ca.signer.KeyVersion)), "legacy") || len(ca.signer.Ciphertext) == 0 {
+				continue
+			}
+			raw, decErr := s.decryptSigner(ca.sealedAsCA())
+			if decErr != nil {
+				return rewrapped, fmt.Errorf("decrypt legacy signer for ssh ca %s failed: %w", ca.ID, decErr)
+			}
+			enc, encErr := s.encryptSigner(raw)
+			pkgcrypto.Zeroize(raw)
+			if encErr != nil {
+				return rewrapped, fmt.Errorf("encrypt signer for ssh ca %s failed: %w", ca.ID, encErr)
+			}
+			if strings.HasPrefix(strings.ToLower(strings.TrimSpace(enc.KeyVersion)), "legacy") {
+				return rewrapped, fmt.Errorf("refusing legacy rewrap output for ssh ca %s", ca.ID)
+			}
+			if updErr := s.store.UpdateSSHCASignerEncryption(ctx, tenantID, ca.ID, enc); updErr != nil {
+				return rewrapped, fmt.Errorf("persist rewrapped signer for ssh ca %s failed: %w", ca.ID, updErr)
+			}
+			rewrapped++
+			_ = s.publishAudit(ctx, "audit.cert.ca_signer_rewrapped", tenantID, map[string]interface{}{
+				"ssh_ca_id":          ca.ID,
+				"from_version":       defaultString(ca.signer.KeyVersion, "legacy-v1"),
+				"to_version":         enc.KeyVersion,
+				"fingerprint_sha256": enc.Fingerprint,
+				"storage_mode":       s.certStorageMode,
+				"root_key_mode":      s.rootKeyMode,
+				"security_ready":     status.Ready,
+				"security_state":     status.State,
+			})
+		}
 	}
 	return rewrapped, nil
 }

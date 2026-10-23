@@ -1,15 +1,15 @@
 # Generated Request Flow Map
 
-Generated at `2026-10-23T04:37:23Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-23T07:20:11Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `913`
-- Routes with exact frontend call sites: `491`
-- Routes whose handlers call `h.svc.*`: `550`
-- Routes with detected store calls: `638`
+- Backend routes analyzed: `921`
+- Routes with exact frontend call sites: `499`
+- Routes whose handlers call `h.svc.*`: `555`
+- Routes with detected store calls: `646`
 - Routes with detected internal `pkg/*` calls: `202`
 
 ## How To Trace One Frontend Click
@@ -106,7 +106,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | certs\|POST\|/certs/{param}/revoke | POST /certs/{id}/revoke | handleRevokeCert (services/certs/handler.go:312) | RevokeCertificate | GetCertificate, RevokeCertificate |  |  | web/dashboard/src/lib/certs.ts:535 |
 | certs\|GET\|/certs/profiles | GET /certs/profiles | handleListProfiles (services/certs/handler.go:365) | ListProfiles | ListProfiles |  |  | web/dashboard/src/lib/certs.ts:613 |
 | certs\|GET\|/certs/crl | GET /certs/crl | handleCRL (services/certs/handler.go:397) | GenerateCRL | GetCA, ListRevokedByCA, GetCertificate, GetCertificateBySerial, GetInventory, ListProtocolConfigs, UpsertProtocolConfig, GetProtocolConfig, +16 more | s.acmeNonceMu.Lock, s.acmeNonceMu.Unlock, s.acmeRateMu.Lock, s.acmeRateMu.Unlock, s.securityProvider.WrapDEK, s.securityProvider.UnwrapDEK, s.mek.Load, s.events.Publish, +2 more | pkg/crypto.Zeroize, pkg/crypto.EncryptEnvelope, pkg/crypto.DecryptEnvelope, pkg/mek.Load | web/dashboard/src/lib/certs.ts:590 |
-| certs\|GET\|/certs/ocsp | GET /certs/ocsp | handleOCSP (services/certs/handler.go:420) | CheckOCSPDER, CheckOCSP | GetCertificateBySerial, GetCA, GetInventory, ListProtocolConfigs, UpsertProtocolConfig, GetProtocolConfig, GetCertExpiryAlertPolicy, UpsertCertExpiryAlertPolicy, +15 more | s.acmeNonceMu.Lock, s.acmeNonceMu.Unlock, s.acmeRateMu.Lock, s.acmeRateMu.Unlock, s.securityProvider.WrapDEK, s.securityProvider.UnwrapDEK, s.mek.Load, s.events.Publish, +1 more | pkg/crypto.Zeroize, pkg/crypto.EncryptEnvelope, pkg/crypto.DecryptEnvelope, pkg/mek.Load | web/dashboard/src/lib/certs.ts:609 |
+| certs\|GET\|/certs/ocsp | GET /certs/ocsp | handleOCSP (services/certs/handler.go:420) | CheckOCSPDER, CheckOCSP | GetCertificateBySerial, GetCA, GetInventory, ListProtocolConfigs, UpsertProtocolConfig, GetProtocolConfig, GetCertExpiryAlertPolicy, UpsertCertExpiryAlertPolicy, +16 more | s.acmeNonceMu.Lock, s.acmeNonceMu.Unlock, s.acmeRateMu.Lock, s.acmeRateMu.Unlock, s.securityProvider.WrapDEK, s.securityProvider.UnwrapDEK, s.mek.Load, s.events.Publish, +1 more | pkg/crypto.Zeroize, pkg/crypto.EncryptEnvelope, pkg/crypto.DecryptEnvelope, pkg/mek.Load | web/dashboard/src/lib/certs.ts:609 |
 | certs\|GET\|/certs/inventory | GET /certs/inventory | handleInventory (services/certs/handler.go:462) | Inventory | GetInventory |  |  | web/dashboard/src/lib/certs.ts:618 |
 | certs\|GET\|/certs/security/status | GET /certs/security/status | handleSecurityStatus (services/certs/handler.go:476) | SecurityStatus |  | s.securityProvider.Status |  | web/dashboard/src/lib/certs.ts:623 |
 | certs\|GET\|/certs/alert-policy | GET /certs/alert-policy | handleGetAlertPolicy (services/certs/handler.go:484) | GetCertExpiryAlertPolicy | GetCertExpiryAlertPolicy |  |  | web/dashboard/src/lib/certs.ts:655 |
@@ -146,6 +146,14 @@ This file connects frontend requests to backend Go processing. It is static anal
 | certs\|PUT\|/certs/edge-tls/certificate | PUT /certs/edge-tls/certificate | handleEdgeCertSource (services/certs/internal_mtls_routes.go:248) |  |  |  |  | web/dashboard/src/lib/certs.ts:1213 |
 | certs\|POST\|/certs/edge-tls/csr | POST /certs/edge-tls/csr | handleEdgeCSR (services/certs/internal_mtls_routes.go:287) |  |  |  |  | web/dashboard/src/lib/certs.ts:1223 |
 | certs\|POST\|/certs/edge-tls/certificate/install | POST /certs/edge-tls/certificate/install | handleEdgeInstall (services/certs/internal_mtls_routes.go:314) |  |  |  |  | web/dashboard/src/lib/certs.ts:1231 |
+| certs\|GET\|/certs/ssh/cas | GET /certs/ssh/cas | listSSHCAs (services/certs/ssh_ca.go:663) |  | ListSSHCAs |  |  | web/dashboard/src/lib/sshCerts.ts:76 |
+| certs\|POST\|/certs/ssh/cas | POST /certs/ssh/cas | createSSHCA (services/certs/ssh_ca.go:673) | CreateSSHCA | CreateSSHCA |  |  | web/dashboard/src/lib/sshCerts.ts:87 |
+| certs\|GET\|/certs/ssh/cas/{param} | GET /certs/ssh/cas/{id} | getSSHCA (services/certs/ssh_ca.go:694) |  | GetSSHCA |  |  | web/dashboard/src/lib/sshCerts.ts:82 |
+| certs\|PUT\|/certs/ssh/cas/{param} | PUT /certs/ssh/cas/{id} | updateSSHCA (services/certs/ssh_ca.go:708) | UpdateSSHCA | GetSSHCA, UpdateSSHCAPolicy |  |  | web/dashboard/src/lib/sshCerts.ts:96 |
+| certs\|POST\|/certs/ssh/cas/{param}/sign | POST /certs/ssh/cas/{id}/sign | signSSH (services/certs/ssh_ca.go:726) | SignSSH | GetSSHCA, CreateSSHCertificate |  |  | web/dashboard/src/lib/sshCerts.ts:101 |
+| certs\|GET\|/certs/ssh/cas/{param}/certificates | GET /certs/ssh/cas/{id}/certificates | listSSHCertificates (services/certs/ssh_ca.go:749) |  | GetSSHCA, ListSSHCertificates |  |  | web/dashboard/src/lib/sshCerts.ts:109 |
+| certs\|GET\|/certs/ssh/cas/{param}/krl | GET /certs/ssh/cas/{id}/krl | getSSHKRL (services/certs/ssh_ca.go:767) | sshKRL | GetSSHCA, ListSSHCertificates |  |  | web/dashboard/src/lib/sshCerts.ts:124 |
+| certs\|POST\|/certs/ssh/certificates/{param}/revoke | POST /certs/ssh/certificates/{id}/revoke | revokeSSH (services/certs/ssh_ca.go:785) | RevokeSSHCertificate | GetSSHCertificate, RevokeSSHCertificate |  |  | web/dashboard/src/lib/sshCerts.ts:115 |
 | certs\|GET\|/certs/summary | GET /certs/summary | handleSummary (services/certs/summary.go:119) | CertSummary |  |  |  | web/dashboard/src/lib/certs.ts:650 |
 | cloud\|GET\|/cloud/byok/providers | GET /cloud/byok/providers | <inline func> (:) |  |  |  |  | web/dashboard/src/lib/byok.ts:121 |
 | cloud\|GET\|/cloud/byok/keys | GET /cloud/byok/keys | listBYOK (services/cloud/byok_routes.go:66) | ListBYOK | ListBindings | s.byokStore.ListBYOKKeys |  | web/dashboard/src/lib/byok.ts:126 |
@@ -668,8 +676,8 @@ This file connects frontend requests to backend Go processing. It is static anal
 | certs\|GET\|/certs/profiles | GET /certs/profiles | handleListProfiles (services/certs/handler.go:365) | ListProfiles | ListProfiles |  |  | web/dashboard/src/lib/certs.ts:613 |
 | certs\|GET\|/certs/profiles/{param} | GET /certs/profiles/{id} | handleGetProfile (services/certs/handler.go:379) | GetProfile | GetProfile |  |  |  |
 | certs\|GET\|/certs/crl | GET /certs/crl | handleCRL (services/certs/handler.go:397) | GenerateCRL | GetCA, ListRevokedByCA, GetCertificate, GetCertificateBySerial, GetInventory, ListProtocolConfigs, UpsertProtocolConfig, GetProtocolConfig, +16 more | s.acmeNonceMu.Lock, s.acmeNonceMu.Unlock, s.acmeRateMu.Lock, s.acmeRateMu.Unlock, s.securityProvider.WrapDEK, s.securityProvider.UnwrapDEK, s.mek.Load, s.events.Publish, +2 more | pkg/crypto.Zeroize, pkg/crypto.EncryptEnvelope, pkg/crypto.DecryptEnvelope, pkg/mek.Load | web/dashboard/src/lib/certs.ts:590 |
-| certs\|GET\|/certs/ocsp | GET /certs/ocsp | handleOCSP (services/certs/handler.go:420) | CheckOCSPDER, CheckOCSP | GetCertificateBySerial, GetCA, GetInventory, ListProtocolConfigs, UpsertProtocolConfig, GetProtocolConfig, GetCertExpiryAlertPolicy, UpsertCertExpiryAlertPolicy, +15 more | s.acmeNonceMu.Lock, s.acmeNonceMu.Unlock, s.acmeRateMu.Lock, s.acmeRateMu.Unlock, s.securityProvider.WrapDEK, s.securityProvider.UnwrapDEK, s.mek.Load, s.events.Publish, +1 more | pkg/crypto.Zeroize, pkg/crypto.EncryptEnvelope, pkg/crypto.DecryptEnvelope, pkg/mek.Load | web/dashboard/src/lib/certs.ts:609 |
-| certs\|POST\|/certs/ocsp | POST /certs/ocsp | handleOCSP (services/certs/handler.go:420) | CheckOCSPDER, CheckOCSP | GetCertificateBySerial, GetCA, GetInventory, ListProtocolConfigs, UpsertProtocolConfig, GetProtocolConfig, GetCertExpiryAlertPolicy, UpsertCertExpiryAlertPolicy, +15 more | s.acmeNonceMu.Lock, s.acmeNonceMu.Unlock, s.acmeRateMu.Lock, s.acmeRateMu.Unlock, s.securityProvider.WrapDEK, s.securityProvider.UnwrapDEK, s.mek.Load, s.events.Publish, +1 more | pkg/crypto.Zeroize, pkg/crypto.EncryptEnvelope, pkg/crypto.DecryptEnvelope, pkg/mek.Load |  |
+| certs\|GET\|/certs/ocsp | GET /certs/ocsp | handleOCSP (services/certs/handler.go:420) | CheckOCSPDER, CheckOCSP | GetCertificateBySerial, GetCA, GetInventory, ListProtocolConfigs, UpsertProtocolConfig, GetProtocolConfig, GetCertExpiryAlertPolicy, UpsertCertExpiryAlertPolicy, +16 more | s.acmeNonceMu.Lock, s.acmeNonceMu.Unlock, s.acmeRateMu.Lock, s.acmeRateMu.Unlock, s.securityProvider.WrapDEK, s.securityProvider.UnwrapDEK, s.mek.Load, s.events.Publish, +1 more | pkg/crypto.Zeroize, pkg/crypto.EncryptEnvelope, pkg/crypto.DecryptEnvelope, pkg/mek.Load | web/dashboard/src/lib/certs.ts:609 |
+| certs\|POST\|/certs/ocsp | POST /certs/ocsp | handleOCSP (services/certs/handler.go:420) | CheckOCSPDER, CheckOCSP | GetCertificateBySerial, GetCA, GetInventory, ListProtocolConfigs, UpsertProtocolConfig, GetProtocolConfig, GetCertExpiryAlertPolicy, UpsertCertExpiryAlertPolicy, +16 more | s.acmeNonceMu.Lock, s.acmeNonceMu.Unlock, s.acmeRateMu.Lock, s.acmeRateMu.Unlock, s.securityProvider.WrapDEK, s.securityProvider.UnwrapDEK, s.mek.Load, s.events.Publish, +1 more | pkg/crypto.Zeroize, pkg/crypto.EncryptEnvelope, pkg/crypto.DecryptEnvelope, pkg/mek.Load |  |
 | certs\|GET\|/certs/inventory | GET /certs/inventory | handleInventory (services/certs/handler.go:462) | Inventory | GetInventory |  |  | web/dashboard/src/lib/certs.ts:618 |
 | certs\|GET\|/certs/security/status | GET /certs/security/status | handleSecurityStatus (services/certs/handler.go:476) | SecurityStatus |  | s.securityProvider.Status |  | web/dashboard/src/lib/certs.ts:623 |
 | certs\|GET\|/certs/alert-policy | GET /certs/alert-policy | handleGetAlertPolicy (services/certs/handler.go:484) | GetCertExpiryAlertPolicy | GetCertExpiryAlertPolicy |  |  | web/dashboard/src/lib/certs.ts:655 |
@@ -719,6 +727,14 @@ This file connects frontend requests to backend Go processing. It is static anal
 | certs\|POST\|/certs/edge-tls/certificate/install | POST /certs/edge-tls/certificate/install | handleEdgeInstall (services/certs/internal_mtls_routes.go:314) |  |  |  |  | web/dashboard/src/lib/certs.ts:1231 |
 | certs\|GET\|/certs/edge-tls/measurement | GET /certs/edge-tls/measurement | handleEdgeMeasurement (services/certs/internal_mtls_routes.go:351) |  |  |  |  |  |
 | certs\|POST\|/v1/enroll | POST /v1/enroll | <inline func> (:) |  |  |  |  |  |
+| certs\|GET\|/certs/ssh/cas | GET /certs/ssh/cas | listSSHCAs (services/certs/ssh_ca.go:663) |  | ListSSHCAs |  |  | web/dashboard/src/lib/sshCerts.ts:76 |
+| certs\|POST\|/certs/ssh/cas | POST /certs/ssh/cas | createSSHCA (services/certs/ssh_ca.go:673) | CreateSSHCA | CreateSSHCA |  |  | web/dashboard/src/lib/sshCerts.ts:87 |
+| certs\|GET\|/certs/ssh/cas/{param} | GET /certs/ssh/cas/{id} | getSSHCA (services/certs/ssh_ca.go:694) |  | GetSSHCA |  |  | web/dashboard/src/lib/sshCerts.ts:82 |
+| certs\|PUT\|/certs/ssh/cas/{param} | PUT /certs/ssh/cas/{id} | updateSSHCA (services/certs/ssh_ca.go:708) | UpdateSSHCA | GetSSHCA, UpdateSSHCAPolicy |  |  | web/dashboard/src/lib/sshCerts.ts:96 |
+| certs\|POST\|/certs/ssh/cas/{param}/sign | POST /certs/ssh/cas/{id}/sign | signSSH (services/certs/ssh_ca.go:726) | SignSSH | GetSSHCA, CreateSSHCertificate |  |  | web/dashboard/src/lib/sshCerts.ts:101 |
+| certs\|GET\|/certs/ssh/cas/{param}/certificates | GET /certs/ssh/cas/{id}/certificates | listSSHCertificates (services/certs/ssh_ca.go:749) |  | GetSSHCA, ListSSHCertificates |  |  | web/dashboard/src/lib/sshCerts.ts:109 |
+| certs\|GET\|/certs/ssh/cas/{param}/krl | GET /certs/ssh/cas/{id}/krl | getSSHKRL (services/certs/ssh_ca.go:767) | sshKRL | GetSSHCA, ListSSHCertificates |  |  | web/dashboard/src/lib/sshCerts.ts:124 |
+| certs\|POST\|/certs/ssh/certificates/{param}/revoke | POST /certs/ssh/certificates/{id}/revoke | revokeSSH (services/certs/ssh_ca.go:785) | RevokeSSHCertificate | GetSSHCertificate, RevokeSSHCertificate |  |  | web/dashboard/src/lib/sshCerts.ts:115 |
 | certs\|GET\|/certs/summary | GET /certs/summary | handleSummary (services/certs/summary.go:119) | CertSummary |  |  |  | web/dashboard/src/lib/certs.ts:650 |
 | cloud\|GET\|/cloud/byok/providers | GET /cloud/byok/providers | <inline func> (:) |  |  |  |  | web/dashboard/src/lib/byok.ts:121 |
 | cloud\|GET\|/cloud/byok/keys | GET /cloud/byok/keys | listBYOK (services/cloud/byok_routes.go:66) | ListBYOK | ListBindings | s.byokStore.ListBYOKKeys |  | web/dashboard/src/lib/byok.ts:126 |

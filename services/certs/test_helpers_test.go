@@ -208,7 +208,7 @@ func createCertsSchemaForTest(conn *pkgdb.DB) error {
 	// Service mTLS tables straight from the migration, so the tests run the
 	// schema production runs.
 	var raw []byte
-	for _, f := range []string{"migrations/013_internal_mtls_policy.sql", "migrations/015_edge_certificate.sql"} {
+	for _, f := range []string{"migrations/013_internal_mtls_policy.sql", "migrations/015_edge_certificate.sql", "migrations/017_ssh_ca.sql"} {
 		b, err := os.ReadFile(f)
 		if err != nil {
 			return err
@@ -222,7 +222,7 @@ func createCertsSchemaForTest(conn *pkgdb.DB) error {
 		}
 	}
 	for _, stmt := range strings.Split(strings.Join(sqlOnly, "\n"), ";") {
-		if strings.Contains(stmt, "CREATE TABLE") {
+		if strings.Contains(stmt, "CREATE TABLE") || strings.Contains(stmt, "CREATE UNIQUE INDEX") || strings.Contains(stmt, "CREATE INDEX") {
 			stmts = append(stmts, stmt)
 		}
 	}

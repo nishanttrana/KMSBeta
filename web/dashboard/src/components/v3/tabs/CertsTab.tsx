@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MoreVertical, RefreshCcw, Shield, ShieldCheck, ShieldX, ShieldAlert, KeyRound, FileText, Clock, AlertTriangle, Lock, Download, Trash2, RotateCcw, Eye, Settings, Zap, Server, Globe, Fingerprint, CheckCircle2, XCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { ServiceMTLSPanel } from "./ServiceMTLSPanel";
+import { SSHCertificatesPanel } from "./SSHCertificatesPanel";
 import {
   acmeChallengeComplete,
   acmeChallengeInfo,
@@ -195,7 +196,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate,searc
   const [starMetadataText,setStarMetadataText]=useState("{\n  \"workload\": \"edge-gateway\"\n}");
   const promptDialog=usePromptDialog();
   const requestedCertPane=String(subView||"cert-overview").trim().toLowerCase();
-  const activeCertPane=["cert-enrollment","cert-service-mtls"].includes(requestedCertPane)?requestedCertPane:"cert-overview";
+  const activeCertPane=["cert-enrollment","cert-service-mtls","cert-ssh"].includes(requestedCertPane)?requestedCertPane:"cert-overview";
   const showEnrollmentPane=activeCertPane==="cert-enrollment";
   const showServiceMTLSPane=activeCertPane==="cert-service-mtls";
   const showOverviewPane=activeCertPane==="cert-overview";
@@ -1488,6 +1489,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate,searc
     </div>}
     {showHSMCerts&&<HSMPartitionTable session={session} kind="certificates" onToast={onToast}/>}
     {showServiceMTLSPane&&<ServiceMTLSPanel session={session} onToast={onToast}/>}
+    {activeCertPane==="cert-ssh"&&<SSHCertificatesPanel session={session} onToast={onToast}/>}
     {showOverviewPane&&<>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginBottom:14}}>
         <Stat l="Active" v={stats.active===null?"—":String(stats.active)} s={stats.total?`${Math.round(((stats.active||0)*100)/stats.total)}% of ${stats.total}`:stats.total===null?"unavailable":"—"} i={ShieldCheck}/>

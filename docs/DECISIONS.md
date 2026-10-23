@@ -7,6 +7,26 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-23 — SSH certificates come from per-tenant SSH CAs with a principal policy
+**Decision:** the certs service runs OpenSSH CAs. A CA's key is sealed
+like an X.509 CA's or kept in the tenant's HSM. Each CA lists the
+principals it may sign (patterns), the certificate types and the longest
+validity, and signing outside them is refused and audited. Revocation is
+a per-CA OpenSSH KRL listing revoked serials.
+**Why:** the owner's list (2026-10-22): "No SSH certificates." A signing
+permission alone would let any holder mint a certificate for `root`.
+**Rejected:** reusing X.509 CAs (a different key purpose and format; an
+SSH CA key should sign nothing else); a plain revoked-keys text file
+(revokes a key in every certificate, not one certificate, and needs the
+user's key); signing only the caller's own username (the token carries a
+user ID, not a login name; the principal list covers it explicitly).
+**Enforced:** `TestSSHCACertificatesVerify`, `TestSSHSigningPolicyRefusals`,
+`TestSSHKRLRevokesBySerial` (OpenSSH `ssh-keygen`), `TestSSHCAKeyInTheHSM`
+(SoftHSM2), `TestCRWKMigratesOffThePublicDefault` (the SSH CA key
+rotates), smoke `ssh-certificates.spec.ts`.
+
+---
+
 ## 2026-10-23 — Administrator checks read permissions, never role names
 **Decision:** governance system administration, keycore's key-access
 administrator and auth's CLI routes grant from the verified token's

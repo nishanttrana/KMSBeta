@@ -1608,6 +1608,22 @@ Fields: name, type (server/client/code_signing/email/ca), keyUsage[], extendedKe
 - `GET /svc/certs/certs/crl` — CRL download
 - `GET/POST /svc/certs/certs/ocsp` — OCSP responder (RFC 6960)
 
+### SSH certificates (13.49.0-beta)
+
+[CERTIFICATES.md section 15](CERTIFICATES.md#15-ssh-certificates). Every
+route is tenant-scoped and audited as `audit.cert.<action>`.
+
+| Route | Permission | Notes |
+|---|---|---|
+| `GET /svc/certs/certs/ssh/cas` | `cert.ssh.read` | `items[]`: `id`, `name`, `algorithm`, `key_backend`, `public_key`, `fingerprint`, `cert_types`, `allowed_principals`, `max_validity_seconds`, `default_extensions`, `status` (action `ssh_cas_listed`) |
+| `POST /svc/certs/certs/ssh/cas` | `cert.ssh.write` | Body `name`, `algorithm` (default `ECDSA-P384`), `key_backend` (`software`, `hsm`), `hsm_connection_id`, `cert_types`, `allowed_principals` (required), `max_validity_seconds`, `default_extensions`. `201 {"ssh_ca"}`. Refusals `invalid_name`, `invalid_algorithm`, `fips_blocked`, `invalid_key_backend`, `invalid_cert_type`, `principals_required`, `invalid_principal_pattern`, `invalid_validity`, `extension_not_allowed`, `name_taken` (`ssh_ca_created`) |
+| `GET /svc/certs/certs/ssh/cas/{id}` | `cert.ssh.read` | `{"ssh_ca", "trust": {"trusted_user_ca_keys", "known_hosts"}}` (`ssh_ca_read`) |
+| `PUT /svc/certs/certs/ssh/cas/{id}` | `cert.ssh.write` | Any of `status` (`active`, `disabled`), `cert_types`, `allowed_principals`, `max_validity_seconds`, `default_extensions`; the key never changes (`ssh_ca_updated`) |
+| `POST /svc/certs/certs/ssh/cas/{id}/sign` | `cert.ssh.sign` | Body `public_key`, `principals`, `cert_type`, `valid_seconds`, `key_id`, `extensions`, `force_command`, `source_address`. `201 {"certificate": "<OpenSSH certificate line>", "ssh_certificate"}`. Refusals `ca_disabled` (409), `cert_type_not_allowed`, `principal_not_allowed` (403), `invalid_public_key`, `key_type_not_allowed`, `weak_public_key`, `principals_required`, `invalid_principal`, `validity_too_long`, `extension_not_allowed`, `invalid_option`, `invalid_key_id` (400) (`ssh_certificate_issued`) |
+| `GET /svc/certs/certs/ssh/cas/{id}/certificates` | `cert.ssh.read` | Newest first; `revoked=true` for revoked only; `limit` up to 500 (`ssh_certificates_listed`) |
+| `GET /svc/certs/certs/ssh/cas/{id}/krl` | `cert.ssh.read` | The OpenSSH KRL, `application/octet-stream` (`ssh_krl_read`, detail `revoked`) |
+| `POST /svc/certs/certs/ssh/certificates/{id}/revoke` | `cert.ssh.write` | Body `reason` (optional, 256 characters). `already_revoked` (409) (`ssh_certificate_revoked`) |
+
 ---
 
 ## Service 4: Audit (`/svc/audit/`)
@@ -4704,6 +4720,14 @@ from the code; do not edit by hand.
 - `GET /svc/certs/certs/renewal-intelligence/{id}`
 - `GET /svc/certs/certs/security/status`
 - `POST /svc/certs/certs/sign-csr`
+- `GET /svc/certs/certs/ssh/cas`
+- `POST /svc/certs/certs/ssh/cas`
+- `GET /svc/certs/certs/ssh/cas/{id}`
+- `PUT /svc/certs/certs/ssh/cas/{id}`
+- `GET /svc/certs/certs/ssh/cas/{id}/certificates`
+- `GET /svc/certs/certs/ssh/cas/{id}/krl`
+- `POST /svc/certs/certs/ssh/cas/{id}/sign`
+- `POST /svc/certs/certs/ssh/certificates/{id}/revoke`
 - `GET /svc/certs/certs/star/subscriptions`
 - `POST /svc/certs/certs/star/subscriptions`
 - `DELETE /svc/certs/certs/star/subscriptions/{id}`

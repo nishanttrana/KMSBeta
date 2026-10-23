@@ -494,6 +494,14 @@ signing,signing,GET,/signing/records?{param},/signing/records,True,serviceReques
 signing,signing,POST,/signing/blob,/signing/blob,False,serviceRequest,web/dashboard/src/lib/signing.ts,140,signing|POST|/signing/blob
 signing,signing,POST,/signing/git,/signing/git,False,serviceRequest,web/dashboard/src/lib/signing.ts,153,signing|POST|/signing/git
 signing,signing,POST,/signing/verify,/signing/verify,False,serviceRequest,web/dashboard/src/lib/signing.ts,161,signing|POST|/signing/verify
+certs,certs,GET,/certs/ssh/cas?{param},/certs/ssh/cas,True,serviceRequest,web/dashboard/src/lib/sshCerts.ts,76,certs|GET|/certs/ssh/cas
+certs,certs,GET,/certs/ssh/cas/{param}?{param},/certs/ssh/cas/{param},True,serviceRequest,web/dashboard/src/lib/sshCerts.ts,82,certs|GET|/certs/ssh/cas/{param}
+certs,certs,POST,/certs/ssh/cas?{param},/certs/ssh/cas,True,serviceRequest,web/dashboard/src/lib/sshCerts.ts,87,certs|POST|/certs/ssh/cas
+certs,certs,PUT,/certs/ssh/cas/{param}?{param},/certs/ssh/cas/{param},True,serviceRequest,web/dashboard/src/lib/sshCerts.ts,96,certs|PUT|/certs/ssh/cas/{param}
+certs,certs,POST,/certs/ssh/cas/{param}/sign?{param},/certs/ssh/cas/{param}/sign,True,serviceRequest,web/dashboard/src/lib/sshCerts.ts,101,certs|POST|/certs/ssh/cas/{param}/sign
+certs,certs,GET,/certs/ssh/cas/{param}/certificates?{param},/certs/ssh/cas/{param}/certificates,True,serviceRequest,web/dashboard/src/lib/sshCerts.ts,109,certs|GET|/certs/ssh/cas/{param}/certificates
+certs,certs,POST,/certs/ssh/certificates/{param}/revoke?{param},/certs/ssh/certificates/{param}/revoke,True,serviceRequest,web/dashboard/src/lib/sshCerts.ts,115,certs|POST|/certs/ssh/certificates/{param}/revoke
+certs,certs,GET,/certs/ssh/cas/{param}/krl?{param},/certs/ssh/cas/{param}/krl,True,serviceRequestRaw,web/dashboard/src/lib/sshCerts.ts,124,certs|GET|/certs/ssh/cas/{param}/krl
 reporting,reporting,POST,/telemetry/errors,/telemetry/errors,False,serviceRequest,web/dashboard/src/lib/telemetry.ts,59,reporting|POST|/telemetry/errors
 audit,audit,GET,/webhooks,/webhooks,False,serviceRequest,web/dashboard/src/lib/webhooks.ts,52,audit|GET|/webhooks
 audit,audit,POST,/webhooks,/webhooks,False,serviceRequest,web/dashboard/src/lib/webhooks.ts,57,audit|POST|/webhooks

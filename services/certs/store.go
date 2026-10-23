@@ -64,6 +64,17 @@ type Store interface {
 	CreateACMEOrder(ctx context.Context, order AcmeOrder) error
 	GetACMEOrder(ctx context.Context, tenantID string, orderID string) (AcmeOrder, error)
 	UpdateACMEOrder(ctx context.Context, tenantID string, orderID string, status string, csrPEM string, certID string) error
+
+	// SSH certificate authorities (store_ssh.go, 13.49.0-beta).
+	CreateSSHCA(ctx context.Context, ca SSHCA) error
+	GetSSHCA(ctx context.Context, tenantID, id string) (SSHCA, error)
+	ListSSHCAs(ctx context.Context, tenantID string) ([]SSHCA, error)
+	UpdateSSHCAPolicy(ctx context.Context, ca SSHCA) error
+	UpdateSSHCASignerEncryption(ctx context.Context, tenantID, id string, enc EncryptedSigner) error
+	CreateSSHCertificate(ctx context.Context, c SSHCertificate) error
+	GetSSHCertificate(ctx context.Context, tenantID, id string) (SSHCertificate, error)
+	ListSSHCertificates(ctx context.Context, tenantID, caID string, revokedOnly bool, limit int) ([]SSHCertificate, error)
+	RevokeSSHCertificate(ctx context.Context, tenantID, id, by, reason string, at time.Time) error
 }
 
 type SQLStore struct {
@@ -79,6 +90,8 @@ func (s *SQLStore) ListTenants(ctx context.Context) ([]string, error) {
 SELECT tenant_id FROM cert_cas
 UNION
 SELECT tenant_id FROM cert_certificates
+UNION
+SELECT tenant_id FROM cert_ssh_cas
 `)
 	if err != nil {
 		return nil, err
@@ -946,6 +959,8 @@ func parseTimeString(v string) time.Time {
 		"2006-01-02 15:04:05.999999999",
 		"2006-01-02 15:04:05",
 		"2006-01-02T15:04:05",
+		// time.Time's String(), as SQLite returns a time it was given.
+		"2006-01-02 15:04:05.999999999 -0700 MST",
 	}
 	for _, f := range formats {
 		if ts, err := time.Parse(f, v); err == nil {
