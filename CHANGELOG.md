@@ -4,6 +4,16 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.55.0-beta] — 2026-10-24
+
+### Added
+- **Python and Node.js SDKs** (`sdk/python`, `sdk/node`), with the same
+  operations as the Go SDK: authenticate as a REST client with automatic
+  token renewal; encrypt, decrypt, data keys, sign, verify, list, read,
+  create and rotate keys; read secret values. No dependencies; Python 3.9+
+  (with TLS 1.3 in its SSL library) and Node 18+. Each runs its contract
+  script against keycore's real routes over TLS on every CI run.
+
 ## [13.54.0-beta] — 2026-10-23
 
 ### Added

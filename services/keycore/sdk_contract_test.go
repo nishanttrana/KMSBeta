@@ -6,6 +6,9 @@ import (
 	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -14,10 +17,16 @@ import (
 	pkgauth "vecta-kms/pkg/auth"
 )
 
-// The Go SDK (sdk/go) against keycore's real routes: what it sends is what
-// keycore takes and what keycore answers is what it reads. A REST client
-// granted the keys uses them; a key it wasn't granted is hidden.
-func TestGoSDKAgainstKeycore(t *testing.T) {
+// sdkRig is keycore behind a TLS edge, as a REST client reaches it: a key it
+// may encrypt with, one it may sign with, and one it wasn't granted.
+type sdkRig struct {
+	srv                 *httptest.Server
+	caPEM               []byte
+	aes, signer, hidden string
+}
+
+func newSDKRig(t *testing.T) sdkRig {
+	t.Helper()
 	h, svc, _ := newActorTestHandler(t)
 	ctx := context.Background()
 	aes := ownedKey(t, svc)
@@ -46,9 +55,19 @@ func TestGoSDKAgainstKeycore(t *testing.T) {
 		r.URL.Path = strings.TrimPrefix(r.URL.Path, "/svc/keycore")
 		h.ServeHTTP(w, r.WithContext(pkgauth.ContextWithClaims(r.Context(), claims)))
 	}))
-	defer srv.Close()
-	c, err := vecta.New(vecta.Config{BaseURL: srv.URL, TenantID: "t1", Token: "client-token",
-		CAPEM: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw})})
+	t.Cleanup(srv.Close)
+	return sdkRig{srv: srv, caPEM: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw}), aes: aes.ID, signer: signer.ID, hidden: hidden.ID}
+}
+
+// The Go SDK (sdk/go) against keycore's real routes: what it sends is what
+// keycore takes and what keycore answers is what it reads. A REST client
+// granted the keys uses them; a key it wasn't granted is hidden.
+func TestGoSDKAgainstKeycore(t *testing.T) {
+	rig := newSDKRig(t)
+	ctx := context.Background()
+	srv := rig.srv
+	aes, signer, hidden := struct{ ID string }{rig.aes}, struct{ ID string }{rig.signer}, struct{ ID string }{rig.hidden}
+	c, err := vecta.New(vecta.Config{BaseURL: srv.URL, TenantID: "t1", Token: "client-token", CAPEM: rig.caPEM})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,5 +127,39 @@ func TestGoSDKAgainstKeycore(t *testing.T) {
 	}
 	if _, err := c.Encrypt(ctx, hidden.ID, []byte("x"), nil); !vecta.IsRefused(err) && !vecta.IsNotFound(err) {
 		t.Fatalf("encrypt with a key not granted: %v", err)
+	}
+}
+
+// The Python (sdk/python) and Node (sdk/node) SDKs against keycore's real
+// routes over TLS: each runs its contract script against the same rig. A
+// runtime that isn't installed (or a Python without TLS 1.3, as macOS's
+// system Python) is skipped; CI has both.
+func TestSDKsAgainstKeycore(t *testing.T) {
+	for _, sdk := range []struct{ name, check, run string }{
+		{"python", "import ssl,sys; sys.exit(0 if ssl.HAS_TLSv1_3 else 1)", "../../sdk/python/contract.py"},
+		{"node", "process.exit(Number(process.versions.node.split('.')[0]) >= 18 ? 0 : 1)", "../../sdk/node/contract.mjs"},
+	} {
+		t.Run(sdk.name, func(t *testing.T) {
+			bin := map[string]string{"python": "python3", "node": "node"}[sdk.name]
+			flag := map[string]string{"python": "-c", "node": "-e"}[sdk.name]
+			if _, err := exec.LookPath(bin); err != nil {
+				t.Skipf("%s is not installed", bin)
+			}
+			if err := exec.Command(bin, flag, sdk.check).Run(); err != nil {
+				t.Skipf("this %s can't speak TLS 1.3 or is too old", bin)
+			}
+			rig := newSDKRig(t)
+			ca := filepath.Join(t.TempDir(), "ca.pem")
+			if err := os.WriteFile(ca, rig.caPEM, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			cmd := exec.Command(bin, sdk.run)
+			cmd.Env = append(os.Environ(), "VECTA_URL="+rig.srv.URL, "VECTA_TENANT=t1", "VECTA_TOKEN=client-token", "VECTA_CA="+ca,
+				"AES_KEY="+rig.aes, "SIGN_KEY="+rig.signer, "HIDDEN_KEY="+rig.hidden)
+			out, err := cmd.CombinedOutput()
+			if err != nil || !strings.Contains(string(out), "contract ok") {
+				t.Fatalf("%s contract: %v\n%s", sdk.name, err, out)
+			}
+		})
 	}
 }

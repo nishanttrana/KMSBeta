@@ -105,6 +105,10 @@ jobs:
         run: scripts/ci-go-test.sh -race ./pkg/... ./services/...
       - name: Go SDK (sdk/go is its own module; the root ./... doesn't reach it)
         run: cd sdk/go && go vet ./... && go test -race -count=1 ./...
+      - name: Python and Node SDKs (their unit tests; TestSDKsAgainstKeycore runs them against keycore)
+        run: |
+          python3 -m unittest discover -s sdk/python/tests
+          (cd sdk/node && node --test test/client.test.mjs)
 
   cluster-replication:
     # Three real Postgres 17 servers: selective per-component logical

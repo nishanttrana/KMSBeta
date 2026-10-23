@@ -21,7 +21,9 @@ description; four services do); a separate repository (the contract tests
 couldn't run on every change); depending on third-party HTTP or retry
 libraries (an SDK every customer vendors should add no dependencies).
 **Enforced:** `TestGoSDKAgainstKeycore`, `TestGoSDKTokenExchangeAgainstAuth`,
-`TestGoSDKReadsASecret`, the SDK's own tests (CI step "Go SDK").
+`TestGoSDKReadsASecret`, `TestSDKsAgainstKeycore` (the Python and Node
+SDKs' contract scripts, 13.55.0-beta), the SDKs' own tests (CI steps "Go
+SDK", "Python and Node SDKs").
 
 ---
 

@@ -177,4 +177,6 @@ All API calls use the proxy path `http://{host}/svc/{service}/...`.
 - [EKM Agent](../services/ekm-agent/README.md)
 - [JCA Provider](../services/jca-provider/README.md)
 - [Go SDK](../sdk/go/README.md)
+- [Python SDK](../sdk/python/README.md)
+- [Node.js SDK](../sdk/node/README.md)
 - [Edge agent](SECURITY/EDGE_DEVICES.md)

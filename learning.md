@@ -3,6 +3,20 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-10-24
+
+### Each runtime has its own way of being old (13.55.0-beta)
+- macOS's system Python 3.9 links LibreSSL 2.8, which has no TLS 1.3: it
+  can't reach the KMS at all, and even setting the minimum version raises.
+  The Python SDK refuses such a Python with a message saying why; its unit
+  tests stub the SSL context, and the real-TLS contract runs where Python
+  has OpenSSL 3 (CI, or a Linux container locally).
+- Python 3.9's `fromisoformat` takes at most six fractional digits; the KMS
+  sends nine. The first trim collected every digit after the dot, timezone
+  included, and only 3.9 noticed. Testing on the oldest supported version
+  found it.
+- `node --test <directory>` fails on Node 24; name the file.
+
 ## 2026-10-23
 
 ### A local module replace reaches every Dockerfile (13.54.0-beta)
