@@ -5,6 +5,20 @@ Newest entries on top.
 
 ## 2026-10-23
 
+### Find what the request really carries before naming a condition (13.51.0-beta)
+- keycore sets every HTTP caller's interface to `rest`: KMIP, EKM and the
+  other front-ends reach it as verified service identities, and a header
+  can't move a request to another interface. A binding on "interface" would
+  have matched nothing. The channel is the verified service identity (or
+  the delegating service), which is what a request actually proves.
+- Service principals skip key grants. A binding that let them skip it too
+  would bind nothing a platform service touches, so bindings are checked
+  before that shortcut.
+- The replication catalogue keeps `key_binding_configs`, though
+  migration 016 dropped it: `TestEveryTableIsClassified` reads every
+  migration, so a table any migration creates stays classified. I removed
+  it as stale and the test failed; it is back, next to the new table.
+
 ### Retiring a preview is more than deleting its catalogue entry (13.50.0-beta)
 - The generic `/enterprise/controls` route stores any category name. With
   `metadata_profile` simply removed from the preview catalogue, a record

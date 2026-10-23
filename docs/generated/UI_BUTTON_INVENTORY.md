@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-23T16:07:22Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-23T16:22:12Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -80,6 +80,12 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 513 | byok | Btn | setModal(null)}>Close |  |
 | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 514 | byok | Btn | void submitRegionMapping()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 549 | byok | Btn | setModal(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/BindingPoliciesPanel.tsx | 95 | - | Btn | setEditing( )}>New binding |  |
+| web/dashboard/src/components/v3/tabs/BindingPoliciesPanel.tsx | 108 | - | Btn | setEditing( )}>Edit |  |
+| web/dashboard/src/components/v3/tabs/BindingPoliciesPanel.tsx | 109 | - | Btn | void remove(p)}>Delete |  |
+| web/dashboard/src/components/v3/tabs/BindingPoliciesPanel.tsx | 146 | - | Btn | Cancel | onCancel |
+| web/dashboard/src/components/v3/tabs/BindingPoliciesPanel.tsx | 147 | - | Btn | Save binding | onSave |
+| web/dashboard/src/components/v3/tabs/BindingPoliciesPanel.tsx | 177 | - | Btn | void run()}>Check |  |
 | web/dashboard/src/components/v3/tabs/CanaryKeysPanel.tsx | 85 | - | Btn | Create canary | create} disabled={busy \|\| !name.trim() |
 | web/dashboard/src/components/v3/tabs/CanaryKeysPanel.tsx | 105 | - | Btn | showTrips(k)}>Trips |  |
 | web/dashboard/src/components/v3/tabs/CanaryKeysPanel.tsx | 106 | - | Btn | deactivate(k)}>Deactivate |  |
@@ -341,54 +347,55 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 112 | - | Btn | setShowForm(false)} variant="ghost">Cancel |  |
 | web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 131 | - | Btn | handleToggle(j)}>{j.enabled ? : } |  |
 | web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 134 | - | Btn | handleDelete(j.id)}> |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1741 | keys | Btn | void refreshKeyInventory()} style={{height:40,padding:"0 16px",borderRadius:4... |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1744 | keys | Btn | setModal("metadata-profiles")} style={{height:40,padding:"0 16px",borderRadiu... |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1753 | keys | button | { e.stopPropagation(); const next=!showColumnMenu; if(next) setShowColumnMenu... |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1881 | keys | button | { e.stopPropagation(); const isOpen=openActionMenuId===k.id; if(isOpen) const... |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1923 | keys | button | } style={ } > Edit Key Policy |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1932 | keys | button | } style={ } > Rotate |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1945 | keys | button | } style={ } > Verify Integrity |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1951 | keys | button | } style={ } > Attest |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1957 | keys | button | } disabled= style={ } > Deactivate |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1967 | keys | button | } disabled= style={ } > Activate |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1977 | keys | button | } disabled= style={ } > Disable |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1987 | keys | button | } style={ } > Export |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1998 | keys | button | } style={ } > Delete |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2017 | keys | Btn | }>Create your first key |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2033 | keys | Btn | setPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2035 | keys | Btn | setPageIndex((prev)=>Math.min(totalPages-1,prev+1))} disabled= >Next |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2137 | keys | button | setCreateTags((prev)=>prev.filter((t)=>t!==tag))} style={ } > |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2147 | keys | Btn | setShowCreateTagPicker(!showCreateTagPicker)}>Add More Tags |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2164 | keys | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2165 | keys | Btn | (icon or dynamic label) | addCustomerKey} disabled={creating |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2286 | keys | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2287 | keys | Btn | (icon or dynamic label) | submitFormKey} disabled={forming |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2393 | keys | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2394 | keys | Btn | (icon or dynamic label) | submitImportKey} disabled={importing |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2453 | keys | Btn | updateKeyStatus(comp,"deactivated")} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2454 | keys | Btn | updateKeyStatus(comp,"active")} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2455 | keys | Btn | updateKeyStatus(comp,"disabled")} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2477 | keys | Btn | }> Rotate |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2478 | keys | Btn | setModal("export")}> Export |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2479 | keys | Btn | Public key (PEM) | downloadSelectedPublicKey |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2480 | keys | Btn | openPolicyEditor(selectedKey)}>Edit Key Policy |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2481 | keys | Btn | updateKeyStatus(selectedKey,"deactivated")} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2482 | keys | Btn | updateKeyStatus(selectedKey,"active")} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2483 | keys | Btn | updateKeyStatus(selectedKey,"disabled")} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2484 | keys | Btn | }> Delete |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2550 | keys | Btn | Add Assignment | addPolicyGrant |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2572 | keys | Btn | removePolicyGrant(subjectType,subjectID)}>Remove |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2594 | keys | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2595 | keys | Btn | (icon or dynamic label) | saveKeyPolicy} disabled={policySaving |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2616 | keys | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2616 | keys | Btn | (icon or dynamic label) | rotateSelectedKey} disabled={rotating |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2643 | keys | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2644 | keys | Btn | (icon or dynamic label) | destroySelectedKey} disabled={!destroyReady |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2669 | keys | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2669 | keys | Btn | (icon or dynamic label) | generatePQCKey} disabled={pqcGenerating |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2675 | keys | Btn | setAttestResult(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2682 | keys | Btn | {const b=new Blob([JSON.stringify(attestResult,null,2)], );const a=document.c... |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2683 | keys | Btn | navigator.clipboard?.writeText(JSON.stringify(attestResult,null,2))}>Copy |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1742 | keys | Btn | void refreshKeyInventory()} style={{height:40,padding:"0 16px",borderRadius:4... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1745 | keys | Btn | setModal("metadata-profiles")} style={{height:40,padding:"0 16px",borderRadiu... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1746 | keys | Btn | setModal("binding-policies")} style={{height:40,padding:"0 16px",borderRadius... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1755 | keys | button | { e.stopPropagation(); const next=!showColumnMenu; if(next) setShowColumnMenu... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1883 | keys | button | { e.stopPropagation(); const isOpen=openActionMenuId===k.id; if(isOpen) const... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1925 | keys | button | } style={ } > Edit Key Policy |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1934 | keys | button | } style={ } > Rotate |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1947 | keys | button | } style={ } > Verify Integrity |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1953 | keys | button | } style={ } > Attest |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1959 | keys | button | } disabled= style={ } > Deactivate |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1969 | keys | button | } disabled= style={ } > Activate |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1979 | keys | button | } disabled= style={ } > Disable |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1989 | keys | button | } style={ } > Export |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2000 | keys | button | } style={ } > Delete |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2019 | keys | Btn | }>Create your first key |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2035 | keys | Btn | setPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2037 | keys | Btn | setPageIndex((prev)=>Math.min(totalPages-1,prev+1))} disabled= >Next |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2139 | keys | button | setCreateTags((prev)=>prev.filter((t)=>t!==tag))} style={ } > |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2149 | keys | Btn | setShowCreateTagPicker(!showCreateTagPicker)}>Add More Tags |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2166 | keys | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2167 | keys | Btn | (icon or dynamic label) | addCustomerKey} disabled={creating |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2288 | keys | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2289 | keys | Btn | (icon or dynamic label) | submitFormKey} disabled={forming |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2395 | keys | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2396 | keys | Btn | (icon or dynamic label) | submitImportKey} disabled={importing |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2455 | keys | Btn | updateKeyStatus(comp,"deactivated")} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2456 | keys | Btn | updateKeyStatus(comp,"active")} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2457 | keys | Btn | updateKeyStatus(comp,"disabled")} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2479 | keys | Btn | }> Rotate |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2480 | keys | Btn | setModal("export")}> Export |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2481 | keys | Btn | Public key (PEM) | downloadSelectedPublicKey |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2482 | keys | Btn | openPolicyEditor(selectedKey)}>Edit Key Policy |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2483 | keys | Btn | updateKeyStatus(selectedKey,"deactivated")} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2484 | keys | Btn | updateKeyStatus(selectedKey,"active")} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2485 | keys | Btn | updateKeyStatus(selectedKey,"disabled")} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2486 | keys | Btn | }> Delete |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2552 | keys | Btn | Add Assignment | addPolicyGrant |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2574 | keys | Btn | removePolicyGrant(subjectType,subjectID)}>Remove |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2596 | keys | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2597 | keys | Btn | (icon or dynamic label) | saveKeyPolicy} disabled={policySaving |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2618 | keys | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2618 | keys | Btn | (icon or dynamic label) | rotateSelectedKey} disabled={rotating |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2645 | keys | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2646 | keys | Btn | (icon or dynamic label) | destroySelectedKey} disabled={!destroyReady |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2674 | keys | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2674 | keys | Btn | (icon or dynamic label) | generatePQCKey} disabled={pqcGenerating |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2680 | keys | Btn | setAttestResult(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2687 | keys | Btn | {const b=new Blob([JSON.stringify(attestResult,null,2)], );const a=document.c... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2688 | keys | Btn | navigator.clipboard?.writeText(JSON.stringify(attestResult,null,2))}>Copy |  |
 | web/dashboard/src/components/v3/tabs/MetadataProfilesPanel.tsx | 77 | - | Btn | setEditing( )}>New profile |  |
 | web/dashboard/src/components/v3/tabs/MetadataProfilesPanel.tsx | 90 | - | Btn | void check(p)}>Check keys |  |
 | web/dashboard/src/components/v3/tabs/MetadataProfilesPanel.tsx | 91 | - | Btn | setEditing( )}>Edit |  |

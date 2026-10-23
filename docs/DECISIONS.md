@@ -7,6 +7,27 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-23 — Binding policies bind a key to channels, networks and workloads; sharing grants are access grants
+**Decision:** a key binding policy limits how a key may be reached: the
+channel (`rest` or a verified platform service identity), a direct
+caller's verified network and workload identity. keycore checks every
+applicable binding in its access decision, before grants and before
+trusting a service principal. The sharing-grant preview is retired: key
+access grants already share keys with users and groups, with operations
+and time windows, and are enforced.
+**Why:** the owner's list (2026-10-22): "Four more features only store
+settings." The old binding records (TPM PCRs, regions) were never
+enforced, and a region or PCR is nothing a request to keycore proves.
+**Rejected:** TPM/PCR and geolocation bindings (no verified PCR or location
+reaches keycore; attested key release covers hardware-bound release); an
+"interface" condition (every HTTP caller is `rest`); a second sharing
+model next to access grants.
+**Enforced:** `TestKeyBindingsAreEnforced`, `TestBindingProblemWorkloads`,
+`TestBindingPolicyValidationAndRetiredPreviews`,
+`TestKeyBindingPoliciesPostgres`, smoke `binding-policies.spec.ts`.
+
+---
+
 ## 2026-10-23 — Metadata profiles are enforced where keys are made and changed
 **Decision:** a tenant's metadata profiles are checked in keycore when a
 key is created, imported (including into an HSM) or updated: every

@@ -210,6 +210,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /keys/{id}/approval", h.visibleKeyRoute(h.handleGetApproval))
 	h.accessRouter(kernelEmitter{h}).MountOn(mux)
 	h.metadataProfileRouter(kernelEmitter{h}).MountOn(mux)
+	h.bindingPolicyRouter(kernelEmitter{h}).MountOn(mux)
 	mux.HandleFunc("GET /keys/{id}/iv-log", h.visibleKeyRoute(h.handleGetIVLog))
 	mux.HandleFunc("GET /keys/{id}/iv-log/{ref}", h.visibleKeyRoute(h.handleGetIVByRef))
 	mux.HandleFunc("GET /tags", h.handleListTags)

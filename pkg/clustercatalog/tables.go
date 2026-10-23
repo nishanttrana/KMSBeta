@@ -180,6 +180,7 @@ var Replicated = map[string][]string{
 		"key_access_groups",
 		"key_access_policy_settings",
 		"key_binding_configs",
+		"key_binding_policies",
 		"key_dependencies",
 		"key_dspm_findings",
 		"key_health_scores",

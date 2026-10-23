@@ -1,15 +1,15 @@
 # Generated Request Flow Map
 
-Generated at `2026-10-23T16:07:22Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-23T16:22:12Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `925`
-- Routes with exact frontend call sites: `502`
+- Backend routes analyzed: `928`
+- Routes with exact frontend call sites: `505`
 - Routes whose handlers call `h.svc.*`: `556`
-- Routes with detected store calls: `651`
+- Routes with detected store calls: `656`
 - Routes with detected internal `pkg/*` calls: `202`
 
 ## How To Trace One Frontend Click
@@ -327,20 +327,23 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keyaccess\|GET\|/key-access/codes | GET /key-access/codes | listRules (services/keyaccess/handler.go:102) | ListRules | ListRules |  |  | web/dashboard/src/lib/keyaccess.ts:95 |
 | keyaccess\|DELETE\|/key-access/codes/{param} | DELETE /key-access/codes/{id} | deleteRule (services/keyaccess/handler.go:136) | DeleteRule | DeleteRule |  |  | web/dashboard/src/lib/keyaccess.ts:110 |
 | keyaccess\|GET\|/key-access/decisions | GET /key-access/decisions | listDecisions (services/keyaccess/handler.go:144) | ListDecisions | ListDecisions |  |  | web/dashboard/src/lib/keyaccess.ts:123 |
+| keycore\|GET\|/binding-policies | GET /binding-policies | listBindingPolicies (services/keycore/binding_policies.go:428) |  | ListKeyBindingPolicies |  |  | web/dashboard/src/lib/bindingPolicies.ts:26 |
+| keycore\|DELETE\|/binding-policies/{param} | DELETE /binding-policies/{id} | deleteBindingPolicy (services/keycore/binding_policies.go:484) |  | GetKeyBindingPolicy, DeleteKeyBindingPolicy |  |  | web/dashboard/src/lib/bindingPolicies.ts:38 |
+| keycore\|POST\|/binding-policies/check | POST /binding-policies/check | checkBindingPolicies (services/keycore/binding_policies.go:499) |  | GetKey, ListKeyBindingPolicies |  |  | web/dashboard/src/lib/bindingPolicies.ts:42 |
 | keycore\|POST\|/keys/{param}/generate-data-key | POST /keys/{id}/generate-data-key | generateDataKey (services/keycore/data_key.go:29) | Encrypt |  | s.meter.IncrementOps | pkg/crypto.RandomBytes, pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:880 |
-| keycore\|GET\|/keys | GET /keys | handleListKeys (services/keycore/handler.go:536) | keyViewFor, SearchKeys, ListKeysCursor, ListKeys | ListAccessGroupIDsForUser, ListGrantedKeyIDs, SearchKeys |  | pkg/tenantcheck.Enforce, pkg/auth.ClaimsFromContext, pkg/route.Allowed | web/dashboard/src/lib/keycore.ts:520, web/dashboard/src/lib/keycore.ts:534 |
-| keycore\|POST\|/keys/{param}/export | POST /keys/{id}/export | handleExportKey (services/keycore/handler.go:916) | ExportPublicComponentPlaintext, ExportCurrentVersionWrapped | RecordRotationMetric, RotatePairVersions, RotateVersion, PurgeDueDestroyed, ActivateDueKeys, SearchKeys, ListKeysScoped, ListKeysCursor, +3 more | s.cache.Delete, s.exists.AddString, s.cache.Set, s.exists.TestString, s.cache.Get | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual, pkg/cryptocatalog.Lookup | web/dashboard/src/lib/keycore.ts:1107 |
-| keycore\|GET\|/keys/{param}/versions | GET /keys/{id}/versions | handleListVersions (services/keycore/handler.go:1018) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/keycore.ts:813 |
-| keycore\|GET\|/tags | GET /tags | handleListTags (services/keycore/handler.go:1316) | ListTagCatalog | EnsureDefaultTags, ListTagCatalog |  |  | web/dashboard/src/lib/keycore.ts:1369 |
-| keycore\|POST\|/keys/{param}/encrypt | POST /keys/{id}/encrypt | handleEncrypt (services/keycore/handler.go:1481) |  |  |  |  | web/dashboard/src/lib/keycore.ts:843 |
-| keycore\|POST\|/keys/{param}/decrypt | POST /keys/{id}/decrypt | handleDecrypt (services/keycore/handler.go:1520) |  |  |  |  | web/dashboard/src/lib/keycore.ts:907 |
-| keycore\|POST\|/keys/{param}/sign | POST /keys/{id}/sign | handleSign (services/keycore/handler.go:1559) |  |  |  |  | web/dashboard/src/lib/keycore.ts:931 |
-| keycore\|POST\|/keys/{param}/verify | POST /keys/{id}/verify | handleVerify (services/keycore/handler.go:1563) | Verify |  | s.meter.IncrementOps | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:949 |
-| keycore\|POST\|/keys/{param}/derive | POST /keys/{id}/derive | handleDerive (services/keycore/handler.go:1607) | Derive |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1024 |
-| keycore\|POST\|/keys/{param}/kem/encapsulate | POST /keys/{id}/kem/encapsulate | handleKEMEncapsulate (services/keycore/handler.go:1680) | KEMEncapsulate |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1052 |
-| keycore\|POST\|/keys/{param}/kem/decapsulate | POST /keys/{id}/kem/decapsulate | handleKEMDecapsulate (services/keycore/handler.go:1720) | KEMDecapsulate |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1081 |
-| keycore\|POST\|/crypto/hash | POST /crypto/hash | handleHash (services/keycore/handler.go:1759) | Hash |  |  |  | web/dashboard/src/lib/keycore.ts:974 |
-| keycore\|POST\|/crypto/random | POST /crypto/random | handleRandom (services/keycore/handler.go:1787) | Random |  | s.hsm.Random | pkg/crypto.Zeroize, pkg/hsm.Random | web/dashboard/src/lib/keycore.ts:995 |
+| keycore\|GET\|/keys | GET /keys | handleListKeys (services/keycore/handler.go:537) | keyViewFor, SearchKeys, ListKeysCursor, ListKeys | ListAccessGroupIDsForUser, ListGrantedKeyIDs, SearchKeys |  | pkg/tenantcheck.Enforce, pkg/auth.ClaimsFromContext, pkg/route.Allowed | web/dashboard/src/lib/keycore.ts:520, web/dashboard/src/lib/keycore.ts:534 |
+| keycore\|POST\|/keys/{param}/export | POST /keys/{id}/export | handleExportKey (services/keycore/handler.go:917) | ExportPublicComponentPlaintext, ExportCurrentVersionWrapped | RecordRotationMetric, RotatePairVersions, RotateVersion, PurgeDueDestroyed, ActivateDueKeys, SearchKeys, ListKeysScoped, ListKeysCursor, +3 more | s.cache.Delete, s.exists.AddString, s.cache.Set, s.exists.TestString, s.cache.Get | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual, pkg/cryptocatalog.Lookup | web/dashboard/src/lib/keycore.ts:1107 |
+| keycore\|GET\|/keys/{param}/versions | GET /keys/{id}/versions | handleListVersions (services/keycore/handler.go:1019) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/keycore.ts:813 |
+| keycore\|GET\|/tags | GET /tags | handleListTags (services/keycore/handler.go:1317) | ListTagCatalog | EnsureDefaultTags, ListTagCatalog |  |  | web/dashboard/src/lib/keycore.ts:1369 |
+| keycore\|POST\|/keys/{param}/encrypt | POST /keys/{id}/encrypt | handleEncrypt (services/keycore/handler.go:1482) |  |  |  |  | web/dashboard/src/lib/keycore.ts:843 |
+| keycore\|POST\|/keys/{param}/decrypt | POST /keys/{id}/decrypt | handleDecrypt (services/keycore/handler.go:1521) |  |  |  |  | web/dashboard/src/lib/keycore.ts:907 |
+| keycore\|POST\|/keys/{param}/sign | POST /keys/{id}/sign | handleSign (services/keycore/handler.go:1560) |  |  |  |  | web/dashboard/src/lib/keycore.ts:931 |
+| keycore\|POST\|/keys/{param}/verify | POST /keys/{id}/verify | handleVerify (services/keycore/handler.go:1564) | Verify |  | s.meter.IncrementOps | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:949 |
+| keycore\|POST\|/keys/{param}/derive | POST /keys/{id}/derive | handleDerive (services/keycore/handler.go:1608) | Derive |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1024 |
+| keycore\|POST\|/keys/{param}/kem/encapsulate | POST /keys/{id}/kem/encapsulate | handleKEMEncapsulate (services/keycore/handler.go:1681) | KEMEncapsulate |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1052 |
+| keycore\|POST\|/keys/{param}/kem/decapsulate | POST /keys/{id}/kem/decapsulate | handleKEMDecapsulate (services/keycore/handler.go:1721) | KEMDecapsulate |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1081 |
+| keycore\|POST\|/crypto/hash | POST /crypto/hash | handleHash (services/keycore/handler.go:1760) | Hash |  |  |  | web/dashboard/src/lib/keycore.ts:974 |
+| keycore\|POST\|/crypto/random | POST /crypto/random | handleRandom (services/keycore/handler.go:1788) | Random |  | s.hsm.Random | pkg/crypto.Zeroize, pkg/hsm.Random | web/dashboard/src/lib/keycore.ts:995 |
 | keycore\|GET\|/keys/{param}/access-policy | GET /keys/{id}/access-policy | getKeyAccessPolicy (services/keycore/handler_access.go:64) | GetKeyAccessPolicy | ListKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1236 |
 | keycore\|PUT\|/keys/{param}/access-policy | PUT /keys/{id}/access-policy | putKeyAccessPolicy (services/keycore/handler_access.go:76) | ReplaceKeyAccessPolicy | GetKeyAccessSettings, ReplaceKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1249 |
 | keycore\|GET\|/access/groups | GET /access/groups | listAccessGroups (services/keycore/handler_access.go:101) | ListAccessGroups | ListAccessGroups |  |  | web/dashboard/src/lib/keycore.ts:1318 |
@@ -368,19 +371,19 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|DELETE\|/agility/caraf/threats/{param} | DELETE /agility/caraf/threats/{id} | deleteCarafThreat (services/keycore/handler_caraf.go:178) |  | DeleteCarafThreat |  |  | web/dashboard/src/lib/cryptoAgility.ts:225 |
 | keycore\|DELETE\|/agility/caraf/assets/{param} | DELETE /agility/caraf/assets/{id} | deleteCarafAsset (services/keycore/handler_caraf.go:316) |  | DeleteCarafAsset |  |  | web/dashboard/src/lib/cryptoAgility.ts:235 |
 | keycore\|PUT\|/agility/caraf/assets/{param}/decision | PUT /agility/caraf/assets/{id}/decision | setCarafDecision (services/keycore/handler_caraf.go:386) |  | SetCarafDecision |  |  | web/dashboard/src/lib/cryptoAgility.ts:239 |
-| keycore\|POST\|/keys | POST /keys | handleCreateKey (services/keycore/handler.go:277) | CreateKey |  |  | pkg/tenantcheck.ActingFor, pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:574 |
-| keycore\|POST\|/keys/import | POST /keys/import | handleImportKey (services/keycore/handler.go:330) | ImportKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:734 |
-| keycore\|POST\|/keys/form | POST /keys/form | handleFormKey (services/keycore/handler.go:371) | FormKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:700 |
-| keycore\|POST\|/keys/{param}/rotate | POST /keys/{id}/rotate | handleRotateKey (services/keycore/handler.go:654) | RotateKeyTo | RecordRotationMetric, RotatePairVersions, RotateVersion | s.cache.Delete | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual | web/dashboard/src/lib/keycore.ts:785 |
-| keycore\|POST\|/keys/{param}/activate | POST /keys/{id}/activate | handleActivateKey (services/keycore/handler.go:701) | ConfigureKeyActivation | SetKeyActivation | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1155, web/dashboard/src/lib/keycore.ts:1167 |
-| keycore\|POST\|/keys/{param}/deactivate | POST /keys/{id}/deactivate | handleDeactivateKey (services/keycore/handler.go:743) |  |  |  |  | web/dashboard/src/lib/keycore.ts:1181 |
-| keycore\|POST\|/keys/{param}/disable | POST /keys/{id}/disable | handleDisableKey (services/keycore/handler.go:746) |  |  |  |  | web/dashboard/src/lib/keycore.ts:1189 |
-| keycore\|POST\|/keys/{param}/destroy | POST /keys/{id}/destroy | handleDestroyKey (services/keycore/handler.go:749) | GetKey, ScheduleKeyDestroy, DestroyKeyImmediately | GetKey, ScheduleDestroy, MarkKeyDestroyed | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set | pkg/clientip.From | web/dashboard/src/lib/keycore.ts:1144 |
-| keycore\|PUT\|/keys/{param}/export-policy | PUT /keys/{id}/export-policy | handleSetExportPolicy (services/keycore/handler.go:1199) | SetExportAllowed | SetExportAllowed | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1220 |
-| keycore\|PUT\|/keys/{param}/usage/limit | PUT /keys/{id}/usage/limit | handleSetUsageLimit (services/keycore/handler.go:1127) | SetUsageLimit | SetUsageLimit | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1202 |
+| keycore\|POST\|/keys | POST /keys | handleCreateKey (services/keycore/handler.go:278) | CreateKey |  |  | pkg/tenantcheck.ActingFor, pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:574 |
+| keycore\|POST\|/keys/import | POST /keys/import | handleImportKey (services/keycore/handler.go:331) | ImportKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:734 |
+| keycore\|POST\|/keys/form | POST /keys/form | handleFormKey (services/keycore/handler.go:372) | FormKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:700 |
+| keycore\|POST\|/keys/{param}/rotate | POST /keys/{id}/rotate | handleRotateKey (services/keycore/handler.go:655) | RotateKeyTo | RecordRotationMetric, RotatePairVersions, RotateVersion | s.cache.Delete | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual | web/dashboard/src/lib/keycore.ts:785 |
+| keycore\|POST\|/keys/{param}/activate | POST /keys/{id}/activate | handleActivateKey (services/keycore/handler.go:702) | ConfigureKeyActivation | SetKeyActivation | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1155, web/dashboard/src/lib/keycore.ts:1167 |
+| keycore\|POST\|/keys/{param}/deactivate | POST /keys/{id}/deactivate | handleDeactivateKey (services/keycore/handler.go:744) |  |  |  |  | web/dashboard/src/lib/keycore.ts:1181 |
+| keycore\|POST\|/keys/{param}/disable | POST /keys/{id}/disable | handleDisableKey (services/keycore/handler.go:747) |  |  |  |  | web/dashboard/src/lib/keycore.ts:1189 |
+| keycore\|POST\|/keys/{param}/destroy | POST /keys/{id}/destroy | handleDestroyKey (services/keycore/handler.go:750) | GetKey, ScheduleKeyDestroy, DestroyKeyImmediately | GetKey, ScheduleDestroy, MarkKeyDestroyed | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set | pkg/clientip.From | web/dashboard/src/lib/keycore.ts:1144 |
+| keycore\|PUT\|/keys/{param}/export-policy | PUT /keys/{id}/export-policy | handleSetExportPolicy (services/keycore/handler.go:1200) | SetExportAllowed | SetExportAllowed | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1220 |
+| keycore\|PUT\|/keys/{param}/usage/limit | PUT /keys/{id}/usage/limit | handleSetUsageLimit (services/keycore/handler.go:1128) | SetUsageLimit | SetUsageLimit | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1202 |
 | keycore\|PUT\|/keys/{param}/description | PUT /keys/{id}/description | setKeyDescription (services/keycore/key_text.go:80) |  | GetKey, SetKeyDescription |  |  | web/dashboard/src/lib/keycore.ts:768 |
-| keycore\|POST\|/tags | POST /tags | handleUpsertTag (services/keycore/handler.go:1341) | UpsertTag | EnsureDefaultTags, ListTagCatalog, UpsertTag |  |  | web/dashboard/src/lib/keycore.ts:1381 |
-| keycore\|DELETE\|/tags/{param} | DELETE /tags/{name} | handleDeleteTag (services/keycore/handler.go:1377) | DeleteTag | DeleteTag |  |  | web/dashboard/src/lib/keycore.ts:1396 |
+| keycore\|POST\|/tags | POST /tags | handleUpsertTag (services/keycore/handler.go:1342) | UpsertTag | EnsureDefaultTags, ListTagCatalog, UpsertTag |  |  | web/dashboard/src/lib/keycore.ts:1381 |
+| keycore\|DELETE\|/tags/{param} | DELETE /tags/{name} | handleDeleteTag (services/keycore/handler.go:1378) | DeleteTag | DeleteTag |  |  | web/dashboard/src/lib/keycore.ts:1396 |
 | keycore\|POST\|/keys/{param}/attest | POST /keys/{id}/attest | handleAttestKey (services/keycore/handler_attestation.go:5) | AttestKey |  |  | pkg/crypto.Sign | web/dashboard/src/lib/keycore.ts:804 |
 | keycore\|POST\|/keys/{param}/verify-material | POST /keys/{id}/verify-material | handleVerifyKeyMaterial (services/keycore/handler_advanced.go:154) | VerifyKeyIntegrity | GetVersion |  | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual | web/dashboard/src/lib/keycore.ts:794 |
 | keycore\|GET\|/rotation/policies | GET /rotation/policies | listRotationPolicies (services/keycore/handler_rotation.go:30) |  | ListRotationPolicies |  |  | web/dashboard/src/lib/rotationScheduler.ts:63 |
@@ -1061,36 +1064,41 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keyaccess\|GET\|/key-access/decisions | GET /key-access/decisions | listDecisions (services/keyaccess/handler.go:144) | ListDecisions | ListDecisions |  |  | web/dashboard/src/lib/keyaccess.ts:123 |
 | keyaccess\|POST\|/key-access/evaluate | POST /key-access/evaluate | evaluate (services/keyaccess/handler.go:163) | Evaluate | ListRules, CreateDecision | s.governance.CreateApprovalRequest | pkg/tenantcheck.IsServicePrincipal |  |
 | keycore\|POST\|/keys/{param}/attested-release | POST /keys/{id}/attested-release | attestedRelease (services/keycore/attested_release.go:142) | AttestedRelease |  |  | pkg/crypto.RecipientKeyBinding, pkg/tenantcheck.IsServicePrincipal, pkg/crypto.ParseRecipientPublicKey, pkg/crypto.Zeroize, pkg/crypto.SealToRecipient |  |
+| keycore\|GET\|/binding-policies | GET /binding-policies | listBindingPolicies (services/keycore/binding_policies.go:428) |  | ListKeyBindingPolicies |  |  | web/dashboard/src/lib/bindingPolicies.ts:26 |
+| keycore\|POST\|/binding-policies | POST /binding-policies | createBindingPolicy (services/keycore/binding_policies.go:438) |  | CreateKeyBindingPolicy |  |  |  |
+| keycore\|PUT\|/binding-policies/{param} | PUT /binding-policies/{id} | updateBindingPolicy (services/keycore/binding_policies.go:459) |  | GetKeyBindingPolicy, UpdateKeyBindingPolicy |  |  |  |
+| keycore\|DELETE\|/binding-policies/{param} | DELETE /binding-policies/{id} | deleteBindingPolicy (services/keycore/binding_policies.go:484) |  | GetKeyBindingPolicy, DeleteKeyBindingPolicy |  |  | web/dashboard/src/lib/bindingPolicies.ts:38 |
+| keycore\|POST\|/binding-policies/check | POST /binding-policies/check | checkBindingPolicies (services/keycore/binding_policies.go:499) |  | GetKey, ListKeyBindingPolicies |  |  | web/dashboard/src/lib/bindingPolicies.ts:42 |
 | keycore\|POST\|/keys/{param}/cloud-wrap | POST /keys/{id}/cloud-wrap | cloudWrap (services/keycore/cloud_wrap.go:214) | CloudWrap |  |  | pkg/tenantcheck.IsServicePrincipal, pkg/crypto.ParseCloudWrappingKey, pkg/crypto.FingerprintPublicKey, pkg/crypto.CloudWrapNeedsModuleOutside, pkg/crypto.Zeroize, pkg/crypto.WrapForCloudImport, pkg/crypto.SHA256 |  |
 | keycore\|POST\|/keys/{param}/generate-data-key | POST /keys/{id}/generate-data-key | generateDataKey (services/keycore/data_key.go:29) | Encrypt |  | s.meter.IncrementOps | pkg/crypto.RandomBytes, pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:880 |
 | keycore\|GET\|/keys/due-for-lifecycle | GET /keys/due-for-lifecycle | handleDueForLifecycle (services/keycore/handler_lifecycle.go:19) | dueForLifecycle | ListCryptoperiodOverrides |  |  |  |
-| keycore\|GET\|/keys | GET /keys | handleListKeys (services/keycore/handler.go:536) | keyViewFor, SearchKeys, ListKeysCursor, ListKeys | ListAccessGroupIDsForUser, ListGrantedKeyIDs, SearchKeys |  | pkg/tenantcheck.Enforce, pkg/auth.ClaimsFromContext, pkg/route.Allowed | web/dashboard/src/lib/keycore.ts:520, web/dashboard/src/lib/keycore.ts:534 |
-| keycore\|GET\|/keys/{param} | GET /keys/{id} | handleGetKey (services/keycore/handler.go:613) | GetKey | GetKey | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set |  |  |
-| keycore\|POST\|/keys/{param}/export | POST /keys/{id}/export | handleExportKey (services/keycore/handler.go:916) | ExportPublicComponentPlaintext, ExportCurrentVersionWrapped | RecordRotationMetric, RotatePairVersions, RotateVersion, PurgeDueDestroyed, ActivateDueKeys, SearchKeys, ListKeysScoped, ListKeysCursor, +3 more | s.cache.Delete, s.exists.AddString, s.cache.Set, s.exists.TestString, s.cache.Get | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual, pkg/cryptocatalog.Lookup | web/dashboard/src/lib/keycore.ts:1107 |
-| keycore\|GET\|/keys/{param}/versions | GET /keys/{id}/versions | handleListVersions (services/keycore/handler.go:1018) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/keycore.ts:813 |
-| keycore\|GET\|/keys/{param}/versions/{param} | GET /keys/{id}/versions/{ver} | handleGetVersion (services/keycore/handler.go:1036) | GetVersion | GetVersion |  |  |  |
-| keycore\|GET\|/keys/{param}/kcv | GET /keys/{id}/kcv | handleGetKCV (services/keycore/handler.go:1092) | GetKey | GetKey | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set |  |  |
-| keycore\|GET\|/keys/{param}/usage | GET /keys/{id}/usage | handleGetUsage (services/keycore/handler.go:1106) | GetUsage | GetUsage |  |  |  |
-| keycore\|GET\|/keys/{param}/approval | GET /keys/{id}/approval | handleGetApproval (services/keycore/handler.go:1281) | GetApproval | GetApproval |  |  |  |
-| keycore\|GET\|/keys/{param}/iv-log | GET /keys/{id}/iv-log | handleGetIVLog (services/keycore/handler.go:1397) |  | GetIVLog |  |  |  |
-| keycore\|GET\|/keys/{param}/iv-log/{param} | GET /keys/{id}/iv-log/{ref} | handleGetIVByRef (services/keycore/handler.go:1423) |  | GetIVByReference |  |  |  |
-| keycore\|GET\|/tags | GET /tags | handleListTags (services/keycore/handler.go:1316) | ListTagCatalog | EnsureDefaultTags, ListTagCatalog |  |  | web/dashboard/src/lib/keycore.ts:1369 |
-| keycore\|POST\|/keys/{param}/encrypt | POST /keys/{id}/encrypt | handleEncrypt (services/keycore/handler.go:1481) |  |  |  |  | web/dashboard/src/lib/keycore.ts:843 |
-| keycore\|POST\|/keys/{param}/decrypt | POST /keys/{id}/decrypt | handleDecrypt (services/keycore/handler.go:1520) |  |  |  |  | web/dashboard/src/lib/keycore.ts:907 |
-| keycore\|POST\|/keys/{param}/sign | POST /keys/{id}/sign | handleSign (services/keycore/handler.go:1559) |  |  |  |  | web/dashboard/src/lib/keycore.ts:931 |
-| keycore\|POST\|/keys/{param}/verify | POST /keys/{id}/verify | handleVerify (services/keycore/handler.go:1563) | Verify |  | s.meter.IncrementOps | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:949 |
-| keycore\|POST\|/keys/{param}/wrap | POST /keys/{id}/wrap | handleWrap (services/keycore/handler.go:1595) |  |  |  |  |  |
-| keycore\|POST\|/keys/{param}/unwrap | POST /keys/{id}/unwrap | handleUnwrap (services/keycore/handler.go:1599) |  |  |  |  |  |
-| keycore\|POST\|/keys/{param}/mac | POST /keys/{id}/mac | handleMAC (services/keycore/handler.go:1603) |  |  |  |  |  |
-| keycore\|POST\|/keys/{param}/derive | POST /keys/{id}/derive | handleDerive (services/keycore/handler.go:1607) | Derive |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1024 |
-| keycore\|POST\|/keys/{param}/service-derive | POST /keys/{id}/service-derive | handleServiceDerive (services/keycore/handler.go:1650) | ServiceDerive |  |  |  |  |
-| keycore\|POST\|/cluster/mek/join-key | POST /cluster/mek/join-key | handleClusterJoinKey (services/keycore/handler.go:2400) | CreateClusterJoinKey |  |  | pkg/crypto.NewKEMRecipient |  |
-| keycore\|POST\|/cluster/mek/export | POST /cluster/mek/export | handleClusterMEKExport (services/keycore/handler.go:2410) | ExportClusterMEK |  |  | pkg/crypto.KEMSeal |  |
-| keycore\|POST\|/cluster/mek/import | POST /cluster/mek/import | handleClusterMEKImport (services/keycore/handler.go:2429) | ImportClusterMEK | CountKeys |  | pkg/crypto.Zeroize |  |
-| keycore\|POST\|/keys/{param}/kem/encapsulate | POST /keys/{id}/kem/encapsulate | handleKEMEncapsulate (services/keycore/handler.go:1680) | KEMEncapsulate |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1052 |
-| keycore\|POST\|/keys/{param}/kem/decapsulate | POST /keys/{id}/kem/decapsulate | handleKEMDecapsulate (services/keycore/handler.go:1720) | KEMDecapsulate |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1081 |
-| keycore\|POST\|/crypto/hash | POST /crypto/hash | handleHash (services/keycore/handler.go:1759) | Hash |  |  |  | web/dashboard/src/lib/keycore.ts:974 |
-| keycore\|POST\|/crypto/random | POST /crypto/random | handleRandom (services/keycore/handler.go:1787) | Random |  | s.hsm.Random | pkg/crypto.Zeroize, pkg/hsm.Random | web/dashboard/src/lib/keycore.ts:995 |
+| keycore\|GET\|/keys | GET /keys | handleListKeys (services/keycore/handler.go:537) | keyViewFor, SearchKeys, ListKeysCursor, ListKeys | ListAccessGroupIDsForUser, ListGrantedKeyIDs, SearchKeys |  | pkg/tenantcheck.Enforce, pkg/auth.ClaimsFromContext, pkg/route.Allowed | web/dashboard/src/lib/keycore.ts:520, web/dashboard/src/lib/keycore.ts:534 |
+| keycore\|GET\|/keys/{param} | GET /keys/{id} | handleGetKey (services/keycore/handler.go:614) | GetKey | GetKey | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set |  |  |
+| keycore\|POST\|/keys/{param}/export | POST /keys/{id}/export | handleExportKey (services/keycore/handler.go:917) | ExportPublicComponentPlaintext, ExportCurrentVersionWrapped | RecordRotationMetric, RotatePairVersions, RotateVersion, PurgeDueDestroyed, ActivateDueKeys, SearchKeys, ListKeysScoped, ListKeysCursor, +3 more | s.cache.Delete, s.exists.AddString, s.cache.Set, s.exists.TestString, s.cache.Get | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual, pkg/cryptocatalog.Lookup | web/dashboard/src/lib/keycore.ts:1107 |
+| keycore\|GET\|/keys/{param}/versions | GET /keys/{id}/versions | handleListVersions (services/keycore/handler.go:1019) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/keycore.ts:813 |
+| keycore\|GET\|/keys/{param}/versions/{param} | GET /keys/{id}/versions/{ver} | handleGetVersion (services/keycore/handler.go:1037) | GetVersion | GetVersion |  |  |  |
+| keycore\|GET\|/keys/{param}/kcv | GET /keys/{id}/kcv | handleGetKCV (services/keycore/handler.go:1093) | GetKey | GetKey | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set |  |  |
+| keycore\|GET\|/keys/{param}/usage | GET /keys/{id}/usage | handleGetUsage (services/keycore/handler.go:1107) | GetUsage | GetUsage |  |  |  |
+| keycore\|GET\|/keys/{param}/approval | GET /keys/{id}/approval | handleGetApproval (services/keycore/handler.go:1282) | GetApproval | GetApproval |  |  |  |
+| keycore\|GET\|/keys/{param}/iv-log | GET /keys/{id}/iv-log | handleGetIVLog (services/keycore/handler.go:1398) |  | GetIVLog |  |  |  |
+| keycore\|GET\|/keys/{param}/iv-log/{param} | GET /keys/{id}/iv-log/{ref} | handleGetIVByRef (services/keycore/handler.go:1424) |  | GetIVByReference |  |  |  |
+| keycore\|GET\|/tags | GET /tags | handleListTags (services/keycore/handler.go:1317) | ListTagCatalog | EnsureDefaultTags, ListTagCatalog |  |  | web/dashboard/src/lib/keycore.ts:1369 |
+| keycore\|POST\|/keys/{param}/encrypt | POST /keys/{id}/encrypt | handleEncrypt (services/keycore/handler.go:1482) |  |  |  |  | web/dashboard/src/lib/keycore.ts:843 |
+| keycore\|POST\|/keys/{param}/decrypt | POST /keys/{id}/decrypt | handleDecrypt (services/keycore/handler.go:1521) |  |  |  |  | web/dashboard/src/lib/keycore.ts:907 |
+| keycore\|POST\|/keys/{param}/sign | POST /keys/{id}/sign | handleSign (services/keycore/handler.go:1560) |  |  |  |  | web/dashboard/src/lib/keycore.ts:931 |
+| keycore\|POST\|/keys/{param}/verify | POST /keys/{id}/verify | handleVerify (services/keycore/handler.go:1564) | Verify |  | s.meter.IncrementOps | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:949 |
+| keycore\|POST\|/keys/{param}/wrap | POST /keys/{id}/wrap | handleWrap (services/keycore/handler.go:1596) |  |  |  |  |  |
+| keycore\|POST\|/keys/{param}/unwrap | POST /keys/{id}/unwrap | handleUnwrap (services/keycore/handler.go:1600) |  |  |  |  |  |
+| keycore\|POST\|/keys/{param}/mac | POST /keys/{id}/mac | handleMAC (services/keycore/handler.go:1604) |  |  |  |  |  |
+| keycore\|POST\|/keys/{param}/derive | POST /keys/{id}/derive | handleDerive (services/keycore/handler.go:1608) | Derive |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1024 |
+| keycore\|POST\|/keys/{param}/service-derive | POST /keys/{id}/service-derive | handleServiceDerive (services/keycore/handler.go:1651) | ServiceDerive |  |  |  |  |
+| keycore\|POST\|/cluster/mek/join-key | POST /cluster/mek/join-key | handleClusterJoinKey (services/keycore/handler.go:2401) | CreateClusterJoinKey |  |  | pkg/crypto.NewKEMRecipient |  |
+| keycore\|POST\|/cluster/mek/export | POST /cluster/mek/export | handleClusterMEKExport (services/keycore/handler.go:2411) | ExportClusterMEK |  |  | pkg/crypto.KEMSeal |  |
+| keycore\|POST\|/cluster/mek/import | POST /cluster/mek/import | handleClusterMEKImport (services/keycore/handler.go:2430) | ImportClusterMEK | CountKeys |  | pkg/crypto.Zeroize |  |
+| keycore\|POST\|/keys/{param}/kem/encapsulate | POST /keys/{id}/kem/encapsulate | handleKEMEncapsulate (services/keycore/handler.go:1681) | KEMEncapsulate |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1052 |
+| keycore\|POST\|/keys/{param}/kem/decapsulate | POST /keys/{id}/kem/decapsulate | handleKEMDecapsulate (services/keycore/handler.go:1721) | KEMDecapsulate |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1081 |
+| keycore\|POST\|/crypto/hash | POST /crypto/hash | handleHash (services/keycore/handler.go:1760) | Hash |  |  |  | web/dashboard/src/lib/keycore.ts:974 |
+| keycore\|POST\|/crypto/random | POST /crypto/random | handleRandom (services/keycore/handler.go:1788) | Random |  | s.hsm.Random | pkg/crypto.Zeroize, pkg/hsm.Random | web/dashboard/src/lib/keycore.ts:995 |
 | keycore\|GET\|/keys/{param}/rotation-metrics | GET /keys/{id}/rotation-metrics | handleListKeyRotationMetrics (services/keycore/handler_enterprise_audit.go:54) |  | ListRotationMetrics |  |  |  |
 | keycore\|GET\|/keys/{param}/health | GET /keys/{id}/health | handleGetKeyHealth (services/keycore/handler_enterprise_audit.go:98) | CalculateKeyHealth | GetKeyHealthScore, GetInventoryItem, UpsertKeyHealthScore |  |  |  |
 | keycore\|GET\|/analytics/algorithms | GET /analytics/algorithms | handleGetAlgorithmBenchmarks (services/keycore/handler_enterprise_audit.go:441) |  | GetAlgorithmBenchmarks |  |  |  |
@@ -1132,29 +1140,29 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|PUT\|/agility/caraf/assets/{param} | PUT /agility/caraf/assets/{id} | updateCarafAsset (services/keycore/handler_caraf.go:297) |  | UpdateCarafAsset |  |  |  |
 | keycore\|DELETE\|/agility/caraf/assets/{param} | DELETE /agility/caraf/assets/{id} | deleteCarafAsset (services/keycore/handler_caraf.go:316) |  | DeleteCarafAsset |  |  | web/dashboard/src/lib/cryptoAgility.ts:235 |
 | keycore\|PUT\|/agility/caraf/assets/{param}/decision | PUT /agility/caraf/assets/{id}/decision | setCarafDecision (services/keycore/handler_caraf.go:386) |  | SetCarafDecision |  |  | web/dashboard/src/lib/cryptoAgility.ts:239 |
-| keycore\|POST\|/keys | POST /keys | handleCreateKey (services/keycore/handler.go:277) | CreateKey |  |  | pkg/tenantcheck.ActingFor, pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:574 |
-| keycore\|POST\|/keys/import | POST /keys/import | handleImportKey (services/keycore/handler.go:330) | ImportKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:734 |
-| keycore\|POST\|/keys/form | POST /keys/form | handleFormKey (services/keycore/handler.go:371) | FormKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:700 |
-| keycore\|POST\|/keys/bulk-import | POST /keys/bulk-import | handleBulkImport (services/keycore/handler.go:413) | ImportKey |  |  | pkg/crypto.Zeroize |  |
-| keycore\|POST\|/keys/bulk-rotate | POST /keys/bulk-rotate | handleBulkRotate (services/keycore/handler.go:440) | RotateKey |  |  |  |  |
-| keycore\|POST\|/keys/bulk-delete | POST /keys/bulk-delete | handleBulkDelete (services/keycore/handler.go:475) | ScheduleKeyDestroy | ScheduleDestroy | s.cache.Delete |  |  |
-| keycore\|PUT\|/keys/{param} | PUT /keys/{id} | handleUpdateKey (services/keycore/handler.go:633) | UpdateKey | GetKey, UpdateKeyMetadata, SetKeyActivation, SetKeyStatus, ScheduleDestroy, MarkKeyDestroyed, SetUsageLimit, SetExportAllowed, +11 more | s.cache.Delete, s.cluster.Publish, s.approval.ensureApproval, s.meter.IncrementOps, s.hsm.Random, s.policy.Evaluate, s.posture.Controls | pkg/crypto.Zeroize, pkg/crypto.DecryptEnvelope, pkg/crypto.GenerateIV, pkg/crypto.ConstantTimeEqual, pkg/crypto.SealDetached, pkg/crypto.SealGCMWithNonce, pkg/crypto.OpenDetached, pkg/hsm.Random |  |
-| keycore\|POST\|/keys/{param}/rotate | POST /keys/{id}/rotate | handleRotateKey (services/keycore/handler.go:654) | RotateKeyTo | RecordRotationMetric, RotatePairVersions, RotateVersion | s.cache.Delete | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual | web/dashboard/src/lib/keycore.ts:785 |
-| keycore\|POST\|/keys/{param}/activate | POST /keys/{id}/activate | handleActivateKey (services/keycore/handler.go:701) | ConfigureKeyActivation | SetKeyActivation | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1155, web/dashboard/src/lib/keycore.ts:1167 |
-| keycore\|POST\|/keys/{param}/deactivate | POST /keys/{id}/deactivate | handleDeactivateKey (services/keycore/handler.go:743) |  |  |  |  | web/dashboard/src/lib/keycore.ts:1181 |
-| keycore\|POST\|/keys/{param}/disable | POST /keys/{id}/disable | handleDisableKey (services/keycore/handler.go:746) |  |  |  |  | web/dashboard/src/lib/keycore.ts:1189 |
-| keycore\|POST\|/keys/{param}/destroy | POST /keys/{id}/destroy | handleDestroyKey (services/keycore/handler.go:749) | GetKey, ScheduleKeyDestroy, DestroyKeyImmediately | GetKey, ScheduleDestroy, MarkKeyDestroyed | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set | pkg/clientip.From | web/dashboard/src/lib/keycore.ts:1144 |
-| keycore\|PUT\|/keys/{param}/export-policy | PUT /keys/{id}/export-policy | handleSetExportPolicy (services/keycore/handler.go:1199) | SetExportAllowed | SetExportAllowed | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1220 |
-| keycore\|POST\|/keys/{param}/versions/{param}/activate | POST /keys/{id}/versions/{ver}/activate | handleActivateVersion (services/keycore/handler.go:1051) |  |  |  |  |  |
-| keycore\|POST\|/keys/{param}/versions/{param}/deactivate | POST /keys/{id}/versions/{ver}/deactivate | handleDeactivateVersion (services/keycore/handler.go:1054) |  |  |  |  |  |
-| keycore\|DELETE\|/keys/{param}/versions/{param} | DELETE /keys/{id}/versions/{ver} | handleDeleteVersion (services/keycore/handler.go:1073) | publishAudit | DeleteVersion | s.cluster.Publish |  |  |
-| keycore\|PUT\|/keys/{param}/usage/limit | PUT /keys/{id}/usage/limit | handleSetUsageLimit (services/keycore/handler.go:1127) | SetUsageLimit | SetUsageLimit | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1202 |
-| keycore\|POST\|/keys/{param}/usage/reset | POST /keys/{id}/usage/reset | handleResetUsage (services/keycore/handler.go:1237) | ResetUsage | ResetUsage | s.cache.Delete |  |  |
-| keycore\|PUT\|/keys/{param}/approval | PUT /keys/{id}/approval | handleSetApproval (services/keycore/handler.go:1250) | SetApproval | SetApproval | s.cache.Delete |  |  |
-| keycore\|PUT\|/keys/{param}/iv-mode | PUT /keys/{id}/iv-mode | handleSetIVMode (services/keycore/handler.go:1295) | publishAudit | UpdateIVMode | s.cluster.Publish |  |  |
+| keycore\|POST\|/keys | POST /keys | handleCreateKey (services/keycore/handler.go:278) | CreateKey |  |  | pkg/tenantcheck.ActingFor, pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:574 |
+| keycore\|POST\|/keys/import | POST /keys/import | handleImportKey (services/keycore/handler.go:331) | ImportKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:734 |
+| keycore\|POST\|/keys/form | POST /keys/form | handleFormKey (services/keycore/handler.go:372) | FormKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:700 |
+| keycore\|POST\|/keys/bulk-import | POST /keys/bulk-import | handleBulkImport (services/keycore/handler.go:414) | ImportKey |  |  | pkg/crypto.Zeroize |  |
+| keycore\|POST\|/keys/bulk-rotate | POST /keys/bulk-rotate | handleBulkRotate (services/keycore/handler.go:441) | RotateKey |  |  |  |  |
+| keycore\|POST\|/keys/bulk-delete | POST /keys/bulk-delete | handleBulkDelete (services/keycore/handler.go:476) | ScheduleKeyDestroy | ScheduleDestroy | s.cache.Delete |  |  |
+| keycore\|PUT\|/keys/{param} | PUT /keys/{id} | handleUpdateKey (services/keycore/handler.go:634) | UpdateKey | GetKey, UpdateKeyMetadata, SetKeyActivation, SetKeyStatus, ScheduleDestroy, MarkKeyDestroyed, SetUsageLimit, SetExportAllowed, +11 more | s.cache.Delete, s.cluster.Publish, s.approval.ensureApproval, s.meter.IncrementOps, s.hsm.Random, s.policy.Evaluate, s.posture.Controls | pkg/crypto.Zeroize, pkg/crypto.DecryptEnvelope, pkg/crypto.GenerateIV, pkg/crypto.ConstantTimeEqual, pkg/crypto.SealDetached, pkg/crypto.SealGCMWithNonce, pkg/crypto.OpenDetached, pkg/hsm.Random |  |
+| keycore\|POST\|/keys/{param}/rotate | POST /keys/{id}/rotate | handleRotateKey (services/keycore/handler.go:655) | RotateKeyTo | RecordRotationMetric, RotatePairVersions, RotateVersion | s.cache.Delete | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual | web/dashboard/src/lib/keycore.ts:785 |
+| keycore\|POST\|/keys/{param}/activate | POST /keys/{id}/activate | handleActivateKey (services/keycore/handler.go:702) | ConfigureKeyActivation | SetKeyActivation | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1155, web/dashboard/src/lib/keycore.ts:1167 |
+| keycore\|POST\|/keys/{param}/deactivate | POST /keys/{id}/deactivate | handleDeactivateKey (services/keycore/handler.go:744) |  |  |  |  | web/dashboard/src/lib/keycore.ts:1181 |
+| keycore\|POST\|/keys/{param}/disable | POST /keys/{id}/disable | handleDisableKey (services/keycore/handler.go:747) |  |  |  |  | web/dashboard/src/lib/keycore.ts:1189 |
+| keycore\|POST\|/keys/{param}/destroy | POST /keys/{id}/destroy | handleDestroyKey (services/keycore/handler.go:750) | GetKey, ScheduleKeyDestroy, DestroyKeyImmediately | GetKey, ScheduleDestroy, MarkKeyDestroyed | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set | pkg/clientip.From | web/dashboard/src/lib/keycore.ts:1144 |
+| keycore\|PUT\|/keys/{param}/export-policy | PUT /keys/{id}/export-policy | handleSetExportPolicy (services/keycore/handler.go:1200) | SetExportAllowed | SetExportAllowed | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1220 |
+| keycore\|POST\|/keys/{param}/versions/{param}/activate | POST /keys/{id}/versions/{ver}/activate | handleActivateVersion (services/keycore/handler.go:1052) |  |  |  |  |  |
+| keycore\|POST\|/keys/{param}/versions/{param}/deactivate | POST /keys/{id}/versions/{ver}/deactivate | handleDeactivateVersion (services/keycore/handler.go:1055) |  |  |  |  |  |
+| keycore\|DELETE\|/keys/{param}/versions/{param} | DELETE /keys/{id}/versions/{ver} | handleDeleteVersion (services/keycore/handler.go:1074) | publishAudit | DeleteVersion | s.cluster.Publish |  |  |
+| keycore\|PUT\|/keys/{param}/usage/limit | PUT /keys/{id}/usage/limit | handleSetUsageLimit (services/keycore/handler.go:1128) | SetUsageLimit | SetUsageLimit | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1202 |
+| keycore\|POST\|/keys/{param}/usage/reset | POST /keys/{id}/usage/reset | handleResetUsage (services/keycore/handler.go:1238) | ResetUsage | ResetUsage | s.cache.Delete |  |  |
+| keycore\|PUT\|/keys/{param}/approval | PUT /keys/{id}/approval | handleSetApproval (services/keycore/handler.go:1251) | SetApproval | SetApproval | s.cache.Delete |  |  |
+| keycore\|PUT\|/keys/{param}/iv-mode | PUT /keys/{id}/iv-mode | handleSetIVMode (services/keycore/handler.go:1296) | publishAudit | UpdateIVMode | s.cluster.Publish |  |  |
 | keycore\|PUT\|/keys/{param}/description | PUT /keys/{id}/description | setKeyDescription (services/keycore/key_text.go:80) |  | GetKey, SetKeyDescription |  |  | web/dashboard/src/lib/keycore.ts:768 |
-| keycore\|POST\|/tags | POST /tags | handleUpsertTag (services/keycore/handler.go:1341) | UpsertTag | EnsureDefaultTags, ListTagCatalog, UpsertTag |  |  | web/dashboard/src/lib/keycore.ts:1381 |
-| keycore\|DELETE\|/tags/{param} | DELETE /tags/{name} | handleDeleteTag (services/keycore/handler.go:1377) | DeleteTag | DeleteTag |  |  | web/dashboard/src/lib/keycore.ts:1396 |
+| keycore\|POST\|/tags | POST /tags | handleUpsertTag (services/keycore/handler.go:1342) | UpsertTag | EnsureDefaultTags, ListTagCatalog, UpsertTag |  |  | web/dashboard/src/lib/keycore.ts:1381 |
+| keycore\|DELETE\|/tags/{param} | DELETE /tags/{name} | handleDeleteTag (services/keycore/handler.go:1378) | DeleteTag | DeleteTag |  |  | web/dashboard/src/lib/keycore.ts:1396 |
 | keycore\|GET\|/ceremony/guardians | GET /ceremony/guardians | handleListGuardians (services/keycore/handler_ceremony.go:11) |  | ListCeremonyGuardians |  |  |  |
 | keycore\|POST\|/ceremony/guardians | POST /ceremony/guardians | handleCreateGuardian (services/keycore/handler_ceremony.go:26) |  | CreateCeremonyGuardian |  |  |  |
 | keycore\|DELETE\|/ceremony/guardians/{param} | DELETE /ceremony/guardians/{id} | handleDeleteGuardian (services/keycore/handler_ceremony.go:66) |  | DeleteCeremonyGuardian |  |  |  |
@@ -1164,7 +1172,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|POST\|/ceremony/{param}/shares | POST /ceremony/{id}/shares | handleSubmitShare (services/keycore/handler_ceremony.go:208) |  | SubmitCeremonyShare, GetCeremony |  |  |  |
 | keycore\|POST\|/ceremony/{param}/complete | POST /ceremony/{id}/complete | handleCompleteCeremony (services/keycore/handler_ceremony.go:257) |  | GetCeremony, UpdateCeremonyStatus |  |  |  |
 | keycore\|POST\|/ceremony/{param}/abort | POST /ceremony/{id}/abort | handleAbortCeremony (services/keycore/handler_ceremony.go:297) |  | UpdateCeremonyStatus |  |  |  |
-| keycore\|POST\|/keys/{param}/usage/meter | POST /keys/{id}/usage/meter | handleMeterUsage (services/keycore/handler.go:1148) | MeterUsage | GetUsage | s.cache.Delete |  |  |
+| keycore\|POST\|/keys/{param}/usage/meter | POST /keys/{id}/usage/meter | handleMeterUsage (services/keycore/handler.go:1149) | MeterUsage | GetUsage | s.cache.Delete |  |  |
 | keycore\|POST\|/keys/{param}/rotation-metrics | POST /keys/{id}/rotation-metrics | handleRecordKeyRotationMetric (services/keycore/handler_enterprise_audit.go:68) |  | RecordRotationMetric |  | pkg/tenantcheck.ActingFor |  |
 | keycore\|POST\|/keys/{param}/health/recalculate | POST /keys/{id}/health/recalculate | handleRecalculateKeyHealth (services/keycore/handler_enterprise_audit.go:119) | CalculateKeyHealth | GetInventoryItem, UpsertKeyHealthScore |  |  |  |
 | keycore\|POST\|/inventory/sync | POST /inventory/sync | handleSyncInventory (services/keycore/handler_enterprise_audit.go:156) | SyncKeyInventory | GetInventoryItem, UpsertInventoryItem, GetInventorySummary |  |  |  |
@@ -1186,11 +1194,9 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|POST\|/enterprise/federation/providers | POST /enterprise/federation/providers | handleUpsertEnterpriseControlCategory (services/keycore/handler_enterprise_controls.go:85) |  |  |  |  |  |
 | keycore\|POST\|/enterprise/federation/mappings | POST /enterprise/federation/mappings | handleUpsertEnterpriseControlCategory (services/keycore/handler_enterprise_controls.go:85) |  |  |  |  |  |
 | keycore\|POST\|/enterprise/federation/failovers | POST /enterprise/federation/failovers | handleUpsertEnterpriseControlCategory (services/keycore/handler_enterprise_controls.go:85) |  |  |  |  |  |
-| keycore\|POST\|/enterprise/binding/policies | POST /enterprise/binding/policies | handleUpsertEnterpriseControlCategory (services/keycore/handler_enterprise_controls.go:85) |  |  |  |  |  |
 | keycore\|POST\|/enterprise/edge/agents | POST /enterprise/edge/agents | handleUpsertEnterpriseControlCategory (services/keycore/handler_enterprise_controls.go:85) |  |  |  |  |  |
 | keycore\|POST\|/enterprise/edge/leases | POST /enterprise/edge/leases | handleUpsertEnterpriseControlCategory (services/keycore/handler_enterprise_controls.go:85) |  |  |  |  |  |
 | keycore\|POST\|/enterprise/edge/receipts | POST /enterprise/edge/receipts | handleUpsertEnterpriseControlCategory (services/keycore/handler_enterprise_controls.go:85) |  |  |  |  |  |
-| keycore\|POST\|/enterprise/sharing/grants | POST /enterprise/sharing/grants | handleUpsertEnterpriseControlCategory (services/keycore/handler_enterprise_controls.go:85) |  |  |  |  |  |
 | keycore\|POST\|/enterprise/threat/signals | POST /enterprise/threat/signals | handleUpsertEnterpriseControlCategory (services/keycore/handler_enterprise_controls.go:85) |  |  |  |  |  |
 | keycore\|POST\|/enterprise/orchestration/runs | POST /enterprise/orchestration/runs | handleTriggerOrchestrationRun (services/keycore/handler_enterprise_controls.go:307) | RotateKey, UpsertEnterpriseControl | UpsertEnterpriseControlRecord |  | pkg/features.ControlCategoryStatus |  |
 | keycore\|GET\|/scheduling/jobs | GET /scheduling/jobs | handleListSchedulingJobs (services/keycore/handler_advanced.go:11) |  | ListSchedulingJobs |  |  |  |

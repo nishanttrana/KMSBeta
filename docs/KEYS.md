@@ -510,6 +510,52 @@ Labels starting `hsm` belong to the platform and can't have rules. Until
 that category is refused (`410 feature_retired`), and old records list
 with `feature_status: retired`.
 
+### 5.6 Binding policies (13.51.0-beta)
+
+A binding policy says how a key may be reached, whoever is asking. A grant
+says who may use a key; a binding says through which channel, from where
+and as which workload. Keys → Binding policies, or
+`/svc/keycore/binding-policies` (permissions `key.binding.read`,
+`key.binding.write`); code `services/keycore/binding_policies.go`.
+
+- **Keys:** `all_keys`, or `key_ids`, or a `label_selector` (every label
+  must match), or both of the last two.
+- **Conditions** (at least one):
+  - `channels`: `rest` (a caller using keycore's API directly) and platform
+    service identities (`kms-kmip`, `kms-ekm`, `kms-dataprotect`, …: the
+    verified service, or the service a user's request was delegated
+    through).
+  - `source_networks`: CIDRs or addresses a direct caller must come from
+    (its verified address, `pkg/clientip`).
+  - `workload_identities`: patterns (`*`, `?`) a direct caller's workload
+    identity must match.
+  Networks and workloads apply to direct callers; a service listed in
+  `channels` is not held to them, since its own address isn't the caller's.
+- **Enforced** on every operation on the key, by every caller, platform
+  services included, in keycore's access decision before grants. Every
+  active binding that applies must pass. A refusal is `403` and
+  `audit.key.access_refused` with `reason: binding_policy` and the binding
+  that refused.
+- **Check before relying on it:** `POST /binding-policies/check` with
+  `key_id`, `channel`, `source_ip`, `workload_identity` says which
+  bindings apply and what each decides (Check in the console). A binding
+  can lock a key away from the services that use it, backups included;
+  list every channel the key needs.
+
+```sh
+curl -s -X POST "$KMS/svc/keycore/binding-policies?tenant_id=$TENANT" -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' -d '{
+    "name": "prod from the data centre", "label_selector": {"env": "prod"},
+    "channels": ["rest", "kms-ekm"], "source_networks": ["10.0.0.0/8"]}'
+```
+
+Until 13.51.0-beta, binding policies (`/enterprise/binding/policies`) and
+sharing grants (`/enterprise/sharing/grants`) were previews that only
+stored records. Both routes are gone; a new record of either category is
+refused (`410 feature_retired`) and old ones list as `retired`. Sharing a
+key with users or groups is a key access grant (`PUT
+/keys/{id}/access-policy`, section 9), which keycore enforces.
+
 ## 6. Importing Existing Keys
 
 ### 6.1 Why Import Keys?

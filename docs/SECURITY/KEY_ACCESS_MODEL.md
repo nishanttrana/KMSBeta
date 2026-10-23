@@ -273,6 +273,17 @@ KMIP needs `AddAttribute`, `ModifyAttribute` and `DeleteAttribute` (only
   policy", and "what can this subject do", served from the decision function
   itself so they can't drift from enforcement.
 
+### 8a. Binding policies (13.51.0-beta)
+
+Before grants, the decision (`evaluateKeyAccess`) checks the tenant's
+binding policies ([KEYS.md 5.6](../KEYS.md#56-binding-policies-13510-beta)):
+how the key may be reached. The channel is the verified service identity
+for a service principal, the delegating service for a delegated request,
+otherwise `rest`; networks use the verified address (`pkg/clientip`) and
+workloads the verified workload identity. Service principals are checked
+too: a binding is the one rule a platform service doesn't bypass. A
+refusal is `binding_policy` (`TestKeyBindingsAreEnforced`).
+
 ## 9. Route permissions (4.0.0-beta)
 
 Keycore requires a verified token on every route except the reconciler

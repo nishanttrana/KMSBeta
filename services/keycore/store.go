@@ -192,6 +192,13 @@ type Store interface {
 	CreateMetadataProfile(ctx context.Context, p MetadataProfile) error
 	UpdateMetadataProfile(ctx context.Context, p MetadataProfile) error
 	DeleteMetadataProfile(ctx context.Context, tenantID, id string) error
+
+	// Key binding policies (binding_policies.go, 13.51.0-beta).
+	ListKeyBindingPolicies(ctx context.Context, tenantID string) ([]KeyBindingPolicy, error)
+	GetKeyBindingPolicy(ctx context.Context, tenantID, id string) (KeyBindingPolicy, error)
+	CreateKeyBindingPolicy(ctx context.Context, p KeyBindingPolicy) error
+	UpdateKeyBindingPolicy(ctx context.Context, p KeyBindingPolicy) error
+	DeleteKeyBindingPolicy(ctx context.Context, tenantID, id string) error
 }
 
 type SQLStore struct {

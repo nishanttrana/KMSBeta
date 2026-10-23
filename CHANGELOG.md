@@ -4,6 +4,26 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.51.0-beta] — 2026-10-23
+
+### Added
+- **Key binding policies are enforced.** A binding says how a key may be
+  reached, whoever is asking (Keys → Binding policies): through which
+  channel (a direct API caller, or platform services such as KMIP or EKM),
+  from which networks, and as which workload identities. It applies to
+  every key, listed keys or keys with given labels. Every operation on a
+  bound key is checked, by every caller including platform services; a
+  refusal is audited with reason `binding_policy`. "Check" says whether a
+  given request would reach a key before anyone relies on it. Routes
+  `/binding-policies`; permissions `key.binding.read`, `key.binding.write`.
+
+### Removed
+- The binding policy and sharing grant previews (`POST
+  /enterprise/binding/policies`, `/enterprise/sharing/grants`), which only
+  stored records. Sharing a key is a key access grant, which keycore
+  already enforced. New records of either category are refused (`410
+  feature_retired`); old ones list as `retired`.
+
 ## [13.50.0-beta] — 2026-10-23
 
 ### Added

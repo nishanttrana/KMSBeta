@@ -16,8 +16,6 @@ reflects it:
 | ID | Feature | What does not happen |
 |---|---|---|
 | `keycore.federation` | Key federation / multi-KMS failover | Providers, mappings and failovers are stored; no key is replicated and no failover happens. |
-| `keycore.binding_policy` | Key binding policies | Stored only; key operations do not evaluate them. |
-| `keycore.sharing_grant` | Fine-grained key sharing grants | Stored only; use key access grants for enforced sharing. |
 | `keycore.edge` | Edge & IoT agents, leases and receipts | Stored only; there is no edge runtime. |
 | `keycore.advanced_encryption_modes` | Homomorphic / functional encryption modes | Registered as controls; no homomorphic or functional encryption is performed. Searchable HMAC tokens are available. |
 
@@ -53,6 +51,14 @@ reflects it:
     ([KEYS.md 5.5](KEYS.md#55-metadata-profiles-13500-beta)). The preview
     route is removed, a new record of its category is refused (`410
     feature_retired`, `pkg/features.Retired`), and old records list as
+    `retired`.
+- **Key binding policies and sharing grants** (13.51.0-beta):
+  - **What they did:** stored records; no key operation read them.
+  - **Now:** binding policies are enforced on every key operation
+    ([KEYS.md 5.6](KEYS.md#56-binding-policies-13510-beta)). Sharing
+    grants are retired in favour of key access grants, which keycore
+    already enforced. Both preview routes are removed, new records of
+    either category are refused (`410 feature_retired`), old ones list as
     `retired`.
 
 ## Leaving preview

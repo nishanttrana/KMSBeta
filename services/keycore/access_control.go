@@ -365,6 +365,11 @@ func (s *Service) evaluateKeyAccess(ctx context.Context, key Key, operation stri
 	if actor.Via != "" && !strings.EqualFold(actor.TenantID, key.TenantID) {
 		return refuse("delegation_tenant_mismatch", "access denied: the user acted for belongs to another tenant")
 	}
+	// How the key may be reached (binding_policies.go): checked for every
+	// caller, service principals included, before any grant.
+	if err := s.checkKeyBindings(ctx, key, actor); err != nil {
+		return err
+	}
 	normOperation, err := normalizeAccessOperation(operation)
 	if err != nil {
 		return err

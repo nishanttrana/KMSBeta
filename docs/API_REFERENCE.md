@@ -1119,11 +1119,9 @@ These endpoints provide the Tier 1 enterprise audit surface for rotation analyti
 | POST | `/svc/keycore/enterprise/federation/providers` | Register multi-KMS provider metadata. |
 | POST | `/svc/keycore/enterprise/federation/mappings` | Register cross-KMS key mappings. |
 | POST | `/svc/keycore/enterprise/federation/failovers` | Record cross-region/provider failover state. |
-| POST | `/svc/keycore/enterprise/binding/policies` | Register hardware attestation/geolocation binding policy. |
 | POST | `/svc/keycore/enterprise/edge/agents` | Register Edge/IoT KMS agents. |
 | POST | `/svc/keycore/enterprise/edge/leases` | Register offline key lease state. |
 | POST | `/svc/keycore/enterprise/edge/receipts` | Register edge operation receipts. |
-| POST | `/svc/keycore/enterprise/sharing/grants` | Register temporary/delegated key-sharing grants. |
 | POST | `/svc/keycore/enterprise/threat/signals` | Register advanced threat signals such as side-channel/DPA alerts. |
 
 Example compromise event:
@@ -1279,6 +1277,22 @@ compromise) must be a move the lifecycle state table allows
 (`services/keycore/lifecycle_state.go`, docs/AUTOMATION_ALKM_PQC.md). A
 compromised key only moves to destroyed. Anything else returns
 `409 status_transition_refused` and emits `audit.key.status_transition_refused`.
+
+### Binding policies (13.51.0-beta)
+
+[KEYS.md section 5.6](KEYS.md#56-binding-policies-13510-beta). Kernel
+events `audit.key.<action>`.
+
+| Route | Permission | Notes |
+|---|---|---|
+| `GET /svc/keycore/binding-policies` | `key.binding.read` | `items[]`: `id`, `name`, `all_keys`, `key_ids`, `label_selector`, `channels`, `source_networks`, `workload_identities`, `status` (`binding_policies_listed`) |
+| `POST /svc/keycore/binding-policies` | `key.binding.write` | Body exactly `name`, `all_keys`, `key_ids`, `label_selector`, `channels`, `source_networks`, `workload_identities`, `status`. `201 {"policy"}`. Refusals `invalid_binding_policy` (400), `name_taken` (409) (`binding_policy_created`) |
+| `PUT /svc/keycore/binding-policies/{id}` | `key.binding.write` | The same body, replacing the policy (`binding_policy_updated`) |
+| `DELETE /svc/keycore/binding-policies/{id}` | `key.binding.write` | (`binding_policy_deleted`) |
+| `POST /svc/keycore/binding-policies/check` | `key.binding.read` | Body `key_id`, `channel`, `source_ip`, `workload_identity`. `{"allowed", "channel", "policies": [{"policy_id", "name", "allowed", "problem"}]}` (`binding_policies_checked`) |
+
+A key operation a binding refuses answers `403` and emits
+`audit.key.access_refused` with `reason: binding_policy`.
 
 ### Metadata profiles (13.50.0-beta)
 
@@ -5182,6 +5196,11 @@ from the code; do not edit by hand.
 - `GET /svc/keycore/analytics/trends`
 - `GET /svc/keycore/analytics/usage`
 - `GET /svc/keycore/attestation/public-key`
+- `GET /svc/keycore/binding-policies`
+- `POST /svc/keycore/binding-policies`
+- `POST /svc/keycore/binding-policies/check`
+- `DELETE /svc/keycore/binding-policies/{id}`
+- `PUT /svc/keycore/binding-policies/{id}`
 - `GET /svc/keycore/canary/keys`
 - `POST /svc/keycore/canary/keys`
 - `DELETE /svc/keycore/canary/keys/{id}`
@@ -5207,7 +5226,6 @@ from the code; do not edit by hand.
 - `POST /svc/keycore/enterprise/advanced-encryption/modes`
 - `POST /svc/keycore/enterprise/advanced-encryption/search-token`
 - `POST /svc/keycore/enterprise/anomaly/scan`
-- `POST /svc/keycore/enterprise/binding/policies`
 - `GET /svc/keycore/enterprise/compliance/dashboard`
 - `GET /svc/keycore/enterprise/controls`
 - `POST /svc/keycore/enterprise/controls`
@@ -5225,7 +5243,6 @@ from the code; do not edit by hand.
 - `POST /svc/keycore/enterprise/kdf/derive`
 - `POST /svc/keycore/enterprise/orchestration/runs`
 - `POST /svc/keycore/enterprise/orchestration/workflows`
-- `POST /svc/keycore/enterprise/sharing/grants`
 - `GET /svc/keycore/enterprise/summary`
 - `POST /svc/keycore/enterprise/threat/signals`
 - `POST /svc/keycore/enterprise/verification/fingerprint`

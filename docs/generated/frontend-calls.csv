@@ -74,6 +74,9 @@ autokey,autokey,GET,/autokey/handles?{param},/autokey/handles,True,serviceReques
 governance,governance,GET,/governance/backups/schedules?{param},/governance/backups/schedules,True,serviceRequest,web/dashboard/src/lib/backupSchedules.ts,52,governance|GET|/governance/backups/schedules
 governance,governance,DELETE,/governance/backups/schedules/{param}?{param},/governance/backups/schedules/{param},True,serviceRequest,web/dashboard/src/lib/backupSchedules.ts,70,governance|DELETE|/governance/backups/schedules/{param}
 governance,governance,POST,/governance/backups/schedules/{param}/run?{param},/governance/backups/schedules/{param}/run,True,serviceRequest,web/dashboard/src/lib/backupSchedules.ts,74,governance|POST|/governance/backups/schedules/{param}/run
+keycore,keycore,GET,/binding-policies?{param},/binding-policies,True,serviceRequest,web/dashboard/src/lib/bindingPolicies.ts,26,keycore|GET|/binding-policies
+keycore,keycore,DELETE,/binding-policies/{param}?{param},/binding-policies/{param},True,serviceRequest,web/dashboard/src/lib/bindingPolicies.ts,38,keycore|DELETE|/binding-policies/{param}
+keycore,keycore,POST,/binding-policies/check?{param},/binding-policies/check,True,serviceRequest,web/dashboard/src/lib/bindingPolicies.ts,42,keycore|POST|/binding-policies/check
 cloud,cloud,GET,/cloud/byok/providers,/cloud/byok/providers,False,serviceRequest,web/dashboard/src/lib/byok.ts,121,cloud|GET|/cloud/byok/providers
 cloud,cloud,GET,/cloud/byok/keys,/cloud/byok/keys,False,serviceRequest,web/dashboard/src/lib/byok.ts,126,cloud|GET|/cloud/byok/keys
 cloud,cloud,GET,/cloud/byok/keys/{param},/cloud/byok/keys/{param},True,serviceRequest,web/dashboard/src/lib/byok.ts,131,cloud|GET|/cloud/byok/keys/{param}
