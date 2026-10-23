@@ -137,7 +137,7 @@ func cliSessionRequest(t *testing.T, password string) *http.Request {
 	t.Helper()
 	body, _ := json.Marshal(map[string]string{"username": "cli-user", "password": password})
 	req := httptest.NewRequest(http.MethodPost, "/auth/cli/session", bytes.NewReader(body))
-	return req.WithContext(pkgauth.ContextWithClaims(req.Context(), &pkgauth.Claims{TenantID: "t1", Role: "tenant-admin", UserID: "admin-1"}))
+	return req.WithContext(pkgauth.ContextWithClaims(req.Context(), &pkgauth.Claims{TenantID: "t1", Role: "tenant-admin", UserID: "admin-1", Permissions: []string{"*"}}))
 }
 
 func TestCLISessionRefusesThePublicPasswordAndAuditsRefusals(t *testing.T) {
@@ -197,5 +197,49 @@ func TestCLISSHPasswordSyncKeepsThePasswordOffTheCommandLine(t *testing.T) {
 	raw, _ := json.Marshal(ev)
 	if strings.Contains(string(raw), password) {
 		t.Fatal("the audit event must not contain the password")
+	}
+}
+
+// The CLI is a shell on the HSM integration container. Opening it and its
+// HSM settings need the HSM permissions; an admin role's name grants nothing
+// (CLAUDE.md rule 4).
+func TestCLIRoutesNeedHSMPermissionsNotARoleName(t *testing.T) {
+	h, _, _, _ := newTestHandler(t)
+	as := func(method, path string, claims *pkgauth.Claims) int {
+		req := httptest.NewRequest(method, path, strings.NewReader(`{}`))
+		req = req.WithContext(pkgauth.ContextWithClaims(req.Context(), claims))
+		rr := httptest.NewRecorder()
+		switch path {
+		case "/auth/cli/session":
+			h.handleCLISession(rr, req)
+		case "/auth/cli/hsm/partitions":
+			h.handleCLIHSMPartitions(rr, req)
+		default:
+			if method == http.MethodPut {
+				h.handleUpdateCLIHSMConfig(rr, req)
+			} else {
+				h.handleGetCLIHSMConfig(rr, req)
+			}
+		}
+		return rr.Code
+	}
+	routes := []struct{ method, path string }{
+		{http.MethodPost, "/auth/cli/session"},
+		{http.MethodGet, "/auth/cli/hsm/config"},
+		{http.MethodPut, "/auth/cli/hsm/config"},
+		{http.MethodGet, "/auth/cli/hsm/partitions"},
+	}
+	for _, role := range []string{"admin", "tenant-admin", "super-admin"} {
+		for _, rt := range routes {
+			if code := as(rt.method, rt.path, &pkgauth.Claims{TenantID: "t1", Role: role, UserID: "u1", Permissions: []string{"auth.user.read", "auth.user.write"}}); code != http.StatusForbidden {
+				t.Fatalf("%s %s with only the role name %q: %d", rt.method, rt.path, role, code)
+			}
+		}
+	}
+	// The permission passes the gate (the route's own checks then answer).
+	for _, rt := range routes {
+		if code := as(rt.method, rt.path, &pkgauth.Claims{TenantID: "t1", Role: "operator", UserID: "u1", Permissions: []string{"key.hsm.read", "key.hsm.write"}}); code == http.StatusForbidden {
+			t.Fatalf("%s %s with key.hsm.*: refused", rt.method, rt.path)
+		}
 	}
 }

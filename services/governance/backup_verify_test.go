@@ -29,7 +29,7 @@ func TestVerifyBackupRouteAuthAndActor(t *testing.T) {
 		t.Fatalf("viewer refusal: %+v", d)
 	}
 
-	if rr := call(&pkgauth.Claims{TenantID: "root", Role: "admin", UserID: "root-admin"}); rr.Code != http.StatusBadRequest {
+	if rr := call(&pkgauth.Claims{TenantID: "root", Role: "admin", UserID: "root-admin", Permissions: []string{"*"}}); rr.Code != http.StatusBadRequest {
 		t.Fatalf("admin with an empty artifact: %d, want 400 (%s)", rr.Code, rr.Body)
 	}
 	d := lastRefusal(t, pub, "audit.governance.backup_verify_refused")

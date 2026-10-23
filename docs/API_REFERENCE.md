@@ -1834,8 +1834,10 @@ Multi-party approvals, encrypted backup/restore, emergency bypass, system state.
 
 **System administration** (`/governance/settings*`, `/governance/backups*`, `/governance/system/*`)
 needs a verified root administrator: `tenant_id=root`, a token for the root
-tenant, and role `admin`/`super-admin` or permission `*` (writes) /
-`auth.tenant.*`, `auth.policy.*`. There is no unauthenticated access:
+tenant, and permission `auth.tenant.write` or `auth.policy.write` (writes;
+for reads also `auth.tenant.read` or `auth.policy.read`), directly or
+through `*` or `auth.*`. A role's name grants nothing (13.48.0-beta; before,
+the role `admin` or `super-admin` was enough). There is no unauthenticated access:
 governance refuses to start without its token-verification key
 (`GOVERNANCE_JWT_PUBLIC_KEY_PEM`/`_B64`, else the shared
 `JWT_PUBLIC_KEY_PEM`/`_B64`). Platform services are admitted only on the

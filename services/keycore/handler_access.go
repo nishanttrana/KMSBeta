@@ -27,7 +27,7 @@ func (h *Handler) accessRouter(audit route.Emitter) *route.Router {
 		return route.Spec{Action: action, Permission: "key.access.read", Resource: resource}
 	}
 	admin := func(action, resource, target string) route.Spec {
-		return route.Spec{Action: action, Permission: "key.access.admin", Resource: resource, TargetParam: target, Severity: "warning"}
+		return route.Spec{Action: action, Permission: permAccessAdmin, Resource: resource, TargetParam: target, Severity: "warning"}
 	}
 	r.Handle("GET /keys/{id}/access-policy", route.Spec{Action: "access_policy_read", Permission: "key.access.read", Resource: "key", TargetParam: "id"}, h.getKeyAccessPolicy)
 	r.Handle("PUT /keys/{id}/access-policy", route.Spec{Action: "access_policy_updated", Permission: "key.access.manage", Resource: "key", TargetParam: "id", Severity: "warning"}, h.putKeyAccessPolicy)

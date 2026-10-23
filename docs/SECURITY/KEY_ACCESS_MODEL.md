@@ -297,7 +297,9 @@ as `audit.key.request_refused` (`reason: unauthenticated`).
 | ceremonies, compromise, enterprise controls, scheduling, inventory/analytics writes, attestation, integrity checks, FIPS self-test (5.0.0-beta) | `key.ceremony.*`, `key.compromise`, `key.enterprise.*`, `key.scheduling.*`, `key.inventory.write`, `key.analytics.write`, `key.health.write`, `key.rotation.write`, `key.usage.meter`, `key.attest`, `key.integrity.verify`, `key.fips.selftest`; orchestration runs `key.rotate` | per-key routes: the key must be visible |
 
 Built-in `admin` / `tenant-admin` hold `*`. Other roles get these permissions
-explicitly. Service principals pass the permission check and act for the
+explicitly. A "tenant admin" in the rules above is whoever holds
+`key.access.admin` (or `*`); the role's name grants nothing (13.48.0-beta;
+before, the names `admin`, `super-admin` and `tenant-admin` did). Service principals pass the permission check and act for the
 request's tenant.
 
 ## 10. Implementation rules (strict)

@@ -119,7 +119,10 @@ Vecta uses `CKA_EXTRACTABLE = false` and `CKA_SENSITIVE = true` for all keys des
 
 ### 1.4 Configuration Reference
 
-HSM configuration is set per-tenant via the CLI API. All sensitive values (PINs, passwords) are read from environment variables — never from the config payload itself.
+HSM configuration is set per-tenant via the CLI API. Reading it and listing
+partitions need `key.hsm.read`; changing it, opening a CLI session
+(`POST /auth/cli/session`) and resetting the CLI user's password need
+`key.hsm.write` (13.48.0-beta; before, an admin role's name). All sensitive values (PINs, passwords) are read from environment variables — never from the config payload itself.
 
 **Full field reference for `HSMProviderConfig`:**
 

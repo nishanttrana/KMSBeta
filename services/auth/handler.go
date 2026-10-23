@@ -1746,8 +1746,8 @@ func (h *Handler) handleResetUserPassword(w http.ResponseWriter, r *http.Request
 		return
 	}
 	cliUsername := strings.TrimSpace(envOr("AUTH_BOOTSTRAP_CLI_USERNAME", "cli-user"))
-	if strings.EqualFold(targetUser.Username, cliUsername) && !isAdminRole(claims.Role) {
-		writeErr(w, http.StatusForbidden, "forbidden", "default CLI user password can only be reset by admin", reqID, targetTenant)
+	if strings.EqualFold(targetUser.Username, cliUsername) && (!route.Allowed(claims, permCLIWrite) || tenantcheck.IsServicePrincipal(claims)) {
+		writeErr(w, http.StatusForbidden, "forbidden", "the CLI user's password is reset by someone holding "+permCLIWrite, reqID, targetTenant)
 		return
 	}
 	if err := h.enforcePasswordPolicy(r.Context(), targetTenant, req.NewPassword, targetUser.Username, targetUser.Email); err != nil {
@@ -2059,8 +2059,8 @@ func (h *Handler) handleUpdateSecurityPolicy(w http.ResponseWriter, r *http.Requ
 func (h *Handler) handleGetCLIHSMConfig(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
-	if !isAdminRole(claims.Role) {
-		writeErr(w, http.StatusForbidden, "forbidden", "admin role required for HSM provider config", reqID, claims.TenantID)
+	if !route.Allowed(claims, permCLIRead) || tenantcheck.IsServicePrincipal(claims) {
+		writeErr(w, http.StatusForbidden, "forbidden", "HSM provider config requires "+permCLIRead, reqID, claims.TenantID)
 		return
 	}
 	hints := buildCLIHSMOnboardingHints(
@@ -2089,8 +2089,8 @@ func (h *Handler) handleGetCLIHSMConfig(w http.ResponseWriter, r *http.Request) 
 func (h *Handler) handleUpdateCLIHSMConfig(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
-	if !isAdminRole(claims.Role) {
-		writeErr(w, http.StatusForbidden, "forbidden", "admin role required for HSM provider config update", reqID, claims.TenantID)
+	if !route.Allowed(claims, permCLIWrite) || tenantcheck.IsServicePrincipal(claims) {
+		writeErr(w, http.StatusForbidden, "forbidden", "HSM provider config update requires "+permCLIWrite, reqID, claims.TenantID)
 		return
 	}
 	hints := buildCLIHSMOnboardingHints(
@@ -2224,8 +2224,8 @@ func (h *Handler) handleCLIStatus(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleCLISession(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
-	if !isAdminRole(claims.Role) {
-		writeErr(w, http.StatusForbidden, "forbidden", "admin role required for CLI launch", reqID, claims.TenantID)
+	if !route.Allowed(claims, permCLIWrite) || tenantcheck.IsServicePrincipal(claims) {
+		writeErr(w, http.StatusForbidden, "forbidden", "CLI launch requires "+permCLIWrite, reqID, claims.TenantID)
 		return
 	}
 	var req struct {
@@ -2315,8 +2315,8 @@ func (h *Handler) handleCLISession(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleCLIHSMPartitions(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
-	if !isAdminRole(claims.Role) {
-		writeErr(w, http.StatusForbidden, "forbidden", "admin role required for HSM partition discovery", reqID, claims.TenantID)
+	if !route.Allowed(claims, permCLIRead) || tenantcheck.IsServicePrincipal(claims) {
+		writeErr(w, http.StatusForbidden, "forbidden", "HSM partition discovery requires "+permCLIRead, reqID, claims.TenantID)
 		return
 	}
 
@@ -2899,10 +2899,13 @@ func (h *Handler) isSelf(claims *pkgauth.Claims, tenantID, userID string) bool {
 		strings.TrimSpace(claims.UserID) == strings.TrimSpace(userID)
 }
 
-func isAdminRole(role string) bool {
-	r := strings.TrimSpace(strings.ToLower(role))
-	return r == "admin" || r == "tenant-admin" || r == "super-admin"
-}
+// The CLI is an SSH shell on the HSM integration container: opening it,
+// resetting its user's password and its HSM provider settings need the HSM
+// permissions, never an admin role's name (CLAUDE.md rule 4; 13.48.0-beta).
+const (
+	permCLIRead  = "key.hsm.read"
+	permCLIWrite = "key.hsm.write"
+)
 
 func parseCLIPort() int {
 	raw := strings.TrimSpace(envOr("AUTH_CLI_PORT", "22"))

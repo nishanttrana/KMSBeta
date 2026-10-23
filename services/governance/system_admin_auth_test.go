@@ -69,7 +69,7 @@ func newAuthTestHandler(t *testing.T) (*Handler, *capturePublisher) {
 	h := NewHandler(NewService(newGovernanceStore(t), pub, &mockEmailSender{}, &mockCallbackExecutor{}, "http://localhost:8050"))
 	h.SetTokenParser(func(token string) (*pkgauth.Claims, error) {
 		if token == "valid-root-admin" {
-			return &pkgauth.Claims{TenantID: "root", Role: "admin", UserID: "root-admin"}, nil
+			return &pkgauth.Claims{TenantID: "root", Role: "admin", UserID: "root-admin", Permissions: []string{"*"}}, nil
 		}
 		return nil, jwt.ErrTokenSignatureInvalid
 	})
@@ -156,6 +156,9 @@ func TestSystemAdminRefusalReasons(t *testing.T) {
 		{"token for another tenant", "root", &pkgauth.Claims{TenantID: "tenant-a", Role: "admin"}, http.StatusForbidden, "tenant_mismatch"},
 		{"non-root tenant", "tenant-a", &pkgauth.Claims{TenantID: "tenant-a", Role: "admin"}, http.StatusForbidden, "not_root_tenant"},
 		{"not an admin", "root", &pkgauth.Claims{TenantID: "root", Role: "viewer", UserID: "v1"}, http.StatusForbidden, "insufficient_privileges"},
+		// A role's name grants nothing; its permissions do (CLAUDE.md rule 4).
+		{"admin role name only", "root", &pkgauth.Claims{TenantID: "root", Role: "admin", UserID: "a1"}, http.StatusForbidden, "insufficient_privileges"},
+		{"super-admin role name only", "root", &pkgauth.Claims{TenantID: "root", Role: "super-admin", UserID: "a2", Permissions: []string{"key.read"}}, http.StatusForbidden, "insufficient_privileges"},
 	}
 	for _, tc := range cases {
 		req := httptest.NewRequest(http.MethodPut, "/governance/system/fips-mode?tenant_id="+tc.tenant, strings.NewReader(`{"mode":"off","confirm":"off"}`))

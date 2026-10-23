@@ -8,12 +8,18 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/route"
 )
 
 type keyAccessCtxKey string
 
 const (
 	accessActorContextKey keyAccessCtxKey = "key_access_actor"
+	// permAccessAdmin: administers key access in a tenant (any key's
+	// grants, any key without grants).
+	permAccessAdmin = "key.access.admin"
 )
 
 type AccessSubjectType string
@@ -123,20 +129,12 @@ func actorIsServicePrincipal(actor AccessActor) bool {
 	return actor.Authenticated && actor.ServicePrincipal
 }
 
+// actorIsAdmin reports whether the verified actor administers key access in
+// its tenant: it holds key.access.admin (or "*", as the built-in admin roles
+// do). The role's name grants nothing (CLAUDE.md rule 4; 13.48.0-beta): a
+// tenant administrator can give a user any role name.
 func actorIsAdmin(actor AccessActor) bool {
-	role := strings.ToLower(strings.TrimSpace(actor.Role))
-	if role == "admin" || role == "super-admin" || role == "tenant-admin" {
-		return true
-	}
-	for _, p := range actor.Permissions {
-		perm := strings.ToLower(strings.TrimSpace(p))
-		if perm == "*" || strings.HasPrefix(perm, "key.") || strings.HasPrefix(perm, "auth.") {
-			if strings.Contains(perm, "admin") || perm == "*" {
-				return true
-			}
-		}
-	}
-	return false
+	return route.Allowed(&pkgauth.Claims{Permissions: actor.Permissions}, permAccessAdmin)
 }
 
 func actorMatchesCreator(actor AccessActor, createdBy string) bool {

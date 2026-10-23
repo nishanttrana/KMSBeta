@@ -953,26 +953,22 @@ func (h *Handler) refuseSystemAdmin(w http.ResponseWriter, r *http.Request, reqI
 	})
 }
 
+// claimsAllowSystemAdmin reports whether a person's verified token holds a
+// tenant or policy permission (write, or also read when !write). The
+// permissions decide, never the role's name: a tenant administrator can give
+// a user any role name (CLAUDE.md rule 4; 13.48.0-beta). The built-in admin
+// roles hold "*". A service principal is never an administrator here;
+// systemAdminServiceCallers names what each may call.
 func claimsAllowSystemAdmin(claims *pkgauth.Claims, write bool) bool {
-	if claims == nil {
+	if claims == nil || tenantcheck.IsServicePrincipal(claims) {
 		return false
 	}
-	role := strings.ToLower(strings.TrimSpace(claims.Role))
-	if role == "super-admin" || role == "admin" {
-		return true
+	perms := []string{"auth.tenant.write", "auth.policy.write"}
+	if !write {
+		perms = append(perms, "auth.tenant.read", "auth.policy.read")
 	}
-	for _, permission := range claims.Permissions {
-		perm := strings.ToLower(strings.TrimSpace(permission))
-		if perm == "*" {
-			return true
-		}
-		if write {
-			if perm == "auth.tenant.write" || perm == "auth.policy.write" {
-				return true
-			}
-			continue
-		}
-		if perm == "auth.tenant.read" || perm == "auth.policy.read" || perm == "auth.tenant.write" || perm == "auth.policy.write" {
+	for _, p := range perms {
+		if route.Allowed(claims, p) {
 			return true
 		}
 	}

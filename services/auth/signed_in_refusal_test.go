@@ -22,7 +22,7 @@ func TestWrongPasswordFromASignedInCallerIs403AndAudited(t *testing.T) {
 		t.Fatal(err)
 	}
 	req := httptest.NewRequest(http.MethodPost, "/auth/change-password", strings.NewReader(`{"current_password":"not-it","new_password":"Another-Horse-2026!"}`))
-	req = req.WithContext(pkgauth.ContextWithClaims(req.Context(), &pkgauth.Claims{TenantID: "t1", Role: "tenant-admin", UserID: "admin-1"}))
+	req = req.WithContext(pkgauth.ContextWithClaims(req.Context(), &pkgauth.Claims{TenantID: "t1", Role: "tenant-admin", UserID: "admin-1", Permissions: []string{"*"}}))
 	rr := httptest.NewRecorder()
 	h.handleChangePassword(rr, req)
 	if rr.Code != http.StatusForbidden || !strings.Contains(rr.Body.String(), "invalid_current_password") {

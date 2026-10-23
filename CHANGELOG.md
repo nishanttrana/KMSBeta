@@ -4,6 +4,27 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.48.0-beta] — 2026-10-23
+
+### Security
+- **A role's name no longer grants anything.** Three places let a user in
+  because their role was *called* "admin", "super-admin" or
+  "tenant-admin", whatever the role actually allowed. A tenant
+  administrator can give a user any role name, so this was a way past the
+  permissions (CLAUDE.md rule 4). Now the permissions decide:
+  - Governance system administration (settings, backups, FIPS mode,
+    system state) and approval policies: `auth.tenant.write` or
+    `auth.policy.write` (reads also `auth.tenant.read`, `auth.policy.read`).
+  - Keys without grants, and changing any key's grants:
+    `key.access.admin`.
+  - The administration CLI and its HSM settings: `key.hsm.read` to view,
+    `key.hsm.write` to change them, open a session or reset the CLI user's
+    password.
+
+  The built-in admin roles hold `*`, so their users keep every access. A
+  custom role that only carried an admin name loses what its permissions
+  don't give it.
+
 ## [13.47.0-beta] — 2026-10-22
 
 ### Added

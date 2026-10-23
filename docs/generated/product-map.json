@@ -33445,7 +33445,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-23T04:16:59Z",
+  "generated_at": "2026-10-23T04:37:23Z",
   "navigation": [
     {
       "group": "Home",
@@ -35460,21 +35460,21 @@
       "handler": "h.handleClientToken",
       "handler_external_package_calls": [
         "crypto/sha256.Sum256",
+        "encoding/json.Marshal",
+        "encoding/json.NewDecoder",
         "errors.Is",
         "errors.As",
+        "errors.New",
         "fmt.Sprintf",
+        "fmt.Errorf",
         "io.ReadAll",
         "io.LimitReader",
+        "net/http.NewRequestWithContext",
+        "regexp.MustCompile",
+        "sort.Strings",
         "strconv.FormatInt",
         "strconv.Itoa",
-        "strings.TrimSpace",
-        "strings.HasPrefix",
-        "strings.ToLower",
-        "strings.EqualFold",
-        "strings.Contains",
-        "strings.TrimRight",
-        "time.Now",
-        "time.Duration"
+        "strconv.Atoi"
       ],
       "handler_file": "services/auth/handler.go",
       "handler_helper_calls": [
@@ -35562,7 +35562,6 @@
         "handleUpdateUserStatus",
         "UpdateUserStatus",
         "handleResetUserPassword",
-        "isAdminRole",
         "handleListGroupRoleBindings",
         "ListGroupRoleBindings",
         "handleUpsertGroupRoleBinding",
@@ -35591,10 +35590,43 @@
         "handleCLISession",
         "auditCLISessionRefused",
         "isRetiredCLIPassword",
-        "syncCLISSHPassword"
+        "syncCLISSHPassword",
+        "handleCLIHSMPartitions",
+        "execComposeServiceCommand",
+        "parsePKCS11Slots",
+        "handleListClients",
+        "ListClientRegistrations",
+        "handleGetClient",
+        "handleUpdateClient",
+        "normalizeIPAllowList",
+        "UpdateClientRegistrationSettings",
+        "firstNonEmptyAuthString",
+        "validateClientSecurityConfig",
+        "UpdateClientRegistrationSecurity",
+        "handleRESTClientSecuritySummary",
+        "platformAdministrator",
+        "GetRolePermissions",
+        "ListGroupRolesForUser",
+        "IsGovernanceRequestApproved",
+        "ensureTenantDefaults",
+        "GetPasswordPolicy",
+        "DefaultPasswordPolicy",
+        "GetSecurityPolicy",
+        "DefaultSecurityPolicy",
+        "createTenantAdminUser",
+        "Publish",
+        "hasPermission",
+        "anyString",
+        "execComposeServiceCommandEnv",
+        "findComposeContainer",
+        "execDockerContainerCommand",
+        "bodySnippet",
+        "inspectDockerExec",
+        "normalizePKCS11Field"
       ],
       "handler_internal_package_calls": [
         "pkg/clientip.From",
+        "pkg/route.Allowed",
         "pkg/auth.ClaimsFromContext",
         "pkg/crypto.Zeroize",
         "pkg/restauth.NormalizeCertFingerprint",
@@ -35602,16 +35634,21 @@
         "pkg/restauth.RequestDPoPCandidates",
         "pkg/restauth.ParsePublicKeyPEM",
         "pkg/restauth.VerifyHTTPMessageSignature",
+        "pkg/restauth.ParseForwardedClientCert",
+        "pkg/restauth.FingerprintHexToThumbprintB64URL",
         "pkg/tenantcheck.InternalServiceTenant",
         "pkg/tenantcheck.ServicePermissionReserved",
-        "pkg/tenantcheck.StripReserved"
+        "pkg/tenantcheck.StripReserved",
+        "pkg/tenantcheck.IsServicePrincipal"
       ],
       "handler_line": 449,
       "handler_name": "handleClientToken",
       "handler_receiver_calls": [
         "h.logic.IssueClientJWT",
         "h.logic.IssueJWT",
-        "h.meter.IncrementOps"
+        "h.meter.IncrementOps",
+        "h.events.Publish",
+        "h.healthChecker.findComposeContainer"
       ],
       "handler_service_calls": [],
       "handler_store_calls": [
@@ -37033,7 +37070,6 @@
         "decodeJSON",
         "GetUserByID",
         "envOr",
-        "isAdminRole",
         "enforcePasswordPolicy",
         "HashPassword",
         "UpdateUserPassword",
@@ -37041,8 +37077,10 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [
+        "pkg/route.Allowed",
         "pkg/auth.ClaimsFromContext",
-        "pkg/crypto.Zeroize"
+        "pkg/crypto.Zeroize",
+        "pkg/tenantcheck.IsServicePrincipal"
       ],
       "handler_line": 1719,
       "handler_name": "handleResetUserPassword",
@@ -37701,7 +37739,6 @@
       "handler_file": "services/auth/handler.go",
       "handler_helper_calls": [
         "requestID",
-        "isAdminRole",
         "writeErr",
         "decodeJSON",
         "Error",
@@ -37777,12 +37814,14 @@
         "ValidatePasswordAgainstPolicy"
       ],
       "handler_internal_package_calls": [
+        "pkg/route.Allowed",
         "pkg/auth.ClaimsFromContext",
         "pkg/crypto.Zeroize",
         "pkg/restauth.ParsePublicKeyPEM",
         "pkg/restauth.ParseForwardedClientCert",
         "pkg/restauth.NormalizeCertFingerprint",
         "pkg/restauth.FingerprintHexToThumbprintB64URL",
+        "pkg/tenantcheck.IsServicePrincipal",
         "pkg/tenantcheck.ServicePermissionReserved"
       ],
       "handler_line": 2224,
@@ -37838,7 +37877,6 @@
       "handler_file": "services/auth/handler.go",
       "handler_helper_calls": [
         "requestID",
-        "isAdminRole",
         "writeErr",
         "buildCLIHSMOnboardingHints",
         "envOr",
@@ -37849,7 +37887,9 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [
-        "pkg/auth.ClaimsFromContext"
+        "pkg/route.Allowed",
+        "pkg/auth.ClaimsFromContext",
+        "pkg/tenantcheck.IsServicePrincipal"
       ],
       "handler_line": 2059,
       "handler_name": "handleGetCLIHSMConfig",
@@ -37892,7 +37932,6 @@
       "handler_file": "services/auth/handler.go",
       "handler_helper_calls": [
         "requestID",
-        "isAdminRole",
         "writeErr",
         "buildCLIHSMOnboardingHints",
         "envOr",
@@ -37908,7 +37947,9 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [
-        "pkg/auth.ClaimsFromContext"
+        "pkg/route.Allowed",
+        "pkg/auth.ClaimsFromContext",
+        "pkg/tenantcheck.IsServicePrincipal"
       ],
       "handler_line": 2089,
       "handler_name": "handleUpdateCLIHSMConfig",
@@ -37951,7 +37992,6 @@
       "handler_file": "services/auth/handler.go",
       "handler_helper_calls": [
         "requestID",
-        "isAdminRole",
         "writeErr",
         "envOr",
         "sanitizePathSegment",
@@ -37962,7 +38002,9 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [
-        "pkg/auth.ClaimsFromContext"
+        "pkg/route.Allowed",
+        "pkg/auth.ClaimsFromContext",
+        "pkg/tenantcheck.IsServicePrincipal"
       ],
       "handler_line": 2315,
       "handler_name": "handleCLIHSMPartitions",
@@ -63532,6 +63574,7 @@
         "newID"
       ],
       "handler_internal_package_calls": [
+        "pkg/route.Allowed",
         "pkg/auth.ClaimsFromContext",
         "pkg/auth.Actor",
         "pkg/tenantcheck.ActingFor",
@@ -71694,7 +71737,7 @@
             "ListKeyAccessGrants"
           ],
           "internal_package_calls": [],
-          "line": 470,
+          "line": 468,
           "name": "GetKeyAccessPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -71786,7 +71829,7 @@
             "ReplaceKeyAccessGrants"
           ],
           "internal_package_calls": [],
-          "line": 485,
+          "line": 483,
           "name": "ReplaceKeyAccessPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -71846,7 +71889,7 @@
           "file": "services/keycore/access_control.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 586,
+          "line": 584,
           "name": "ListAccessGroups",
           "receiver_calls": [],
           "store_calls": [
@@ -71909,7 +71952,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 593,
+          "line": 591,
           "name": "CreateAccessGroup",
           "receiver_calls": [],
           "store_calls": [
@@ -71967,7 +72010,7 @@
           "file": "services/keycore/access_control.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 616,
+          "line": 614,
           "name": "DeleteAccessGroup",
           "receiver_calls": [],
           "store_calls": [
@@ -72029,7 +72072,7 @@
             "ReplaceAccessGroupMembers"
           ],
           "internal_package_calls": [],
-          "line": 628,
+          "line": 626,
           "name": "SetAccessGroupMembers",
           "receiver_calls": [],
           "store_calls": [
@@ -94140,24 +94183,24 @@
         ]
       },
       {
-        "complexity": 38,
+        "complexity": 44,
         "externalPackages": [
           "crypto/sha256.Sum256",
+          "encoding/json.Marshal",
+          "encoding/json.NewDecoder",
           "errors.Is",
           "errors.As",
+          "errors.New",
           "fmt.Sprintf",
+          "fmt.Errorf",
           "io.ReadAll",
           "io.LimitReader",
+          "net/http.NewRequestWithContext",
+          "regexp.MustCompile",
+          "sort.Strings",
           "strconv.FormatInt",
           "strconv.Itoa",
-          "strings.TrimSpace",
-          "strings.HasPrefix",
-          "strings.ToLower",
-          "strings.EqualFold",
-          "strings.Contains",
-          "strings.TrimRight",
-          "time.Now",
-          "time.Duration"
+          "strconv.Atoi"
         ],
         "frontendSites": [],
         "handler": "handleClientToken",
@@ -94166,6 +94209,7 @@
         "hasFrontend": false,
         "internalPackages": [
           "pkg/clientip.From",
+          "pkg/route.Allowed",
           "pkg/auth.ClaimsFromContext",
           "pkg/crypto.Zeroize",
           "pkg/restauth.NormalizeCertFingerprint",
@@ -94173,9 +94217,12 @@
           "pkg/restauth.RequestDPoPCandidates",
           "pkg/restauth.ParsePublicKeyPEM",
           "pkg/restauth.VerifyHTTPMessageSignature",
+          "pkg/restauth.ParseForwardedClientCert",
+          "pkg/restauth.FingerprintHexToThumbprintB64URL",
           "pkg/tenantcheck.InternalServiceTenant",
           "pkg/tenantcheck.ServicePermissionReserved",
-          "pkg/tenantcheck.StripReserved"
+          "pkg/tenantcheck.StripReserved",
+          "pkg/tenantcheck.IsServicePrincipal"
         ],
         "method": "POST",
         "normalizedPath": "/auth/client-token",
@@ -94183,7 +94230,9 @@
         "receiverCalls": [
           "h.logic.IssueClientJWT",
           "h.logic.IssueJWT",
-          "h.meter.IncrementOps"
+          "h.meter.IncrementOps",
+          "h.events.Publish",
+          "h.healthChecker.findComposeContainer"
         ],
         "risk": "high",
         "routeKey": "auth|POST|/auth/client-token",
@@ -95244,7 +95293,7 @@
         ]
       },
       {
-        "complexity": 4,
+        "complexity": 6,
         "externalPackages": [
           "errors.Is",
           "strings.TrimSpace",
@@ -95263,8 +95312,10 @@
         "handlerLine": 1719,
         "hasFrontend": true,
         "internalPackages": [
+          "pkg/route.Allowed",
           "pkg/auth.ClaimsFromContext",
-          "pkg/crypto.Zeroize"
+          "pkg/crypto.Zeroize",
+          "pkg/tenantcheck.IsServicePrincipal"
         ],
         "method": "POST",
         "normalizedPath": "/auth/users/{param}/reset-password",
@@ -95769,7 +95820,7 @@
         ]
       },
       {
-        "complexity": 23,
+        "complexity": 25,
         "externalPackages": [
           "encoding/json.Marshal",
           "encoding/json.NewDecoder",
@@ -95801,12 +95852,14 @@
         "handlerLine": 2224,
         "hasFrontend": true,
         "internalPackages": [
+          "pkg/route.Allowed",
           "pkg/auth.ClaimsFromContext",
           "pkg/crypto.Zeroize",
           "pkg/restauth.ParsePublicKeyPEM",
           "pkg/restauth.ParseForwardedClientCert",
           "pkg/restauth.NormalizeCertFingerprint",
           "pkg/restauth.FingerprintHexToThumbprintB64URL",
+          "pkg/tenantcheck.IsServicePrincipal",
           "pkg/tenantcheck.ServicePermissionReserved"
         ],
         "method": "POST",
@@ -95845,7 +95898,7 @@
         ]
       },
       {
-        "complexity": 2,
+        "complexity": 4,
         "externalPackages": [
           "errors.Is",
           "strings.TrimSpace"
@@ -95863,7 +95916,9 @@
         "handlerLine": 2059,
         "hasFrontend": true,
         "internalPackages": [
-          "pkg/auth.ClaimsFromContext"
+          "pkg/route.Allowed",
+          "pkg/auth.ClaimsFromContext",
+          "pkg/tenantcheck.IsServicePrincipal"
         ],
         "method": "GET",
         "normalizedPath": "/auth/cli/hsm/config",
@@ -95885,7 +95940,7 @@
         ]
       },
       {
-        "complexity": 3,
+        "complexity": 5,
         "externalPackages": [
           "errors.Is",
           "fmt.Sprintf",
@@ -95907,7 +95962,9 @@
         "handlerLine": 2089,
         "hasFrontend": true,
         "internalPackages": [
-          "pkg/auth.ClaimsFromContext"
+          "pkg/route.Allowed",
+          "pkg/auth.ClaimsFromContext",
+          "pkg/tenantcheck.IsServicePrincipal"
         ],
         "method": "PUT",
         "normalizedPath": "/auth/cli/hsm/config",
@@ -95930,7 +95987,7 @@
         ]
       },
       {
-        "complexity": 1,
+        "complexity": 3,
         "externalPackages": [
           "fmt.Sprintf",
           "strings.TrimSpace",
@@ -95951,7 +96008,9 @@
         "handlerLine": 2315,
         "hasFrontend": true,
         "internalPackages": [
-          "pkg/auth.ClaimsFromContext"
+          "pkg/route.Allowed",
+          "pkg/auth.ClaimsFromContext",
+          "pkg/tenantcheck.IsServicePrincipal"
         ],
         "method": "GET",
         "normalizedPath": "/auth/cli/hsm/partitions",
@@ -108876,7 +108935,7 @@
         ]
       },
       {
-        "complexity": 23,
+        "complexity": 24,
         "externalPackages": [
           "encoding/json.NewDecoder",
           "encoding/json.NewEncoder",
@@ -108908,6 +108967,7 @@
         "handlerLine": 156,
         "hasFrontend": true,
         "internalPackages": [
+          "pkg/route.Allowed",
           "pkg/auth.ClaimsFromContext",
           "pkg/auth.Actor",
           "pkg/tenantcheck.ActingFor",
@@ -124173,7 +124233,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-23T04:16:59Z",
+    "generatedAt": "2026-10-23T04:37:23Z",
     "methods": [
       "DELETE",
       "GET",

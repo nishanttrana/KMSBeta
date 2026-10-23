@@ -213,3 +213,28 @@ func TestAnonymousKeyUseIsRefused(t *testing.T) {
 		}
 	}
 }
+
+// A key without grants is open to its creator and to whoever administers
+// key access. That is a permission (key.access.admin, or "*" as the built-in
+// admin roles hold), never a role's name (CLAUDE.md rule 4).
+func TestKeyAdminIsAPermissionNotARoleName(t *testing.T) {
+	h, svc, _ := newActorTestHandler(t)
+	key := ownedKey(t, svc) // created by owner-1, no grants
+	for name, c := range map[string]*pkgauth.Claims{
+		"admin role name":        {UserID: "u-a", TenantID: "t1", Role: "admin"},
+		"super-admin role name":  {UserID: "u-b", TenantID: "t1", Role: "super-admin", Permissions: []string{"key.read"}},
+		"tenant-admin role name": {UserID: "u-c", TenantID: "t1", Role: "tenant-admin", Permissions: []string{"auth.user.admin"}},
+	} {
+		if w := encryptAs(h, key.ID, c, nil); w.Code != http.StatusForbidden {
+			t.Fatalf("%s used a key it was never granted: %d %s", name, w.Code, w.Body)
+		}
+	}
+	for name, c := range map[string]*pkgauth.Claims{
+		"key.access.admin": {UserID: "u-d", TenantID: "t1", Role: "operator", Permissions: []string{"key.access.admin"}},
+		"*":                {UserID: "u-e", TenantID: "t1", Role: "custom", Permissions: []string{"*"}},
+	} {
+		if w := encryptAs(h, key.ID, c, nil); w.Code != http.StatusOK {
+			t.Fatalf("%s refused: %d %s", name, w.Code, w.Body)
+		}
+	}
+}

@@ -3,6 +3,19 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-10-23
+
+### A rule found in one place is usually broken in others (13.48.0-beta)
+- The governance role-name check was the one noted, but a search for
+  comparisons against "admin" role names found the same pattern in keycore
+  (key access without grants) and auth (five CLI routes). Each was its own
+  copy of "admin means the role is called admin".
+- The fix broke tests, not users: test tokens had a role name and no
+  permissions, which no real token has (the built-in admin roles hold
+  `*`). The fixtures now carry the permissions a real token would.
+- Each fix has a test that fails on the old code: a role name alone,
+  without the permission, is refused.
+
 ## 2026-10-22
 
 ### A live test proves only the client it uses (13.47.0-beta)

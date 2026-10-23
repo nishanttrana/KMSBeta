@@ -7,6 +7,25 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-23 — Administrator checks read permissions, never role names
+**Decision:** governance system administration, keycore's key-access
+administrator and auth's CLI routes grant from the verified token's
+permissions through `route.Allowed` (`auth.tenant.*`/`auth.policy.*`,
+`key.access.admin`, `key.hsm.read`/`key.hsm.write`). Service principals
+are excluded from these checks: they are admitted only where a list names
+them.
+**Why:** CLAUDE.md rule 4; the owner asked for the fix (2026-10-23). A
+tenant administrator can give anyone any role name, so a check on the
+name let a role with few permissions act as an administrator.
+**Rejected:** keeping the names alongside the permissions (the name is
+still the bypass); a new `admin` permission (the existing ones already
+describe each capability, and the built-in roles hold `*`).
+**Enforced:** `TestSystemAdminRoutesRequireVerifiedToken` (role-name
+cases), `TestKeyAdminIsAPermissionNotARoleName`,
+`TestCLIRoutesNeedHSMPermissionsNotARoleName`.
+
+---
+
 ## 2026-10-22 — The audit trail is anchored with RFC 3161 timestamps of each checkpoint
 **Decision:** each signed checkpoint's signature is timestamped by an
 outside RFC 3161 authority the root tenant chooses (a `tsa` credential).
