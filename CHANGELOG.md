@@ -4,6 +4,22 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.57.0-beta] — 2026-10-24
+
+### Added
+- **Terraform provider** (`sdk/terraform-provider-vecta`, built from this
+  repository): `vecta_key` and `vecta_key_access` resources and a
+  `vecta_key` data source, signing in as a REST client. Metadata changes
+  update the key in place, sending only what changed. A new algorithm makes
+  a new key. Destroying a key in Terraform deactivates it and never
+  destroys key material; a refused deactivation fails the destroy. Its
+  tests run real Terraform plans and applies on every CI run. See
+  [docs/TERRAFORM.md](docs/TERRAFORM.md).
+
+### Fixed
+- The CI/CD guide said no SDK or Terraform provider exists; it now lists
+  the SDKs, the provider and the Helm chart.
+
 ## [13.56.0-beta] — 2026-10-24
 
 ### Security

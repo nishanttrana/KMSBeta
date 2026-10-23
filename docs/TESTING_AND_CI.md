@@ -15,7 +15,7 @@ pull request.
 | Documentation ships with the change | `scripts/check-docs.sh` over the pushed commits ([below](#the-documentation-gate)) |
 | Go tests — FIPS mode off / on / only | the whole suite in each customer-selectable FIPS mode, on the certified module, with SoftHSM and a JDK required |
 | Go tests — FIPS mode off, JCA step | `mvn verify` on `services/jca-provider`, the pom the SDK ships, built as a customer builds it (13.40.0-beta) |
-| Go tests — race detector | the whole suite under `-race` (13.8.0-beta) |
+| Go tests — race detector | the whole suite under `-race` (13.8.0-beta); then the SDK modules: Go, Python, Node and the Terraform provider (real Terraform plans and applies against a TLS stand-in for keycore, `govulncheck` on its dependencies) |
 | Backend RuntimeCfg/Vet/Test/Security | runtime config validation, `scripts/conformance.sh`, `go vet`, every test run twice (`-count=2`), the suite with no network, `govulncheck`, no unreachable code (`scripts/check-dead-code.sh`) |
 | Integration tests (Postgres) | storage behaviour SQLite cannot prove, a real NATS, an AWS KMS emulator (LocalStack) for BYOK, a real Envoy (the address it appends, the internal headers it strips: `pkg/clientip`, `pkg/correlation`) |
 | Cluster replication and failover (three-node Postgres) | joining, replication, election, re-subscription, switchover and fencing between three databases |

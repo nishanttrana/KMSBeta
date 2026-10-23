@@ -109,6 +109,8 @@ jobs:
         run: |
           python3 -m unittest discover -s sdk/python/tests
           (cd sdk/node && node --test test/client.test.mjs)
+      - name: Terraform provider (its own module; the tests download a checksum-verified Terraform and run real plans and applies)
+        run: cd sdk/terraform-provider-vecta && go vet ./... && go test -count=1 ./... && go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
   cluster-replication:
     # Three real Postgres 17 servers: selective per-component logical

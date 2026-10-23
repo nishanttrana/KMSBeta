@@ -5,6 +5,21 @@ Newest entries on top.
 
 ## 2026-10-24
 
+### A Terraform provider must not turn a KMS refusal into success (13.57.0-beta)
+- keycore answers 409 both for "already deactivated" and for "protected
+  system key". A destroy that ignored every 409 would drop a still-active
+  key from state as if it were gone. Destroy reads the key's status first
+  and treats only an already-inactive key as done.
+- An Optional+Computed `labels` map breaks when the server adds values the
+  configuration set differently (metadata profile defaults): Terraform calls
+  it a provider bug. The provider checks for this itself and names the
+  stored labels, so the fix is obvious.
+- terraform-plugin-testing downloads and signature-checks a Terraform
+  release when none is on PATH, so the tests need no CI setup step. The
+  provider module's dependencies (x/net, grpc) had known vulnerabilities at
+  the versions the framework pulled in; `govulncheck` now runs on the
+  module in CI, since the root scan doesn't reach it.
+
 ### Building a client shows what the API lets clients break (13.56.0-beta)
 - Planning the Terraform provider's key update showed that `PUT /keys/{id}`
   replaces owner, cloud, region and compliance while the API returned none

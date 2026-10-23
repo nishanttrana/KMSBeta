@@ -7,6 +7,26 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-24 — Terraform deactivates keys; it never destroys them
+**Decision:** the Terraform provider (`sdk/terraform-provider-vecta`, on
+the Go SDK) maps a resource's destroy to deactivation. Destroying key
+material stays in the KMS, with its confirmations and approvals.
+`vecta_key_access` owns a key's whole grant list.
+**Why:** the owner's list (2026-10-22: "No client tooling"). A routine
+`terraform destroy`, or a resource renamed without a `moved` block, would
+otherwise make every ciphertext under the key unreadable, irreversibly and
+without the KMS's destruction checks. One owner of the grant list is the
+only way a plan can show grant drift.
+**Rejected:** destroying keys from Terraform behind a flag (one flag away
+from irreversible data loss in a plan nobody reads closely); a resource per
+grant (grants made elsewhere would be invisible to plans); publishing to the
+Terraform Registry now (needs a signing key and release process the owner
+hasn't set up).
+**Enforced:** `TestKeyLifecycle` (destroy leaves both keys, deactivated),
+`TestRefusedDeactivationFailsTheDestroy`, the "Terraform provider" CI step.
+
+---
+
 ## 2026-10-24 — Key metadata changes are partial and need the key's manager
 **Decision:** `PATCH /keys/{id}` changes only the fields sent. Both it and
 `PUT /keys/{id}` require the caller to see the key and manage it (creator,

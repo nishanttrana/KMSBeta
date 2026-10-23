@@ -19,7 +19,10 @@ This page replaces the dashboard's former **DevSecOps / IaC** tab. See
 | KMIP | Yes ([COMPONENT_GUIDE.md](COMPONENT_GUIDE.md)) |
 | Artifact signing with a CI OIDC token | Yes ([below](#sign-a-release-with-the-jobs-oidc-token)) |
 | Tenant manifests and automatic key rotation | Yes, server side ([AUTOMATION_ALKM_PQC.md](AUTOMATION_ALKM_PQC.md)) |
-| Terraform provider, Go/Python/Node/Java SDKs, Helm chart, KMS sidecar | **No.** None is published, so use the REST API directly |
+| Go, Python and Node.js SDKs | Yes, in this repository (`sdk/go`, `sdk/python`, `sdk/node`); not yet on a package registry |
+| Terraform provider (keys and their grants) | Yes, built from this repository ([TERRAFORM.md](TERRAFORM.md)); not yet on the Terraform Registry |
+| Helm chart | Yes ([KUBERNETES.md](KUBERNETES.md)) |
+| A Java SDK beyond the JCA provider, a KMS sidecar image | **No.** Use the JCA provider or the REST API |
 
 ## 1. Give the pipeline its own identity
 
@@ -113,7 +116,8 @@ included), and each token's `audit.auth.client_token_issued` names its
 
 The SDKs do the token exchange and renewal for you: Go (`sdk/go`,
 13.54.0-beta), Python (`sdk/python`) and Node.js (`sdk/node`, both
-13.55.0-beta); see their READMEs.
+13.55.0-beta); see their READMEs. So does the Terraform provider
+([TERRAFORM.md](TERRAFORM.md), 13.57.0-beta).
 
 A registration can instead bind the token to the caller with `oauth_mtls`,
 `dpop` or `http_message_signature` (`auth_mode`). Documentation →

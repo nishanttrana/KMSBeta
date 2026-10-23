@@ -179,4 +179,5 @@ All API calls use the proxy path `http://{host}/svc/{service}/...`.
 - [Go SDK](../sdk/go/README.md)
 - [Python SDK](../sdk/python/README.md)
 - [Node.js SDK](../sdk/node/README.md)
+- [Terraform provider](TERRAFORM.md)
 - [Edge agent](SECURITY/EDGE_DEVICES.md)
