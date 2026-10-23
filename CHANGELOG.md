@@ -4,6 +4,30 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.47.0-beta] — 2026-10-22
+
+### Added
+- **Timestamped audit checkpoints (RFC 3161).** The audit trail's signed
+  checkpoints can now be anchored outside the KMS. With timestamping on,
+  each new checkpoint's signature is sent to a time-stamp authority you
+  choose, and the token it signs is kept in the same chain. A token can't
+  be backdated, so a history rewritten later can only carry later times;
+  anyone can check a token with `openssl ts -verify`. Turn it on in Audit
+  Log → Checkpoints → Timestamping with a new credential type,
+  "RFC 3161 time-stamp authority" (`tsa`: the authority's address,
+  optional username and password, and the root certificate its signer
+  chains to). Turning it on takes a real timestamp first; a credential that
+  doesn't produce a valid token is refused. Each checkpoint shows
+  anchored, late (token far from the signing time), invalid or not
+  anchored.
+- Playbook trigger "Audit checkpoint could not be timestamped"
+  (`audit_timestamp_failed`). Routes: `GET`/`PUT /audit/anchor`.
+
+### Changed
+- The audit service's own alarms (`chain_broken` and now
+  `checkpoint_timestamp_failed`) go out through one helper,
+  `reportOnStream` (was `reportChainBroken`).
+
 ## [13.46.0-beta] — 2026-10-22
 
 ### Added

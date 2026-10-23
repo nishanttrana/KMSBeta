@@ -5,6 +5,25 @@ Newest entries on top.
 
 ## 2026-10-22
 
+### A live test proves only the client it uses (13.47.0-beta)
+- The opt-in test against a real time-stamp authority passed, but it
+  built its own HTTP client. Production goes through `pkg/ssrfguard`
+  (TLS 1.3 only, public addresses only), which no test had exercised
+  against a real authority. The live test now uses the production client,
+  with `ssrfguard.UseSystemResolverForTests` (the guard refuses real DNS in
+  tests otherwise, which is what a quick throwaway test first ran into).
+- That matters in practice: Sectigo's public authority offers only
+  TLS 1.2, so the platform refuses it, while FreeTSA, Microsoft and
+  SwissSign accept TLS 1.3. The error now says why ("unreachable: …")
+  instead of only "unreachable".
+- An event the audit service writes straight into its chain never reaches
+  the stream, so no playbook sees it. A trigger on an event audit raises
+  itself needs the publish-then-record path (`reportOnStream`), and a test
+  with the loopback publisher.
+- Each Credentials type needs an answer for "Test". A type tested by the
+  service that uses it refuses there with `connection_test_elsewhere`;
+  otherwise the button records a false failure.
+
 ### A refusal a library makes for us is invisible unless we record why (13.46.0-beta)
 - Go 1.27.3 refuses chains through the compromised eMudhra intermediates,
   but its error is the generic "certificate signed by unknown authority".

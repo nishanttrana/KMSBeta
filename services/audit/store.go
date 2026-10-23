@@ -26,6 +26,8 @@ type Store interface {
 	LastChainVerified(ctx context.Context, tenantID string) (time.Time, bool, error)
 	VerifyTarget(ctx context.Context, tenantID, targetID string, limit int) (TargetIntegrity, error)
 	ListCheckpoints(ctx context.Context, tenantID string, limit int) ([]CheckpointStatus, error)
+	AnchorSettings(ctx context.Context) (AnchorSettings, error)
+	PutAnchorSettings(ctx context.Context, a AnchorSettings) error
 
 	CountDistinctIPsForTarget(ctx context.Context, tenantID string, targetID string, since time.Time) (int, error)
 

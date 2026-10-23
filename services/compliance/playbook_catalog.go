@@ -50,6 +50,7 @@ var playbookTriggers = []TriggerSpec{
 	{Type: "sustained_risk_detected", Label: "Sustained high-risk activity on a target", Group: "Incident response", Subjects: []string{"audit.security.sustained_risk_detected"}},
 	{Type: "key_compromised", Label: "Key compromise reported", Group: "Incident response", Subjects: []string{"audit.key.compromise_detected"}},
 	{Type: "audit_chain_broken", Label: "Audit trail tampering detected", Group: "Incident response", Subjects: []string{"audit.audit.chain_broken"}},
+	{Type: "audit_timestamp_failed", Label: "Audit checkpoint could not be timestamped", Group: "Incident response", Subjects: []string{"audit.audit.checkpoint_timestamp_failed"}},
 	{Type: "secret_exposed", Label: "Exposed secret discovered (code, repository, bucket or upload)", Group: "Incident response", Subjects: []string{"audit.discovery.secret_exposed"}},
 	{Type: "distrusted_ca_found", Label: "Certificate found under a distrusted CA", Group: "Incident response", Subjects: []string{"audit.discovery.distrusted_ca_found"}},
 	{Type: "revoked_certificate_found", Label: "Revoked certificate found on an endpoint", Group: "Incident response", Subjects: []string{"audit.discovery.revoked_certificate_found"}},

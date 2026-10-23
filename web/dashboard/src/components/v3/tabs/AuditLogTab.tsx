@@ -20,6 +20,7 @@ import {
 import { AuditAnalyticsPanel } from "./AuditAnalyticsPanel";
 import { AuditEventDetail } from "./AuditEventDetail";
 import { AuditInvestigate } from "./AuditInvestigate";
+import { AnchorSettings } from "./AnchorSettings";
 import { abbrevHash, eventOrigin, formatAction, isHTTPRequestAction, resultTone, riskColor, shortTS } from "./auditFormat";
 
 /* ── constants ── */
@@ -78,7 +79,14 @@ const CHECKPOINT_STATUS: Record<string, { label: string; color: string }> = {
   head_mismatch: { label: "HISTORY CHANGED", color: C.red },
 };
 
-const CheckpointsSection = ({ session }: { session: any }) => {
+const ANCHOR_LABEL: Record<string, { label: string; color: string }> = {
+  anchored: { label: "Timestamped", color: C.greenFg },
+  late: { label: "Timestamped late", color: C.amberFg },
+  invalid: { label: "Token invalid", color: C.redFg },
+  not_anchored: { label: "-", color: C.muted },
+};
+
+const CheckpointsSection = ({ session, onToast, onNavigate }: { session: any; onToast?: (m: string) => void; onNavigate?: (t: string) => void }) => {
   const [items, setItems] = useState<AuditCheckpoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -105,6 +113,7 @@ const CheckpointsSection = ({ session }: { session: any }) => {
 
   return (
     <div>
+      <AnchorSettings session={session} onToast={onToast} onNavigate={onNavigate} />
       <Section t="Signed Checkpoints" act={<Btn l={loading ? "Verifying..." : "Re-verify"} c={C.cyan} click={load} />}>
         <Card>
           <div className="vk-fold" tabIndex={0} style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>
@@ -135,6 +144,7 @@ const CheckpointsSection = ({ session }: { session: any }) => {
                     <th style={{ padding: "6px" }}>Chain hash</th>
                     <th style={{ padding: "6px" }}>Key</th>
                     <th style={{ padding: "6px" }}>Signed</th>
+                    <th style={{ padding: "6px" }}>Timestamp</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -148,6 +158,9 @@ const CheckpointsSection = ({ session }: { session: any }) => {
                         <td style={{ padding: "6px", ...mono, color: C.text }}>{c.chain_hash.slice(0, 16)}…</td>
                         <td style={{ padding: "6px", ...mono, color: C.dim }}>{c.key_id.slice(0, 12)}…</td>
                         <td style={{ padding: "6px", color: C.dim, fontSize: 10 }}>{c.signed_at ? new Date(c.signed_at).toLocaleString() : "--"}</td>
+                        <td style={{ padding: "6px", fontSize: 10, color: (ANCHOR_LABEL[c.anchor?.status || "not_anchored"] || ANCHOR_LABEL.invalid!).color }} title={c.anchor?.error || c.anchor?.tsa || ""}>
+                          {(ANCHOR_LABEL[c.anchor?.status || "not_anchored"] || ANCHOR_LABEL.invalid!).label}
+                        </td>
                       </tr>
                     );
                   })}
@@ -172,6 +185,10 @@ const CheckpointsSection = ({ session }: { session: any }) => {
             ["Signed message", open.message],
             ["Signature (base64 DER)", open.signature],
             ["Public key", open.public_key_pem || "not available: the key is not trusted"],
+            ["Timestamp", open.anchor && open.anchor.status !== "not_anchored"
+              ? `${(ANCHOR_LABEL[open.anchor.status] || ANCHOR_LABEL.invalid!).label}${open.anchor.gen_time ? ` at ${new Date(open.anchor.gen_time).toLocaleString()}` : ""} by ${open.anchor.tsa || "?"} (serial ${open.anchor.serial || "?"}, ${open.anchor.trust || "?"})${open.anchor.error ? `: ${open.anchor.error}` : ""}`
+              : "not timestamped"],
+            ...(open.anchor?.token_b64 ? [["RFC 3161 token (base64 DER)", open.anchor.token_b64]] : []),
           ].map(([k, v]) => (
             <div key={k} style={{ marginBottom: 8 }}>
               <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6 }}>{k}</div>
@@ -188,7 +205,7 @@ const CheckpointsSection = ({ session }: { session: any }) => {
 // another, as the event card does to Investigate.
 const VIEWS = ["events", "activity", "investigate", "checkpoints"];
 
-export const AuditLogTab = ({ session, onToast, subView, onSubViewChange }: any) => {
+export const AuditLogTab = ({ session, onToast, subView, onSubViewChange, onNavigate }: any) => {
   const [loading, setLoading] = useState(false);
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [config, setConfig] = useState<AuditConfig | null>(null);
@@ -447,7 +464,7 @@ export const AuditLogTab = ({ session, onToast, subView, onSubViewChange }: any)
       {view === "events" && renderEvents()}
       {view === "activity" && <AuditAnalyticsPanel session={session} onOpenEvent={setSelectedEvent} />}
       {view === "investigate" && <AuditInvestigate session={session} pivots={pivots} onPivotsChange={setPivots} onOpenEvent={setSelectedEvent} />}
-      {view === "checkpoints" && <CheckpointsSection session={session} />}
+      {view === "checkpoints" && <CheckpointsSection session={session} onToast={onToast} onNavigate={onNavigate} />}
 
       <AuditEventDetail event={selectedEvent} onClose={() => setSelectedEvent(null)} onInvestigate={investigate} />
 

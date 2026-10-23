@@ -81,6 +81,8 @@ func (h *Handler) routes() *http.ServeMux {
 	h.integrityRouter(selfEmitter{h.svc}).MountOn(mux)
 	// Activity statistics for the Audit Log charts (stats.go).
 	h.statsRouter(selfEmitter{h.svc}).MountOn(mux)
+	// Timestamped checkpoints: the anchoring setting (anchor.go).
+	h.anchorRouter(selfEmitter{h.svc}).MountOn(mux)
 	// Investigate: who, what, where, how and outcome for any pivot (investigate.go).
 	h.investigateRouter(selfEmitter{h.svc}).MountOn(mux)
 

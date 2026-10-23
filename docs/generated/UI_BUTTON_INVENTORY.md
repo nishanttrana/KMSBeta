@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-22T06:04:18Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-23T04:16:59Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -43,6 +43,9 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 310 | alerts | Btn | setActiveFilter(tab.id)} style={{ background:activeFilter===tab.id?(palette[`... |  |
 | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 339 | alerts | Btn | setPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev |  |
 | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 341 | alerts | Btn | setPageIndex((prev)=>Math.min(totalPages-1,prev+1))} disabled= >Next |  |
+| web/dashboard/src/components/v3/tabs/AnchorSettings.tsx | 63 | - | Btn | void save(true)}>Use this authority |  |
+| web/dashboard/src/components/v3/tabs/AnchorSettings.tsx | 64 | - | Btn | void save(false)}>Turn off |  |
+| web/dashboard/src/components/v3/tabs/AnchorSettings.tsx | 66 | - | Btn | void save(true)}> |  |
 | web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx | 108 | - | Btn | openPolicyModal()}>Create Policy |  |
 | web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx | 127 | - | Btn | openPolicyModal(p)}>Edit |  |
 | web/dashboard/src/components/v3/tabs/ApprovalPoliciesPanel.tsx | 128 | - | Btn | { const next = p.status === "active" ? "inactive" : "active"; // The server r... |  |
@@ -54,11 +57,11 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/AuditInvestigate.tsx | 88 | - | Btn | void load()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/AuditInvestigate.tsx | 96 | - | button | drop(d)} style={ }>× |  |
 | web/dashboard/src/components/v3/tabs/AuditInvestigate.tsx | 100 | - | Btn | onPivotsChange( )}>Clear all |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 337 | audit | Btn | void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si... |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 338 | audit | Btn | (icon or dynamic label) | verifyChain} disabled={chainVerifying |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 341 | audit | Btn | load()} disabled= >Refresh |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 432 | audit | Btn | setOffset(Math.max(0, offset - PAGE_SIZE))}>Previous |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 433 | audit | Btn | setOffset(offset + PAGE_SIZE)}>Next |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 354 | audit | Btn | void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si... |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 355 | audit | Btn | (icon or dynamic label) | verifyChain} disabled={chainVerifying |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 358 | audit | Btn | load()} disabled= >Refresh |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 449 | audit | Btn | setOffset(Math.max(0, offset - PAGE_SIZE))}>Previous |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 450 | audit | Btn | setOffset(offset + PAGE_SIZE)}>Next |  |
 | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 317 | byok | Btn | setConnectorView("cards")} title="Card view"> |  |
 | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 318 | byok | Btn | setConnectorView("list")} title="List view"> |  |
 | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | 319 | byok | Btn | void refresh()} disabled= > Refresh |  |

@@ -677,6 +677,12 @@ func (h *Handler) testConnection(c *route.Call) {
 		c.Refuse(http.StatusConflict, "connection_test_elsewhere", "test this connection on "+where)
 		return
 	}
+	if conn.Type == "tsa" {
+		// Choosing the authority for anchoring takes a real timestamp and
+		// records the result here (13.47.0-beta).
+		c.Refuse(http.StatusConflict, "connection_test_elsewhere", "test this connection where it is used: Audit Log, Checkpoints, Timestamping")
+		return
+	}
 	// A cloud account's or HSM's real test is run by the service that uses
 	// it; compliance tests the types it sends through itself.
 	var testErr error

@@ -269,7 +269,37 @@ export type AuditCheckpoint = {
   signature: string;
   public_key_pem?: string;
   status: "verified" | "key_unknown" | "signature_invalid" | "head_mismatch";
+  // The checkpoint's RFC 3161 timestamp, verified now (13.47.0-beta).
+  anchor?: AuditAnchorStatus;
 };
+
+export type AuditAnchorStatus = {
+  status: "anchored" | "late" | "invalid" | "not_anchored";
+  gen_time?: string;
+  tsa?: string;
+  serial?: string;
+  trust?: string;
+  token_b64?: string;
+  error?: string;
+};
+
+// GET/PUT /audit/anchor: whether signed checkpoints are timestamped, and by
+// which "tsa" credential (root administrators set it).
+export type AuditAnchorSettings = { enabled: boolean; connection_id: string; updated_by?: string; updated_at?: string };
+
+export async function getAuditAnchor(session: AuthSession): Promise<AuditAnchorSettings> {
+  const out = await serviceRequest<{ anchor?: AuditAnchorSettings }>(session, "audit", "/audit/anchor");
+  if (!out?.anchor) throw new Error("audit returned no anchoring settings");
+  return out.anchor;
+}
+
+export async function saveAuditAnchor(session: AuthSession, input: { enabled: boolean; connection_id: string }): Promise<AuditAnchorSettings> {
+  const out = await serviceRequest<{ anchor?: AuditAnchorSettings }>(session, "audit", "/audit/anchor", {
+    method: "PUT", body: JSON.stringify({ enabled: input.enabled, connection_id: input.connection_id }),
+  });
+  if (!out?.anchor) throw new Error("audit returned no anchoring settings");
+  return out.anchor;
+}
 
 export async function listAuditCheckpoints(session: AuthSession, limit = 50): Promise<AuditCheckpoint[]> {
   const out = await serviceRequest<{ items?: AuditCheckpoint[] }>(

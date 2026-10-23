@@ -7,6 +7,35 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-22 — The audit trail is anchored with RFC 3161 timestamps of each checkpoint
+**Decision:** each signed checkpoint's signature is timestamped by an
+outside RFC 3161 authority the root tenant chooses (a `tsa` credential).
+The token is an audit event in the chain it anchors, verified when listed
+(signer chain to the credential's trust roots, TimeStamping usage, SHA-2,
+the request's nonce) and checkable with `openssl ts -verify`. Turning it
+on takes a real token first. It is off by default: the platform makes no
+outside call nobody asked for.
+**Why:** the owner's list (2026-10-22): "The audit trail has no outside
+anchor." Checkpoints are signed with the audit service's own key, so
+whoever controls the platform could rewrite history and sign it again.
+A third party's time can't be backdated.
+**Rejected:** write-once storage (S3 Object Lock and similar: one more
+cloud account to hold, and the proof is the provider's retention setting,
+not something a reader verifies); a public transparency log or
+blockchain (publishes a hash of every tenant's chain to the world, and
+needs a client this product doesn't have); timestamping every event
+(thousands of outside calls a day; one per checkpoint covers the same
+history, at most 10 minutes late); trusting the system roots by default
+without saying so (most authorities' roots aren't in them, so the UI and
+docs ask for the root).
+**Enforced:** `TestCheckpointsAreTimestamped`, `TestAnchorRoute`,
+`TestTimestampFailurePublishedToStream`,
+`TestTimestampConnectionIsAuditsAlone`, the opt-in
+`TestLiveTimestampAuthority` (production client), smoke
+`audit-anchor.spec.ts`.
+
+---
+
 ## 2026-10-22 — Distrusted CAs are matched when read, against Go's list and the tenant's
 **Decision:** discovery records each scanned certificate's presented chain
 by SPKI SHA-256 and matches it against the distrusted list when findings

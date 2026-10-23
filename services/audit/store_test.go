@@ -31,6 +31,8 @@ func newAuditStore(t *testing.T) *SQLStore {
 
 func createAuditSchemaForTest(conn *pkgdb.DB) error {
 	stmts := []string{
+		`CREATE TABLE audit_anchor_settings (id INTEGER PRIMARY KEY, enabled BOOLEAN NOT NULL DEFAULT FALSE,
+			connection_id TEXT NOT NULL DEFAULT '', updated_by TEXT NOT NULL DEFAULT '', updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
 		// hmac_sig + category_group were added by migration 004
 		// (services/audit/migrations/004_tamper_evidence.sql). country_code is
 		// inserted via the geoip enrichment path. The test harness builds the
@@ -183,5 +185,45 @@ func checkActionPrefix(t *testing.T, s *SQLStore, tenant string) {
 	}
 	if all, _ := s.QueryEvents(ctx, tenant, EventQuery{Limit: 50}); len(all) != 5 {
 		t.Fatalf("no prefix: %d events", len(all))
+	}
+}
+
+// The anchoring settings on real Postgres (migration 015): one row, written
+// over by each save.
+func TestAnchorSettingsPostgres(t *testing.T) {
+	dsn := strings.TrimSpace(os.Getenv("VECTA_TEST_POSTGRES_DSN"))
+	if dsn == "" {
+		t.Skip("set VECTA_TEST_POSTGRES_DSN to a disposable Postgres database")
+	}
+	ctx := context.Background()
+	conn, err := pkgdb.Open(ctx, pkgdb.Config{PostgresDSN: dsn, MaxOpen: 4, MaxIdle: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	if err := conn.RunMigrations(ctx, "migrations"); err != nil {
+		t.Fatalf("migrations: %v", err)
+	}
+	s := NewSQLStore(conn)
+	before, err := s.AnchorSettings(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s.PutAnchorSettings(context.Background(), before) })
+	for _, want := range []AnchorSettings{
+		{Enabled: true, ConnectionID: "pbconn_tsa_pg", UpdatedBy: "admin-pg"},
+		{Enabled: false, ConnectionID: "", UpdatedBy: "admin-pg-2"},
+	} {
+		if err := s.PutAnchorSettings(ctx, want); err != nil {
+			t.Fatal(err)
+		}
+		got, err := s.AnchorSettings(ctx)
+		if err != nil || got.Enabled != want.Enabled || got.ConnectionID != want.ConnectionID || got.UpdatedBy != want.UpdatedBy || got.UpdatedAt == nil {
+			t.Fatalf("settings %+v %v, want %+v", got, err, want)
+		}
+	}
+	var rows int
+	if err := conn.SQL().QueryRowContext(ctx, `SELECT COUNT(*) FROM audit_anchor_settings`).Scan(&rows); err != nil || rows != 1 {
+		t.Fatalf("rows %d %v", rows, err)
 	}
 }

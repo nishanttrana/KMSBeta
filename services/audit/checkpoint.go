@@ -167,9 +167,15 @@ func (s *Service) SignCheckpoints(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	signed := 0
+	anchor, err := sq.AnchorSettings(ctx)
+	if err != nil {
+		return 0, err
+	}
 	for _, h := range heads {
-		if h.action == actionCheckpointSigned {
-			continue // nothing new since the last checkpoint
+		// Nothing new since the last checkpoint: its own timestamp (or the
+		// failure to get one) is not new history to sign again.
+		if h.action == actionCheckpointSigned || h.action == actionCheckpointTimestamped || h.action == actionTimestampFailed {
+			continue
 		}
 		head := checkpointHead{
 			Format: checkpointFormat, TenantID: h.tenant, ChainNode: h.node,
@@ -180,7 +186,7 @@ func (s *Service) SignCheckpoints(ctx context.Context) (int, error) {
 			s.refuseCheckpoint(ctx, h.tenant, "signing_failed", err)
 			continue
 		}
-		if _, err := s.ProcessEvent(ctx, AuditEvent{
+		cpEvent, err := s.ProcessEvent(ctx, AuditEvent{
 			TenantID: h.tenant, Service: "audit", Action: actionCheckpointSigned,
 			ActorID: "system", ActorType: "service", TargetType: "audit_chain", TargetID: chainLabel(h.node), Result: "success",
 			Details: map[string]interface{}{
@@ -188,10 +194,14 @@ func (s *Service) SignCheckpoints(ctx context.Context) (int, error) {
 				"signed_at": head.SignedAt, "key_id": signer.keyID, "algorithm": checkpointAlgorithm,
 				"signature": base64.StdEncoding.EncodeToString(sig),
 			},
-		}); err != nil {
+		})
+		if err != nil {
 			return signed, err
 		}
 		signed++
+		if anchor.Enabled && anchor.ConnectionID != "" {
+			s.anchorCheckpoint(ctx, cpEvent, sig, anchor)
+		}
 	}
 	return signed, nil
 }
@@ -448,17 +458,20 @@ func (s *SQLStore) loadCheckpoints(ctx context.Context, tenantID string, limit i
 // message, signature and public key an outside verifier needs, and the
 // result of checking it against what is stored now.
 type CheckpointStatus struct {
-	EventID      string `json:"event_id"`
-	ChainNode    string `json:"chain_node,omitempty"`
-	Sequence     int64  `json:"sequence"`
-	ChainHash    string `json:"chain_hash"`
-	SignedAt     string `json:"signed_at"`
-	KeyID        string `json:"key_id"`
-	Algorithm    string `json:"algorithm"`
-	Message      string `json:"message"`
-	Signature    string `json:"signature"`
-	PublicKeyPEM string `json:"public_key_pem,omitempty"`
-	Status       string `json:"status"` // verified | key_unknown | signature_invalid | head_mismatch
+	EventID string `json:"event_id"`
+	// Anchor is the checkpoint's RFC 3161 timestamp, verified now
+	// (anchor.go).
+	Anchor       *AnchorStatus `json:"anchor,omitempty"`
+	ChainNode    string        `json:"chain_node,omitempty"`
+	Sequence     int64         `json:"sequence"`
+	ChainHash    string        `json:"chain_hash"`
+	SignedAt     string        `json:"signed_at"`
+	KeyID        string        `json:"key_id"`
+	Algorithm    string        `json:"algorithm"`
+	Message      string        `json:"message"`
+	Signature    string        `json:"signature"`
+	PublicKeyPEM string        `json:"public_key_pem,omitempty"`
+	Status       string        `json:"status"` // verified | key_unknown | signature_invalid | head_mismatch
 }
 
 // ListCheckpoints returns a tenant's newest checkpoints, each verified: the
@@ -508,6 +521,25 @@ func (s *Service) ListCheckpoints(ctx context.Context, tenantID string, limit in
 	if err != nil {
 		return nil, err
 	}
+	if sq, ok := s.store.(*SQLStore); ok && len(items) > 0 {
+		ids := make([]string, len(items))
+		for i, it := range items {
+			ids[i] = it.EventID
+		}
+		anchors, err := sq.anchorEvents(ctx, tenantID, ids)
+		if err != nil {
+			return nil, err
+		}
+		for i := range items {
+			sig, _ := base64.StdEncoding.DecodeString(items[i].Signature)
+			var ev *AuditEvent
+			if a, ok := anchors[items[i].EventID]; ok {
+				ev = &a
+			}
+			st := anchorStatus(ev, sig, items[i].SignedAt)
+			items[i].Anchor = &st
+		}
+	}
 	var breaks []map[string]interface{}
 	for _, it := range items {
 		if it.Status != checkpointVerified {
@@ -515,7 +547,7 @@ func (s *Service) ListCheckpoints(ctx context.Context, tenantID string, limit in
 		}
 	}
 	if len(breaks) > 0 {
-		s.reportChainBroken(ctx, AuditEvent{
+		s.reportOnStream(ctx, AuditEvent{
 			TenantID: tenantID, Service: "audit", Action: "audit.audit.chain_broken",
 			ActorID: "system", ActorType: "system", Result: "failure", TargetType: "audit_trail",
 			Details: map[string]interface{}{"scope": "checkpoints", "break_count": len(breaks), "breaks": breaks},

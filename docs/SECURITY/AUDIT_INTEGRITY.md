@@ -2,7 +2,8 @@
 
 How the audit log is made tamper-evident, what each layer proves, and what
 it does not. Code: `services/audit/chain.go`, `cluster.go` (HMAC keyring),
-`event_hmac_key.go`, `checkpoint.go`, `target_integrity.go`. Since 3.0.0-beta.
+`event_hmac_key.go`, `checkpoint.go`, `target_integrity.go`, `anchor.go`.
+Since 3.0.0-beta.
 
 ## Layers
 
@@ -12,6 +13,7 @@ it does not. Code: `services/audit/chain.go`, `cluster.go` (HMAC keyring),
 | Hash chain | `chain_hash = SHA-256(previous_hash ‖ canonical event JSON)`. Every field (actor, action, target, result, details, …) is covered. One chain per tenant per node (`chain_node`). | Any edited, inserted or removed row, unless every later hash is recomputed. |
 | Per-event HMAC | `HMAC-SHA-256(chain_hash)` under a key derived from the audit master key (see below). | A rewrite that recomputes the hashes, by anyone without the HMAC key. |
 | Signed checkpoints | Every 10 minutes each node signs the head of each tenant chain it writes with ECDSA-P384 (SHA-384). | A rewrite by someone holding the HMAC key: the rewritten history no longer ends at the signed head. |
+| Timestamped checkpoints (13.47.0-beta, opt-in) | Each checkpoint's signature is timestamped by an outside RFC 3161 authority. | A rewrite by someone who also holds the checkpoint key: re-signed checkpoints can only get tokens dated after the rewrite. |
 
 ## The event HMAC key
 
@@ -55,6 +57,66 @@ it does not. Code: `services/audit/chain.go`, `cluster.go` (HMAC keyring),
 - **Refusals.** A key that can't be generated or a signature that fails is
   `audit.audit.checkpoint_refused` (`result: refused`, `reason`), and
   nothing is recorded as signed.
+
+## Timestamped checkpoints (13.47.0-beta)
+
+A checkpoint is signed by the audit service's own key, so whoever controls
+the platform could rewrite a chain and sign it again. Timestamping adds a
+witness the platform doesn't control.
+
+- **Turning it on.** Audit Log → Checkpoints → Timestamping, by a person in
+  the root tenant with `auth.tenant.write` and `compliance.connection.use`
+  (`PUT /audit/anchor`). It names a credential of type `tsa` (Playbooks →
+  Credentials): the authority's `https` address, optional `username` and
+  `password`, and `trust_pem`, the root certificate the authority's signer
+  chains to. Without `trust_pem` the system roots are used, and they rarely
+  include a time-stamp authority's root: get the root from the authority.
+  Turning it on takes a real token first; a credential that doesn't produce
+  a valid one is refused (`timestamp_test_failed`), and the result is
+  recorded as the credential's test. It applies to every tenant's chains.
+- **What is sent.** `SHA-256(signature)` of each new checkpoint, with a
+  random nonce, asking for the signer's certificate. The authority learns
+  nothing else. The call goes through `pkg/ssrfguard`: TLS 1.3 and a public
+  address only (Sectigo's authority offers only TLS 1.2 and is refused;
+  FreeTSA, Microsoft and SwissSign work).
+- **What is accepted.** A token whose imprint is that hash, with a SHA-2
+  digest, the request's nonce, an embedded signer certificate with the
+  TimeStamping usage, and a chain to the trust roots at the token's time.
+- **Where it goes.** `audit.audit.checkpoint_timestamped` in the chain it
+  anchors (`target_id` = the checkpoint's event ID; `imprint_sha256`,
+  `gen_time`, `tsa`, `tsa_serial`, `trust`, `token_b64`, and `trust_pem`
+  when set). The event is not new history: it does not cause another
+  checkpoint. A failure is `audit.audit.checkpoint_timestamp_failed`
+  (`reason` `credential_unavailable`, `trust_roots` or `timestamp_refused`),
+  published on the `AUDIT` stream like `chain_broken` so the playbook
+  trigger `audit_timestamp_failed` sees it. A failed checkpoint stays
+  signed; the next one is timestamped as usual.
+- **Status.** `GET /audit/checkpoints` re-verifies each token and reports
+  `anchor.status`: `anchored`; `late` (the token is more than an hour after
+  the checkpoint's `signed_at`, or more than 5 minutes before it, so it
+  doesn't date the checkpoint); `invalid` (the token doesn't verify for this
+  signature); `not_anchored`.
+
+### Verifying a token outside the KMS
+
+```sh
+printf '%s' "$SIGNATURE_B64" | base64 -d > sig.der     # the checkpoint's signature
+printf '%s' "$TOKEN_B64" | base64 -d > token.der       # anchor.token_b64
+openssl ts -verify -token_in -in token.der -data sig.der -CAfile tsa-root.pem
+openssl ts -reply -token_in -in token.der -text | grep 'Time stamp'
+```
+
+Use the authority's root you obtained yourself, not the `trust_pem` stored
+with the token.
+
+### What it proves
+
+A token proves the checkpoint, and so every event up to its `sequence`,
+existed at `gen_time`. An honest chain has a token within minutes of each
+checkpoint. A chain rewritten later can only be re-anchored with tokens
+dated after the rewrite: its old events are covered only by tokens far
+later than their own times, and the tokens delivered earlier to a SIEM
+(stream `audit.audit.checkpoint_timestamped`) no longer match it.
 
 ### Which keys are trusted
 
@@ -231,7 +293,8 @@ is buffered and this did not apply.
   tail of a chain, including its latest checkpoint events, or forge a key
   registration and re-sign. The internal checks can't see that; the copies
   already delivered to your SIEM can. Stream `audit.audit.checkpoint_*` to
-  a system the KMS administrators can't write.
+  a system the KMS administrators can't write. Timestamping (above)
+  doesn't change this: deleted tokens are gone with the tail.
 - **Events from before 3.0.0-beta** were HMAC'd under keys that were lost at
   each restart; they report `hmac_key_unknown`. Their hash chain still
   links, and the first checkpoint signed after the upgrade covers them.

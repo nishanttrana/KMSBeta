@@ -367,6 +367,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "audit-get-audit-anchor",
+    "group": "Audit & Alerts (audit)",
+    "title": "GET /audit/anchor",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/audit/anchor?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "GET /svc/audit/audit/anchor?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "audit-get-audit-cbom-diff",
     "group": "Audit & Alerts (audit)",
     "title": "GET /audit/cbom/diff",
@@ -1104,6 +1132,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Audit service.",
     "requestExample": "POST /svc/audit/webhooks/{id}/test?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "audit-put-audit-anchor",
+    "group": "Audit & Alerts (audit)",
+    "title": "PUT /audit/anchor",
+    "service": "audit",
+    "method": "PUT",
+    "pathTemplate": "/audit/anchor?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "PUT /svc/audit/audit/anchor?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

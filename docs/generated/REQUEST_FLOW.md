@@ -1,16 +1,16 @@
 # Generated Request Flow Map
 
-Generated at `2026-10-22T06:04:18Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-23T04:16:59Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `911`
-- Routes with exact frontend call sites: `489`
-- Routes whose handlers call `h.svc.*`: `549`
-- Routes with detected store calls: `636`
-- Routes with detected internal `pkg/*` calls: `201`
+- Backend routes analyzed: `913`
+- Routes with exact frontend call sites: `491`
+- Routes whose handlers call `h.svc.*`: `550`
+- Routes with detected store calls: `638`
+- Routes with detected internal `pkg/*` calls: `202`
 
 ## How To Trace One Frontend Click
 
@@ -24,10 +24,12 @@ This file connects frontend requests to backend Go processing. It is static anal
 
 | Route key | Route | Handler | Service methods | Store calls | Receiver/client calls | Internal package calls | Frontend call sites |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:179) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:134 |
-| audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:198) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:182 |
-| audit\|GET\|/audit/chain/verify | GET /audit/chain/verify | handleChainVerify (services/audit/handler.go:221) | VerifyChainWalk | LastChainVerified, VerifyChainWalk |  | pkg/tenantcheck.Enforce | web/dashboard/src/lib/audit.ts:229 |
-| audit\|GET\|/audit/config | GET /audit/config | handleAuditConfig (services/audit/handler.go:246) |  |  |  |  | web/dashboard/src/lib/audit.ts:245 |
+| audit\|GET\|/audit/anchor | GET /audit/anchor | getAnchor (services/audit/anchor.go:351) |  | AnchorSettings |  |  | web/dashboard/src/lib/audit.ts:291 |
+| audit\|PUT\|/audit/anchor | PUT /audit/anchor | putAnchor (services/audit/anchor.go:363) | openTSA, tsaClient | PutAnchorSettings, AnchorSettings | s.tsaCreds.Resolve | pkg/crypto.SHA256, pkg/route.Allowed, pkg/tenantcheck.IsServicePrincipal, pkg/ssrfguard.NewHTTPSClient | web/dashboard/src/lib/audit.ts:297 |
+| audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:181) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:134 |
+| audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:200) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:182 |
+| audit\|GET\|/audit/chain/verify | GET /audit/chain/verify | handleChainVerify (services/audit/handler.go:223) | VerifyChainWalk | LastChainVerified, VerifyChainWalk |  | pkg/tenantcheck.Enforce | web/dashboard/src/lib/audit.ts:229 |
+| audit\|GET\|/audit/config | GET /audit/config | handleAuditConfig (services/audit/handler.go:248) |  |  |  |  | web/dashboard/src/lib/audit.ts:245 |
 | audit\|GET\|/ops-metrics/overview | GET /ops-metrics/overview | handleGetOpsOverview (services/audit/handler_ops_metrics.go:8) |  | GetOpsOverview |  |  | web/dashboard/src/lib/opsMetrics.ts:55 |
 | audit\|GET\|/ops-metrics/latency | GET /ops-metrics/latency | handleGetLatencyPercentiles (services/audit/handler_ops_metrics.go:45) |  | GetLatencyPercentiles |  |  | web/dashboard/src/lib/opsMetrics.ts:60 |
 | audit\|GET\|/ops-metrics/by-service | GET /ops-metrics/by-service | handleGetServiceStats (services/audit/handler_ops_metrics.go:62) |  | GetServiceStats |  |  | web/dashboard/src/lib/opsMetrics.ts:65 |
@@ -41,7 +43,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | audit\|GET\|/audit/investigate | GET /audit/investigate | investigate (services/audit/investigate.go:197) |  | Investigate |  |  | web/dashboard/src/lib/audit.ts:173 |
 | audit\|GET\|/audit/activity/stats | GET /audit/activity/stats | activityStats (services/audit/stats.go:153) |  | AuditStats |  |  | web/dashboard/src/lib/audit.ts:85 |
 | audit\|GET\|/audit/targets/{param}/integrity | GET /audit/targets/{target_id}/integrity | verifyTargetIntegrity (services/audit/target_integrity.go:359) | VerifyTarget | VerifyTarget |  |  | web/dashboard/src/lib/audit.ts:221 |
-| audit\|GET\|/audit/checkpoints | GET /audit/checkpoints | listCheckpoints (services/audit/checkpoint.go:527) | ListCheckpoints | ListCheckpoints |  |  | web/dashboard/src/lib/audit.ts:275 |
+| audit\|GET\|/audit/checkpoints | GET /audit/checkpoints | listCheckpoints (services/audit/checkpoint.go:559) | ListCheckpoints | ListCheckpoints |  |  | web/dashboard/src/lib/audit.ts:305 |
 | auth\|POST\|/auth/clients/{param}/revoke | POST /auth/clients/{id}/revoke | revokeClient (services/auth/clients_admin.go:52) |  | RevokeClientRegistration |  |  | web/dashboard/src/lib/authAdmin.ts:510 |
 | auth\|POST\|/auth/clients/{param}/rotate-key | POST /auth/clients/{id}/rotate-key | rotateClientKey (services/auth/clients_admin.go:64) |  | RotateClientAPIKey | h.meter.IncrementOps | pkg/crypto.Zeroize | web/dashboard/src/lib/authAdmin.ts:498 |
 | auth\|POST\|/auth/register | POST /auth/register | handleRegister (services/auth/handler.go:234) |  | GetTenant, CreateClientRegistration |  |  | web/dashboard/src/lib/authAdmin.ts:469 |
@@ -518,13 +520,15 @@ This file connects frontend requests to backend Go processing. It is static anal
 
 | Route key | Route | Handler | Service methods | Store calls | Receiver/client calls | Internal package calls | Frontend call sites |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| audit\|POST\|/audit/publish | POST /audit/publish | handlePublish (services/audit/handler.go:115) | PublishAudit, VerifyChainWalk | QueryEvents, GetEvent, LastChainVerified, VerifyChainWalk | s.wal.Append, s.publisher.Publish | pkg/auth.ClaimsFromContext, pkg/tenantcheck.Enforce |  |
-| audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:179) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:134 |
-| audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:198) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:182 |
-| audit\|POST\|/audit/search | POST /audit/search | handleSearch (services/audit/handler.go:216) |  |  |  |  |  |
-| audit\|GET\|/audit/chain/verify | GET /audit/chain/verify | handleChainVerify (services/audit/handler.go:221) | VerifyChainWalk | LastChainVerified, VerifyChainWalk |  | pkg/tenantcheck.Enforce | web/dashboard/src/lib/audit.ts:229 |
+| audit\|GET\|/audit/anchor | GET /audit/anchor | getAnchor (services/audit/anchor.go:351) |  | AnchorSettings |  |  | web/dashboard/src/lib/audit.ts:291 |
+| audit\|PUT\|/audit/anchor | PUT /audit/anchor | putAnchor (services/audit/anchor.go:363) | openTSA, tsaClient | PutAnchorSettings, AnchorSettings | s.tsaCreds.Resolve | pkg/crypto.SHA256, pkg/route.Allowed, pkg/tenantcheck.IsServicePrincipal, pkg/ssrfguard.NewHTTPSClient | web/dashboard/src/lib/audit.ts:297 |
+| audit\|POST\|/audit/publish | POST /audit/publish | handlePublish (services/audit/handler.go:117) | PublishAudit, VerifyChainWalk | QueryEvents, GetEvent, LastChainVerified, VerifyChainWalk | s.wal.Append, s.publisher.Publish | pkg/auth.ClaimsFromContext, pkg/tenantcheck.Enforce |  |
+| audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:181) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:134 |
+| audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:200) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:182 |
+| audit\|POST\|/audit/search | POST /audit/search | handleSearch (services/audit/handler.go:218) |  |  |  |  |  |
+| audit\|GET\|/audit/chain/verify | GET /audit/chain/verify | handleChainVerify (services/audit/handler.go:223) | VerifyChainWalk | LastChainVerified, VerifyChainWalk |  | pkg/tenantcheck.Enforce | web/dashboard/src/lib/audit.ts:229 |
 | audit\|GET\|/audit/stream | GET /audit/stream | handleStream (services/audit/stream.go:76) |  |  |  |  |  |
-| audit\|GET\|/audit/config | GET /audit/config | handleAuditConfig (services/audit/handler.go:246) |  |  |  |  | web/dashboard/src/lib/audit.ts:245 |
+| audit\|GET\|/audit/config | GET /audit/config | handleAuditConfig (services/audit/handler.go:248) |  |  |  |  | web/dashboard/src/lib/audit.ts:245 |
 | audit\|POST\|/audit/cluster/signing-key/join-key | POST /audit/cluster/signing-key/join-key | handleClusterKeyJoinKey (services/audit/cluster.go:169) | auditCluster |  |  |  |  |
 | audit\|POST\|/audit/cluster/signing-key/export | POST /audit/cluster/signing-key/export | handleClusterKeyExport (services/audit/cluster.go:182) | signing, auditCluster |  |  | pkg/clusterkey.Seal |  |
 | audit\|POST\|/audit/cluster/signing-key/import | POST /audit/cluster/signing-key/import | handleClusterKeyImport (services/audit/cluster.go:212) | auditCluster, signing |  |  | pkg/clusterkey.WriteFileAtomic, pkg/crypto.Zeroize |  |
@@ -533,7 +537,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | audit\|GET\|/ops-metrics/latency | GET /ops-metrics/latency | handleGetLatencyPercentiles (services/audit/handler_ops_metrics.go:45) |  | GetLatencyPercentiles |  |  | web/dashboard/src/lib/opsMetrics.ts:60 |
 | audit\|GET\|/ops-metrics/by-service | GET /ops-metrics/by-service | handleGetServiceStats (services/audit/handler_ops_metrics.go:62) |  | GetServiceStats |  |  | web/dashboard/src/lib/opsMetrics.ts:65 |
 | audit\|GET\|/ops-metrics/errors | GET /ops-metrics/errors | handleGetErrorBreakdown (services/audit/handler_ops_metrics.go:79) |  | GetErrorBreakdown |  |  | web/dashboard/src/lib/opsMetrics.ts:70 |
-| audit\|GET\|/audit/fips/boundary | GET /audit/fips/boundary | handleFIPSBoundary (services/audit/handler.go:261) |  |  |  |  |  |
+| audit\|GET\|/audit/fips/boundary | GET /audit/fips/boundary | handleFIPSBoundary (services/audit/handler.go:263) |  |  |  |  |  |
 | audit\|GET\|/audit/cbom/inventory | GET /audit/cbom/inventory | handleCBOMInventory (services/audit/handler_cbom.go:17) |  | CBOMSamples |  | pkg/cbom.Tier, pkg/cbom.Build |  |
 | audit\|GET\|/audit/cbom/diff | GET /audit/cbom/diff | handleCBOMDiff (services/audit/handler_cbom.go:51) |  | CBOMSamples |  | pkg/cbom.Tier, pkg/cbom.Build |  |
 | audit\|GET\|/metrics | GET /metrics | handlePrometheusMetrics (services/audit/handler_prometheus.go:14) |  | GetAllServiceStats |  |  |  |
@@ -546,7 +550,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | audit\|GET\|/audit/investigate | GET /audit/investigate | investigate (services/audit/investigate.go:197) |  | Investigate |  |  | web/dashboard/src/lib/audit.ts:173 |
 | audit\|GET\|/audit/activity/stats | GET /audit/activity/stats | activityStats (services/audit/stats.go:153) |  | AuditStats |  |  | web/dashboard/src/lib/audit.ts:85 |
 | audit\|GET\|/audit/targets/{param}/integrity | GET /audit/targets/{target_id}/integrity | verifyTargetIntegrity (services/audit/target_integrity.go:359) | VerifyTarget | VerifyTarget |  |  | web/dashboard/src/lib/audit.ts:221 |
-| audit\|GET\|/audit/checkpoints | GET /audit/checkpoints | listCheckpoints (services/audit/checkpoint.go:527) | ListCheckpoints | ListCheckpoints |  |  | web/dashboard/src/lib/audit.ts:275 |
+| audit\|GET\|/audit/checkpoints | GET /audit/checkpoints | listCheckpoints (services/audit/checkpoint.go:559) | ListCheckpoints | ListCheckpoints |  |  | web/dashboard/src/lib/audit.ts:305 |
 | auth\|POST\|/auth/clients/{param}/revoke | POST /auth/clients/{id}/revoke | revokeClient (services/auth/clients_admin.go:52) |  | RevokeClientRegistration |  |  | web/dashboard/src/lib/authAdmin.ts:510 |
 | auth\|POST\|/auth/clients/{param}/rotate-key | POST /auth/clients/{id}/rotate-key | rotateClientKey (services/auth/clients_admin.go:64) |  | RotateClientAPIKey | h.meter.IncrementOps | pkg/crypto.Zeroize | web/dashboard/src/lib/authAdmin.ts:498 |
 | auth\|DELETE\|/auth/api-keys/{param} | DELETE /auth/api-keys/{id} | deleteAPIKey (services/auth/clients_admin.go:97) |  | GetAPIKeyByID, DeleteAPIKey |  | pkg/tenantcheck.StripReserved |  |
@@ -769,8 +773,8 @@ This file connects frontend requests to backend Go processing. It is static anal
 | cluster-manager\|POST\|/cluster/peer/vote | POST /cluster/peer/vote | handlePeerVote (services/cluster-manager/failover_handler.go:109) | GrantVote |  | s.fo.jitteredDeadline | pkg/clusterrepl.ParseLSN |  |
 | cluster-manager\|POST\|/cluster/peer/announce | POST /cluster/peer/announce | handlePeerAnnounce (services/cluster-manager/failover_handler.go:127) | Announce |  |  |  |  |
 | cluster-manager\|POST\|/cluster/peer/fence | POST /cluster/peer/fence | handlePeerFence (services/cluster-manager/failover_handler.go:145) | Fence |  |  |  |  |
-| compliance\|POST\|/compliance/connections/{param}/resolve | POST /compliance/connections/{id}/resolve | resolveConnection (services/compliance/connections_service.go:88) |  | GetConnection | h.connVault.Open |  |  |
-| compliance\|POST\|/compliance/connections/import | POST /compliance/connections/import | importConnection (services/compliance/connections_service.go:143) |  | GetConnection, CreateConnection | h.connVault.current |  |  |
+| compliance\|POST\|/compliance/connections/{param}/resolve | POST /compliance/connections/{id}/resolve | resolveConnection (services/compliance/connections_service.go:90) |  | GetConnection | h.connVault.Open |  |  |
+| compliance\|POST\|/compliance/connections/import | POST /compliance/connections/import | importConnection (services/compliance/connections_service.go:145) |  | GetConnection, CreateConnection | h.connVault.current |  |  |
 | compliance\|GET\|/compliance/connections | GET /compliance/connections | listConnectionChoices (services/compliance/credentials.go:44) |  | ListConnections |  |  | web/dashboard/src/lib/credentials.ts:61 |
 | compliance\|GET\|/compliance/connections/{param} | GET /compliance/connections/{id} | checkConnectionUse (services/compliance/credentials.go:70) |  | GetConnection |  |  |  |
 | compliance\|GET\|/compliance/connections/{param}/usage | GET /compliance/connections/{id}/usage | connectionUsage (services/compliance/credentials.go:134) |  | GetConnection |  |  | web/dashboard/src/lib/credentials.ts:80 |

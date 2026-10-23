@@ -7,10 +7,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/nats-io/nats.go"
+
+	"vecta-kms/pkg/credstore"
 )
 
 type Service struct {
@@ -24,7 +27,15 @@ type Service struct {
 	webhooks    *webhookFanout
 	creds       *credVault      // webhook credentials under the audit master key
 	checkpoints checkpointState // this process's checkpoint signer (checkpoint.go)
+	// tsaCreds opens the time-stamp authority credential; tsaHTTP reaches
+	// it (nil: the guarded default; tests reach a loopback authority).
+	tsaCreds credstore.Store
+	tsaHTTP  *http.Client
 }
+
+// SetCredentialStore wires the credential store anchoring opens its
+// time-stamp authority from (anchor.go).
+func (s *Service) SetCredentialStore(c credstore.Store) { s.tsaCreds = c }
 
 // SetWebhookFanout wires delivery of persisted events to webhooks.
 func (s *Service) SetWebhookFanout(f *webhookFanout) { s.webhooks = f }
@@ -272,7 +283,7 @@ func (s *Service) DrainWAL(ctx context.Context) error {
 // trusted, so only the envelope is recorded; the line itself is kept in the
 // quarantine file.
 func (s *Service) reportWALRecordRefused(ctx context.Context, rec WALRecord, reason string) {
-	s.reportChainBroken(ctx, AuditEvent{
+	s.reportOnStream(ctx, AuditEvent{
 		TenantID:  platformTenantID,
 		Service:   "audit",
 		Action:    "audit.audit.wal_record_refused",
@@ -297,7 +308,7 @@ func (s *Service) VerifyChainWalk(ctx context.Context, tenantID string, sinceChe
 		return res, err
 	}
 	if !res.OK {
-		s.reportChainBroken(ctx, AuditEvent{
+		s.reportOnStream(ctx, AuditEvent{
 			TenantID:  tenantID,
 			Service:   "audit",
 			Action:    "audit.audit.chain_broken",
@@ -322,7 +333,7 @@ func (s *Service) RecordFullVerification(ctx context.Context, tenantID string, r
 	if !res.OK || res.Scope != "full" {
 		return
 	}
-	s.reportChainBroken(ctx, AuditEvent{
+	s.reportOnStream(ctx, AuditEvent{
 		TenantID:  tenantID,
 		Service:   "audit",
 		Action:    actionChainVerified,
@@ -344,7 +355,7 @@ func (s *Service) VerifyChain(ctx context.Context, tenantID string) (bool, []map
 		return false, nil, err
 	}
 	if !ok {
-		s.reportChainBroken(ctx, AuditEvent{
+		s.reportOnStream(ctx, AuditEvent{
 			TenantID:  tenantID,
 			Service:   "audit",
 			Action:    "audit.audit.chain_broken",
@@ -361,11 +372,12 @@ func (s *Service) VerifyChain(ctx context.Context, tenantID string) (bool, []map
 	return ok, breaks, nil
 }
 
-// reportChainBroken puts a chain_broken event on the AUDIT stream, where
-// ingest records it in the chain and subscribers (playbooks, SIEM export)
-// see it. Recording it directly would keep it out of the stream. When the
-// stream is unavailable it is recorded directly, so a break is never lost.
-func (s *Service) reportChainBroken(ctx context.Context, evt AuditEvent) {
+// reportOnStream puts an event audit raises itself (chain_broken,
+// checkpoint_timestamp_failed) on the AUDIT stream, where ingest records it
+// in the chain and subscribers (playbooks, SIEM export) see it. Recording it
+// directly would keep it out of the stream. When the stream is unavailable
+// it is recorded directly, so the event is never lost.
+func (s *Service) reportOnStream(ctx context.Context, evt AuditEvent) {
 	evt.ID = newID("evt")
 	evt.Timestamp = time.Now().UTC()
 	if s.publisher != nil {

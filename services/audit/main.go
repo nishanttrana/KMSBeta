@@ -24,6 +24,7 @@ import (
 	pkgclustersync "vecta-kms/pkg/clustersync"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
+	"vecta-kms/pkg/credstore"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
@@ -114,6 +115,8 @@ func main() {
 	// processing and publishes on the same stream ingestion uses, so its
 	// findings join the immutable audit chain and reach playbooks.
 	svc.SetRiskDetector(NewSustainedRiskDetector(pub))
+	// Checkpoints are timestamped through a "tsa" credential (anchor.go).
+	svc.SetCredentialStore(credstore.FromEnv())
 
 	// Event streams send through compliance connections, opened over
 	// internal mTLS as kms-audit (stream_connections.go).

@@ -1761,7 +1761,10 @@ re-verified now: `event_id`, `chain_node`, `sequence` (the signed head),
 `chain_hash`, `signed_at`, `key_id`, `algorithm` (`ECDSA-P384`), `message`
 (the exact signed bytes), `signature` (base64 DER), `public_key_pem` (when
 the key is trusted) and `status` (`verified`, `key_unknown`,
-`signature_invalid`, `head_mismatch`). Any failure also raises the critical
+`signature_invalid`, `head_mismatch`). Since 13.47.0-beta each item has
+`anchor` (`status` `anchored`, `late`, `invalid` or `not_anchored`;
+`gen_time`, `tsa`, `serial`, `trust`, `token_b64`, `error`) when anchoring
+has been used. Any failure also raises the critical
 `audit.audit.chain_broken` (`scope: checkpoints`). Checkpoints are signed
 every 10 minutes for each chain that moved; see
 [SECURITY/AUDIT_INTEGRITY.md](SECURITY/AUDIT_INTEGRITY.md) for trust rules
@@ -1774,6 +1777,20 @@ walks each chain from its newest verified checkpoint (13.20.0-beta); add
 this node), `rows_checked`, `last_full_verification` (when the hourly full
 walk last passed, or `null`). Break reasons add `checkpoint_key_unknown`,
 `checkpoint_signature_invalid` and `checkpoint_head_mismatch`.
+
+### GET / PUT /svc/audit/audit/anchor
+
+Timestamped checkpoints (13.47.0-beta;
+[SECURITY/AUDIT_INTEGRITY.md](SECURITY/AUDIT_INTEGRITY.md#timestamped-checkpoints-13470-beta)).
+`GET` (`audit.events.read`; kernel event `anchor_settings_read`) returns
+`{"anchor": {"enabled", "connection_id", "updated_by", "updated_at"}}`.
+`PUT` (`auth.tenant.write`, a person in the root tenant; kernel event
+`anchor_settings_updated`) takes exactly `enabled` and `connection_id` (a
+`tsa` credential of the root tenant). Turning it on needs
+`compliance.connection.use` and takes a real token first. Refusals:
+`not_root_tenant` (403), `permission_denied` (403), `connection_required`,
+`credential_unusable`, `timestamp_test_failed` (400). Details `enabled`,
+`connection_id`, and `tested` when a token was taken.
 
 ---
 
@@ -2145,6 +2162,8 @@ this.
   `sustained_risk_detected` (`audit.security.sustained_risk_detected`),
   `key_compromised`,
   `audit_chain_broken` (`audit.audit.chain_broken`),
+  `audit_timestamp_failed` (`audit.audit.checkpoint_timestamp_failed`,
+  13.47.0-beta),
   `secret_exposed` (`audit.discovery.secret_exposed`, 7.18.0-beta),
   `secret_access_rule_changed` (`audit.secrets.access_rule_created`,
   `access_rule_deleted`, `settings_updated`, `version_cap_set`,
@@ -2198,6 +2217,7 @@ connection. The catalogue's `connection_types` gives each type's `fields`,
 | `datadog` | `url` (the Logs intake, e.g. `https://http-intake.logs.datadoghq.com/api/v2/logs`), `api_key` | Logs intake array |
 | `elastic` | `url`, `api_key` (encoded) [`index`, default `vecta-kms-audit`] | Bulk API, `_id` = event ID; a rejected document is a failure |
 | `sentinel` | `dce_url`, `dcr_immutable_id` (`dcr-<32 hex>`), `stream_name` (`Custom-…`), `azure_tenant_id`, `client_id`, `client_secret` | Azure Monitor Logs Ingestion API with an Entra client-credentials token. The DCR stream must declare `TimeGenerated`, `EventId`, `Action`, `TenantId`, `Service`, `Actor`, `TargetType`, `TargetId`, `Result`, `Severity`, `SourceIp`, `Event` (dynamic). The retired HTTP Data Collector API is not used. |
+| `tsa` | `url` [`username` with `password`, `trust_pem`] | RFC 3161 time-stamp requests for audit checkpoints (13.47.0-beta); tested from Audit Log → Checkpoints (`connection_test_elsewhere` here) |
 | `syslog` | `address` (`host:port`, usually 6514) [`ca_pem`, `server_name`] | CEF in RFC 5424 messages over TLS 1.3 (RFC 5425), for QRadar, ArcSight and other collectors. No plain UDP/TCP. Success means written to the TLS session (syslog has no acknowledgement). |
 
 Every field is sealed as one envelope under the compliance master key from
@@ -4384,7 +4404,7 @@ Selected events with dedicated audit classification:
 - Metered operations (`metered_op` in details) feed the Operations metrics; see "Operations metrics"
 - `audit.key.data_key_generated` (refusals: `reason` = `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access and HSM refusals, `permission_denied`): envelope-encryption DEK generation
 - `audit.key.rotation_policies_listed`, `audit.key.rotation_policy_created`, `audit.key.rotation_policy_updated`, `audit.key.rotation_policy_deleted`, `audit.key.rotation_policy_triggered`, `audit.key.rotation_runs_listed`, `audit.key.rotation_upcoming_listed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.key.rotation_policy_run` (scheduled run; `result: failure` when any key failed): key rotation policies
-- `audit.audit.checkpoints_listed` (kernel event for `GET /audit/checkpoints`; details `checkpoints`, `failed`), `audit.audit.checkpoint_signed` (a signed chain head: `chain_node`, `sequence`, `chain_hash`, `signed_at`, `key_id`, `algorithm`, `signature`), `audit.audit.checkpoint_key_created` (root; `target_id` key ID, `public_key_pem`), `audit.audit.checkpoint_refused` (`reason` `key_generation_failed`/`signing_failed`), `audit.audit.event_hmac_key_installed` (root; HMAC key derived from the audit master key; `mek_version`, `unavailable_mek_versions`).
+- `audit.audit.checkpoints_listed` (kernel event for `GET /audit/checkpoints`; details `checkpoints`, `failed`), `audit.audit.checkpoint_signed` (a signed chain head: `chain_node`, `sequence`, `chain_hash`, `signed_at`, `key_id`, `algorithm`, `signature`), `audit.audit.checkpoint_key_created` (root; `target_id` key ID, `public_key_pem`), `audit.audit.checkpoint_refused` (`reason` `key_generation_failed`/`signing_failed`), `audit.audit.checkpoint_timestamped` (an RFC 3161 token for a checkpoint: `imprint_sha256`, `gen_time`, `tsa`, `tsa_serial`, `trust`, `token_b64`), `audit.audit.checkpoint_timestamp_failed` (`reason` `credential_unavailable`/`trust_roots`/`timestamp_refused`), `audit.audit.anchor_settings_read`, `audit.audit.anchor_settings_updated`, `audit.audit.event_hmac_key_installed` (root; HMAC key derived from the audit master key; `mek_version`, `unavailable_mek_versions`).
 - `audit.audit.activity_stats_read` (kernel event for `GET /audit/activity/stats`, 7.17.0-beta; details `from`, `to`, `total`; refusals `result: refused`, `reason` `bad_window` or the kernel's).
 - `audit.audit.investigation_read` (kernel event for `GET /audit/investigate`, 13.42.0-beta; details: each pivot given and `total`, so who investigated whom is on record; refusals `result: refused`, `reason` `bad_window` or the kernel's).
 - `audit.audit.target_integrity_verified` (kernel event for `GET /audit/targets/{target_id}/integrity`; details `verdict`, `events_checked`, `failed`), `audit.audit.chain_broken` (critical; `scope: target` with `target_id` and per-event `breaks`, or the whole tenant chain; `break_count`). Published on the `AUDIT` stream (recorded by ingest, directly if the publish fails), so playbooks can trigger on it: audit trail integrity
@@ -4496,6 +4516,8 @@ from the code; do not edit by hand.
 ### audit (`/svc/audit/`)
 
 - `GET /svc/audit/audit/activity/stats`
+- `GET /svc/audit/audit/anchor`
+- `PUT /svc/audit/audit/anchor`
 - `GET /svc/audit/audit/cbom/diff`
 - `GET /svc/audit/audit/cbom/inventory`
 - `GET /svc/audit/audit/chain/verify`

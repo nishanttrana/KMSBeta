@@ -10,6 +10,7 @@ var Replicated = map[string][]string{
 	"audit": {
 		"alert_rules", // dropped by migration 011 (2.14.0-beta); 001 still creates it first
 		"alerts",      // dropped by migration 012 (2.16.0-beta); 001 still creates it first
+		"audit_anchor_settings",
 		"audit_mek_exposure",
 		"audit_mek_state",
 		"webhooks",

@@ -245,16 +245,50 @@ func TestPlatformUsageFindsStreamsAndGovernance(t *testing.T) {
 			_, _ = w.Write([]byte(`{"items":[{"id":"wh1","name":"SOC","connection_id":"c1"},{"id":"wh2","name":"other","connection_id":"c2"}]}`))
 		case "/governance/settings":
 			_, _ = w.Write([]byte(`{"settings":{"slack_connection_id":"c1"}}`))
+		case "/audit/anchor":
+			_, _ = w.Write([]byte(`{"anchor":{"enabled":true,"connection_id":"c1"}}`))
 		}
 	}))
 	defer srv.Close()
 	users, err := platformUsage{auditURL: srv.URL, governanceURL: srv.URL, http: srv.Client()}.Users(context.Background(), "root", "c1")
-	if err != nil || strings.Join(users, "|") != "event stream SOC|governance approval notices" {
+	if err != nil || strings.Join(users, "|") != "event stream SOC|governance approval notices|audit checkpoint anchoring" {
 		t.Fatalf("users %v %v", users, err)
 	}
 	// Other tenants have no governance settings to check.
 	if users, err := (platformUsage{auditURL: srv.URL, governanceURL: srv.URL, http: srv.Client()}).Users(context.Background(), "t1", "c1"); err != nil || len(users) != 1 {
 		t.Fatalf("t1 users %v %v", users, err)
+	}
+}
+
+// A time-stamp authority credential is opened by the audit service alone,
+// and its real test is the one Audit runs when anchoring is turned on.
+func TestTimestampConnectionIsAuditsAlone(t *testing.T) {
+	hs := newPlaybookHarness(t)
+	tsa := hs.conn(t, "tsa", map[string]string{"url": "https://1.1.1.1/tsr", "username": "u", "password": "tsa-secret"})
+	resolve := func(who *pkgauth.Claims) (int, string) {
+		w := hs.do(t, http.MethodPost, "/compliance/connections/"+tsa+"/resolve?tenant_id=t1", who, map[string]any{})
+		return w.Code, w.Body.String()
+	}
+	if code, body := resolve(svcClaims("kms-audit")); code != http.StatusOK || !strings.Contains(body, `"password":"tsa-secret"`) {
+		t.Fatalf("audit resolve: %d %s", code, body)
+	}
+	for _, who := range []string{"kms-governance", "kms-discovery"} {
+		if code, body := resolve(svcClaims(who)); code != http.StatusConflict || strings.Contains(body, "tsa-secret") {
+			t.Fatalf("%s opened a tsa connection: %d %s", who, code, body)
+		}
+		wantRefused(t, lastEvent(t, hs.rec, "connection_resolved"), reasonConnectionUse)
+	}
+	if w := hs.do(t, http.MethodPost, "/compliance/playbooks/connections/"+tsa+"/test", pbAdmin, map[string]any{}); w.Code != http.StatusConflict {
+		t.Fatalf("tsa connection test: %d %s", w.Code, w.Body.String())
+	}
+	wantRefused(t, lastEvent(t, hs.rec, "connection_tested"), "connection_test_elsewhere")
+	for _, bad := range []map[string]string{
+		{"url": "https://1.1.1.1/tsr", "username": "u"},
+		{"url": "https://1.1.1.1/tsr", "trust_pem": "not a certificate"},
+	} {
+		if w := hs.do(t, http.MethodPost, "/compliance/playbooks/connections", pbAdmin, map[string]any{"name": "tsa", "type": "tsa", "fields": bad}); w.Code != http.StatusBadRequest {
+			t.Fatalf("tsa fields %v: %d %s", bad, w.Code, w.Body.String())
+		}
 	}
 }
 

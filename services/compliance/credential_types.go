@@ -29,6 +29,9 @@ const (
 	// that protects the KMS's own keys, its root of trust, is the tenant's
 	// profile in the HSM tab and is not a credential here.
 	categoryHSM = "hsm"
+	// categoryTimestamp: an RFC 3161 time-stamp authority the audit
+	// service anchors signed checkpoints with (13.47.0-beta).
+	categoryTimestamp = "timestamp"
 )
 
 // optionsField carries provider options the form has no field for (a
@@ -82,6 +85,12 @@ var credentialTypes = []ConnectionSpec{
 	// vendor's PKCS#11 library, uploaded over SSH/SFTP). topology is what
 	// the operator says the slot is: a single HSM or the vendor's HA group,
 	// which the library presents as one slot.
+	// An RFC 3161 time-stamp authority: the request carries only a hash and
+	// the token is signed, but the platform still reaches it over https.
+	// trust_pem names the roots its signer must chain to (default: the
+	// system roots).
+	{Type: "tsa", Label: "RFC 3161 time-stamp authority", Category: categoryTimestamp, Use: "Audit trail anchoring",
+		Fields: []string{"url"}, URLField: "url", Optional: []string{"username", "password", "trust_pem"}, Secrets: []string{"password"}},
 	{Type: "pkcs11_hsm", Label: "PKCS#11 HSM (keys created in the HSM)", Category: categoryHSM, Use: "Keys, certificate authorities",
 		Fields: []string{"library_path", "pin"}, Optional: []string{"slot_id", "token_label", "topology", "vendor"},
 		Secrets: []string{"pin"}, Choices: map[string][]string{"topology": {"single", "ha_group"}}},
@@ -149,6 +158,13 @@ func validateCredential(c Connection, allow ssrfguard.Allow) error {
 		}
 		if ca := f("ca_pem"); ca != "" && !strings.Contains(ca, "BEGIN CERTIFICATE") {
 			return errors.New("ca_pem must be a CA certificate in PEM")
+		}
+	case "tsa":
+		if (f("username") == "") != (f("password") == "") {
+			return errors.New("username and password are set together")
+		}
+		if t := f("trust_pem"); t != "" && !strings.Contains(t, "BEGIN CERTIFICATE") {
+			return errors.New("trust_pem must be the authority's root certificate(s) in PEM")
 		}
 	case "aws_xks":
 		if !reXKSAccessKeyID.MatchString(f("access_key_id")) {

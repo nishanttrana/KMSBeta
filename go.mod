@@ -17,6 +17,8 @@ require (
 	github.com/beevik/etree v1.8.1
 	github.com/bits-and-blooms/bloom/v3 v3.7.1
 	github.com/cloudflare/circl v1.6.5
+	github.com/digitorus/pkcs7 v0.0.0-20260914070511-d678ea5ea03f
+	github.com/digitorus/timestamp v0.0.0-20260914073129-b4b58b92aa51
 	github.com/fxamacker/cbor/v2 v2.9.6
 	github.com/go-ldap/ldap/v3 v3.4.15
 	github.com/golang-jwt/jwt/v5 v5.3.1

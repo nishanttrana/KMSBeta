@@ -59,7 +59,9 @@ func connectionCaller(c *route.Call) (string, bool) {
 func usable(use, typ string) bool {
 	switch use {
 	case "stream":
-		return connectionByType[typ].Stream
+		// The audit service: its event streams, and the time-stamp
+		// authority it anchors checkpoints with (13.47.0-beta).
+		return connectionByType[typ].Stream || typ == "tsa"
 	case "approval_notice":
 		return typ == "slack" || typ == "teams" || typ == "smtp"
 	case "scan_source":
@@ -272,6 +274,17 @@ func (p platformUsage) Users(ctx context.Context, tenantID, connID string) ([]st
 	}
 	if gov.Settings.SMTPConnectionID == connID {
 		users = append(users, "governance mail")
+	}
+	var anchor struct {
+		Anchor struct {
+			ConnectionID string `json:"connection_id"`
+		} `json:"anchor"`
+	}
+	if _, err := callJSON(ctx, p.http, http.MethodGet, p.auditURL+"/audit/anchor", tenantID, "", nil, &anchor); err != nil {
+		return nil, fmt.Errorf("audit anchoring: %w", err)
+	}
+	if anchor.Anchor.ConnectionID == connID {
+		users = append(users, "audit checkpoint anchoring")
 	}
 	return users, nil
 }
