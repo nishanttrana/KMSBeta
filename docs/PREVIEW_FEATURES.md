@@ -18,7 +18,6 @@ reflects it:
 | `keycore.federation` | Key federation / multi-KMS failover | Providers, mappings and failovers are stored; no key is replicated and no failover happens. |
 | `keycore.binding_policy` | Key binding policies | Stored only; key operations do not evaluate them. |
 | `keycore.sharing_grant` | Fine-grained key sharing grants | Stored only; use key access grants for enforced sharing. |
-| `keycore.metadata_profile` | Key metadata profiles | Stored only; key creation does not apply or validate them. |
 | `keycore.edge` | Edge & IoT agents, leases and receipts | Stored only; there is no edge runtime. |
 | `keycore.advanced_encryption_modes` | Homomorphic / functional encryption modes | Registered as controls; no homomorphic or functional encryption is performed. Searchable HMAC tokens are available. |
 
@@ -46,6 +45,15 @@ reflects it:
   - **Now:** removed in 3.1.0-beta (routes, table via keycore migration 027).
     The audit service's signed checkpoints are the real tamper evidence
     ([SECURITY/AUDIT_INTEGRITY.md](SECURITY/AUDIT_INTEGRITY.md)).
+
+- **Key metadata profiles** (13.50.0-beta):
+  - **What they did:** stored a record per profile; key creation never
+    read it.
+  - **Now:** real profiles enforced on create, import and update
+    ([KEYS.md 5.5](KEYS.md#55-metadata-profiles-13500-beta)). The preview
+    route is removed, a new record of its category is refused (`410
+    feature_retired`, `pkg/features.Retired`), and old records list as
+    `retired`.
 
 ## Leaving preview
 

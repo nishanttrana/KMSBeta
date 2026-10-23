@@ -7,6 +7,25 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-23 — Metadata profiles are enforced where keys are made and changed
+**Decision:** a tenant's metadata profiles are checked in keycore when a
+key is created, imported (including into an HSM) or updated: every
+applicable profile, every problem reported, nothing stored on a
+violation. Defaults fill missing labels. Existing keys are reported, not
+changed. The stored-only preview is retired.
+**Why:** the owner's list (2026-10-22): "Four more features only store
+settings." A profile nobody enforces documents a rule nothing keeps.
+**Rejected:** checking in the policy service (it decides operations, not
+key fields, and an unavailable policy service would block every key on a
+labelling rule); rewriting existing keys to fit (changes keys nobody
+asked to change); warning instead of refusing (the profile is the
+tenant's rule; a disabled profile is the way to stop enforcing it).
+**Enforced:** `TestMetadataProfilesAreEnforced`,
+`TestMetadataProfileValidation`, `TestMetadataProfilePreviewRetired`,
+smoke `metadata-profiles.spec.ts`.
+
+---
+
 ## 2026-10-23 — SSH certificates come from per-tenant SSH CAs with a principal policy
 **Decision:** the certs service runs OpenSSH CAs. A CA's key is sealed
 like an X.509 CA's or kept in the tenant's HSM. Each CA lists the

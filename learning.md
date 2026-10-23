@@ -5,6 +5,18 @@ Newest entries on top.
 
 ## 2026-10-23
 
+### Retiring a preview is more than deleting its catalogue entry (13.50.0-beta)
+- The generic `/enterprise/controls` route stores any category name. With
+  `metadata_profile` simply removed from the preview catalogue, a record
+  of that category would have been stored again and shown as available.
+  A retired category now has its own status: writes are refused with
+  `feature_retired`, old records read as `retired`.
+- keycore's legacy route wrapper writes straight to the response, so the
+  kernel can't record a reason for a refusal it makes. A refusal that must
+  be audited with a reason goes in a kernel-level wrapper in front of it.
+- In keycore tests the full handler drops kernel events (no audit
+  client); assert them on the router built with a routetest recorder.
+
 ### Test a protocol format with the protocol's own tool (13.49.0-beta)
 - The KRL is a binary format written by hand from `PROTOCOL.krl`. A Go
   round trip would only prove the writer agrees with itself; the test

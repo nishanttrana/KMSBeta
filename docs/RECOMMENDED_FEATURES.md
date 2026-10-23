@@ -38,7 +38,7 @@ The remaining feature areas were started as backend enterprise-control APIs. Sev
 | Enhanced Key Binding | **Preview**: records only; not evaluated on key operations | `/enterprise/binding/policies` |
 | Edge & IoT Key Management | **Preview**: records only; there is no edge runtime | `/enterprise/edge/agents`, `/leases`, `/receipts` |
 | Fine-Grained Key Sharing | **Preview**: records only; use key access grants for enforced sharing | `/enterprise/sharing/grants` |
-| Key Metadata Management | **Preview**: records only; not applied at key creation | `/enterprise/metadata/profiles` |
+| Key Metadata Management | **Available** (13.50.0-beta): metadata profiles enforced on create, import and update | `/metadata-profiles`, [KEYS.md 5.5](KEYS.md#55-metadata-profiles-13500-beta) |
 | Advanced Threat Protection | Implemented: signal intake, scheduled key-usage threat detection and canary keys raised as Posture findings and Reporting alerts, compromise workflow, DSPM findings | `/enterprise/threat/signals`, `/canary/keys`, `audit.keycore.threat_signal_raised`, compromise workflow, DSPM findings |
 
 ---

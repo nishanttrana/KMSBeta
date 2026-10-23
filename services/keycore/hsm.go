@@ -280,6 +280,9 @@ func (s *Service) createHSMKey(ctx context.Context, req CreateKeyRequest) (Key, 
 	if err := s.enforceFIPSKeyAlgorithm(ctx, req.TenantID, req.Algorithm, "key.create"); err != nil {
 		return Key{}, err
 	}
+	if err := s.applyMetadataProfiles(ctx, &req, "key.create"); err != nil {
+		return Key{}, err
+	}
 	if req.KeyType == "" {
 		req.KeyType = inferKeyTypeFromAlgorithm(req.Algorithm)
 	}

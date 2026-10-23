@@ -39,6 +39,7 @@ import { ExportKeyDialog } from "../../../modules/keys/ExportKeyDialog";
 import { KeyDescription, MAX_KEY_DESCRIPTION } from "../../../modules/keys/KeyDescription";
 import { NO_ROTATION, RotationScheduleField, mayScheduleRotation, rotationDays, scheduleRotation } from "../../../modules/keys/RotationSchedule";
 import { CanaryKeysPanel } from "./CanaryKeysPanel";
+import { MetadataProfilesPanel } from "./MetadataProfilesPanel";
 
 function normalizeKeyState(state: string): string {
   const raw = String(state || "").toLowerCase().trim();
@@ -1740,6 +1741,7 @@ export const KeysTab=({session,keyCatalog,keyCatalogError,setKeyCatalog,tagCatal
           <Btn onClick={()=>void refreshKeyInventory()} style={{height:40,padding:"0 16px",borderRadius:4,fontSize:12,fontWeight:700,minWidth:108,color:C.text,border:`1px solid ${C.borderHi}`}} disabled={refreshingKeys}>
             <span style={{display:"inline-flex",alignItems:"center",gap:7}}><RefreshCcw size={13} strokeWidth={2.1}/>{refreshingKeys?"Refreshing...":"Refresh"}</span>
           </Btn>
+          <Btn onClick={()=>setModal("metadata-profiles")} style={{height:40,padding:"0 16px",borderRadius:4,fontSize:12,fontWeight:700,color:C.text,border:`1px solid ${C.borderHi}`}} title="Which metadata keys must carry">Metadata profiles</Btn>
           <KeyCreateMenu onCreate={()=>{setInHSM(hsmKeysEnabled&&hsmSupportsAlgorithm(algo));setModal("create");}} onForm={()=>setModal("form-key")} onImport={()=>{resetImportForm();setModal("import");}} onPQC={()=>setModal("generate-pqc")} onCanary={()=>setModal("canary")}/>
         </div>
       </div>
@@ -2644,6 +2646,9 @@ export const KeysTab=({session,keyCatalog,keyCatalogError,setKeyCatalog,tagCatal
     </Modal>
 
     {/*  GENERATE PQC KEY MODAL  */}
+    <Modal open={modal==="metadata-profiles"} onClose={()=>setModal(null)} title="Metadata Profiles" width={900}>
+      <MetadataProfilesPanel session={session}/>
+    </Modal>
     <Modal open={modal==="canary"} onClose={()=>setModal(null)} title="Canary Keys" width={820}>
       <CanaryKeysPanel session={session}/>
     </Modal>

@@ -15,6 +15,9 @@ const HeaderStatus = "X-Vecta-Feature-Status"
 const (
 	StatusAvailable = "available"
 	StatusPreview   = "preview"
+	// StatusRetired: a preview replaced by a real feature. Its old records
+	// read as retired and new ones are refused (Retired says where it went).
+	StatusRetired = "retired"
 )
 
 type Feature struct {
@@ -31,7 +34,6 @@ var Preview = []Feature{
 	{"keycore.federation", "keycore", "Key federation / multi-KMS failover", "Providers, mappings and failovers are stored; no key is replicated and no failover happens."},
 	{"keycore.binding_policy", "keycore", "Key binding policies", "Stored only; key operations do not evaluate them."},
 	{"keycore.sharing_grant", "keycore", "Fine-grained key sharing grants", "Stored only; use key access grants for enforced sharing."},
-	{"keycore.metadata_profile", "keycore", "Key metadata profiles", "Stored only; key creation does not apply or validate them."},
 	{"keycore.edge", "keycore", "Edge & IoT agents, leases and receipts", "Stored only; there is no edge runtime."},
 	{"keycore.advanced_encryption_modes", "keycore", "Homomorphic / functional encryption modes", "Registered as controls; no homomorphic or functional encryption is performed. Searchable HMAC tokens are available."},
 }
@@ -43,16 +45,24 @@ var controlCategories = map[string]string{
 	"federation_failover": "keycore.federation",
 	"binding_policy":      "keycore.binding_policy",
 	"sharing_grant":       "keycore.sharing_grant",
-	"metadata_profile":    "keycore.metadata_profile",
 	"edge_agent":          "keycore.edge",
 	"edge_lease":          "keycore.edge",
 	"edge_receipt":        "keycore.edge",
 	"advanced_encryption": "keycore.advanced_encryption_modes",
 }
 
+// Retired maps keycore enterprise control categories whose preview was
+// replaced by a real feature to where that feature is.
+var Retired = map[string]string{
+	"metadata_profile": "key metadata profiles: /metadata-profiles in keycore, Keys → Metadata Profiles (13.50.0-beta)",
+}
+
 // ControlCategoryStatus returns the status of a keycore enterprise control
 // category and, for a preview, its feature ID.
 func ControlCategoryStatus(category string) (status, featureID string) {
+	if _, ok := Retired[category]; ok {
+		return StatusRetired, ""
+	}
 	if id, ok := controlCategories[category]; ok {
 		return StatusPreview, id
 	}

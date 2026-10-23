@@ -185,6 +185,13 @@ type Store interface {
 	DeactivateCanaryKey(ctx context.Context, tenantID, id string) error
 	RecordCanaryTrip(ctx context.Context, event CanaryTripEvent) error
 	ListCanaryTrips(ctx context.Context, tenantID, canaryID string, limit int) ([]CanaryTripEvent, error)
+
+	// Key metadata profiles (metadata_profiles.go, 13.50.0-beta).
+	ListMetadataProfiles(ctx context.Context, tenantID string) ([]MetadataProfile, error)
+	GetMetadataProfile(ctx context.Context, tenantID, id string) (MetadataProfile, error)
+	CreateMetadataProfile(ctx context.Context, p MetadataProfile) error
+	UpdateMetadataProfile(ctx context.Context, p MetadataProfile) error
+	DeleteMetadataProfile(ctx context.Context, tenantID, id string) error
 }
 
 type SQLStore struct {

@@ -1124,7 +1124,6 @@ These endpoints provide the Tier 1 enterprise audit surface for rotation analyti
 | POST | `/svc/keycore/enterprise/edge/leases` | Register offline key lease state. |
 | POST | `/svc/keycore/enterprise/edge/receipts` | Register edge operation receipts. |
 | POST | `/svc/keycore/enterprise/sharing/grants` | Register temporary/delegated key-sharing grants. |
-| POST | `/svc/keycore/enterprise/metadata/profiles` | Register classification/tagging/enrichment profiles. |
 | POST | `/svc/keycore/enterprise/threat/signals` | Register advanced threat signals such as side-channel/DPA alerts. |
 
 Example compromise event:
@@ -1280,6 +1279,23 @@ compromise) must be a move the lifecycle state table allows
 (`services/keycore/lifecycle_state.go`, docs/AUTOMATION_ALKM_PQC.md). A
 compromised key only moves to destroyed. Anything else returns
 `409 status_transition_refused` and emits `audit.key.status_transition_refused`.
+
+### Metadata profiles (13.50.0-beta)
+
+[KEYS.md section 5.5](KEYS.md#55-metadata-profiles-13500-beta). Kernel
+events `audit.key.<action>`.
+
+| Route | Permission | Notes |
+|---|---|---|
+| `GET /svc/keycore/metadata-profiles` | `key.metadata.read` | `items[]`: `id`, `name`, `purposes`, `status`, `require_owner`, `require_description`, `labels[]` (`key`, `required`, `allowed`, `pattern`, `default`), `required_tags` (`metadata_profiles_listed`) |
+| `POST /svc/keycore/metadata-profiles` | `key.metadata.write` | Body exactly `name`, `purposes`, `status`, `require_owner`, `require_description`, `labels`, `required_tags`. `201 {"profile"}`. Refusals `invalid_metadata_profile` (400), `name_taken` (409) (`metadata_profile_created`) |
+| `PUT /svc/keycore/metadata-profiles/{id}` | `key.metadata.write` | The same body, replacing the profile (`metadata_profile_updated`) |
+| `DELETE /svc/keycore/metadata-profiles/{id}` | `key.metadata.write` | (`metadata_profile_deleted`) |
+| `GET /svc/keycore/metadata-profiles/{id}/violations` | `key.metadata.read` | `items[]` (`key_id`, `name`, `purpose`, `problems`) and `checked` (`metadata_profile_violations_listed`) |
+
+`POST /keys`, `/keys/import`, `/keys/form` and `PUT /keys/{id}` answer
+`400 {"error": {"code": "metadata_profile_violation", "profiles", "problems"}}`
+when a key doesn't meet the tenant's profiles.
 
 ---
 
@@ -5207,7 +5223,6 @@ from the code; do not edit by hand.
 - `POST /svc/keycore/enterprise/federation/mappings`
 - `POST /svc/keycore/enterprise/federation/providers`
 - `POST /svc/keycore/enterprise/kdf/derive`
-- `POST /svc/keycore/enterprise/metadata/profiles`
 - `POST /svc/keycore/enterprise/orchestration/runs`
 - `POST /svc/keycore/enterprise/orchestration/workflows`
 - `POST /svc/keycore/enterprise/sharing/grants`
@@ -5288,6 +5303,11 @@ from the code; do not edit by hand.
 - `POST /svc/keycore/keys/{id}/versions/{ver}/activate`
 - `POST /svc/keycore/keys/{id}/versions/{ver}/deactivate`
 - `POST /svc/keycore/keys/{id}/wrap`
+- `GET /svc/keycore/metadata-profiles`
+- `POST /svc/keycore/metadata-profiles`
+- `DELETE /svc/keycore/metadata-profiles/{id}`
+- `PUT /svc/keycore/metadata-profiles/{id}`
+- `GET /svc/keycore/metadata-profiles/{id}/violations`
 - `GET /svc/keycore/rotation/analytics`
 - `GET /svc/keycore/rotation/analytics/overdue`
 - `GET /svc/keycore/rotation/cryptoperiods`

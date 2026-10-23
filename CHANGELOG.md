@@ -4,6 +4,24 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.50.0-beta] — 2026-10-23
+
+### Added
+- **Key metadata profiles are enforced.** A profile says what a tenant's
+  keys must carry (Keys → Metadata profiles): an owner, a description,
+  tags, and labels that are required, limited to a list, matching a
+  pattern or filled from a default. It applies to keys of the purposes it
+  names, or to every key. Creating, importing or updating a key that
+  doesn't meet it is refused with every problem listed, and audited.
+  Existing keys are not changed; "Check keys" lists those that don't
+  comply. Routes `/metadata-profiles`; permissions `key.metadata.read`,
+  `key.metadata.write`.
+
+### Removed
+- The metadata profile preview (`POST /enterprise/metadata/profiles`),
+  which only stored records. A new record of that category is refused
+  (`410 feature_retired`); old records list as `retired`.
+
 ## [13.49.0-beta] — 2026-10-23
 
 ### Added

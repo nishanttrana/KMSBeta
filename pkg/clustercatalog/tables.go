@@ -186,6 +186,7 @@ var Replicated = map[string][]string{
 		"key_interface_subject_policies",
 		"key_inventory",
 		"key_metadata_ext",
+		"key_metadata_profiles",
 		"key_rotation_metrics",
 		"key_scheduling_jobs",
 		"key_sharing_tokens",

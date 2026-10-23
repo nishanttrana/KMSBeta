@@ -386,6 +386,9 @@ kmip,kmip,DELETE,/kmip/interop/targets/{param}?{param},/kmip/interop/targets/{pa
 kmip,kmip,POST,/kmip/interop/targets/{param}/validate?{param},/kmip/interop/targets/{param}/validate,True,serviceRequest,web/dashboard/src/lib/kmip.ts,263,kmip|POST|/kmip/interop/targets/{param}/validate
 $dynamic-service,$dynamic-service,GET,/mek/exposure?open=false,/mek/exposure,True,serviceRequestRaw,web/dashboard/src/lib/mekExposure.ts,86,$dynamic-service|GET|/mek/exposure
 $dynamic-service,$dynamic-service,POST,/mek/exposure/{param}/{param}/acknowledge,/mek/exposure/{param}/{param}/acknowledge,True,serviceRequest,web/dashboard/src/lib/mekExposure.ts,102,$dynamic-service|POST|/mek/exposure/{param}/{param}/acknowledge
+keycore,keycore,GET,/metadata-profiles?{param},/metadata-profiles,True,serviceRequest,web/dashboard/src/lib/metadataProfiles.ts,27,keycore|GET|/metadata-profiles
+keycore,keycore,DELETE,/metadata-profiles/{param}?{param},/metadata-profiles/{param},True,serviceRequest,web/dashboard/src/lib/metadataProfiles.ts,39,keycore|DELETE|/metadata-profiles/{param}
+keycore,keycore,GET,/metadata-profiles/{param}/violations?{param},/metadata-profiles/{param}/violations,True,serviceRequest,web/dashboard/src/lib/metadataProfiles.ts,43,keycore|GET|/metadata-profiles/{param}/violations
 audit,audit,GET,/ops-metrics/overview?window={param},/ops-metrics/overview,True,serviceRequest,web/dashboard/src/lib/opsMetrics.ts,55,audit|GET|/ops-metrics/overview
 audit,audit,GET,/ops-metrics/latency?window={param},/ops-metrics/latency,True,serviceRequest,web/dashboard/src/lib/opsMetrics.ts,60,audit|GET|/ops-metrics/latency
 audit,audit,GET,/ops-metrics/by-service?window={param},/ops-metrics/by-service,True,serviceRequest,web/dashboard/src/lib/opsMetrics.ts,65,audit|GET|/ops-metrics/by-service

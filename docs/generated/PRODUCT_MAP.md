@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-23T07:20:11Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-23T16:07:22Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `25`
 - Tab/component mappings: `32`
 - Sub-pane groups: `14`
-- Backend HTTP routes discovered: `921` across `27` services
-- Backend routes on the `pkg/route` kernel: `556` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `523`
-- Frontend call sites with exact backend route match: `493`
+- Backend HTTP routes discovered: `925` across `27` services
+- Backend routes on the `pkg/route` kernel: `560` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `526`
+- Frontend call sites with exact backend route match: `496`
 - Frontend call sites needing review or dynamic/runtime confirmation: `30`
-- Clickable controls with static `onClick` handlers: `766`
-- Backend request flows with handler/service/package summaries: `921`
+- Clickable controls with static `onClick` handlers: `775`
+- Backend request flows with handler/service/package summaries: `925`
 
 ## How To Use This For Launch
 
@@ -148,7 +148,7 @@ flowchart LR
   svc_governance["governance (40 routes)"]
   svc_hyok["hyok (25 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (178 routes)"]
+  svc_keycore["keycore (182 routes)"]
   svc_posture["posture (13 routes)"]
   svc_pqc["pqc (14 routes)"]
   svc_reporting["reporting (34 routes)"]
@@ -217,7 +217,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | hsm-connector | 14 | 0 |
 | hyok | 25 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 178 | 75 |
+| keycore | 182 | 78 |
 | kmip | 12 | 11 |
 | policy | 12 | 0 |
 | posture | 13 | 10 |
@@ -396,7 +396,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/cbom | h.handleCBOM |  | services/compliance/handler.go | 83 |
 | compliance | GET | /compliance/cbom/summary | h.handleCBOMSummary |  | services/compliance/handler.go | 84 |
 
-Showing `120` of `422`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `423`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

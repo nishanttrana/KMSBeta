@@ -471,6 +471,45 @@ curl -X POST "https://localhost/svc/keycore/keys?tenant_id=acme-corp" \
 
 ---
 
+### 5.5 Metadata profiles (13.50.0-beta)
+
+A metadata profile says what a tenant's keys must carry. Keys → Metadata
+profiles, or `/svc/keycore/metadata-profiles` (permissions
+`key.metadata.read`, `key.metadata.write`); code
+`services/keycore/metadata_profiles.go`.
+
+- **Applies to** keys of the listed `purposes` (`encrypt`, `sign`, …), or
+  to every key when none are listed, while its `status` is `active`.
+- **Rules:** `require_owner`, `require_description`, `required_tags`, and
+  label rules: `key`, `required`, `allowed` (a list of values), `pattern`
+  (a regular expression the whole value must match, RE2 syntax) and
+  `default` (filled in when the label is missing).
+- **When:** creating, importing (including into an HSM) and updating a
+  key. A key that doesn't meet every applicable profile is refused with
+  `400 metadata_profile_violation`, listing each problem; nothing is
+  stored. The refusal is audited as `audit.key.create_refused` or
+  `audit.key.update_refused` with `reason: metadata_profile_violation`,
+  the profiles and the problems.
+- **Existing keys** are not changed. `GET
+  /metadata-profiles/{id}/violations` (Check keys in the console) lists
+  the keys that don't meet one profile now.
+
+```sh
+curl -s -X POST "$KMS/svc/keycore/metadata-profiles?tenant_id=$TENANT" -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' -d '{
+    "name": "encryption keys", "purposes": ["encrypt"], "require_owner": true,
+    "labels": [{"key": "env", "required": true, "allowed": ["prod", "dev"]},
+               {"key": "cost_center", "required": true, "pattern": "CC-[0-9]{4}"},
+               {"key": "data_class", "default": "internal"}],
+    "required_tags": ["pci"]}'
+```
+
+Labels starting `hsm` belong to the platform and can't have rules. Until
+13.50.0-beta, metadata profiles were a preview that only stored records
+(`/enterprise/metadata/profiles`); that route is gone, a new record of
+that category is refused (`410 feature_retired`), and old records list
+with `feature_status: retired`.
+
 ## 6. Importing Existing Keys
 
 ### 6.1 Why Import Keys?

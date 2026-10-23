@@ -209,6 +209,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /keys/{id}/usage", h.visibleKeyRoute(h.handleGetUsage))
 	mux.HandleFunc("GET /keys/{id}/approval", h.visibleKeyRoute(h.handleGetApproval))
 	h.accessRouter(kernelEmitter{h}).MountOn(mux)
+	h.metadataProfileRouter(kernelEmitter{h}).MountOn(mux)
 	mux.HandleFunc("GET /keys/{id}/iv-log", h.visibleKeyRoute(h.handleGetIVLog))
 	mux.HandleFunc("GET /keys/{id}/iv-log/{ref}", h.visibleKeyRoute(h.handleGetIVByRef))
 	mux.HandleFunc("GET /tags", h.handleListTags)
@@ -308,6 +309,9 @@ func (h *Handler) handleCreateKey(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusBadRequest, "description_invalid", err.Error(), reqID, req.TenantID)
 			return
 		}
+		if writeMetadataViolation(w, err, reqID, req.TenantID) {
+			return
+		}
 		if errors.Is(err, errPublicKeyAlone) {
 			writeErr(w, http.StatusBadRequest, "public_key_needs_private_key", err.Error(), reqID, req.TenantID)
 			return
@@ -350,6 +354,9 @@ func (h *Handler) handleImportKey(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusBadRequest, "description_invalid", err.Error(), reqID, req.TenantID)
 			return
 		}
+		if writeMetadataViolation(w, err, reqID, req.TenantID) {
+			return
+		}
 		writeErr(w, http.StatusBadRequest, "import_failed", err.Error(), reqID, req.TenantID)
 		return
 	}
@@ -386,6 +393,9 @@ func (h *Handler) handleFormKey(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, errKeyDescriptionInvalid) {
 			writeErr(w, http.StatusBadRequest, "description_invalid", err.Error(), reqID, req.TenantID)
+			return
+		}
+		if writeMetadataViolation(w, err, reqID, req.TenantID) {
 			return
 		}
 		writeErr(w, http.StatusBadRequest, "form_failed", err.Error(), reqID, req.TenantID)
@@ -632,6 +642,9 @@ func (h *Handler) handleUpdateKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.svc.UpdateKey(r.Context(), tenantID, r.PathValue("id"), req); err != nil {
+		if writeMetadataViolation(w, err, reqID, tenantID) {
+			return
+		}
 		writeErr(w, http.StatusInternalServerError, "update_failed", "failed to update key", reqID, tenantID)
 		return
 	}

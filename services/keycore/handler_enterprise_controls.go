@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
+	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 	"time"
 	"vecta-kms/pkg/features"
+	"vecta-kms/pkg/route"
 
 	"vecta-kms/pkg/crypto"
 )
@@ -49,6 +53,29 @@ func (h *Handler) handleGetEnterpriseControl(w http.ResponseWriter, r *http.Requ
 		features.MarkPreview(w, item.FeatureID)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"control": item, "request_id": reqID})
+}
+
+// refuseRetiredControls refuses a control record of a category whose
+// preview was replaced by a real feature (pkg/features.Retired), audited as
+// refused with reason feature_retired. The body is read and put back.
+func refuseRetiredControls(next func(*route.Call)) func(*route.Call) {
+	return func(c *route.Call) {
+		raw, err := io.ReadAll(io.LimitReader(c.R.Body, 1<<20))
+		if err != nil {
+			c.Error(http.StatusBadRequest, "bad_request", "the body could not be read")
+			return
+		}
+		c.R.Body = io.NopCloser(bytes.NewReader(raw))
+		var in struct {
+			Category string `json:"category"`
+		}
+		_ = json.Unmarshal(raw, &in)
+		if where, ok := features.Retired[normalizeEnterpriseCategory(in.Category)]; ok {
+			c.Refuse(http.StatusGone, "feature_retired", "this preview was replaced by "+where)
+			return
+		}
+		next(c)
+	}
 }
 
 func (h *Handler) handleUpsertEnterpriseControl(w http.ResponseWriter, r *http.Request) {

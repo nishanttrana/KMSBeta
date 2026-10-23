@@ -629,6 +629,9 @@ func (s *Service) createKeyFromMaterial(
 	if req.Description, derr = s.keyDescription(ctx, req.TenantID, "audit.key.create_refused", map[string]any{"name": req.Name, "operation": firstNonEmptyString(policyOperation, "key.create")}, req.Description); derr != nil {
 		return Key{}, derr
 	}
+	if err := s.applyMetadataProfiles(ctx, &req, firstNonEmptyString(policyOperation, "key.create")); err != nil {
+		return Key{}, err
+	}
 	if req.HSM || strings.TrimSpace(req.HSMConnectionID) != "" {
 		return s.importHSMKey(ctx, req, raw, expectedKCV, firstNonEmptyString(policyOperation, "key.create"), auditSubject)
 	}
@@ -2193,7 +2196,11 @@ func (s *Service) UpdateKey(ctx context.Context, tenantID string, keyID string, 
 			labels[k] = v
 		}
 	}
-	req.Labels = labels
+	md := keyMetadata{Purpose: firstNonEmptyString(req.Purpose, current.Purpose), Owner: req.Owner, Description: current.Description, Labels: labels, Tags: req.Tags}
+	if err := s.enforceMetadataProfiles(ctx, tenantID, "audit.key.update_refused", map[string]any{"key_id": keyID, "operation": "key.update"}, &md); err != nil {
+		return err
+	}
+	req.Labels = md.Labels
 	if err := s.store.UpdateKeyMetadata(ctx, tenantID, keyID, req); err != nil {
 		return err
 	}

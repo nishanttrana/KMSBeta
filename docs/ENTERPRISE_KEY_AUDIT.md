@@ -376,9 +376,9 @@ The second implementation pass turns the remaining roadmap items into backend ca
 
 ### Enterprise Control Records
 
-Enterprise control records are the common persistence model for orchestration, federation, edge agents, sharing grants, metadata profiles, binding policies, threat signals, and advanced encryption mode governance.
+Enterprise control records are the common persistence model for orchestration, federation, edge agents, sharing grants, binding policies, threat signals, and advanced encryption mode governance.
 
-> **Preview:** federation, binding policies, sharing grants, metadata profiles, edge agents/leases/receipts and advanced-encryption modes only **store** records. Nothing enforces or executes them. Their records carry `feature_status: "preview"`, and responses carry `X-Vecta-Feature-Status: preview`. See [PREVIEW_FEATURES.md](PREVIEW_FEATURES.md).
+> **Preview:** federation, binding policies, sharing grants, edge agents/leases/receipts and advanced-encryption modes only **store** records. Nothing enforces or executes them. Their records carry `feature_status: "preview"`, and responses carry `X-Vecta-Feature-Status: preview`. See [PREVIEW_FEATURES.md](PREVIEW_FEATURES.md).
 
 ```bash
 curl -X POST "$BASE/enterprise/federation/providers?tenant_id=$TENANT" \
@@ -413,7 +413,7 @@ Supported categories include:
 | `binding_policy` | Hardware attestation/geolocation binding policy records. |
 | `edge_agent`, `edge_lease`, `edge_receipt` | Edge/IoT agent, offline lease, and receipt records. |
 | `sharing_grant` | Temporary/delegated key sharing records. |
-| `metadata_profile` | Classification, tagging, and enrichment profiles. |
+| `metadata_profile` | Retired (13.50.0-beta): metadata profiles are enforced at `/metadata-profiles` ([KEYS.md 5.5](KEYS.md#55-metadata-profiles-13500-beta)). |
 | `threat_signal` | Side-channel, DPA, canary, or other advanced threat signals. |
 
 ### Anomaly Detection and DSPM Feed

@@ -38,7 +38,7 @@ func (h *Handler) keyOpsRouter(audit route.Emitter) *route.Router {
 	r.Handle("POST /analytics/metrics", route.Spec{Action: "analytics_metric_recorded", Permission: "key.analytics.write", Resource: "key"}, legacy(h.handleRecordKeyAnalyticsMetric))
 	r.Handle("GET /enterprise/controls", route.Spec{Action: "enterprise_controls_listed", Permission: "key.enterprise.read", Resource: "key"}, legacy(h.handleListEnterpriseControls))
 	r.Handle("GET /enterprise/controls/{category}/{id}", route.Spec{Action: "enterprise_control_read", Permission: "key.enterprise.read", Resource: "key", TargetParam: "id"}, legacy(h.handleGetEnterpriseControl))
-	r.Handle("POST /enterprise/controls", route.Spec{Action: "enterprise_control_upserted", Permission: "key.enterprise.write", Resource: "key"}, legacy(h.handleUpsertEnterpriseControl))
+	r.Handle("POST /enterprise/controls", route.Spec{Action: "enterprise_control_upserted", Permission: "key.enterprise.write", Resource: "key"}, refuseRetiredControls(legacy(h.handleUpsertEnterpriseControl)))
 	r.Handle("POST /enterprise/anomaly/scan", route.Spec{Action: "enterprise_anomaly_scan", Permission: "key.enterprise.write", Resource: "key"}, legacy(h.handleRunEnterpriseAnomalyScan))
 	r.Handle("POST /enterprise/dspm/findings", route.Spec{Action: "dspm_finding_upserted", Permission: "key.enterprise.write", Resource: "key"}, legacy(h.handleUpsertKeyDSPMFinding))
 	r.Handle("POST /enterprise/kdf/derive", route.Spec{Action: "enterprise_kdf_derive", Permission: "key.enterprise.write", Resource: "key"}, legacy(h.handleEnterpriseKDFDerive))
@@ -54,7 +54,6 @@ func (h *Handler) keyOpsRouter(audit route.Emitter) *route.Router {
 	r.Handle("POST /enterprise/edge/leases", route.Spec{Action: "enterprise_edge_lease_upserted", Permission: "key.enterprise.write", Resource: "key"}, legacy(h.handleUpsertEnterpriseControlCategory(controlCategoryEdgeLease)))
 	r.Handle("POST /enterprise/edge/receipts", route.Spec{Action: "enterprise_edge_receipt_upserted", Permission: "key.enterprise.write", Resource: "key"}, legacy(h.handleUpsertEnterpriseControlCategory(controlCategoryEdgeReceipt)))
 	r.Handle("POST /enterprise/sharing/grants", route.Spec{Action: "enterprise_sharing_grant_upserted", Permission: "key.enterprise.write", Resource: "key"}, legacy(h.handleUpsertEnterpriseControlCategory(controlCategorySharingGrant)))
-	r.Handle("POST /enterprise/metadata/profiles", route.Spec{Action: "enterprise_metadata_profile_upserted", Permission: "key.enterprise.write", Resource: "key"}, legacy(h.handleUpsertEnterpriseControlCategory(controlCategoryMetadataProfile)))
 	r.Handle("POST /enterprise/threat/signals", route.Spec{Action: "enterprise_threat_signal_upserted", Permission: "key.enterprise.write", Resource: "key"}, legacy(h.handleUpsertEnterpriseControlCategory(controlCategoryThreatSignal)))
 	// An orchestration run rotates the keys it names, so it needs key.rotate.
 	r.Handle("POST /enterprise/orchestration/runs", route.Spec{Action: "orchestration_run_requested", Permission: "key.rotate", Resource: "key", Severity: "warning"}, legacy(h.handleTriggerOrchestrationRun))
