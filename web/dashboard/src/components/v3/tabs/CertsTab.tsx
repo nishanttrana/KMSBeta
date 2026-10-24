@@ -6,6 +6,7 @@ import { SSHCertificatesPanel } from "./SSHCertificatesPanel";
 import { ACMESTARCard } from "./certs/ACMESTARCard";
 import { CertOverview } from "./certs/CertOverview";
 import { CertRenewals } from "./certs/CertRenewals";
+import { useLivePoll } from "./certs/useLivePoll";
 import {
   acmeChallengeComplete,
   acmeChallengeInfo,
@@ -308,15 +309,9 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate,searc
   // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   },[session?.tenantId]);
 
-  useEffect(()=>{
-    if(!onSubViewChange){
-      return;
-    }
-    if(String(subView||"").trim()){
-      return;
-    }
-    onSubViewChange("cert-overview");
-  },[subView,onSubViewChange]);
+  useEffect(()=>{ if(onSubViewChange&&!String(subView||"").trim()) onSubViewChange("cert-overview"); },[subView,onSubViewChange]);
+  // The overview re-reads CAs, certificates and counts every 15 s while open (13.63.0-beta).
+  const live=useLivePoll(Boolean(session)&&showOverviewPane,async()=>{const [a,b,c,d]=await Promise.all([listCAs(session),loadAllCertificates(),getCertSummary(session),getCertRenewalSummary(session)]);setCAs(Array.isArray(a)?a:[]);setCerts(Array.isArray(b)?b:[]);setCertSummary(c);setRenewalSummary(d||null);});
 
   const protocolOrder=useMemo(()=>["acme","est","scep","cmpv2","runtime-mtls"],[]);
 
@@ -1181,7 +1176,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange,onNavigate,searc
       onRefresh={()=>{void refreshCAs(); void refreshCerts();}} openModal={setModal} busy={String(rowActionBusy||"")}
       actions={{download:actDownloadCert,renew:(c)=>void actRenewCert(c),revoke:(c)=>void actRevokeCert(c),ocsp:(c)=>void actOCSP(c),remove:(c)=>void actDeleteCert(c)}}
       onCRL={(ca)=>void actCRL(ca)} onDeleteCA={(ca)=>void actDeleteCA(ca)} search={certSearch} onSearch={setCertSearch}
-      hsmConfigured={hsmConfigured} onOpenRenewals={()=>onSubViewChange?.("cert-renewals")}/>}
+      hsmConfigured={hsmConfigured} onOpenRenewals={()=>onSubViewChange?.("cert-renewals")} live={live}/>}
     {activeCertPane==="cert-renewals"&&<CertRenewals summary={renewalSummary} refreshing={renewalRefreshing} onRefresh={()=>void refreshRenewalIntel()}
       onOpenCert={(id)=>{setCertSearch(id); onSubViewChange?.("cert-overview");}}/>}
 

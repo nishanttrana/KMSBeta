@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { AlertTriangle, Clock, FileText, Fingerprint, Globe, RefreshCcw, ShieldCheck, ShieldX } from "lucide-react";
 import { Btn, Stat } from "../../legacyPrimitives";
-import { CertCATree } from "./CertCATree";
+import { CertCAPanel } from "./CertCAPanel";
 import { CertMenu } from "./CertMenu";
 import { type CertActions, CertTable } from "./CertTable";
 import { FilterTile } from "./FilterTile";
 import type { CertFilter, ExpiryPolicy } from "./certFilters";
+import type { LiveState } from "./useLivePoll";
 
 type Props = {
   session: any;
@@ -26,11 +27,12 @@ type Props = {
   onSearch: (q: string) => void;
   hsmConfigured: boolean;
   onOpenRenewals: () => void;
+  live: LiveState;
 };
 
 // Certificates → Certificate Operations (13.61.0-beta): one toolbar, four
-// counts that filter the table, and the CA hierarchy beside the table as a
-// filter. Renewal planning is Certificates → Renewals; ACME STAR is under
+// counts that filter the table, and the CA hierarchy (a live diagram or the
+// classic cards, 13.63.0-beta) above the table as a filter. Renewal planning is Certificates → Renewals; ACME STAR is under
 // Enrollment Protocols.
 export function CertOverview(p: Props) {
   const [filter, setFilter] = useState<CertFilter>("");
@@ -65,13 +67,12 @@ export function CertOverview(p: Props) {
           <Stat l="Missed windows" v={missed === null ? "unavailable" : String(missed)} s="renewals" c={missed ? "red" : "accent"} i={AlertTriangle} />
         </button>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(220px,280px) minmax(0,1fr)", gap: 12, alignItems: "start" }}>
-        <CertCATree cas={p.cas} certs={p.certs} selected={caFilter} onSelect={setCAFilter} onCreate={() => p.openModal("create-ca")}
-          onCRL={p.onCRL} onDelete={p.onDeleteCA} busy={p.busy} loading={p.loading} />
-        <CertTable session={p.session} onToast={p.onToast} certs={p.certs} cas={p.cas} filter={filter} onClearFilter={() => setFilter("")}
-          caFilter={caFilter} onClearCA={() => setCAFilter("")} search={p.search} onSearch={p.onSearch} policy={p.policy}
-          busy={p.busy} actions={p.actions} hsmConfigured={p.hsmConfigured} />
-      </div>
+      <CertCAPanel cas={p.cas} certs={p.certs} policy={p.policy} selected={caFilter} onSelect={setCAFilter}
+        onPick={(ca, f) => { setCAFilter(ca); setFilter(f); }} onCreate={() => p.openModal("create-ca")}
+        onCRL={p.onCRL} onDelete={p.onDeleteCA} busy={p.busy} loading={p.loading} live={p.live} />
+      <CertTable session={p.session} onToast={p.onToast} certs={p.certs} cas={p.cas} filter={filter} onClearFilter={() => setFilter("")}
+        caFilter={caFilter} onClearCA={() => setCAFilter("")} search={p.search} onSearch={p.onSearch} policy={p.policy}
+        busy={p.busy} actions={p.actions} hsmConfigured={p.hsmConfigured} />
     </div>
   );
 }

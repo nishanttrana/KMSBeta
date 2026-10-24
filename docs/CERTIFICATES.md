@@ -666,9 +666,21 @@ tree and the certificate table.
   `CertSummary`, so an `active` certificate past its end counts as expired
   and Expiring uses the alert policy's window and external setting. Expiring
   sorts soonest first. Missed windows opens Renewals.
-- **The CA tree is a filter.** Each CA shows its algorithm, where its key
-  lives and the number of certificates it issued; pressing it lists them.
-  Download CRL and Delete CA are in its ⋮ menu.
+- **The CA hierarchy** (13.63.0-beta) sits above the table, as a Diagram
+  or the Classic cards (the choice is kept per browser).
+  - *Diagram:* tiers down the page (root CAs, then issuing and intermediate
+    CAs, then each CA's certificates). Each CA shows its algorithm and
+    whether its private key is in an HSM or in software; Download CRL and
+    Delete CA are in its ⋮ menu. Each certificate block shows a bar of
+    active, expiring and revoked. Pressing a CA or one of its counts lists
+    exactly those certificates in the table (same rules as the tiles).
+  - *Classic:* nested CA cards with each CA's issued certificates, CRL and
+    Delete.
+  - *Live:* the page re-reads CAs, certificates, counts and the renewal
+    summary every 15 seconds while open and visible
+    (`web/dashboard/src/components/v3/tabs/certs/useLivePoll.ts`). A CA
+    whose numbers changed is outlined briefly; a failed update shows "Live
+    updates paused" with Retry.
 - **The table** lists each certificate once, with its CA and days left.
   Download, Renew, Revoke, OCSP status and Delete are in its ⋮ menu. With an
   HSM configured, Source switches to the certificates in the HSM partition.

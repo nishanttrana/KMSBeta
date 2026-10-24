@@ -5,6 +5,23 @@ Newest entries on top.
 
 ## 2026-10-24
 
+### Drawing a diagram inside the console's checks (13.63.0-beta)
+- **A decorative overlay still has to pass the overlap sweep.**
+  `coveredControls` checks every `svg`, and the connector SVG lay under
+  the CA boxes, so it read as covered. The connectors are now three thin
+  `div`s per edge, which keeps the sweep strict instead of exempting
+  diagrams.
+- **Adjacent spans need a real space.** "2" and "certificates" in two flex
+  spans looked spaced but read "2certificates" to tests and screen readers.
+  A flex `gap` is visual only; put a `{" "}` between words.
+- **Polling is testable without waiting.** `page.clock.install()` before
+  the page loads, then `page.clock.fastForward(16_000)`, drives a 15-second
+  poll in milliseconds; the stub reads a mutable object so each poll can
+  answer differently (a new certificate, then a 503).
+- **A live view's failure is page state.** `useLivePoll` keeps the last good
+  data, shows "Live updates paused" with Retry, and skips polls while the
+  tab is hidden.
+
 ### A group key decides what a group may claim (13.62.0-beta)
 - **The renewal schedule was grouped by day but labelled by CA.** The
   entry took `ca_id` and `ca_name` from whichever certificate created it.

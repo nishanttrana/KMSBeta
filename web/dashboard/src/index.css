@@ -275,6 +275,10 @@ code, pre, kbd { font-family: var(--font-mono); }
 #root table tbody tr:hover { background: color-mix(in oklab, var(--c-accent-dim) 80%, transparent); }
 
 .vk-num { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+/* A live view's heartbeat (Certificates CA hierarchy). */
+.vk-live-dot { animation: vk-live 2s ease-in-out infinite; }
+@keyframes vk-live { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .vk-live-dot { animation: none; } }
 
 .vecta-stat-card { transition: border-color 0.18s ease, box-shadow 0.18s ease; }
 .vecta-stat-card:hover { border-color: var(--c-border-hi); box-shadow: var(--shadow-md); }

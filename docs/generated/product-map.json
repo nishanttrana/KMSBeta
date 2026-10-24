@@ -21477,7 +21477,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "openProtocolModal(meta.name)}> Configure",
-      "line": 1300,
+      "line": 1295,
       "tabs": [
         "certs"
       ],
@@ -21487,7 +21487,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void runProtocolTest(meta.name)} >",
-      "line": 1301,
+      "line": 1296,
       "tabs": [
         "certs"
       ],
@@ -21497,7 +21497,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"acme-wizard\")}> ACME Wizard",
-      "line": 1309,
+      "line": 1304,
       "tabs": [
         "certs"
       ],
@@ -21507,7 +21507,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"acme-star\")}> STAR",
-      "line": 1310,
+      "line": 1305,
       "tabs": [
         "certs"
       ],
@@ -21517,7 +21517,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"est-wizard\")}> EST Enroll",
-      "line": 1311,
+      "line": 1306,
       "tabs": [
         "certs"
       ],
@@ -21527,7 +21527,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"scep-wizard\")}> SCEP Enroll",
-      "line": 1312,
+      "line": 1307,
       "tabs": [
         "certs"
       ],
@@ -21537,7 +21537,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"cmpv2-wizard\")}> CMPv2 Request",
-      "line": 1313,
+      "line": 1308,
       "tabs": [
         "certs"
       ],
@@ -21547,7 +21547,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 1364,
+      "line": 1359,
       "tabs": [
         "certs"
       ],
@@ -21557,7 +21557,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitCreateCA()} disabled= >",
-      "line": 1365,
+      "line": 1360,
       "tabs": [
         "certs"
       ],
@@ -21567,7 +21567,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 1440,
+      "line": 1435,
       "tabs": [
         "certs"
       ],
@@ -21577,7 +21577,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitIssueCert()} disabled= >",
-      "line": 1441,
+      "line": 1436,
       "tabs": [
         "certs"
       ],
@@ -21587,7 +21587,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 1501,
+      "line": 1496,
       "tabs": [
         "certs"
       ],
@@ -21597,7 +21597,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitSignCSR()} disabled= >",
-      "line": 1502,
+      "line": 1497,
       "tabs": [
         "certs"
       ],
@@ -21607,7 +21607,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 1531,
+      "line": 1526,
       "tabs": [
         "certs"
       ],
@@ -21617,7 +21617,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitDownloadCert()} disabled= >",
-      "line": 1532,
+      "line": 1527,
       "tabs": [
         "certs"
       ],
@@ -21627,7 +21627,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 1556,
+      "line": 1551,
       "tabs": [
         "certs"
       ],
@@ -21637,7 +21637,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitUpload()} disabled= >",
-      "line": 1557,
+      "line": 1552,
       "tabs": [
         "certs"
       ],
@@ -21647,7 +21647,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 1576,
+      "line": 1571,
       "tabs": [
         "certs"
       ],
@@ -21657,7 +21657,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void saveAlertPolicy()} disabled= >",
-      "line": 1577,
+      "line": 1572,
       "tabs": [
         "certs"
       ],
@@ -21667,7 +21667,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 1597,
+      "line": 1592,
       "tabs": [
         "certs"
       ],
@@ -21677,7 +21677,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void saveCLMPolicy()} disabled= >",
-      "line": 1598,
+      "line": 1593,
       "tabs": [
         "certs"
       ],
@@ -21687,7 +21687,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setProtocolConfigText(JSON.stringify(protocolDefaultConfigs[String(protocolNa...",
-      "line": 1624,
+      "line": 1619,
       "tabs": [
         "certs"
       ],
@@ -21697,7 +21697,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 1626,
+      "line": 1621,
       "tabs": [
         "certs"
       ],
@@ -21707,7 +21707,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void saveProtocol()} disabled= >",
-      "line": 1627,
+      "line": 1622,
       "tabs": [
         "certs"
       ],
@@ -21717,7 +21717,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 1701,
+      "line": 1696,
       "tabs": [
         "certs"
       ],
@@ -21727,7 +21727,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitCreateSTARSubscription()} disabled= >",
-      "line": 1702,
+      "line": 1697,
       "tabs": [
         "certs"
       ],
@@ -21737,7 +21737,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 1738,
+      "line": 1733,
       "tabs": [
         "certs"
       ],
@@ -21747,7 +21747,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ const email=String((document.getElementById(\"acme-wiz-email\") as any)?.valu...",
-      "line": 1739,
+      "line": 1734,
       "tabs": [
         "certs"
       ],
@@ -21757,7 +21757,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 1797,
+      "line": 1792,
       "tabs": [
         "certs"
       ],
@@ -21767,7 +21767,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ if(!session)return; try{ const attrs=await estCSRAttributes(session); onToa...",
-      "line": 1798,
+      "line": 1793,
       "tabs": [
         "certs"
       ],
@@ -21777,7 +21777,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ const cn=String((document.getElementById(\"est-wiz-cn\") as any)?.value||\"\")....",
-      "line": 1805,
+      "line": 1800,
       "tabs": [
         "certs"
       ],
@@ -21787,7 +21787,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 1858,
+      "line": 1853,
       "tabs": [
         "certs"
       ],
@@ -21797,7 +21797,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ if(!session||!activeCA)return; setSubmitting(true); try{ const msgType=scep...",
-      "line": 1859,
+      "line": 1854,
       "tabs": [
         "certs"
       ],
@@ -21807,7 +21807,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 1921,
+      "line": 1916,
       "tabs": [
         "certs"
       ],
@@ -21817,7 +21817,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ const msgType=cmpMsgType as \"ir\"|\"cr\"|\"kur\"|\"rr\",cn=String((document.getEle...",
-      "line": 1922,
+      "line": 1917,
       "tabs": [
         "certs"
       ],
@@ -25956,26 +25956,90 @@
       "tag": "Btn"
     },
     {
-      "file": "web/dashboard/src/components/v3/tabs/certs/CertCATree.tsx",
+      "file": "web/dashboard/src/components/v3/tabs/certs/CertCAClassic.tsx",
       "handler": "",
-      "label": "setClosed((p) => ( ))} style={ }> {open ? : }",
-      "line": 48,
+      "label": "setClosed((p) => ( ))} style={ }> {open ? : } {`$ : $ `}",
+      "line": 57,
       "tabs": [],
       "tag": "button"
     },
     {
-      "file": "web/dashboard/src/components/v3/tabs/certs/CertCATree.tsx",
+      "file": "web/dashboard/src/components/v3/tabs/certs/CertCAClassic.tsx",
       "handler": "",
-      "label": "onSelect(on ? \"\" : id)} title={`$ CA \u00b7 $ \u00b7 key in $ `} style={ }> {`$ \u00b7 $ `}",
-      "line": 52,
+      "label": "onSelect(on ? \"\" : id)} aria-pressed= title=\"List these certificates in the t...",
+      "line": 71,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/certs/CertCAClassic.tsx",
+      "handler": "",
+      "label": "onCRL(ca)} disabled={busy === `crl-$ `}> {busy === `crl-$ ` ? \"...\" : \"CRL\"}",
+      "line": 72,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/certs/CertCAClassic.tsx",
+      "handler": "",
+      "label": "onDelete(ca)} disabled={busy === `delete-ca-$ `}> {busy === `delete-ca-$ ` ?...",
+      "line": 73,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/certs/CertCAClassic.tsx",
+      "handler": "",
+      "label": "setIssuedClosed((p) => ( ))} style={ }> {issuedOpen ? : } {`Issued Certificat...",
+      "line": 79,
       "tabs": [],
       "tag": "button"
     },
     {
-      "file": "web/dashboard/src/components/v3/tabs/certs/CertCATree.tsx",
-      "handler": "onCreate",
+      "file": "web/dashboard/src/components/v3/tabs/certs/CertCADiagram.tsx",
+      "handler": "",
+      "label": "onPick(n.caID, f)} style={ }>",
+      "line": 113,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/certs/CertCADiagram.tsx",
+      "handler": "",
+      "label": "onPick(n.caID, \"\")} style={ }>",
+      "line": 117,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/certs/CertCADiagram.tsx",
+      "handler": "",
+      "label": "onSelect(on ? \"\" : id)} title={`List $ 's certificates`} style={ }> {place ==...",
+      "line": 143,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/certs/CertCAPanel.tsx",
+      "handler": "",
+      "label": "void live.retry()}>Retry",
+      "line": 37,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/certs/CertCAPanel.tsx",
+      "handler": "",
+      "label": "choose(v)} style={ }>",
+      "line": 64,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/certs/CertCAPanel.tsx",
+      "handler": "p.onCreate",
       "label": "Create CA",
-      "line": 76,
+      "line": 70,
       "tabs": [],
       "tag": "Btn"
     },
@@ -26007,7 +26071,7 @@
       "file": "web/dashboard/src/components/v3/tabs/certs/CertOverview.tsx",
       "handler": "p.onRefresh} disabled={p.loading",
       "label": "(icon or dynamic label)",
-      "line": 45,
+      "line": 47,
       "tabs": [],
       "tag": "Btn"
     },
@@ -26015,7 +26079,7 @@
       "file": "web/dashboard/src/components/v3/tabs/certs/CertOverview.tsx",
       "handler": "",
       "label": "p.openModal(\"issue\")}> Issue certificate",
-      "line": 54,
+      "line": 56,
       "tabs": [],
       "tag": "Btn"
     },
@@ -26023,7 +26087,7 @@
       "file": "web/dashboard/src/components/v3/tabs/certs/CertOverview.tsx",
       "handler": "p.onOpenRenewals",
       "label": "Open Renewals",
-      "line": 63,
+      "line": 65,
       "tabs": [],
       "tag": "button"
     },
@@ -34656,7 +34720,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-24T08:31:46Z",
+  "generated_at": "2026-10-24T08:55:22Z",
   "navigation": [
     {
       "group": "Home",
@@ -96107,7 +96171,7 @@
   "summary": {
     "backend_routes": 948,
     "backend_services": 27,
-    "button_inventory": 787,
+    "button_inventory": 795,
     "frontend_call_sites": 538,
     "matched_frontend_call_sites": 507,
     "nav_items": 25,
@@ -129831,7 +129895,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-24T08:31:46Z",
+    "generatedAt": "2026-10-24T08:55:22Z",
     "methods": [
       "DELETE",
       "GET",

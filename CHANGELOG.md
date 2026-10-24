@@ -4,6 +4,27 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.63.0-beta] — 2026-10-24
+
+### Changed
+- **Certificates → Certificate Operations: the CA hierarchy is a live
+  diagram, with the classic view one click away.** It sits full width above
+  the certificate table, with a Diagram / Classic switch (remembered per
+  browser).
+  - **Diagram.** Tiers down the page: root CAs, then issuing and
+    intermediate CAs, then each CA's certificates. Each CA shows its
+    algorithm and whether its private key is in an HSM or in software;
+    each certificate block shows a bar of active, expiring and revoked.
+    Pressing a CA, or one of its counts, lists exactly those certificates
+    in the table, and the path to the chosen CA is highlighted.
+  - **Live.** The page re-reads CAs, certificates and counts every
+    15 seconds while it is open and visible. A CA whose numbers changed is
+    outlined for a moment, and the header says when it was last updated.
+    A failed update reads "Live updates paused" with a Retry, never a toast
+    on every poll.
+  - **Classic.** The nested CA cards from before 13.61.0-beta, each with
+    its issued certificates, CRL and Delete.
+
 ## [13.62.0-beta] — 2026-10-24
 
 ### Fixed

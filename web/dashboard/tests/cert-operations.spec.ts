@@ -58,14 +58,16 @@ const RENEWAL = {
   star_subscription_count: 0, star_delegated_count: 0, star_due_soon_count: 0, star_mass_rollout_risk_count: 0,
 };
 
-async function stub(page: Page) {
+// What the stubbed service answers; a test may change it between polls.
+type Live = { certs: any[]; failSummary: boolean };
+async function stub(page: Page, live: Live = { certs: CERTS, failSummary: false }) {
   await page.route("**/api/**", (r) => r.fulfill(json({})));
   await page.route("**/auth/**", (r) => r.fulfill(json({})));
   await page.route("**/svc/**", (r) => {
     const p = new URL(r.request().url()).pathname;
-    if (p.endsWith("/svc/certs/certs")) return r.fulfill(json({ items: CERTS }));
+    if (p.endsWith("/svc/certs/certs")) return r.fulfill(json({ items: live.certs }));
     if (p.endsWith("/certs/ca")) return r.fulfill(json({ items: CAS }));
-    if (p.endsWith("/certs/summary")) return r.fulfill(json({ summary: SUMMARY }));
+    if (p.endsWith("/certs/summary")) return live.failSummary ? r.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: { message: "certs unavailable" } }) }) : r.fulfill(json({ summary: SUMMARY }));
     if (p.endsWith("/certs/alert-policy")) return r.fulfill(json({ policy: { days_before: 30, include_external: true } }));
     if (p.endsWith("/certs/renewal-intelligence")) return r.fulfill(json({ summary: RENEWAL }));
     if (p.endsWith("/certs/star/summary")) return r.fulfill(json({ summary: { enabled: true, subscriptions: [], mass_rollout_risks: [] } }));
@@ -100,11 +102,24 @@ test("each certificate tile and CA lists exactly what it counts", async ({ page 
     await expect(rows).toHaveCount(6);
   }
 
-  // A CA filters the table; its count is the rows listed.
-  const issuing2 = view.getByTestId("ca-node").filter({ hasText: "issuing-2" });
-  await expect(issuing2.getByTitle("Certificates issued by this CA")).toHaveText("2");
-  await issuing2.getByRole("button", { name: /^issuing-2/ }).click();
+  // The diagram: tiers, where each CA key lives, and each CA's certificates.
+  const diagram = view.getByTestId("ca-diagram");
+  await expect(diagram).toContainText("Tier 1");
+  await expect(diagram).toContainText("Tier 2");
+  await expect(diagram).toContainText("Certificates");
+  await expect(view.getByTestId("ca-node").filter({ hasText: "vecta-root" })).toContainText("Root CA");
+  await expect(view.getByTestId("ca-node").filter({ hasText: "issuing-1" })).toContainText(/Issuing CA.*HSM/);
+  const group2 = view.getByTestId("ca-certs").filter({ hasText: "1 revoked" });
+  await expect(group2).toContainText("2 certificates");
+  await expect(group2).toContainText("1 expiring");
+
+  // A CA, or one of its counts, lists exactly those certificates.
+  await view.getByTestId("ca-node").filter({ hasText: "issuing-2" }).getByRole("button", { name: /^issuing-2/ }).click();
   await expect(rows).toHaveCount(2);
+  await group2.getByRole("button", { name: "1 expiring" }).click();
+  await expect(rows).toHaveCount(1);
+  await expect(rows).toContainText("mq.internal");
+  await view.getByRole("button", { name: /^Clear Expiring/ }).click();
   await view.getByRole("button", { name: "Clear CA: issuing-2" }).click();
   await expect(rows).toHaveCount(6);
 
@@ -122,6 +137,40 @@ test("each certificate tile and CA lists exactly what it counts", async ({ page 
 
   await view.getByRole("button", { name: /^Missed windows/ }).click();
   await expect(page).toHaveURL(/#certs\/cert-renewals$/);
+});
+
+test("the CA diagram updates live, and a failed update reads paused with a retry", async ({ page }) => {
+  const live: Live = { certs: [...CERTS], failSummary: false };
+  await page.clock.install();
+  await stub(page, live);
+  await page.goto("/#certs/cert-overview");
+  const group2 = page.getByTestId("ca-certs").filter({ hasText: "revoked" }).first();
+  await expect(group2).toContainText("2 certificates");
+  await expect(page.getByTestId("ca-live")).toContainText("Live");
+
+  live.certs = [...CERTS, cert("crt_7", "new.corp", "ca_int2", 90, "active", 7)];
+  await page.clock.fastForward(16_000);
+  await expect(group2).toContainText("3 certificates");
+  await expect(page.getByTestId("cert-row")).toHaveCount(7);
+
+  live.failSummary = true;
+  await page.clock.fastForward(16_000);
+  await expect(page.getByTestId("ca-live")).toContainText("Live updates paused");
+  live.failSummary = false;
+  await page.getByTestId("ca-live").getByRole("button", { name: "Retry" }).click();
+  await expect(page.getByTestId("ca-live")).toContainText("Live · updated");
+});
+
+test("the classic CA view lists each CA's certificates, and the choice is kept", async ({ page }) => {
+  await stub(page);
+  await page.goto("/#certs/cert-overview");
+  await page.getByRole("group", { name: "CA view" }).getByRole("button", { name: "Classic" }).click();
+  await expect(page.getByTestId("ca-classic")).toHaveCount(3);
+  await expect(page.getByTestId("ca-issued-row")).toHaveCount(5); // crt_5 is from an external CA
+  await page.getByTestId("ca-classic").filter({ hasText: "issuing-2" }).getByRole("button", { name: "2 certs" }).click();
+  await expect(page.getByTestId("cert-row")).toHaveCount(2);
+  await page.reload();
+  await expect(page.getByRole("group", { name: "CA view" }).getByRole("button", { name: "Classic" })).toHaveAttribute("aria-pressed", "true");
 });
 
 test("each renewal tile and bar lists the windows it counts, and a window opens its certificate", async ({ page }) => {
