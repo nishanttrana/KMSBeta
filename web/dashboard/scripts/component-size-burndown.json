@@ -1,7 +1,7 @@
 {
   "src/components/v3/legacyPrimitives.tsx": 769,
   "src/components/v3/tabs/BYOKTab.tsx": 556,
-  "src/components/v3/tabs/CertsTab.tsx": 2649,
+  "src/components/v3/tabs/CertsTab.tsx": 1959,
   "src/components/v3/tabs/ClusterTabView.tsx": 595,
   "src/components/v3/tabs/ComplianceTab.tsx": 1177,
   "src/components/v3/tabs/ConfidentialComputeTab.tsx": 656,

@@ -5,6 +5,26 @@ Newest entries on top.
 
 ## 2026-10-24
 
+### A cluttered page hid a mislabel and counts that went nowhere (13.61.0-beta)
+- **The renewal schedule is grouped by day, not by CA.** The certs service
+  keys `ca_directed_schedule` on the renewal date alone and stamps each
+  bucket with the first certificate's CA. The old card printed that CA
+  beside a count that could span several. The new chart labels a bar by its
+  day only; each window in its list shows its own CA. The server field is
+  still misleading (open).
+- **Six tiles drilled into nothing.** The page broke "every count lists its
+  entries" because its tiles were plain `Stat`s. Tiles that filter need the
+  service's own predicate: an `active` certificate past its end is counted
+  as expired, and days left are truncated as Go does.
+  `components/v3/tabs/certs/certFilters.ts` mirrors `summary.go` and
+  `buildCertRenewalSummary`, and `tests/unit/certFilters.test.ts` holds the
+  edge cases.
+- **Two copies of a list cost more than space.** Every certificate was in
+  the CA tree and in the table, each with its own status filter. One list,
+  filtered by the tree and the tiles, removed a whole state machine (open
+  CA, open issued list, two filters, a fixed-position menu with its own
+  click listener).
+
 ### Federation is fencing and refusing, not copying (13.60.0-beta)
 - **Copying is the easy part.** Seal each version to the receiver and sign
   the bundle. The work is deciding when a push must not apply: a replay, a

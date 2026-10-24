@@ -56,16 +56,6 @@ export type CertificateProfile = {
   created_at?: string;
 };
 
-export type InventoryCertificateItem = {
-  cert_id: string;
-  ca_id: string;
-  cert_type: string;
-  cert_class: string;
-  status: string;
-  not_after: string;
-  profile_id?: string;
-};
-
 export type ProtocolConfig = {
   tenant_id: string;
   protocol: "acme" | "est" | "scep" | "cmpv2" | "runtime-mtls";
@@ -234,7 +224,6 @@ export type ProtocolSchema = {
 type CAsResponse = { items: CertCA[] };
 type CertsResponse = { items: CertificateItem[] };
 type ProfilesResponse = { items: CertificateProfile[] };
-type InventoryResponse = { items: InventoryCertificateItem[] };
 type ProtocolsResponse = { items: ProtocolConfig[] };
 type ProtocolSchemasResponse = { items: ProtocolSchema[] };
 type AlertPolicyResponse = { policy: CertExpiryAlertPolicy };
@@ -611,11 +600,6 @@ export async function getOCSP(
 
 export async function listProfiles(session: AuthSession): Promise<CertificateProfile[]> {
   const out = await serviceRequest<ProfilesResponse>(session, "certs", `/certs/profiles?${tenantQuery(session)}`);
-  return Array.isArray(out?.items) ? out.items : [];
-}
-
-export async function listInventory(session: AuthSession): Promise<InventoryCertificateItem[]> {
-  const out = await serviceRequest<InventoryResponse>(session, "certs", `/certs/inventory?${tenantQuery(session)}`);
   return Array.isArray(out?.items) ? out.items : [];
 }
 

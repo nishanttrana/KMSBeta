@@ -4,6 +4,38 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.61.0-beta] — 2026-10-24
+
+### Changed
+- **Certificates → Certificate Operations is one tidy page.** It was eight
+  cards, five rows of buttons and two copies of every certificate.
+  - **Toolbar.** Refresh, Policies (alert and lifetime policy) and Issue
+    certificate, with Sign CSR and Upload 3rd-party under More.
+  - **Counts filter the table.** Active, Expiring and Revoked list exactly
+    the certificates the certs service counted; Missed windows opens
+    Renewals.
+  - **The CA tree is a filter.** A CA shows its algorithm, where its key
+    lives and how many certificates it issued; pressing it lists them in the
+    table. CRL and Delete are in its ⋮ menu. Certificates are no longer
+    repeated under each CA.
+  - **The table** shows each certificate's CA and days left with a bar, runs
+    full height with paging, and keeps its actions in a ⋮ menu that closes
+    on Escape or a press outside. The HSM partition view is its Source
+    choice.
+- **Certificates → Renewals** (new sidebar option) replaces the Renewal
+  Windows, CA-Directed Schedule and Mass-Renewal Risk cards: tiles for due in
+  72 hours, missed windows, emergency rotations and at risk, a chart of
+  renewals per day coloured by risk, and the windows each tile or bar
+  counts. A window opens its certificate.
+- **ACME STAR subscriptions** moved to Certificates → Enrollment Protocols,
+  below the ACME protocol, and list every subscription instead of five.
+- The Expiry Calendar card is gone: the Expiring tile lists the same
+  certificates, soonest first.
+
+### Removed
+- The dashboard's unused `listInventory` client (`GET /certs/inventory`
+  stays in the API).
+
 ## [13.60.0-beta] — 2026-10-24
 
 ### Added

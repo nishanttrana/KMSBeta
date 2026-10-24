@@ -77,6 +77,7 @@ export const SUB_PANES: Record<string, SubPane[]> = {
   ],
   certs: [
     { id: "cert-overview", label: "Certificate Operations", hint: "CA hierarchy, issuance, signing and certificate lifecycle", icon: FileText, feature: "certs" },
+    { id: "cert-renewals", label: "Renewals", hint: "Renewal windows per day, due, missed and emergency renewals", icon: RefreshCw, feature: "certs" },
     { id: "cert-enrollment", label: "Enrollment Protocols", hint: "ACME, EST, SCEP, CMPv2 and runtime mTLS enrollment settings", icon: Link, feature: "certs" },
     { id: "cert-service-mtls", label: "Service mTLS", hint: "Internal certificates: key, PQC key exchange, rotation and restarts", icon: Shield, feature: "certs" },
     { id: "cert-ssh", label: "SSH Certificates", hint: "SSH CAs, user and host certificates, revocation", icon: KeyRound, feature: "certs" }

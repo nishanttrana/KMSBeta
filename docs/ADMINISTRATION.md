@@ -1645,7 +1645,7 @@ Use this checklist immediately after installation before onboarding any users or
 - [ ] Configure the security policy (`max_failed_attempts` ≤ 5, reasonable `lockout_minutes`)
 - [ ] Decide whether the REST interface should stay on HTTP or move to HTTPS
 - [ ] HTTPS: confirm the edge certificate is valid and the edge key exchange is in force (Service mTLS)
-- [ ] Verify the internal CA is initialized (check Certificates → CA Hierarchy)
+- [ ] Verify the internal CA is initialized (Certificates → Certificate Operations, CAs panel)
 
 ### Tenant and User Setup
 

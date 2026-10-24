@@ -358,7 +358,7 @@ test("a module's sub-options expand under its name in the sidebar", async ({ pag
   const crumb = page.getByRole("navigation", { name: "Breadcrumb" });
   for (const [label, id, options] of [
     ["Cloud Key Control", "cloudctl", ["BYOK", "HYOK", "Google CSE"]],
-    ["Certificates / PKI", "certs", ["Certificate Operations", "Enrollment Protocols", "Service mTLS", "SSH Certificates"]],
+    ["Certificates / PKI", "certs", ["Certificate Operations", "Renewals", "Enrollment Protocols", "Service mTLS", "SSH Certificates"]],
     ["Administration", "admin", ["Health", "Runtime Crypto", "SNMP", "Tags", "Password Policy", "Login Security", "Key Access Hardening", "CLI / HSM", "Governance", "Alert Rules", "Tenant Administration", "User Management"]],
   ] as const) {
     await module(label).click();
@@ -845,7 +845,7 @@ test("posture cards read unavailable when the service fails", async ({ page }) =
 test("certificate tiles are the console's flat stat tiles", async ({ page }) => {
   await page.getByText("Certificates / PKI", { exact: true }).first().click();
   const tiles = page.locator(".vecta-stat-card");
-  await expect(tiles).toHaveText([/^Active/i, /^Revoked/i, /^CAs/i, /^Expiring/i, /^Missed windows/i, /^Emergency/i]);
+  await expect(tiles).toHaveText([/^Active/i, /^Expiring/i, /^Revoked/i, /^Missed windows/i]);
   const looks = await tiles.evaluateAll((els) => els.map((el) => {
     const num = el.querySelector(".vk-num")!;
     return { image: getComputedStyle(el).backgroundImage, number: getComputedStyle(num).color };
@@ -868,7 +868,8 @@ test("the certificate lifetime policy shows and sends only the tenant's own valu
     await r.fulfill(json({ policy: { tenant_id: "root", ...sent } }));
   });
   await page.getByText("Certificates / PKI", { exact: true }).first().click();
-  await page.getByRole("button", { name: "Lifetime policy" }).click();
+  await page.getByRole("button", { name: "Policies" }).click();
+  await page.getByRole("menuitem", { name: "Lifetime policy" }).click();
   const dialog = page.getByText("Certificate lifetime policy").locator("xpath=ancestor::*[.//button[normalize-space()='Save Policy']][1]");
   await expect(dialog).toContainText("none set");
   await expect(dialog).not.toContainText(/CA\/B|SC-081|schedule|47/i);

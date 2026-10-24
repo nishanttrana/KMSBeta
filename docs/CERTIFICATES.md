@@ -652,6 +652,27 @@ A saved policy keeps its mode and limit; one that relied on the schedule to
 tighten it now applies its own limit only. The unused "renew before" field
 is removed too.
 
+### 4.8 In the console
+
+Certificates → Certificate Operations (13.61.0-beta) holds one toolbar
+(Refresh, Policies for the alert and lifetime policy, Issue certificate
+with Sign CSR and Upload 3rd-party under More), four count tiles, the CA
+tree and the certificate table.
+
+- **Tiles filter the table.** Active, Expiring and Revoked are the certs
+  service's counts (`GET /certs/summary`). Pressing one lists exactly the
+  certificates it counts: the filters in
+  `web/dashboard/src/components/v3/tabs/certs/certFilters.ts` follow
+  `CertSummary`, so an `active` certificate past its end counts as expired
+  and Expiring uses the alert policy's window and external setting. Expiring
+  sorts soonest first. Missed windows opens Renewals.
+- **The CA tree is a filter.** Each CA shows its algorithm, where its key
+  lives and the number of certificates it issued; pressing it lists them.
+  Download CRL and Delete CA are in its ⋮ menu.
+- **The table** lists each certificate once, with its CA and days left.
+  Download, Renew, Revoke, OCSP status and Delete are in its ⋮ menu. With an
+  HSM configured, Source switches to the certificates in the HSM partition.
+
 ---
 
 ## 5. Signing External CSRs
@@ -1300,6 +1321,12 @@ def refresh_cert():
 threading.Thread(target=refresh_cert, daemon=True).start()
 ```
 
+### 7.6 In the console
+
+STAR subscriptions are listed under Certificates → Enrollment Protocols,
+below the ACME protocol that serves them, with Renew and Delete on each and
+the rollout groups at risk underneath. New opens the subscription form.
+
 ---
 
 ## 8. Renewal Intelligence (ARI — RFC Draft)
@@ -1384,6 +1411,24 @@ Bucket 1: certs expiring June 14
 ...
 Bucket 6: certs expiring June 20 (actual expiry — do not miss this)
 ```
+
+### 8.7 In the console
+
+Certificates → Renewals (13.61.0-beta) reads `GET /certs/renewal-intelligence`.
+
+- **Tiles:** due in 72 hours, missed windows, emergency rotations and at
+  risk (risk medium or above), the service's own counts. Pressing one lists
+  the renewal windows it counts.
+- **Renewals per day:** one bar per entry of `ca_directed_schedule`,
+  coloured by its highest risk. A bucket is the day a renewal is scheduled
+  (`mass_renewal_bucket`), and a bar lists the certificates in its
+  `cert_ids`.
+- **A window opens its certificate** in Certificate Operations.
+- **Recompute** calls `POST /certs/renewal-intelligence/refresh`.
+
+A schedule entry's `ca_id` and `ca_name` are those of the first certificate
+in the day's bucket, which may hold certificates of several CAs, so the
+console doesn't show them per bar (open).
 
 ---
 

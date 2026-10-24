@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-24T07:22:59Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-24T08:16:46Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -11,10 +11,10 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Sub-pane groups: `14`
 - Backend HTTP routes discovered: `948` across `27` services
 - Backend routes on the `pkg/route` kernel: `583` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `539`
-- Frontend call sites with exact backend route match: `508`
+- Frontend API call sites discovered: `538`
+- Frontend call sites with exact backend route match: `507`
 - Frontend call sites needing review or dynamic/runtime confirmation: `31`
-- Clickable controls with static `onClick` handlers: `800`
+- Clickable controls with static `onClick` handlers: `787`
 - Backend request flows with handler/service/package summaries: `948`
 
 ## How To Use This For Launch
@@ -166,10 +166,10 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Group | UI item | Tab id | Component | Service dependencies | Static call sites |
 | --- | --- | --- | --- | --- | --- |
 | Home | Command Center | home | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
-| Home | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 209 |
+| Home | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 208 |
 | Home | Workbench | workbench | web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx | - | 0 |
 | Keys & certificates | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 100 |
-| Keys & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 105 |
+| Keys & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 104 |
 | Keys & certificates | Rotation & Scheduling | rotation | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | - | 0 |
 | Keys & certificates | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 12 |
 | Keys & certificates | Crypto Discovery | discovery | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | compliance, discovery | 23 |
@@ -195,7 +195,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | UNLISTED | dataenc | dataenc | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | UNLISTED | hyok | hyok | web/dashboard/src/components/v3/tabs/HYOKTab.tsx | hyok | 7 |
 | UNLISTED | pkcs11 | pkcs11 | web/dashboard/src/components/v3/tabs/ClientSDKTab.tsx | ekm, tfe | 26 |
-| UNLISTED | restapi | restapi | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | auth, auth-edge, certs, secrets | 129 |
+| UNLISTED | restapi | restapi | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | auth, auth-edge, certs, secrets | 128 |
 | UNLISTED | tokenize | tokenize | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 
 ## Backend Route Counts
@@ -205,7 +205,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | audit | 34 | 20 |
 | auth | 92 | 49 |
 | autokey | 15 | 11 |
-| certs | 78 | 62 |
+| certs | 78 | 61 |
 | cloud | 28 | 15 |
 | cluster-manager | 28 | 12 |
 | compliance | 60 | 27 |
@@ -343,6 +343,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | certs | POST | /certs/profiles | h.handleCreateProfile |  | services/certs/handler.go | 52 |
 | certs | GET | /certs/profiles/{id} | h.handleGetProfile |  | services/certs/handler.go | 54 |
 | certs | POST | /certs/ocsp | h.handleOCSP |  | services/certs/handler.go | 57 |
+| certs | GET | /certs/inventory | h.handleInventory |  | services/certs/handler.go | 58 |
 | certs | GET | /certs/clm/policy | h.handleGetCLMPolicy |  | services/certs/handler.go | 62 |
 | certs | GET | /acme/directory | h.handleACMEDirectory |  | services/certs/handler.go | 78 |
 | certs | HEAD | /acme/new-nonce | h.handleACMENonce |  | services/certs/handler.go | 79 |
@@ -395,9 +396,8 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/keys/orphaned | h.handleOrphaned |  | services/compliance/handler.go | 78 |
 | compliance | GET | /compliance/keys/expired | h.handleExpired |  | services/compliance/handler.go | 79 |
 | compliance | GET | /compliance/cbom | h.handleCBOM |  | services/compliance/handler.go | 83 |
-| compliance | GET | /compliance/cbom/summary | h.handleCBOMSummary |  | services/compliance/handler.go | 84 |
 
-Showing `120` of `434`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `435`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 
