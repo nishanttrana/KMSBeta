@@ -211,6 +211,7 @@ func (h *Handler) routes() *http.ServeMux {
 	h.accessRouter(kernelEmitter{h}).MountOn(mux)
 	h.metadataProfileRouter(kernelEmitter{h}).MountOn(mux)
 	h.bindingPolicyRouter(kernelEmitter{h}).MountOn(mux)
+	h.federationRouter(kernelEmitter{h}).MountOn(mux)
 	mux.HandleFunc("GET /keys/{id}/iv-log", h.visibleKeyRoute(h.handleGetIVLog))
 	mux.HandleFunc("GET /keys/{id}/iv-log/{ref}", h.visibleKeyRoute(h.handleGetIVByRef))
 	mux.HandleFunc("GET /tags", h.handleListTags)
@@ -654,6 +655,8 @@ func (h *Handler) handleUpdateKey(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusNotFound, "not_found", "key not found", reqID, tenantID)
 		case errors.As(err, &refusal):
 			writeErr(w, http.StatusForbidden, refusal.reason, refusal.Error(), reqID, tenantID)
+		case errors.Is(err, errFederatedReplica):
+			writeErr(w, http.StatusConflict, "federated_replica", err.Error(), reqID, tenantID)
 		default:
 			writeErr(w, http.StatusInternalServerError, "get_failed", "failed to retrieve key", reqID, tenantID)
 		}
@@ -661,6 +664,9 @@ func (h *Handler) handleUpdateKey(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.svc.UpdateKey(ctx, tenantID, r.PathValue("id"), req); err != nil {
 		if writeMetadataViolation(w, err, reqID, tenantID) {
+			return
+		}
+		if writeReplicaRefusal(w, err, reqID, tenantID) {
 			return
 		}
 		writeErr(w, http.StatusInternalServerError, "update_failed", "failed to update key", reqID, tenantID)
@@ -701,6 +707,9 @@ func (h *Handler) handleRotateKey(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.As(err, new(*accessRefusal)) {
 			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, tenantID)
+			return
+		}
+		if writeReplicaRefusal(w, err, reqID, tenantID) {
 			return
 		}
 		writeErr(w, http.StatusBadRequest, "rotate_failed", err.Error(), reqID, tenantID)
@@ -890,6 +899,9 @@ func (h *Handler) handleDestroyKey(w http.ResponseWriter, r *http.Request) {
 				writeErr(w, http.StatusConflict, "system_key_protected", err.Error(), reqID, tenantID)
 				return
 			}
+			if writeReplicaRefusal(w, err, reqID, tenantID) {
+				return
+			}
 			writeErr(w, http.StatusBadRequest, "destroy_failed", err.Error(), reqID, tenantID)
 			return
 		}
@@ -923,6 +935,9 @@ func (h *Handler) keyStatus(w http.ResponseWriter, r *http.Request, status strin
 		}
 		if errors.Is(err, errKeyTransitionRefused) {
 			writeErr(w, http.StatusConflict, "status_transition_refused", err.Error(), reqID, tenantID)
+			return
+		}
+		if writeReplicaRefusal(w, err, reqID, tenantID) {
 			return
 		}
 		writeErr(w, http.StatusBadRequest, "status_failed", err.Error(), reqID, tenantID)

@@ -774,10 +774,12 @@ func sha256Hex(raw []byte) string {
 }
 
 func controlCoverageScore(all []EnterpriseControlRecord) (int, bool) {
-	// Preview categories store settings and enforce nothing: not controls.
+	// Preview categories store settings and enforce nothing, and retired
+	// ones are old preview records (13.60.0-beta: those were counted): not
+	// controls.
 	records := make([]EnterpriseControlRecord, 0, len(all))
 	for _, r := range all {
-		if status, _ := features.ControlCategoryStatus(r.Category); status != features.StatusPreview {
+		if status, _ := features.ControlCategoryStatus(r.Category); status == features.StatusAvailable {
 			records = append(records, r)
 		}
 	}

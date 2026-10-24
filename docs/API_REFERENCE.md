@@ -1150,9 +1150,17 @@ These endpoints provide the Tier 1 enterprise audit surface for rotation analyti
 | POST | `/svc/keycore/enterprise/advanced-encryption/modes` | Register governed advanced-encryption mode controls. |
 | POST | `/svc/keycore/enterprise/orchestration/workflows` | Register workflow/cron orchestration metadata. |
 | POST | `/svc/keycore/enterprise/orchestration/runs` | Trigger orchestration run; can execute batch key rotations. |
-| POST | `/svc/keycore/enterprise/federation/providers` | Register multi-KMS provider metadata. |
-| POST | `/svc/keycore/enterprise/federation/mappings` | Register cross-KMS key mappings. |
-| POST | `/svc/keycore/enterprise/federation/failovers` | Record cross-region/provider failover state. |
+| GET | `/svc/keycore/federation/identity` | This tenant's federation identity, to give another installation ([FEDERATION.md](FEDERATION.md), 13.60.0-beta). |
+| GET | `/svc/keycore/federation/peers` | Registered peer installations. |
+| POST | `/svc/keycore/federation/peers` | Register a peer: its identity, address, tenant and REST client. |
+| DELETE | `/svc/keycore/federation/peers/{id}` | Remove a peer without links. |
+| GET | `/svc/keycore/federation/links` | Keys replicated to peers, with their sync status. |
+| POST | `/svc/keycore/federation/links` | Replicate a key to a peer (pushed at once). |
+| POST | `/svc/keycore/federation/links/{id}/sync` | Push now and verify. |
+| DELETE | `/svc/keycore/federation/links/{id}` | Stop replicating (the replica stays). |
+| GET | `/svc/keycore/federation/keys/{id}` | A key's federation role, epoch and versions. |
+| POST | `/svc/keycore/federation/keys/{id}/promote` | Fail over: make this installation the key's primary. |
+| POST | `/svc/keycore/federation/receive` | A peer's push (its REST client only). |
 | POST | `/svc/keycore/enterprise/threat/signals` | Register advanced threat signals such as side-channel/DPA alerts. |
 
 Example compromise event:
@@ -5299,15 +5307,23 @@ from the code; do not edit by hand.
 - `GET /svc/keycore/enterprise/dspm/events`
 - `GET /svc/keycore/enterprise/dspm/findings`
 - `POST /svc/keycore/enterprise/dspm/findings`
-- `POST /svc/keycore/enterprise/federation/failovers`
-- `POST /svc/keycore/enterprise/federation/mappings`
-- `POST /svc/keycore/enterprise/federation/providers`
 - `POST /svc/keycore/enterprise/kdf/derive`
 - `POST /svc/keycore/enterprise/orchestration/runs`
 - `POST /svc/keycore/enterprise/orchestration/workflows`
 - `GET /svc/keycore/enterprise/summary`
 - `POST /svc/keycore/enterprise/threat/signals`
 - `POST /svc/keycore/enterprise/verification/fingerprint`
+- `GET /svc/keycore/federation/identity`
+- `GET /svc/keycore/federation/keys/{id}`
+- `POST /svc/keycore/federation/keys/{id}/promote`
+- `GET /svc/keycore/federation/links`
+- `POST /svc/keycore/federation/links`
+- `DELETE /svc/keycore/federation/links/{id}`
+- `POST /svc/keycore/federation/links/{id}/sync`
+- `GET /svc/keycore/federation/peers`
+- `POST /svc/keycore/federation/peers`
+- `DELETE /svc/keycore/federation/peers/{id}`
+- `POST /svc/keycore/federation/receive`
 - `GET /svc/keycore/fips/rng-health`
 - `POST /svc/keycore/fips/self-test`
 - `GET /svc/keycore/health/summary`

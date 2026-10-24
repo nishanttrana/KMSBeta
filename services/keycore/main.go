@@ -33,6 +33,7 @@ import (
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
 	pkgheartbeat "vecta-kms/pkg/heartbeat"
+	"vecta-kms/pkg/clusterstate"
 	"vecta-kms/pkg/hsm"
 	"vecta-kms/pkg/metering"
 	pkgratelimit "vecta-kms/pkg/ratelimit"
@@ -207,6 +208,10 @@ func main() {
 
 	// Rotation policies: due auto-rotate policies run on the primary.
 	go NewRotationScheduler(svc, auditClient, logger).Run(ctx)
+
+	// Key federation: links whose key changed are pushed to their peer, and
+	// every link is verified hourly (federation.go). Primary only.
+	go svc.RunFederationSync(ctx, clusterstate.RunsPrimaryJobs)
 
 	// Threat detection over this node's (node-local) key usage trail.
 	go NewThreatSweeper(svc).Run(ctx)

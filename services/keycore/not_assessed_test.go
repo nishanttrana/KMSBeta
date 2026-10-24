@@ -16,6 +16,9 @@ func TestComplianceDashboardDoesNotInventScores(t *testing.T) {
 		t.Fatalf("control coverage scored with no controls: %+v", dash.ControlScores)
 	}
 	if _, ok := controlCoverageScore([]EnterpriseControlRecord{{Category: controlCategoryFederationProvider, Status: "active"}}); ok {
+		t.Fatal("a retired preview's record counted as a control")
+	}
+	if _, ok := controlCoverageScore([]EnterpriseControlRecord{{Category: "advanced_encryption", Status: "active"}}); ok {
 		t.Fatal("a preview (stored-only) record counted as a control")
 	}
 	cost, err := svc.BuildEnterpriseCostOptimization(context.Background(), "t1", 30)

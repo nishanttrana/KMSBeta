@@ -293,6 +293,7 @@ ekm,ekm,GET,/ekm/clients?{param},/ekm/clients,True,serviceRequest,web/dashboard/
 ekm,ekm,GET,/ekm/clients/{param}?{param},/ekm/clients/{param},True,serviceRequest,web/dashboard/src/lib/ekmClients.ts,66,ekm|GET|/ekm/clients/{param}
 ekm,ekm,POST,/ekm/clients,/ekm/clients,False,serviceRequest,web/dashboard/src/lib/ekmClients.ts,71,ekm|POST|/ekm/clients
 ekm,ekm,POST,/ekm/clients/{param}/registration-token?{param},/ekm/clients/{param}/registration-token,True,serviceRequest,web/dashboard/src/lib/ekmClients.ts,80,ekm|POST|/ekm/clients/{param}/registration-token
+keycore,keycore,GET,{param}{param}{param},/{param}{param}{param},True,serviceRequest,web/dashboard/src/lib/federation.ts,25,keycore|GET|/{param}{param}{param}
 governance,governance,GET,/governance/settings?tenant_id={param},/governance/settings,True,serviceRequest,web/dashboard/src/lib/governance.ts,130,governance|GET|/governance/settings
 governance,governance,GET,/governance/system/state?tenant_id={param},/governance/system/state,True,serviceRequest,web/dashboard/src/lib/governance.ts,139,governance|GET|/governance/system/state
 governance,governance,PUT,/governance/system/state,/governance/system/state,False,serviceRequest,web/dashboard/src/lib/governance.ts,155,governance|PUT|/governance/system/state

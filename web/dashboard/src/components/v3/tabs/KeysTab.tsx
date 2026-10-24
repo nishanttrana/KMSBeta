@@ -42,6 +42,7 @@ import { NO_ROTATION, RotationScheduleField, mayScheduleRotation, rotationDays, 
 import { CanaryKeysPanel } from "./CanaryKeysPanel";
 import { MetadataProfilesPanel } from "./MetadataProfilesPanel";
 import { BindingPoliciesPanel } from "./BindingPoliciesPanel";
+import { FederationPanel } from "./FederationPanel";
 
 function normalizeKeyState(state: string): string {
   const raw = String(state || "").toLowerCase().trim();
@@ -1748,6 +1749,7 @@ export const KeysTab=({session,keyCatalog,keyCatalogError,setKeyCatalog,tagCatal
           </Btn>
           <Btn onClick={()=>setModal("metadata-profiles")} style={{height:40,padding:"0 16px",borderRadius:4,fontSize:12,fontWeight:700,color:C.text,border:`1px solid ${C.borderHi}`}} title="Which metadata keys must carry">Metadata profiles</Btn>
           <Btn onClick={()=>setModal("binding-policies")} style={{height:40,padding:"0 16px",borderRadius:4,fontSize:12,fontWeight:700,color:C.text,border:`1px solid ${C.borderHi}`}} title="How keys may be reached: channel, network, workload">Binding policies</Btn>
+          <Btn onClick={()=>setModal("federation")} style={{height:40,padding:"0 16px",borderRadius:4,fontSize:12,fontWeight:700,color:C.text,border:`1px solid ${C.borderHi}`}} title="Replicate keys to another KMS installation; fail over">Federation</Btn>
           <KeyCreateMenu onCreate={()=>{setInHSM(hsmKeysEnabled&&hsmSupportsAlgorithm(algo));setModal("create");}} onForm={()=>setModal("form-key")} onImport={()=>{resetImportForm();setModal("import");}} onPQC={()=>setModal("generate-pqc")} onCanary={()=>setModal("canary")}/>
         </div>
       </div>
@@ -2641,15 +2643,10 @@ export const KeysTab=({session,keyCatalog,keyCatalogError,setKeyCatalog,tagCatal
     </Modal>
 
     {/*  GENERATE PQC KEY MODAL  */}
-    <Modal open={modal==="metadata-profiles"} onClose={()=>setModal(null)} title="Metadata Profiles" width={900}>
-      <MetadataProfilesPanel session={session}/>
-    </Modal>
-    <Modal open={modal==="binding-policies"} onClose={()=>setModal(null)} title="Binding Policies" width={900}>
-      <BindingPoliciesPanel session={session}/>
-    </Modal>
-    <Modal open={modal==="canary"} onClose={()=>setModal(null)} title="Canary Keys" width={820}>
-      <CanaryKeysPanel session={session}/>
-    </Modal>
+    <Modal open={modal==="metadata-profiles"} onClose={()=>setModal(null)} title="Metadata Profiles" width={900}><MetadataProfilesPanel session={session}/></Modal>
+    <Modal open={modal==="binding-policies"} onClose={()=>setModal(null)} title="Binding Policies" width={900}><BindingPoliciesPanel session={session}/></Modal>
+    <Modal open={modal==="federation"} onClose={()=>setModal(null)} title="Federation" width={960}><FederationPanel session={session}/></Modal>
+    <Modal open={modal==="canary"} onClose={()=>setModal(null)} title="Canary Keys" width={820}><CanaryKeysPanel session={session}/></Modal>
     <Modal open={modal==="generate-pqc"} onClose={()=>setModal(null)} title="Generate Post-Quantum Key" width={920}>
       <div style={{background:C.purpleDim,border:`1px solid ${C.purple}`,borderRadius:4,padding:10,marginBottom:12,fontSize:10,color:C.purpleFg}}>Post-Quantum Cryptography - NIST FIPS 203/204/205 approved algorithms</div>
       <Row2>

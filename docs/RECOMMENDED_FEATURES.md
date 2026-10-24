@@ -27,7 +27,7 @@ The remaining feature areas were started as backend enterprise-control APIs. Sev
 |---|---|---|
 | Machine Learning & Anomaly Detection | Implemented as statistical anomaly detection | `/enterprise/anomaly/scan`, `key_dspm_findings`, audit/DSPM export |
 | Advanced Key Scheduling & Orchestration | Implemented | `/enterprise/orchestration/workflows`, `/enterprise/orchestration/runs`, executable batch rotation |
-| Key Federation & Multi-KMS Orchestration | **Preview**: records only; no replication or failover | `/enterprise/federation/providers`, `/mappings`, `/failovers` |
+| Key Federation & Multi-KMS Orchestration | Implemented (13.60.0-beta): keys replicate to other installations, sealed and signed; sync verified by KCV; failover by promotion with fencing | `/federation/peers`, `/federation/links`, `/federation/keys/{id}/promote`, [FEDERATION.md](FEDERATION.md) |
 | Enhanced Key Recovery & Escrow | **Removed** (1.4.0-beta): the general escrow workflow only kept records. Backup keys can be split M-of-N among guardians instead | System Administration > Backups, `key_split` on `POST /svc/governance/governance/backups` |
 | Blockchain-Backed Audit Chain | **Replaced** (3.1.0-beta): the anchor-record preview is removed; the audit service signs each chain head (ECDSA-P384) and the checkpoints reach SIEM | `GET /svc/audit/audit/checkpoints`, [SECURITY/AUDIT_INTEGRITY.md](SECURITY/AUDIT_INTEGRITY.md) |
 | Key Derivation Functions | Implemented | `/enterprise/kdf/derive` for HKDF, PBKDF2, Scrypt, Argon2id |
@@ -171,7 +171,8 @@ The remaining feature areas were started as backend enterprise-control APIs. Sev
 - **Effort**: 3 weeks
 
 #### 8. **Key Federation & Multi-KMS Orchestration** ⭐⭐⭐⭐
-**Gap**: No federation across KMS instances
+**Status**: implemented in 13.60.0-beta ([FEDERATION.md](FEDERATION.md)).
+**Gap (before)**: No federation across KMS instances
 **Recommendation**:
 - Key federation across KMS instances
 - Multi-KMS orchestration

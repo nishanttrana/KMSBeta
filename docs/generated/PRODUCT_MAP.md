@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-24T06:49:41Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-24T07:22:59Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `25`
 - Tab/component mappings: `32`
 - Sub-pane groups: `14`
-- Backend HTTP routes discovered: `940` across `27` services
-- Backend routes on the `pkg/route` kernel: `575` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `538`
+- Backend HTTP routes discovered: `948` across `27` services
+- Backend routes on the `pkg/route` kernel: `583` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `539`
 - Frontend call sites with exact backend route match: `508`
-- Frontend call sites needing review or dynamic/runtime confirmation: `30`
-- Clickable controls with static `onClick` handlers: `789`
-- Backend request flows with handler/service/package summaries: `940`
+- Frontend call sites needing review or dynamic/runtime confirmation: `31`
+- Clickable controls with static `onClick` handlers: `800`
+- Backend request flows with handler/service/package summaries: `948`
 
 ## How To Use This For Launch
 
@@ -148,7 +148,7 @@ flowchart LR
   svc_governance["governance (40 routes)"]
   svc_hyok["hyok (25 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (183 routes)"]
+  svc_keycore["keycore (191 routes)"]
   svc_posture["posture (13 routes)"]
   svc_pqc["pqc (14 routes)"]
   svc_reporting["reporting (34 routes)"]
@@ -217,7 +217,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | hsm-connector | 14 | 0 |
 | hyok | 25 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 183 | 81 |
+| keycore | 191 | 82 |
 | kmip | 12 | 11 |
 | policy | 12 | 0 |
 | posture | 13 | 10 |
@@ -256,6 +256,7 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | compliance | GET | /compliance/playbooks/connections/{param}/test | serviceRequest | web/dashboard/src/lib/credentials.ts | 72 |
 | compliance | GET | /compliance/playbooks/connections/{param} | serviceRequest | web/dashboard/src/lib/credentials.ts | 76 |
 | tfe | GET | /tfe/file-encrypt/download | serviceRequest | web/dashboard/src/lib/ekm.ts | 726 |
+| keycore | GET | /{param}{param}{param} | serviceRequest | web/dashboard/src/lib/federation.ts | 25 |
 | hyok | POST | /hyok/{param}/v1/keys/{param}/{param} | serviceRequest | web/dashboard/src/lib/hyok.ts | 188 |
 | reporting | PUT | /alerts/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/reporting.ts | 311 |
 | reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 350 |
@@ -267,7 +268,7 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | secrets | GET | /secrets/database/leases/{param}/renew | serviceRequest | web/dashboard/src/lib/secretsDatabase.ts | 64 |
 | secrets | GET | /secrets/database/leases/{param}/revoke | serviceRequest | web/dashboard/src/lib/secretsDatabase.ts | 69 |
 
-Showing `30` of `30`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
+Showing `31` of `31`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
 
 ## Backend Routes Not Directly Called From Dashboard
 
@@ -396,7 +397,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/cbom | h.handleCBOM |  | services/compliance/handler.go | 83 |
 | compliance | GET | /compliance/cbom/summary | h.handleCBOMSummary |  | services/compliance/handler.go | 84 |
 
-Showing `120` of `426`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `434`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

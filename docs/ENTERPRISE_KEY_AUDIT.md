@@ -378,28 +378,12 @@ The second implementation pass turns the remaining roadmap items into backend ca
 
 Enterprise control records are the common persistence model for orchestration, federation, threat signals, and advanced encryption mode governance.
 
-> **Preview:** federation and advanced-encryption modes only **store** records. Nothing enforces or executes them. Their records carry `feature_status: "preview"`, and responses carry `X-Vecta-Feature-Status: preview`. See [PREVIEW_FEATURES.md](PREVIEW_FEATURES.md).
-
-```bash
-curl -X POST "$BASE/enterprise/federation/providers?tenant_id=$TENANT" \
-  -H "$AUTH" -H "Content-Type: application/json" \
-  -d '{
-    "record_id": "fed-aws-prod",
-    "name": "AWS KMS production",
-    "status": "active",
-    "severity": "info",
-    "metadata": {
-      "provider": "aws-kms",
-      "regions": ["us-east-1", "us-west-2"],
-      "lookup_mode": "external_id_mapping"
-    }
-  }'
-```
+> **Preview:** advanced-encryption modes only **store** records. Nothing enforces or executes them. Their records carry `feature_status: "preview"`, and responses carry `X-Vecta-Feature-Status: preview`. See [PREVIEW_FEATURES.md](PREVIEW_FEATURES.md). Preview and retired records don't count towards the compliance dashboard's control coverage (13.60.0-beta: retired ones did).
 
 List controls:
 
 ```bash
-curl "$BASE/enterprise/controls?tenant_id=$TENANT&category=federation_provider" -H "$AUTH"
+curl "$BASE/enterprise/controls?tenant_id=$TENANT&category=orchestration_workflow" -H "$AUTH"
 ```
 
 Supported categories include:
@@ -408,7 +392,7 @@ Supported categories include:
 |---|---|
 | `anomaly` | Statistical anomaly findings generated from health, compromise, inventory, hotspot, and benchmark signals. |
 | `orchestration_workflow` / `orchestration_run` | Cron/workflow metadata and executable batch rotation runs. |
-| `federation_provider`, `federation_mapping`, `federation_failover` | Multi-KMS registry, cross-KMS mappings, and failover evidence. |
+| `federation_provider`, `federation_mapping`, `federation_failover` | Retired (13.60.0-beta): keys replicate to another installation, and fail over, through `/federation` ([FEDERATION.md](FEDERATION.md)). |
 | `advanced_encryption` | Searchable token mode plus governed research-mode controls. |
 | `binding_policy` | Retired (13.51.0-beta): binding policies are enforced at `/binding-policies` ([KEYS.md 5.6](KEYS.md#56-binding-policies-13510-beta)). |
 | `edge_agent`, `edge_lease`, `edge_receipt` | Retired (13.52.0-beta): edge devices are in ekm ([SECURITY/EDGE_DEVICES.md](SECURITY/EDGE_DEVICES.md)). |

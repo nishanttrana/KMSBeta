@@ -4,6 +4,39 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.60.0-beta] — 2026-10-24
+
+### Added
+- **Key federation across KMS installations.** A key can be replicated to
+  another Vecta KMS installation: another region, or a disaster-recovery
+  site with its own database and master key.
+  - **Transfer.** Each version's material is sealed to the other
+    installation's ML-KEM-768 key, in a bundle this installation signs.
+  - **The replica.** It keeps the key's ID, versions and KCVs, so
+    ciphertext and signatures work at both sites. It serves every
+    operation; its primary rotates and changes it.
+  - **Sync.** Changes are pushed within a minute, and every link is
+    verified hourly against the replica's KCVs.
+  - **Failover.** Promoting the replica moves the primary there. The old
+    primary is fenced by a signed statement and demoted, and failback is a
+    link in the other direction.
+  - **Split brain.** A version that differs between the sites is never
+    replaced, so no material is lost.
+  - **Where.** Keys → Federation; see [docs/FEDERATION.md](docs/FEDERATION.md).
+
+### Changed
+- The federation preview (`/enterprise/federation/providers`, `/mappings`,
+  `/failovers`), which stored records and replicated nothing, is retired:
+  its routes are gone, new records of its categories answer `410
+  feature_retired`, and old ones list as `retired`.
+
+### Fixed
+- The compliance dashboard's control coverage counted retired preview
+  records (metadata profiles, binding policies, sharing grants, edge agents)
+  as controls. Only real controls count now.
+- The feature reference still listed metadata profiles, binding policies,
+  sharing grants and edge devices as previews.
+
 ## [13.59.0-beta] — 2026-10-24
 
 ### Added

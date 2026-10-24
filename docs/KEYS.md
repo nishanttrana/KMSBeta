@@ -556,6 +556,15 @@ refused (`410 feature_retired`) and old ones list as `retired`. Sharing a
 key with users or groups is a key access grant (`PUT
 /keys/{id}/access-policy`, section 9), which keycore enforces.
 
+### 5.7 Federation (13.60.0-beta)
+
+A key can be replicated to another Vecta KMS installation (another region,
+or a disaster-recovery site) under the same ID, versions and KCVs, so
+ciphertext and signatures work at both. The replica serves every
+operation. Its primary rotates and changes it, and an administrator
+promotes the replica to fail over. Keys → **Federation**; see
+[FEDERATION.md](FEDERATION.md).
+
 ## 6. Importing Existing Keys
 
 ### 6.1 Why Import Keys?

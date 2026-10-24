@@ -26,6 +26,7 @@ only what the database actually does.
 | Failover: manual promotion, and a majority vote at 3+ nodes, with fencing | **Done** (slice 4, 13.37.0-beta). Election, re-subscription to the new primary, a planned switchover and fencing proven on three real Postgres servers (`TestFailoverEndToEnd`) |
 | Audit chains replicated from every node (shared-append) | Slice 3/4, not yet |
 | Helm chart | Slice 5, not yet |
+| Failover across separate installations (no shared database) | **Done** as key federation (13.60.0-beta): chosen keys replicate, sealed and signed, and an administrator promotes the replica ([FEDERATION.md](FEDERATION.md)) |
 
 A second node can join through the UI (Platform → Cluster → Add Instance).
 Any node serves crypto operations, reads and logins, and a lifecycle write

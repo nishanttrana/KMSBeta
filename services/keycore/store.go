@@ -193,6 +193,25 @@ type Store interface {
 	UpdateMetadataProfile(ctx context.Context, p MetadataProfile) error
 	DeleteMetadataProfile(ctx context.Context, tenantID, id string) error
 
+	// Key federation (federation.go, 13.60.0-beta).
+	GetFederationIdentity(ctx context.Context, tenantID string) (FederationIdentity, error)
+	CreateFederationIdentity(ctx context.Context, id FederationIdentity) error
+	ListFederationPeers(ctx context.Context, tenantID string) ([]FederationPeer, error)
+	GetFederationPeer(ctx context.Context, tenantID, id string) (FederationPeer, error)
+	GetFederationPeerByFingerprint(ctx context.Context, tenantID, fingerprint string) (FederationPeer, error)
+	CreateFederationPeer(ctx context.Context, p FederationPeer) error
+	DeleteFederationPeer(ctx context.Context, tenantID, id string) error
+	ListFederationLinks(ctx context.Context, tenantID string) ([]FederationLink, error)
+	ListAllFederationLinks(ctx context.Context) ([]FederationLink, error)
+	GetFederationLink(ctx context.Context, tenantID, id string) (FederationLink, error)
+	CreateFederationLink(ctx context.Context, l FederationLink) error
+	UpdateFederationLinkSync(ctx context.Context, tenantID, id, status, digest, lastError string, at time.Time) error
+	DeleteFederationLink(ctx context.Context, tenantID, id string) error
+	CountFederationLinksForPeer(ctx context.Context, tenantID, peerID string) (int, error)
+	GetFederationKeyState(ctx context.Context, tenantID, keyID string) (FederationKeyState, error)
+	PutFederationKeyState(ctx context.Context, st FederationKeyState) error
+	ApplyFederatedKey(ctx context.Context, key Key, create bool, newVersions []KeyVersion, statuses map[int]string, st FederationKeyState) error
+
 	// Key binding policies (binding_policies.go, 13.51.0-beta).
 	ListKeyBindingPolicies(ctx context.Context, tenantID string) ([]KeyBindingPolicy, error)
 	GetKeyBindingPolicy(ctx context.Context, tenantID, id string) (KeyBindingPolicy, error)

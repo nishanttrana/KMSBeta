@@ -43,6 +43,10 @@ func (s *Service) authorizeKeyUpdate(ctx context.Context, tenantID, id string) (
 	if err := s.ensureKeyVisible(ctx, key); err != nil {
 		return Key{}, err
 	}
+	// A replica is changed on its primary (federation.go).
+	if err := s.refuseReplicaChange(ctx, tenantID, key.ID); err != nil {
+		return Key{}, err
+	}
 	if authorizeAccessPolicyChange(accessActorFromContext(ctx), key) == nil {
 		return key, nil
 	}
@@ -74,6 +78,9 @@ func (h *Handler) patchKey(c *route.Call) {
 		return
 	case errors.As(err, &refusal):
 		c.Refuse(http.StatusForbidden, refusal.reason, refusal.Error())
+		return
+	case errors.Is(err, errFederatedReplica):
+		c.Refuse(http.StatusConflict, "federated_replica", err.Error())
 		return
 	case err != nil:
 		c.Error(http.StatusInternalServerError, "get_failed", "failed to retrieve key")

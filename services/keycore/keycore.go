@@ -77,6 +77,8 @@ type Service struct {
 	// hsmCreds lists the tenant's HSM credentials (hsm_targets.go); nil
 	// when the deployment has no credential store.
 	hsmCreds HSMCredentials
+	// fedClient calls federation peers as their REST client (federation.go).
+	fedClient fedPeerClient
 }
 
 // SetCryptoperiodPolicy installs the NIST SP 800-57 cryptoperiod table.
@@ -1921,6 +1923,9 @@ func (s *Service) RotateKeyTo(ctx context.Context, tenantID string, keyID string
 		return KeyVersion{}, err
 	}
 	oldVersion = key.CurrentVersion
+	if err := s.refuseReplicaChange(ctx, tenantID, keyID); err != nil {
+		return KeyVersion{}, err
+	}
 	if isDeletedLike(key.Status) {
 		return KeyVersion{}, errors.New("cannot rotate a deleted key")
 	}
@@ -2193,6 +2198,9 @@ func (s *Service) UpdateKey(ctx context.Context, tenantID string, keyID string, 
 	if err != nil {
 		return err
 	}
+	if err := s.refuseReplicaChange(ctx, tenantID, keyID); err != nil {
+		return err
+	}
 	labels := KeyLabels{}
 	for k, v := range req.Labels {
 		if !strings.HasPrefix(k, "hsm") {
@@ -2305,6 +2313,9 @@ func (s *Service) SetKeyStatus(ctx context.Context, tenantID string, keyID strin
 	if err != nil {
 		return err
 	}
+	if err := s.refuseReplicaChange(ctx, tenantID, keyID); err != nil {
+		return err
+	}
 	currentStatus := normalizeLifecycleStatus(key.Status)
 	if isDeletedLike(currentStatus) {
 		return errors.New("cannot change status for deleted keys")
@@ -2355,6 +2366,9 @@ func (s *Service) ScheduleKeyDestroy(ctx context.Context, tenantID string, keyID
 	}
 	key, err := s.GetKey(ctx, tenantID, keyID)
 	if err != nil {
+		return time.Time{}, err
+	}
+	if err := s.refuseReplicaChange(ctx, tenantID, keyID); err != nil {
 		return time.Time{}, err
 	}
 	if isDeletedLike(key.Status) {
@@ -2428,6 +2442,9 @@ func (s *Service) ScheduleKeyDestroy(ctx context.Context, tenantID string, keyID
 func (s *Service) DestroyKeyImmediately(ctx context.Context, tenantID string, keyID string, justification string, requesterID string, requesterEmail string, requesterIP string) error {
 	key, err := s.GetKey(ctx, tenantID, keyID)
 	if err != nil {
+		return err
+	}
+	if err := s.refuseReplicaChange(ctx, tenantID, keyID); err != nil {
 		return err
 	}
 	if isDeletedLike(key.Status) {

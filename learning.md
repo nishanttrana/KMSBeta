@@ -5,6 +5,21 @@ Newest entries on top.
 
 ## 2026-10-24
 
+### Federation is fencing and refusing, not copying (13.60.0-beta)
+- **Copying is the easy part.** Seal each version to the receiver and sign
+  the bundle. The work is deciding when a push must not apply: a replay, a
+  lower epoch, a key that exists and isn't federated, or a version whose
+  KCV differs.
+- **Never replace material.** Every rule ends in a refusal rather than an
+  overwrite, so a split brain leaves both sides readable.
+- **Epochs fence like terms in Raft.** Promotion raises the epoch. The old
+  primary learns of it from a signed statement in its refused push, rather
+  than from a timeout, so it demotes only on a promotion it can verify.
+- **Retiring a preview must retire it everywhere.** The compliance score
+  excluded preview records but not retired ones, so three earlier
+  retirements had kept counting as controls. The federation retirement's
+  test caught it.
+
 ### A PKCS#11 module lives in someone else's process (13.59.0-beta)
 - **Go is the wrong language for it.** A Go `c-shared` library can't be
   loaded by a Go program: two Go runtimes don't share a process. That

@@ -25,7 +25,7 @@ Enterprise Key Audit adds an operating layer for the highest-value KMS gaps:
 - inventory sync, dependency records, orphan detection, and duplicate KCV detection
 - statistical anomaly detection with DSPM findings
 - orchestration runs, KDF, fingerprint verification, and threat signals
-- **Preview** (records only, not enforced; see [PREVIEW_FEATURES.md](PREVIEW_FEATURES.md)): federation, edge, sharing, metadata, binding, advanced-encryption modes
+- **Preview** (records only, not enforced; see [PREVIEW_FEATURES.md](PREVIEW_FEATURES.md)): advanced-encryption modes. Federation, edge devices, metadata profiles and binding policies are real features now; sharing grants were replaced by key access grants
 
 ### Why Teams Use It
 

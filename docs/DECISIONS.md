@@ -7,6 +7,44 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-24 — Federation replicates chosen keys, fences by epoch, and never replaces material
+**Decision.** Keys replicate between installations one key at a time.
+- **Links.** A link is pushed by the key's primary to a registered peer:
+  ML-KEM-768-sealed versions in a bundle signed with the tenant's ECDSA
+  P-256 identity, delivered as the peer's REST client.
+- **Replicas.** A replica keeps the key's ID, versions and KCVs, and
+  serves operations; lifecycle changes are the primary's.
+- **Failover.** An administrator promotes the replica, which raises the
+  epoch. The old primary is fenced by a signed statement and demoted.
+- **Conflicts.** A push that disagrees with any version the receiver holds
+  is refused.
+
+**Why.**
+- The owner's list (2026-10-22): "Federation and failover across separate
+  KMS installations is preview only."
+- Separate installations share no database, so cluster replication can't
+  span them.
+- Keeping IDs and versions is what makes failover transparent to
+  ciphertext.
+
+**Rejected.**
+- Replicating whole tenants. Grants and users are local, and admins choose
+  which keys may leave.
+- Automatic failover between installations. Without a shared quorum, a
+  partition would promote both sides.
+- Overwriting on conflict. It would lose data encrypted under the
+  overwritten version.
+- Pulling instead of pushing. A pull needs the source reachable from the
+  replica, and its credentials there.
+- Replicating HSM-resident or non-exportable keys.
+
+**Enforced.** `TestFederationReplicatesAndFailsOver`,
+`TestFederationSplitBrainKeepsBothVersions`,
+`TestFederationRefusesWhatItMustNotApply`,
+`TestFederationStorePostgres`.
+
+---
+
 ## 2026-10-24 — The PKCS#11 module is C on libcurl, a REST client, one token per tenant
 **Decision.** `sdk/pkcs11` is a PKCS#11 v2.40 module in C, linked only
 against libcurl.
