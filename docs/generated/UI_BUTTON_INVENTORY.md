@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-24T08:55:22Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-24T09:13:28Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -442,19 +442,19 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 453 | - | Btn | setPolicyModal(false)}>Cancel |  |
 | web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 454 | - | Btn | (icon or dynamic label) | savePolicy} disabled={pSaving \|\| !pName.trim() \|\| !pFilter.trim() |
 | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | 22 | rotation | button | setView(id)} style={{ display: "inline-flex", alignItems: "center", gap: 6, p... |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 400 | sbom | Btn | void loadData( )} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 487 | sbom | Btn | void exportSBOMFile("cyclonedx")} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 490 | sbom | Btn | void exportSBOMFile("spdx")} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 494 | sbom | Btn | setExportMenuOpen((prev) => !prev)} disabled= style={ }>Export |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 496 | sbom | Btn | } disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 499 | sbom | Btn | } disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 504 | sbom | Btn | void openSBOMDiff()} style={ }>SBOM Diff |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 563 | sbom | Btn | void exportCBOMFile()} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 566 | sbom | Btn | void openCBOMDiff()} style={ }>View Diff |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 658 | sbom | Btn | setDiffOpen(false)}>Close |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 692 | sbom | Btn | setSBOMDiffOpen(false)}>Close |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 720 | sbom | Btn | }>Close |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 750 | sbom | Btn | }>Close |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 380 | sbom | Btn | void loadData( )} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 467 | sbom | Btn | void exportSBOMFile("cyclonedx")} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 470 | sbom | Btn | void exportSBOMFile("spdx")} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 474 | sbom | Btn | setExportMenuOpen((prev) => !prev)} disabled= style={ }>Export |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 476 | sbom | Btn | } disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 479 | sbom | Btn | } disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 484 | sbom | Btn | void openSBOMDiff()} style={ }>SBOM Diff |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 543 | sbom | Btn | void exportCBOMFile()} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 546 | sbom | Btn | void openCBOMDiff()} style={ }>View Diff |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 638 | sbom | Btn | setDiffOpen(false)}>Close |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 672 | sbom | Btn | setSBOMDiffOpen(false)}>Close |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 700 | sbom | Btn | }>Close |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 730 | sbom | Btn | }>Close |  |
 | web/dashboard/src/components/v3/tabs/SSHCADetail.tsx | 86 | - | Btn | void editPrincipals()}>Edit principals |  |
 | web/dashboard/src/components/v3/tabs/SSHCADetail.tsx | 87 | - | Btn | void downloadSSHKRL(session, ca).catch((e) => onToast?.(errMsg(e)))}>Download... |  |
 | web/dashboard/src/components/v3/tabs/SSHCADetail.tsx | 88 | - | Btn | void setStatus("disabled")}>Disable |  |

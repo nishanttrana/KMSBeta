@@ -1382,8 +1382,11 @@ The SBOM service (`/svc/sbom`) inventories the platform's own dependencies
 (Go modules, npm packages, container images, runtimes):
 
 ```bash
-# Latest snapshot (generated on first read if none exists)
+# Latest snapshot (404 not_found until one is generated)
 curl "https://localhost/svc/sbom/sbom/latest" -H "Authorization: Bearer $TOKEN"
+
+# Generate one now (platform tenant only)
+curl -X POST "https://localhost/svc/sbom/sbom/generate" -H "Authorization: Bearer $TOKEN"
 
 # Export a snapshot as CycloneDX or SPDX
 curl "https://localhost/svc/sbom/sbom/$SNAPSHOT_ID/export?format=cyclonedx" \
@@ -1394,6 +1397,15 @@ curl "https://localhost/svc/sbom/sbom/$SNAPSHOT_ID/export?format=spdx" \
 
 SBOM fields per component: `name`, `version`, `type`, `purl`, `supplier`,
 `licenses`, `hashes`, `ecosystem`.
+
+**Schedule.** `SBOM_SCHEDULE` and `CBOM_SCHEDULE` (`daily` | `weekly` |
+`off`; compose sets `daily`) are checked hourly, starting two minutes after
+the service starts. Each check generates any snapshot that is missing or
+older than its interval, so a restart doesn't put the schedule back to
+zero (13.64.0-beta). The scheduled CBOM covers the tenants in
+`CBOM_SCHEDULE_TENANTS` (default `root`) and every tenant that already has
+a CBOM. Before the first snapshot, the console's **SBOM / CBOM** page reads
+"Not generated", and **Generate BOM** makes one.
 
 The KMS does not track CVEs against its SBOM: feed the export to your
 vulnerability-management tool. Vulnerability correlation, offline advisories

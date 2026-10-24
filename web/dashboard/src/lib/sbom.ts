@@ -1,5 +1,5 @@
 import type { AuthSession } from "./auth";
-import { serviceRequest } from "./serviceApi";
+import { serviceRequest, serviceRequestOrNone } from "./serviceApi";
 
 export type BOMComponent = {
   name: string;
@@ -95,9 +95,11 @@ export async function generateSBOM(session: AuthSession, trigger = "manual"): Pr
   return out.snapshot;
 }
 
-export async function getLatestSBOM(session: AuthSession): Promise<SBOMSnapshot> {
-  const out = await serviceRequest<SnapshotResponse<SBOMSnapshot>>(session, "sbom", "/sbom/latest");
-  return out.item;
+// The latest snapshot, summary and readiness are null before the first
+// snapshot is generated (the service answers 404 not_found).
+export async function getLatestSBOM(session: AuthSession): Promise<SBOMSnapshot | null> {
+  const out = await serviceRequestOrNone<SnapshotResponse<SBOMSnapshot>>(session, "sbom", "/sbom/latest");
+  return out?.item ?? null;
 }
 
 export async function listSBOMHistory(session: AuthSession, limit = 20): Promise<SBOMSnapshot[]> {
@@ -131,9 +133,9 @@ export async function generateCBOM(session: AuthSession, trigger = "manual"): Pr
   return out.snapshot;
 }
 
-export async function getLatestCBOM(session: AuthSession): Promise<CBOMSnapshot> {
-  const out = await serviceRequest<SnapshotResponse<CBOMSnapshot>>(session, "sbom", `/cbom/latest?${tenantQuery(session)}`);
-  return out.item;
+export async function getLatestCBOM(session: AuthSession): Promise<CBOMSnapshot | null> {
+  const out = await serviceRequestOrNone<SnapshotResponse<CBOMSnapshot>>(session, "sbom", `/cbom/latest?${tenantQuery(session)}`);
+  return out?.item ?? null;
 }
 
 export async function listCBOMHistory(session: AuthSession, limit = 20): Promise<CBOMSnapshot[]> {
@@ -145,9 +147,9 @@ export async function listCBOMHistory(session: AuthSession, limit = 20): Promise
   return Array.isArray(out?.items) ? out.items : [];
 }
 
-export async function getCBOMSummary(session: AuthSession): Promise<Record<string, unknown>> {
-  const out = await serviceRequest<SummaryResponse>(session, "sbom", `/cbom/summary?${tenantQuery(session)}`);
-  return out?.summary || {};
+export async function getCBOMSummary(session: AuthSession): Promise<Record<string, unknown> | null> {
+  const out = await serviceRequestOrNone<SummaryResponse>(session, "sbom", `/cbom/summary?${tenantQuery(session)}`);
+  return out ? out.summary || {} : null;
 }
 
 export async function exportCBOM(
@@ -192,7 +194,7 @@ export async function diffSBOM(session: AuthSession, fromID: string, toID: strin
   return out.diff;
 }
 
-export async function getCBOMPQCReadiness(session: AuthSession): Promise<PQCReadiness> {
-  const out = await serviceRequest<PQCReadinessResponse>(session, "sbom", `/cbom/pqc-readiness?${tenantQuery(session)}`);
-  return out.pqc_readiness;
+export async function getCBOMPQCReadiness(session: AuthSession): Promise<PQCReadiness | null> {
+  const out = await serviceRequestOrNone<PQCReadinessResponse>(session, "sbom", `/cbom/pqc-readiness?${tenantQuery(session)}`);
+  return out?.pqc_readiness ?? null;
 }

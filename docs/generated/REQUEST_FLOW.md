@@ -1,6 +1,6 @@
 # Generated Request Flow Map
 
-Generated at `2026-10-24T08:55:22Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-24T09:13:28Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
@@ -465,17 +465,17 @@ This file connects frontend requests to backend Go processing. It is static anal
 | reporting\|GET\|/alerts/stats/mttr | GET /alerts/stats/mttr | mttrStats (services/reporting/handler.go:646) | MTTRStats | ScanAlerts |  |  | web/dashboard/src/lib/reporting.ts:231 |
 | reporting\|GET\|/alerts/stats/top-sources | GET /alerts/stats/top-sources | topSources (services/reporting/handler.go:674) | TopSources |  |  |  | web/dashboard/src/lib/reporting.ts:365 |
 | sbom\|POST\|/sbom/generate | POST /sbom/generate | generateSBOM (services/sbom/handler.go:89) | GenerateSBOM | SaveSBOMSnapshot, GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:91 |
-| sbom\|GET\|/sbom/latest | GET /sbom/latest | latestSBOM (services/sbom/handler.go:107) | GetLatestSBOM | GetLatestSBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:99 |
-| sbom\|GET\|/sbom/history | GET /sbom/history | sbomHistory (services/sbom/handler.go:117) | ListSBOMHistory | ListSBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:104 |
-| sbom\|GET\|/sbom/diff | GET /sbom/diff | sbomDiff (services/sbom/handler.go:147) | DiffSBOM | GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:187 |
-| sbom\|GET\|/sbom/{param}/export | GET /sbom/{id}/export | sbomExport (services/sbom/handler.go:135) | ExportSBOM |  |  |  | web/dashboard/src/lib/sbom.ts:118 |
-| sbom\|POST\|/cbom/generate | POST /cbom/generate | generateCBOM (services/sbom/handler.go:160) | GenerateCBOM | SaveCBOMSnapshot, GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:127 |
-| sbom\|GET\|/cbom/latest | GET /cbom/latest | latestCBOM (services/sbom/handler.go:178) | GetLatestCBOM | GetLatestCBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:135 |
-| sbom\|GET\|/cbom/history | GET /cbom/history | cbomHistory (services/sbom/handler.go:188) | ListCBOMHistory | ListCBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:140 |
-| sbom\|GET\|/cbom/summary | GET /cbom/summary | cbomSummary (services/sbom/handler.go:217) | CBOMSummary |  |  |  | web/dashboard/src/lib/sbom.ts:149 |
-| sbom\|GET\|/cbom/pqc-readiness | GET /cbom/pqc-readiness | cbomPQCReadiness (services/sbom/handler.go:226) | CBOMPQCReadiness |  |  |  | web/dashboard/src/lib/sbom.ts:196 |
-| sbom\|GET\|/cbom/diff | GET /cbom/diff | cbomDiff (services/sbom/handler.go:235) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:167 |
-| sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | cbomExport (services/sbom/handler.go:206) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:158 |
+| sbom\|GET\|/sbom/latest | GET /sbom/latest | latestSBOM (services/sbom/handler.go:107) | GetLatestSBOM | GetLatestSBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:101 |
+| sbom\|GET\|/sbom/history | GET /sbom/history | sbomHistory (services/sbom/handler.go:117) | ListSBOMHistory | ListSBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:106 |
+| sbom\|GET\|/sbom/diff | GET /sbom/diff | sbomDiff (services/sbom/handler.go:147) | DiffSBOM | GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:189 |
+| sbom\|GET\|/sbom/{param}/export | GET /sbom/{id}/export | sbomExport (services/sbom/handler.go:135) | ExportSBOM |  |  |  | web/dashboard/src/lib/sbom.ts:120 |
+| sbom\|POST\|/cbom/generate | POST /cbom/generate | generateCBOM (services/sbom/handler.go:160) | GenerateCBOM | SaveCBOMSnapshot, GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:129 |
+| sbom\|GET\|/cbom/latest | GET /cbom/latest | latestCBOM (services/sbom/handler.go:178) | GetLatestCBOM | GetLatestCBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:137 |
+| sbom\|GET\|/cbom/history | GET /cbom/history | cbomHistory (services/sbom/handler.go:188) | ListCBOMHistory | ListCBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:142 |
+| sbom\|GET\|/cbom/summary | GET /cbom/summary | cbomSummary (services/sbom/handler.go:217) | CBOMSummary |  |  |  | web/dashboard/src/lib/sbom.ts:151 |
+| sbom\|GET\|/cbom/pqc-readiness | GET /cbom/pqc-readiness | cbomPQCReadiness (services/sbom/handler.go:226) | CBOMPQCReadiness |  |  |  | web/dashboard/src/lib/sbom.ts:198 |
+| sbom\|GET\|/cbom/diff | GET /cbom/diff | cbomDiff (services/sbom/handler.go:235) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:169 |
+| sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | cbomExport (services/sbom/handler.go:206) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:160 |
 | secrets\|GET\|/secrets/database/roles | GET /secrets/database/roles | listDBRoles (services/secrets/dbengine_routes.go:74) |  | ListDBRoles, CountActiveDBLeases |  |  | web/dashboard/src/lib/secretsDatabase.ts:39 |
 | secrets\|DELETE\|/secrets/database/roles/{param} | DELETE /secrets/database/roles/{name} | deleteDBRole (services/secrets/dbengine_routes.go:148) |  | CountActiveDBLeases, DeleteDBRole |  |  | web/dashboard/src/lib/secretsDatabase.ts:50 |
 | secrets\|GET\|/secrets/database/leases | GET /secrets/database/leases | listDBLeases (services/secrets/dbengine_routes.go:199) |  | ListDBLeases |  |  | web/dashboard/src/lib/secretsDatabase.ts:58 |
@@ -1363,18 +1363,18 @@ This file connects frontend requests to backend Go processing. It is static anal
 | reporting\|GET\|/alerts/stats/mttr | GET /alerts/stats/mttr | mttrStats (services/reporting/handler.go:646) | MTTRStats | ScanAlerts |  |  | web/dashboard/src/lib/reporting.ts:231 |
 | reporting\|GET\|/alerts/stats/top-sources | GET /alerts/stats/top-sources | topSources (services/reporting/handler.go:674) | TopSources |  |  |  | web/dashboard/src/lib/reporting.ts:365 |
 | sbom\|POST\|/sbom/generate | POST /sbom/generate | generateSBOM (services/sbom/handler.go:89) | GenerateSBOM | SaveSBOMSnapshot, GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:91 |
-| sbom\|GET\|/sbom/latest | GET /sbom/latest | latestSBOM (services/sbom/handler.go:107) | GetLatestSBOM | GetLatestSBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:99 |
-| sbom\|GET\|/sbom/history | GET /sbom/history | sbomHistory (services/sbom/handler.go:117) | ListSBOMHistory | ListSBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:104 |
-| sbom\|GET\|/sbom/diff | GET /sbom/diff | sbomDiff (services/sbom/handler.go:147) | DiffSBOM | GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:187 |
-| sbom\|GET\|/sbom/{param}/export | GET /sbom/{id}/export | sbomExport (services/sbom/handler.go:135) | ExportSBOM |  |  |  | web/dashboard/src/lib/sbom.ts:118 |
+| sbom\|GET\|/sbom/latest | GET /sbom/latest | latestSBOM (services/sbom/handler.go:107) | GetLatestSBOM | GetLatestSBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:101 |
+| sbom\|GET\|/sbom/history | GET /sbom/history | sbomHistory (services/sbom/handler.go:117) | ListSBOMHistory | ListSBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:106 |
+| sbom\|GET\|/sbom/diff | GET /sbom/diff | sbomDiff (services/sbom/handler.go:147) | DiffSBOM | GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:189 |
+| sbom\|GET\|/sbom/{param}/export | GET /sbom/{id}/export | sbomExport (services/sbom/handler.go:135) | ExportSBOM |  |  |  | web/dashboard/src/lib/sbom.ts:120 |
 | sbom\|GET\|/sbom/{param} | GET /sbom/{id} | sbomByID (services/sbom/handler.go:126) | GetSBOMByID | GetSBOMSnapshotByID |  |  |  |
-| sbom\|POST\|/cbom/generate | POST /cbom/generate | generateCBOM (services/sbom/handler.go:160) | GenerateCBOM | SaveCBOMSnapshot, GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:127 |
-| sbom\|GET\|/cbom/latest | GET /cbom/latest | latestCBOM (services/sbom/handler.go:178) | GetLatestCBOM | GetLatestCBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:135 |
-| sbom\|GET\|/cbom/history | GET /cbom/history | cbomHistory (services/sbom/handler.go:188) | ListCBOMHistory | ListCBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:140 |
-| sbom\|GET\|/cbom/summary | GET /cbom/summary | cbomSummary (services/sbom/handler.go:217) | CBOMSummary |  |  |  | web/dashboard/src/lib/sbom.ts:149 |
-| sbom\|GET\|/cbom/pqc-readiness | GET /cbom/pqc-readiness | cbomPQCReadiness (services/sbom/handler.go:226) | CBOMPQCReadiness |  |  |  | web/dashboard/src/lib/sbom.ts:196 |
-| sbom\|GET\|/cbom/diff | GET /cbom/diff | cbomDiff (services/sbom/handler.go:235) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:167 |
-| sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | cbomExport (services/sbom/handler.go:206) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:158 |
+| sbom\|POST\|/cbom/generate | POST /cbom/generate | generateCBOM (services/sbom/handler.go:160) | GenerateCBOM | SaveCBOMSnapshot, GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:129 |
+| sbom\|GET\|/cbom/latest | GET /cbom/latest | latestCBOM (services/sbom/handler.go:178) | GetLatestCBOM | GetLatestCBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:137 |
+| sbom\|GET\|/cbom/history | GET /cbom/history | cbomHistory (services/sbom/handler.go:188) | ListCBOMHistory | ListCBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:142 |
+| sbom\|GET\|/cbom/summary | GET /cbom/summary | cbomSummary (services/sbom/handler.go:217) | CBOMSummary |  |  |  | web/dashboard/src/lib/sbom.ts:151 |
+| sbom\|GET\|/cbom/pqc-readiness | GET /cbom/pqc-readiness | cbomPQCReadiness (services/sbom/handler.go:226) | CBOMPQCReadiness |  |  |  | web/dashboard/src/lib/sbom.ts:198 |
+| sbom\|GET\|/cbom/diff | GET /cbom/diff | cbomDiff (services/sbom/handler.go:235) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:169 |
+| sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | cbomExport (services/sbom/handler.go:206) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:160 |
 | sbom\|GET\|/cbom/{param} | GET /cbom/{id} | cbomByID (services/sbom/handler.go:197) | GetCBOMByID | GetCBOMSnapshotByID |  |  |  |
 | secrets\|GET\|/secrets/database/roles | GET /secrets/database/roles | listDBRoles (services/secrets/dbengine_routes.go:74) |  | ListDBRoles, CountActiveDBLeases |  |  | web/dashboard/src/lib/secretsDatabase.ts:39 |
 | secrets\|PUT\|/secrets/database/roles/{param} | PUT /secrets/database/roles/{name} | putDBRole (services/secrets/dbengine_routes.go:92) |  | PutDBRole, CountActiveDBLeases, DeleteDBRole, GetDBRole, ListDBLeases, GetDBLease, ListDBRoles, DueDBLeases |  | pkg/clusterstate.RunsPrimaryJobs, pkg/credstore.MayAttach, pkg/tenantcheck.IsServicePrincipal |  |

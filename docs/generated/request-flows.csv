@@ -820,18 +820,18 @@ reporting|GET|/alerts/stats/mttd,reporting,GET,/alerts/stats/mttd,/alerts/stats/
 reporting|GET|/alerts/stats/mttr,reporting,GET,/alerts/stats/mttr,/alerts/stats/mttr,web/dashboard/src/lib/reporting.ts:231,mttrStats,services/reporting/handler.go,646,MTTRStats,ScanAlerts,,,
 reporting|GET|/alerts/stats/top-sources,reporting,GET,/alerts/stats/top-sources,/alerts/stats/top-sources,web/dashboard/src/lib/reporting.ts:365,topSources,services/reporting/handler.go,674,TopSources,,,,
 sbom|POST|/sbom/generate,sbom,POST,/sbom/generate,/sbom/generate,web/dashboard/src/lib/sbom.ts:91,generateSBOM,services/sbom/handler.go,89,GenerateSBOM,"SaveSBOMSnapshot, GetSBOMSnapshotByID",,,
-sbom|GET|/sbom/latest,sbom,GET,/sbom/latest,/sbom/latest,web/dashboard/src/lib/sbom.ts:99,latestSBOM,services/sbom/handler.go,107,GetLatestSBOM,GetLatestSBOMSnapshot,,,
-sbom|GET|/sbom/history,sbom,GET,/sbom/history,/sbom/history,web/dashboard/src/lib/sbom.ts:104,sbomHistory,services/sbom/handler.go,117,ListSBOMHistory,ListSBOMSnapshots,,,
-sbom|GET|/sbom/diff,sbom,GET,/sbom/diff,/sbom/diff,web/dashboard/src/lib/sbom.ts:187,sbomDiff,services/sbom/handler.go,147,DiffSBOM,GetSBOMSnapshotByID,,,strings.TrimSpace
-sbom|GET|/sbom/{param}/export,sbom,GET,/sbom/{id}/export,/sbom/{param}/export,web/dashboard/src/lib/sbom.ts:118,sbomExport,services/sbom/handler.go,135,ExportSBOM,,,,
+sbom|GET|/sbom/latest,sbom,GET,/sbom/latest,/sbom/latest,web/dashboard/src/lib/sbom.ts:101,latestSBOM,services/sbom/handler.go,107,GetLatestSBOM,GetLatestSBOMSnapshot,,,
+sbom|GET|/sbom/history,sbom,GET,/sbom/history,/sbom/history,web/dashboard/src/lib/sbom.ts:106,sbomHistory,services/sbom/handler.go,117,ListSBOMHistory,ListSBOMSnapshots,,,
+sbom|GET|/sbom/diff,sbom,GET,/sbom/diff,/sbom/diff,web/dashboard/src/lib/sbom.ts:189,sbomDiff,services/sbom/handler.go,147,DiffSBOM,GetSBOMSnapshotByID,,,strings.TrimSpace
+sbom|GET|/sbom/{param}/export,sbom,GET,/sbom/{id}/export,/sbom/{param}/export,web/dashboard/src/lib/sbom.ts:120,sbomExport,services/sbom/handler.go,135,ExportSBOM,,,,
 sbom|GET|/sbom/{param},sbom,GET,/sbom/{id},/sbom/{param},,sbomByID,services/sbom/handler.go,126,GetSBOMByID,GetSBOMSnapshotByID,,,strings.TrimSpace
-sbom|POST|/cbom/generate,sbom,POST,/cbom/generate,/cbom/generate,web/dashboard/src/lib/sbom.ts:127,generateCBOM,services/sbom/handler.go,160,GenerateCBOM,"SaveCBOMSnapshot, GetCBOMSnapshotByID",,,strings.TrimSpace
-sbom|GET|/cbom/latest,sbom,GET,/cbom/latest,/cbom/latest,web/dashboard/src/lib/sbom.ts:135,latestCBOM,services/sbom/handler.go,178,GetLatestCBOM,GetLatestCBOMSnapshot,,,strings.TrimSpace
-sbom|GET|/cbom/history,sbom,GET,/cbom/history,/cbom/history,web/dashboard/src/lib/sbom.ts:140,cbomHistory,services/sbom/handler.go,188,ListCBOMHistory,ListCBOMSnapshots,,,strings.TrimSpace
-sbom|GET|/cbom/summary,sbom,GET,/cbom/summary,/cbom/summary,web/dashboard/src/lib/sbom.ts:149,cbomSummary,services/sbom/handler.go,217,CBOMSummary,,,,
-sbom|GET|/cbom/pqc-readiness,sbom,GET,/cbom/pqc-readiness,/cbom/pqc-readiness,web/dashboard/src/lib/sbom.ts:196,cbomPQCReadiness,services/sbom/handler.go,226,CBOMPQCReadiness,,,,
-sbom|GET|/cbom/diff,sbom,GET,/cbom/diff,/cbom/diff,web/dashboard/src/lib/sbom.ts:167,cbomDiff,services/sbom/handler.go,235,DiffCBOM,GetCBOMSnapshotByID,,,strings.TrimSpace
-sbom|GET|/cbom/{param}/export,sbom,GET,/cbom/{id}/export,/cbom/{param}/export,web/dashboard/src/lib/sbom.ts:158,cbomExport,services/sbom/handler.go,206,ExportCBOM,,,,
+sbom|POST|/cbom/generate,sbom,POST,/cbom/generate,/cbom/generate,web/dashboard/src/lib/sbom.ts:129,generateCBOM,services/sbom/handler.go,160,GenerateCBOM,"SaveCBOMSnapshot, GetCBOMSnapshotByID",,,strings.TrimSpace
+sbom|GET|/cbom/latest,sbom,GET,/cbom/latest,/cbom/latest,web/dashboard/src/lib/sbom.ts:137,latestCBOM,services/sbom/handler.go,178,GetLatestCBOM,GetLatestCBOMSnapshot,,,strings.TrimSpace
+sbom|GET|/cbom/history,sbom,GET,/cbom/history,/cbom/history,web/dashboard/src/lib/sbom.ts:142,cbomHistory,services/sbom/handler.go,188,ListCBOMHistory,ListCBOMSnapshots,,,strings.TrimSpace
+sbom|GET|/cbom/summary,sbom,GET,/cbom/summary,/cbom/summary,web/dashboard/src/lib/sbom.ts:151,cbomSummary,services/sbom/handler.go,217,CBOMSummary,,,,
+sbom|GET|/cbom/pqc-readiness,sbom,GET,/cbom/pqc-readiness,/cbom/pqc-readiness,web/dashboard/src/lib/sbom.ts:198,cbomPQCReadiness,services/sbom/handler.go,226,CBOMPQCReadiness,,,,
+sbom|GET|/cbom/diff,sbom,GET,/cbom/diff,/cbom/diff,web/dashboard/src/lib/sbom.ts:169,cbomDiff,services/sbom/handler.go,235,DiffCBOM,GetCBOMSnapshotByID,,,strings.TrimSpace
+sbom|GET|/cbom/{param}/export,sbom,GET,/cbom/{id}/export,/cbom/{param}/export,web/dashboard/src/lib/sbom.ts:160,cbomExport,services/sbom/handler.go,206,ExportCBOM,,,,
 sbom|GET|/cbom/{param},sbom,GET,/cbom/{id},/cbom/{param},,cbomByID,services/sbom/handler.go,197,GetCBOMByID,GetCBOMSnapshotByID,,,strings.TrimSpace
 secrets|GET|/secrets/database/roles,secrets,GET,/secrets/database/roles,/secrets/database/roles,web/dashboard/src/lib/secretsDatabase.ts:39,listDBRoles,services/secrets/dbengine_routes.go,74,,"ListDBRoles, CountActiveDBLeases",,,
 secrets|PUT|/secrets/database/roles/{param},secrets,PUT,/secrets/database/roles/{name},/secrets/database/roles/{param},,putDBRole,services/secrets/dbengine_routes.go,92,,"PutDBRole, CountActiveDBLeases, DeleteDBRole, GetDBRole, ListDBLeases, GetDBLease, ListDBRoles, DueDBLeases",,"pkg/clusterstate.RunsPrimaryJobs, pkg/credstore.MayAttach, pkg/tenantcheck.IsServicePrincipal","context.Background, strings.TrimSpace, strings.LastIndex, time.Until, time.NewTicker"

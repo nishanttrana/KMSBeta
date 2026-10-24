@@ -4,6 +4,7 @@ import { clearSession } from "./auth";
 
 type APIErrorShape = {
   error?: {
+    code?: string;
     message?: string;
   };
 };
@@ -131,7 +132,35 @@ export async function serviceRequest<T = unknown>(
   init?: ServiceRequestInit,
   timeoutMs = REQUEST_TIMEOUT_MS
 ): Promise<T> {
-  const response = await serviceRequestRaw(session, service, path, init, timeoutMs);
+  return readResponse<T>(await serviceRequestRaw(session, service, path, init, timeoutMs), init);
+}
+
+// A read of something that may not exist yet (the latest snapshot before the
+// first one): the service's 404 with code not_found is null. Any other
+// failure throws, including the router's plain 404 for a route that isn't
+// registered.
+export async function serviceRequestOrNone<T = unknown>(
+  session: AuthSession,
+  service: string,
+  path: string,
+  init?: ServiceRequestInit
+): Promise<T | null> {
+  const response = await serviceRequestRaw(session, service, path, init);
+  if (response.status === 404) {
+    let code = "";
+    try {
+      code = parseServiceJSON<APIErrorShape>(await response.clone().text())?.error?.code || "";
+    } catch {
+      // Not JSON: the router's own 404.
+    }
+    if (code === "not_found") {
+      return null;
+    }
+  }
+  return readResponse<T>(response, init);
+}
+
+async function readResponse<T>(response: Response, init?: ServiceRequestInit): Promise<T> {
   if (!response.ok) {
     if (!init?.keepSessionOn401) {
       handleUnauthorizedResponse(response.status);

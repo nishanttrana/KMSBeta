@@ -4200,6 +4200,10 @@ reason `platform_tenant_required`.
 
 Returns the latest SBOM snapshot. **Response 200**: `item`: `id`,
 `source_hash`, `created_at`, `document` (the components), `summary`.
+**Response 404** `not_found` until a snapshot has been generated. The same
+holds for `GET /svc/sbom/cbom/latest`, `/cbom/summary` and
+`/cbom/pqc-readiness` for the tenant; the history routes answer an empty
+list.
 
 ---
 

@@ -24773,7 +24773,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "void loadData( )} disabled= >",
-      "line": 400,
+      "line": 380,
       "tabs": [
         "sbom"
       ],
@@ -24783,7 +24783,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "void exportSBOMFile(\"cyclonedx\")} disabled= style={ }>",
-      "line": 487,
+      "line": 467,
       "tabs": [
         "sbom"
       ],
@@ -24793,7 +24793,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "void exportSBOMFile(\"spdx\")} disabled= style={ }>",
-      "line": 490,
+      "line": 470,
       "tabs": [
         "sbom"
       ],
@@ -24803,7 +24803,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "setExportMenuOpen((prev) => !prev)} disabled= style={ }>Export",
-      "line": 494,
+      "line": 474,
       "tabs": [
         "sbom"
       ],
@@ -24813,7 +24813,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "} disabled= style={ }>",
-      "line": 496,
+      "line": 476,
       "tabs": [
         "sbom"
       ],
@@ -24823,7 +24823,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "} disabled= style={ }>",
-      "line": 499,
+      "line": 479,
       "tabs": [
         "sbom"
       ],
@@ -24833,7 +24833,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "void openSBOMDiff()} style={ }>SBOM Diff",
-      "line": 504,
+      "line": 484,
       "tabs": [
         "sbom"
       ],
@@ -24843,7 +24843,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "void exportCBOMFile()} disabled= style={ }>",
-      "line": 563,
+      "line": 543,
       "tabs": [
         "sbom"
       ],
@@ -24853,7 +24853,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "void openCBOMDiff()} style={ }>View Diff",
-      "line": 566,
+      "line": 546,
       "tabs": [
         "sbom"
       ],
@@ -24863,7 +24863,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "setDiffOpen(false)}>Close",
-      "line": 658,
+      "line": 638,
       "tabs": [
         "sbom"
       ],
@@ -24873,7 +24873,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "setSBOMDiffOpen(false)}>Close",
-      "line": 692,
+      "line": 672,
       "tabs": [
         "sbom"
       ],
@@ -24883,7 +24883,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "}>Close",
-      "line": 720,
+      "line": 700,
       "tabs": [
         "sbom"
       ],
@@ -24893,7 +24893,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "}>Close",
-      "line": 750,
+      "line": 730,
       "tabs": [
         "sbom"
       ],
@@ -33720,22 +33720,22 @@
     },
     {
       "dynamic": false,
-      "expression": "serviceRequest(\"sbom\", \"/sbom/latest\")",
+      "expression": "serviceRequestOrNone(\"sbom\", \"/sbom/latest\")",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 99,
+      "line": 101,
       "match_key": "sbom|GET|/sbom/latest",
       "method": "GET",
       "normalized_path": "/sbom/latest",
       "path": "/sbom/latest",
       "service": "sbom",
       "service_key": "sbom",
-      "source": "serviceRequest"
+      "source": "serviceRequestOrNone"
     },
     {
       "dynamic": true,
       "expression": "serviceRequest(\"sbom\", `/sbom/history?limit=${Math.max(1, Math.trunc(Number(limit || 20)))}`)",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 104,
+      "line": 106,
       "match_key": "sbom|GET|/sbom/history",
       "method": "GET",
       "normalized_path": "/sbom/history",
@@ -33748,7 +33748,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"sbom\", `/sbom/${encodeURIComponent(String(id || \"\").trim())}/export?format=${encodeURIComponent(format)}&encoding=${encod...",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 118,
+      "line": 120,
       "match_key": "sbom|GET|/sbom/{param}/export",
       "method": "GET",
       "normalized_path": "/sbom/{param}/export",
@@ -33761,7 +33761,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"sbom\", `/cbom/generate?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 127,
+      "line": 129,
       "match_key": "sbom|POST|/cbom/generate",
       "method": "POST",
       "normalized_path": "/cbom/generate",
@@ -33772,22 +33772,22 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"sbom\", `/cbom/latest?${tenantQuery(session)}`)",
+      "expression": "serviceRequestOrNone(\"sbom\", `/cbom/latest?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 135,
+      "line": 137,
       "match_key": "sbom|GET|/cbom/latest",
       "method": "GET",
       "normalized_path": "/cbom/latest",
       "path": "/cbom/latest?{param}",
       "service": "sbom",
       "service_key": "sbom",
-      "source": "serviceRequest"
+      "source": "serviceRequestOrNone"
     },
     {
       "dynamic": true,
       "expression": "serviceRequest(\"sbom\", `/cbom/history?${tenantQuery(session)}&limit=${Math.max(1, Math.trunc(Number(limit || 20)))}`)",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 140,
+      "line": 142,
       "match_key": "sbom|GET|/cbom/history",
       "method": "GET",
       "normalized_path": "/cbom/history",
@@ -33798,22 +33798,22 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"sbom\", `/cbom/summary?${tenantQuery(session)}`)",
+      "expression": "serviceRequestOrNone(\"sbom\", `/cbom/summary?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 149,
+      "line": 151,
       "match_key": "sbom|GET|/cbom/summary",
       "method": "GET",
       "normalized_path": "/cbom/summary",
       "path": "/cbom/summary?{param}",
       "service": "sbom",
       "service_key": "sbom",
-      "source": "serviceRequest"
+      "source": "serviceRequestOrNone"
     },
     {
       "dynamic": true,
       "expression": "serviceRequest(\"sbom\", `/cbom/${encodeURIComponent(String(id || \"\").trim())}/export?${tenantQuery(session)}&format=${encodeURIComponent(f...",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 158,
+      "line": 160,
       "match_key": "sbom|GET|/cbom/{param}/export",
       "method": "GET",
       "normalized_path": "/cbom/{param}/export",
@@ -33826,7 +33826,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"sbom\", `/cbom/diff?${tenantQuery(session)}&from=${encodeURIComponent(String(fromID || \"\").trim())}&to=${encodeURIComponen...",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 167,
+      "line": 169,
       "match_key": "sbom|GET|/cbom/diff",
       "method": "GET",
       "normalized_path": "/cbom/diff",
@@ -33839,7 +33839,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"sbom\", `/sbom/diff?from=${encodeURIComponent(String(fromID || \"\").trim())}&to=${encodeURIComponent(String(toID || \"\").tri...",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 187,
+      "line": 189,
       "match_key": "sbom|GET|/sbom/diff",
       "method": "GET",
       "normalized_path": "/sbom/diff",
@@ -33850,16 +33850,16 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"sbom\", `/cbom/pqc-readiness?${tenantQuery(session)}`)",
+      "expression": "serviceRequestOrNone(\"sbom\", `/cbom/pqc-readiness?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 196,
+      "line": 198,
       "match_key": "sbom|GET|/cbom/pqc-readiness",
       "method": "GET",
       "normalized_path": "/cbom/pqc-readiness",
       "path": "/cbom/pqc-readiness?{param}",
       "service": "sbom",
       "service_key": "sbom",
-      "source": "serviceRequest"
+      "source": "serviceRequestOrNone"
     },
     {
       "dynamic": true,
@@ -34720,7 +34720,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-24T08:55:22Z",
+  "generated_at": "2026-10-24T09:13:28Z",
   "navigation": [
     {
       "group": "Home",
@@ -89180,7 +89180,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 104,
+          "line": 120,
           "name": "GenerateSBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -89198,10 +89198,10 @@
     {
       "frontend_call_sites": [
         {
-          "expression": "serviceRequest(\"sbom\", \"/sbom/latest\")",
+          "expression": "serviceRequestOrNone(\"sbom\", \"/sbom/latest\")",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 99,
-          "source": "serviceRequest"
+          "line": 101,
+          "source": "serviceRequestOrNone"
         }
       ],
       "handler": "h.latestSBOM",
@@ -89238,7 +89238,7 @@
             "GetLatestSBOMSnapshot"
           ],
           "internal_package_calls": [],
-          "line": 131,
+          "line": 147,
           "name": "GetLatestSBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -89256,7 +89256,7 @@
         {
           "expression": "serviceRequest(\"sbom\", `/sbom/history?limit=${Math.max(1, Math.trunc(Number(limit || 20)))}`)",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 104,
+          "line": 106,
           "source": "serviceRequest"
         }
       ],
@@ -89295,7 +89295,7 @@
             "ListSBOMSnapshots"
           ],
           "internal_package_calls": [],
-          "line": 140,
+          "line": 156,
           "name": "ListSBOMHistory",
           "receiver_calls": [],
           "store_calls": [
@@ -89313,7 +89313,7 @@
         {
           "expression": "serviceRequest(\"sbom\", `/sbom/diff?from=${encodeURIComponent(String(fromID || \"\").trim())}&to=${encodeURIComponent(String(toID || \"\").tri...",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 187,
+          "line": 189,
           "source": "serviceRequest"
         }
       ],
@@ -89361,7 +89361,7 @@
             "diffComponents"
           ],
           "internal_package_calls": [],
-          "line": 159,
+          "line": 175,
           "name": "DiffSBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -89379,7 +89379,7 @@
         {
           "expression": "serviceRequest(\"sbom\", `/sbom/${encodeURIComponent(String(id || \"\").trim())}/export?format=${encodeURIComponent(format)}&encoding=${encod...",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 118,
+          "line": 120,
           "source": "serviceRequest"
         }
       ],
@@ -89420,7 +89420,7 @@
             "exportSBOM"
           ],
           "internal_package_calls": [],
-          "line": 177,
+          "line": 193,
           "name": "ExportSBOM",
           "receiver_calls": [],
           "store_calls": []
@@ -89471,7 +89471,7 @@
             "GetSBOMSnapshotByID"
           ],
           "internal_package_calls": [],
-          "line": 151,
+          "line": 167,
           "name": "GetSBOMByID",
           "receiver_calls": [],
           "store_calls": [
@@ -89489,7 +89489,7 @@
         {
           "expression": "serviceRequest(\"sbom\", `/cbom/generate?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 127,
+          "line": 129,
           "source": "serviceRequest"
         }
       ],
@@ -89556,7 +89556,7 @@
             "defaultString"
           ],
           "internal_package_calls": [],
-          "line": 185,
+          "line": 201,
           "name": "GenerateCBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -89574,10 +89574,10 @@
     {
       "frontend_call_sites": [
         {
-          "expression": "serviceRequest(\"sbom\", `/cbom/latest?${tenantQuery(session)}`)",
+          "expression": "serviceRequestOrNone(\"sbom\", `/cbom/latest?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 135,
-          "source": "serviceRequest"
+          "line": 137,
+          "source": "serviceRequestOrNone"
         }
       ],
       "handler": "h.latestCBOM",
@@ -89620,7 +89620,7 @@
             "GetLatestCBOMSnapshot"
           ],
           "internal_package_calls": [],
-          "line": 221,
+          "line": 237,
           "name": "GetLatestCBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -89638,7 +89638,7 @@
         {
           "expression": "serviceRequest(\"sbom\", `/cbom/history?${tenantQuery(session)}&limit=${Math.max(1, Math.trunc(Number(limit || 20)))}`)",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 140,
+          "line": 142,
           "source": "serviceRequest"
         }
       ],
@@ -89683,7 +89683,7 @@
             "ListCBOMSnapshots"
           ],
           "internal_package_calls": [],
-          "line": 234,
+          "line": 250,
           "name": "ListCBOMHistory",
           "receiver_calls": [],
           "store_calls": [
@@ -89699,10 +89699,10 @@
     {
       "frontend_call_sites": [
         {
-          "expression": "serviceRequest(\"sbom\", `/cbom/summary?${tenantQuery(session)}`)",
+          "expression": "serviceRequestOrNone(\"sbom\", `/cbom/summary?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 149,
-          "source": "serviceRequest"
+          "line": 151,
+          "source": "serviceRequestOrNone"
         }
       ],
       "handler": "h.cbomSummary",
@@ -89735,7 +89735,7 @@
           "file": "services/sbom/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 268,
+          "line": 284,
           "name": "CBOMSummary",
           "receiver_calls": [],
           "store_calls": []
@@ -89747,10 +89747,10 @@
     {
       "frontend_call_sites": [
         {
-          "expression": "serviceRequest(\"sbom\", `/cbom/pqc-readiness?${tenantQuery(session)}`)",
+          "expression": "serviceRequestOrNone(\"sbom\", `/cbom/pqc-readiness?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 196,
-          "source": "serviceRequest"
+          "line": 198,
+          "source": "serviceRequestOrNone"
         }
       ],
       "handler": "h.cbomPQCReadiness",
@@ -89783,7 +89783,7 @@
           "file": "services/sbom/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 276,
+          "line": 292,
           "name": "CBOMPQCReadiness",
           "receiver_calls": [],
           "store_calls": []
@@ -89797,7 +89797,7 @@
         {
           "expression": "serviceRequest(\"sbom\", `/cbom/diff?${tenantQuery(session)}&from=${encodeURIComponent(String(fromID || \"\").trim())}&to=${encodeURIComponen...",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 167,
+          "line": 169,
           "source": "serviceRequest"
         }
       ],
@@ -89845,7 +89845,7 @@
             "diffAssets"
           ],
           "internal_package_calls": [],
-          "line": 290,
+          "line": 306,
           "name": "DiffCBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -89863,7 +89863,7 @@
         {
           "expression": "serviceRequest(\"sbom\", `/cbom/${encodeURIComponent(String(id || \"\").trim())}/export?${tenantQuery(session)}&format=${encodeURIComponent(f...",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 158,
+          "line": 160,
           "source": "serviceRequest"
         }
       ],
@@ -89904,7 +89904,7 @@
             "exportCBOM"
           ],
           "internal_package_calls": [],
-          "line": 260,
+          "line": 276,
           "name": "ExportCBOM",
           "receiver_calls": [],
           "store_calls": []
@@ -89955,7 +89955,7 @@
             "GetCBOMSnapshotByID"
           ],
           "internal_package_calls": [],
-          "line": 251,
+          "line": 267,
           "name": "GetCBOMByID",
           "receiver_calls": [],
           "store_calls": [
@@ -125832,10 +125832,10 @@
         "externalPackages": [],
         "frontendSites": [
           {
-            "expression": "serviceRequest(\"sbom\", \"/sbom/latest\")",
+            "expression": "serviceRequestOrNone(\"sbom\", \"/sbom/latest\")",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 99,
-            "source": "serviceRequest"
+            "line": 101,
+            "source": "serviceRequestOrNone"
           }
         ],
         "handler": "latestSBOM",
@@ -125868,7 +125868,7 @@
           {
             "expression": "serviceRequest(\"sbom\", `/sbom/history?limit=${Math.max(1, Math.trunc(Number(limit || 20)))}`)",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 104,
+            "line": 106,
             "source": "serviceRequest"
           }
         ],
@@ -125904,7 +125904,7 @@
           {
             "expression": "serviceRequest(\"sbom\", `/sbom/diff?from=${encodeURIComponent(String(fromID || \"\").trim())}&to=${encodeURIComponent(String(toID || \"\").tri...",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 187,
+            "line": 189,
             "source": "serviceRequest"
           }
         ],
@@ -125938,7 +125938,7 @@
           {
             "expression": "serviceRequest(\"sbom\", `/sbom/${encodeURIComponent(String(id || \"\").trim())}/export?format=${encodeURIComponent(format)}&encoding=${encod...",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 118,
+            "line": 120,
             "source": "serviceRequest"
           }
         ],
@@ -126001,7 +126001,7 @@
           {
             "expression": "serviceRequest(\"sbom\", `/cbom/generate?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 127,
+            "line": 129,
             "source": "serviceRequest"
           }
         ],
@@ -126036,10 +126036,10 @@
         ],
         "frontendSites": [
           {
-            "expression": "serviceRequest(\"sbom\", `/cbom/latest?${tenantQuery(session)}`)",
+            "expression": "serviceRequestOrNone(\"sbom\", `/cbom/latest?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 135,
-            "source": "serviceRequest"
+            "line": 137,
+            "source": "serviceRequestOrNone"
           }
         ],
         "handler": "latestCBOM",
@@ -126074,7 +126074,7 @@
           {
             "expression": "serviceRequest(\"sbom\", `/cbom/history?${tenantQuery(session)}&limit=${Math.max(1, Math.trunc(Number(limit || 20)))}`)",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 140,
+            "line": 142,
             "source": "serviceRequest"
           }
         ],
@@ -126106,10 +126106,10 @@
         "externalPackages": [],
         "frontendSites": [
           {
-            "expression": "serviceRequest(\"sbom\", `/cbom/summary?${tenantQuery(session)}`)",
+            "expression": "serviceRequestOrNone(\"sbom\", `/cbom/summary?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 149,
-            "source": "serviceRequest"
+            "line": 151,
+            "source": "serviceRequestOrNone"
           }
         ],
         "handler": "cbomSummary",
@@ -126138,10 +126138,10 @@
         "externalPackages": [],
         "frontendSites": [
           {
-            "expression": "serviceRequest(\"sbom\", `/cbom/pqc-readiness?${tenantQuery(session)}`)",
+            "expression": "serviceRequestOrNone(\"sbom\", `/cbom/pqc-readiness?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 196,
-            "source": "serviceRequest"
+            "line": 198,
+            "source": "serviceRequestOrNone"
           }
         ],
         "handler": "cbomPQCReadiness",
@@ -126174,7 +126174,7 @@
           {
             "expression": "serviceRequest(\"sbom\", `/cbom/diff?${tenantQuery(session)}&from=${encodeURIComponent(String(fromID || \"\").trim())}&to=${encodeURIComponen...",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 167,
+            "line": 169,
             "source": "serviceRequest"
           }
         ],
@@ -126208,7 +126208,7 @@
           {
             "expression": "serviceRequest(\"sbom\", `/cbom/${encodeURIComponent(String(id || \"\").trim())}/export?${tenantQuery(session)}&format=${encodeURIComponent(f...",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 158,
+            "line": 160,
             "source": "serviceRequest"
           }
         ],
@@ -129895,7 +129895,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-24T08:55:22Z",
+    "generatedAt": "2026-10-24T09:13:28Z",
     "methods": [
       "DELETE",
       "GET",

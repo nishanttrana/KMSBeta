@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -44,41 +45,56 @@ func NewService(store Store, keycore KeyCoreClient, certs CertsClient, discovery
 	}
 }
 
+// The schedule is checked, not counted down: a ticker of the full interval
+// starts again on every restart, and a deploy restarts the service, so a
+// daily snapshot was never made. The first check waits for keycore, certs
+// and discovery to come up.
+const (
+	scheduleFirstCheck = 2 * time.Minute
+	scheduleCheckEvery = time.Hour
+)
+
 func (s *Service) StartScheduler(ctx context.Context, cfg SchedulerConfig) {
-	if every := scheduleInterval(cfg.SBOMMode); every > 0 {
-		go func() {
-			t := time.NewTicker(every)
-			defer t.Stop()
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-t.C:
-					if clusterstate.RunsPrimaryJobs(ctx) {
-						_, _ = s.GenerateSBOM(context.Background(), "scheduled")
-					}
+	if scheduleInterval(cfg.SBOMMode) == 0 && scheduleInterval(cfg.CBOMMode) == 0 {
+		return
+	}
+	go func() {
+		t := time.NewTimer(scheduleFirstCheck)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case now := <-t.C:
+				if clusterstate.RunsPrimaryJobs(ctx) {
+					s.runDueSnapshots(context.Background(), cfg, now.UTC())
 				}
+				t.Reset(scheduleCheckEvery)
 			}
-		}()
+		}
+	}()
+}
+
+// runDueSnapshots generates each scheduled snapshot that is missing or older
+// than its interval. A store error other than "none yet" skips it until the
+// next check.
+func (s *Service) runDueSnapshots(ctx context.Context, cfg SchedulerConfig, now time.Time) {
+	due := func(createdAt time.Time, err error, every time.Duration) bool {
+		return errors.Is(err, errNotFound) || (err == nil && now.Sub(createdAt) >= every)
+	}
+	if every := scheduleInterval(cfg.SBOMMode); every > 0 {
+		latest, err := s.store.GetLatestSBOMSnapshot(ctx)
+		if due(latest.CreatedAt, err, every) {
+			_, _ = s.GenerateSBOM(ctx, "scheduled")
+		}
 	}
 	if every := scheduleInterval(cfg.CBOMMode); every > 0 {
-		go func() {
-			t := time.NewTicker(every)
-			defer t.Stop()
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-t.C:
-					if !clusterstate.RunsPrimaryJobs(ctx) {
-						continue
-					}
-					for _, tenantID := range s.scheduledTenants(context.Background(), cfg.Tenants) {
-						_, _ = s.GenerateCBOM(context.Background(), tenantID, "scheduled")
-					}
-				}
+		for _, tenantID := range s.scheduledTenants(ctx, cfg.Tenants) {
+			latest, err := s.store.GetLatestCBOMSnapshot(ctx, tenantID)
+			if due(latest.CreatedAt, err, every) {
+				_, _ = s.GenerateCBOM(ctx, tenantID, "scheduled")
 			}
-		}()
+		}
 	}
 }
 

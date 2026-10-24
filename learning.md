@@ -5,6 +5,26 @@ Newest entries on top.
 
 ## 2026-10-24
 
+### SBOM / CBOM read "not found" on every fresh stack (13.64.0-beta)
+- **"Not there yet" was handled on the server and missed on the page.**
+  6.21.0-beta made the latest-snapshot reads answer 404 rather than
+  generate a snapshot on read, which was right. But the page still loaded
+  six reads in one `Promise.all`, so one 404 rejected the batch and the
+  whole page showed the error. `live-check.py` passes a JSON 404 by design,
+  so nothing flagged it. A read whose 404 means "none yet" goes through
+  `serviceRequestOrNone`, which keys on the service's `not_found` code, and
+  independent sources load separately (`tests/sbom.spec.ts`,
+  `tests/unit/notGeneratedYet.test.ts`).
+- **A ticker of the full interval never fires if the service restarts more
+  often.** The daily SBOM/CBOM schedule was `time.NewTicker(24h)`; a deploy
+  restarts the service, so the database held no snapshot at all. A
+  schedule checks often and runs what is due, judged by the stored time of
+  the last run. A search of every `time.NewTicker` found no other
+  multi-hour job counted from start-up: the others tick each minute and
+  check what is due, or are hourly housekeeping.
+- The handler wrote its 404 with code `internal_error`. An error code is
+  what a client branches on, so it has to match the status.
+
 ### Drawing a diagram inside the console's checks (13.63.0-beta)
 - **A decorative overlay still has to pass the overlap sweep.**
   `coveredControls` checks every `svg`, and the connector SVG lay under

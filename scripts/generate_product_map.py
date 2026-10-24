@@ -852,7 +852,7 @@ def extract_frontend_calls() -> List[Dict[str, object]]:
         text = read_text(path)
         consts = extract_string_consts(text)
 
-        for name, pos, args in find_named_calls(text, ["serviceRequestRaw", "serviceRequest"]):
+        for name, pos, args in find_named_calls(text, ["serviceRequestRaw", "serviceRequestOrNone", "serviceRequest"]):
             if len(args) < 3:
                 continue
             service, service_dynamic = resolve_expr(args[1], consts)

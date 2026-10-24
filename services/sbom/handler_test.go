@@ -130,3 +130,33 @@ func TestHandlerCBOMEndpoints(t *testing.T) {
 		}
 	}
 }
+
+// Before the first snapshot, the reads the dashboard loads answer 404 with
+// code not_found, which it shows as "not generated", not as a failure.
+func TestHandlerNoSnapshotYetIsNotFound(t *testing.T) {
+	hh, _, _, _, _, _ := newSBOMHandler(t)
+	h := asCaller(hh, adminOf("root"))
+	for _, path := range []string{
+		"/sbom/latest",
+		"/cbom/latest?tenant_id=root",
+		"/cbom/summary?tenant_id=root",
+		"/cbom/pqc-readiness?tenant_id=root",
+	} {
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, path, nil))
+		var body struct {
+			Error struct{ Code string } `json:"error"`
+		}
+		_ = json.Unmarshal(rr.Body.Bytes(), &body)
+		if rr.Code != http.StatusNotFound || body.Error.Code != "not_found" {
+			t.Fatalf("%s: status=%d body=%s, want 404 not_found", path, rr.Code, rr.Body.String())
+		}
+	}
+	for _, path := range []string{"/sbom/history", "/cbom/history?tenant_id=root"} {
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, path, nil))
+		if rr.Code != http.StatusOK {
+			t.Fatalf("%s: status=%d, want an empty 200", path, rr.Code)
+		}
+	}
+}

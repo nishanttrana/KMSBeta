@@ -4,7 +4,32 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
-## [13.63.0-beta] — 2026-10-24
+## [13.64.0-beta] — 2026-10-24
+
+### Fixed
+- **SBOM / CBOM no longer reads "not found" before the first snapshot.**
+  The latest SBOM, latest CBOM, CBOM summary and PQC readiness answer 404
+  until a snapshot exists, and the page loaded all of them in one request
+  batch, so that one 404 failed the whole page with "SBOM/CBOM load failed:
+  not found".
+  - The page now loads the SBOM and the CBOM separately. A tile with no
+    snapshot behind it reads "Not generated", or "Unavailable" with the
+    error, never 0 or "All clear". Until either snapshot exists, the button
+    reads **Generate BOM**.
+  - Generate BOM generates both and reports each failure on its own. A
+    tenant administrator, who may generate the CBOM but not the
+    platform-wide SBOM, keeps the CBOM.
+  - The service's "no snapshot" answer now has code `not_found` (it was
+    `internal_error`). The dashboard reads only that code as "not generated
+    yet", so a 404 from a route that doesn't exist still shows as a fault
+    (`serviceRequestOrNone` in `lib/serviceApi.ts`).
+- **The daily SBOM and CBOM schedules now run.** Each was a 24-hour ticker
+  that started over whenever the service restarted, and every deploy
+  restarts it, so no scheduled snapshot was ever made: the live stack held
+  none. The service now checks hourly, starting two minutes after start-up,
+  and generates any snapshot that is missing or older than its interval
+  (`TestScheduledSnapshotsRunWhenMissingOrStale`).
+
 
 ### Changed
 - **Certificates → Certificate Operations: the CA hierarchy is a live

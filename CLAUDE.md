@@ -699,6 +699,11 @@ Security rules are explained in
   error; a composite with a failed source is an error; a zero is shown only
   when a check ran. The dashboard never catches a fetch into an empty list
   or renders constants.
+- "None yet" is not a failure. A read that answers 404 before anything
+  exists uses code `not_found`, and the dashboard reads it through
+  `serviceRequestOrNone` and shows "Not generated" with the action that
+  makes one. A page loads independent sources separately, so that one
+  failing never blanks the others (13.64.0-beta, SBOM / CBOM).
 - A write reports what it changed (`RowsAffected`, 404 for nothing) and
   validates enumerated values at the service. A read handler never creates
   data (`TestCBOMHistoryReadWritesNothing`).
@@ -824,6 +829,10 @@ Security rules are explained in
   down.
 - A chart's numbers are counted by the owning service over the whole window
   with one predicate shared by count and list (`TestInventoryIsNeverASample`).
+- A schedule checks often and runs what is due, judged from the stored time
+  of the last run. It never waits a full interval from start-up: a deploy
+  restarts the service, and a daily ticker never fired
+  (`TestScheduledSnapshotsRunWhenMissingOrStale`, 13.64.0-beta).
 - Work whose duration depends on someone else's network runs in the
   background with a deadline and progress, refuses a second run, and a row
   left `running` by a restart reads as interrupted.

@@ -8,6 +8,7 @@ import { B, Btn, Card, Inp, Modal, Row3, Sel, Stat, Tabs } from "../legacyPrimit
 import { C } from "../theme";
 import { errMsg } from "../runtimeUtils";
 import { usePopover } from "../usePopover";
+import { downloadBase64File, downloadTextFile } from "./sbomFiles";
 import {
   diffCBOM,
   diffSBOM,
@@ -42,6 +43,9 @@ export const SBOMTab = ({ session, onToast }: any) => {
   const [cbomSummary, setCBOMSummary] = useState<any>({});
   const [cbomHistory, setCBOMHistory] = useState<any[]>([]);
   const [pqcReadiness, setPQCReadiness] = useState<any>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [sbomError, setSBOMError] = useState("");
+  const [cbomError, setCBOMError] = useState("");
   const [activeSBOMFormat, setActiveSBOMFormat] = useState("cyclonedx");
   const [exportMenuOpen, setExportMenuOpen, exportMenuRef] = usePopover();
   const [selectedDepCategory, setSelectedDepCategory] = useState("");
@@ -66,38 +70,6 @@ export const SBOMTab = ({ session, onToast }: any) => {
   // update state after the tab is switched away.
   const abortRef = useRef<AbortController | null>(null);
 
-  // ── Download helpers ──────────────────────────────────────────
-  const downloadTextFile = (filename: string, content: string, mime = "application/json") => {
-    const blob = new Blob([String(content || "")], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = String(filename || "download.txt");
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  };
-
-  const downloadBase64File = (filename: string, b64: string, mime = "application/octet-stream") => {
-    try {
-      const bin = atob(String(b64 || ""));
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
-      const blob = new Blob([bytes], { type: mime });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = String(filename || "download.bin");
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      onToast?.("Export download failed: invalid base64 payload.");
-    }
-  };
-
   // ── Data loading ──────────────────────────────────────────────
   const loadData = async (opts: any = {}) => {
     if (!session?.token) {
@@ -114,28 +86,34 @@ export const SBOMTab = ({ session, onToast }: any) => {
     const doRefresh = Boolean(opts?.refresh);
     if (doRefresh) setRefreshing(true);
     else if (!opts?.silent) setLoading(true);
+    // SBOM and CBOM load and generate independently: one failing (a tenant
+    // administrator can't generate the platform SBOM) leaves the other shown.
+    // Before the first snapshot the reads return null: "Not generated".
     try {
+      const failed: string[] = [];
       if (doRefresh) {
-        await Promise.all([generateSBOM(session, "manual"), generateCBOM(session, "manual")]);
+        const [sbomGen, cbomGen] = await Promise.allSettled([generateSBOM(session, "manual"), generateCBOM(session, "manual")]);
+        if (sbomGen.status === "rejected") failed.push(`SBOM: ${errMsg(sbomGen.reason)}`);
+        if (cbomGen.status === "rejected") failed.push(`CBOM: ${errMsg(cbomGen.reason)}`);
       }
-      const [sbomOut, sbomHistoryOut, cbomOut, summaryOut, historyOut, pqcOut] = await Promise.all([
-        getLatestSBOM(session),
-        listSBOMHistory(session, 12),
-        getLatestCBOM(session),
-        getCBOMSummary(session),
-        listCBOMHistory(session, 8),
-        getCBOMPQCReadiness(session).catch(() => null)
+      const [sbomPart, cbomPart] = await Promise.allSettled([
+        Promise.all([getLatestSBOM(session), listSBOMHistory(session, 12)]),
+        Promise.all([getLatestCBOM(session), getCBOMSummary(session), listCBOMHistory(session, 8), getCBOMPQCReadiness(session)])
       ]);
       if (ctrl.signal.aborted) return;
+      const [sbomOut, sbomHistoryOut] = sbomPart.status === "fulfilled" ? sbomPart.value : [null, []];
+      const [cbomOut, summaryOut, historyOut, pqcOut] = cbomPart.status === "fulfilled" ? cbomPart.value : [null, null, [], null];
+      setSBOMError(sbomPart.status === "rejected" ? errMsg(sbomPart.reason) : "");
+      setCBOMError(cbomPart.status === "rejected" ? errMsg(cbomPart.reason) : "");
       setSBOMLatest(sbomOut || null);
       setSBOMHistory(Array.isArray(sbomHistoryOut) ? sbomHistoryOut : []);
       setCBOMLatest(cbomOut || null);
       setCBOMSummary(summaryOut || {});
       setCBOMHistory(Array.isArray(historyOut) ? historyOut : []);
       setPQCReadiness(pqcOut || null);
-      if (doRefresh) onToast?.("SBOM and CBOM refreshed.");
-    } catch (error) {
-      if (!ctrl.signal.aborted) onToast?.(`SBOM/CBOM load failed: ${errMsg(error)}`);
+      setLoaded(true);
+      if (failed.length) onToast?.(`Generate failed: ${failed.join("; ")}`);
+      else if (doRefresh) onToast?.("SBOM and CBOM generated.");
     } finally {
       if (!ctrl.signal.aborted) {
         if (doRefresh) setRefreshing(false);
@@ -156,7 +134,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
   const exportSBOMFile = async (format: string) => {
     if (!session?.token) { onToast?.("Login is required."); return; }
     const snapshotID = String(sbomLatest?.id || "").trim();
-    if (!snapshotID) { onToast?.("SBOM snapshot is not ready. Refresh BOM first."); return; }
+    if (!snapshotID) { onToast?.("No SBOM snapshot yet. Press Generate BOM."); return; }
     setActiveSBOMFormat(format);
     setExportingSBOM(format);
     try {
@@ -181,7 +159,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
 
   const exportSBOMCSV = () => {
     const list = Array.isArray(sbomLatest?.document?.components) ? sbomLatest.document.components : [];
-    if (!list.length) { onToast?.("SBOM snapshot is not ready. Refresh BOM first."); return; }
+    if (!list.length) { onToast?.("No SBOM snapshot yet. Press Generate BOM."); return; }
     try {
       setExportingSBOM("csv");
       const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
@@ -203,7 +181,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
   const exportCBOMFile = async () => {
     if (!session?.token) { onToast?.("Login is required."); return; }
     const snapshotID = String(cbomLatest?.id || "").trim();
-    if (!snapshotID) { onToast?.("CBOM snapshot is not ready. Refresh BOM first."); return; }
+    if (!snapshotID) { onToast?.("No CBOM snapshot yet. Press Generate BOM."); return; }
     setExportingCBOM(true);
     try {
       const artifact = await exportCBOM(session, snapshotID, "cyclonedx");
@@ -382,6 +360,8 @@ export const SBOMTab = ({ session, onToast }: any) => {
     return items;
   }, [components, componentCategoryFilter, componentSearch, goComponents, containerComponents, systemComponents]);
 
+  // A tile with no snapshot behind it says why, never 0.
+  const missing = (error: string) => (!loaded ? "Loading" : error ? "Unavailable" : "Not generated");
   const sbomGenerated = String(sbomLatest?.document?.generated_at || sbomLatest?.created_at || "");
   const cbomGenerated = String(cbomLatest?.document?.generated_at || cbomLatest?.created_at || "");
 
@@ -389,16 +369,16 @@ export const SBOMTab = ({ session, onToast }: any) => {
   return <div style={{ display: "grid", gap: 14 }}>
     {/* Header Stats Row */}
     <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
-      <Stat l="Dependencies" v={components.length} s={sbomGenerated ? `Updated ${new Date(sbomGenerated).toLocaleDateString()}` : undefined} c="accent" i={Package} />
-      <Stat l="Crypto Assets" v={totalAssets} s={cbomGenerated ? `Updated ${new Date(cbomGenerated).toLocaleDateString()}` : undefined} c="blue" i={Atom} />
-      <Stat l="Deprecated" v={deprecatedCount} s={deprecatedCount > 0 ? "Action needed" : "All clear"} c="amber" i={Ban} />
+      <Stat l="Dependencies" v={sbomLatest ? components.length : missing(sbomError)} s={sbomLatest ? (sbomGenerated ? `Updated ${new Date(sbomGenerated).toLocaleDateString()}` : undefined) : sbomError || undefined} c="accent" i={Package} />
+      <Stat l="Crypto Assets" v={cbomLatest ? totalAssets : missing(cbomError)} s={cbomLatest ? (cbomGenerated ? `Updated ${new Date(cbomGenerated).toLocaleDateString()}` : undefined) : cbomError || undefined} c="blue" i={Atom} />
+      <Stat l="Deprecated" v={cbomLatest ? deprecatedCount : missing(cbomError)} s={cbomLatest ? (deprecatedCount > 0 ? "Action needed" : "None") : undefined} c="amber" i={Ban} />
     </div>
 
     {/* Sub-tabs + Refresh */}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
       <Tabs tabs={["Overview", "Software BOM", "Crypto BOM"]} active={tab} onChange={setTab} />
       <Btn small onClick={() => void loadData({ refresh: true })} disabled={refreshing || loading}>
-        <RefreshCcw size={12} />{refreshing ? "Refreshing..." : "Refresh BOM"}
+        <RefreshCcw size={12} />{refreshing ? "Generating..." : sbomLatest || cbomLatest ? "Refresh BOM" : "Generate BOM"}
       </Btn>
     </div>
 
@@ -633,7 +613,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
       </Card>
     </>}
 
-    {!loading && !refreshing && !sbomLatest && !cbomLatest && <Card style={{ padding: 16 }}><div style={{ fontSize: 10, color: C.muted, textAlign: "center" }}>No BOM data available. Click "Refresh BOM" to generate your first Software and Cryptographic BOM snapshots.</div></Card>}
+    {loaded && !refreshing && !sbomLatest && !cbomLatest && <Card style={{ padding: 16 }}><div style={{ fontSize: 10, color: C.muted, textAlign: "center" }}>{sbomError || cbomError ? `Unavailable: ${sbomError || cbomError}` : "No SBOM or CBOM yet. Press Generate BOM."}</div></Card>}
 
     {/* ── CBOM Diff Modal ───────────────────────────────────── */}
     <Modal open={diffOpen} onClose={() => setDiffOpen(false)} title="CBOM Diff (Latest vs Previous)">

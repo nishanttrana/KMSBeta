@@ -100,3 +100,34 @@ func TestServiceCBOMGenerationAndDiff(t *testing.T) {
 		t.Fatalf("expected cbom diff changes: %+v", diff)
 	}
 }
+
+// A deploy restarts the service, so the schedule must generate what is
+// missing or stale when it checks, not wait a full interval from start.
+func TestScheduledSnapshotsRunWhenMissingOrStale(t *testing.T) {
+	svc, _, _, _, _, pub := newSBOMService(t)
+	cfg := SchedulerConfig{SBOMMode: "daily", CBOMMode: "daily", Tenants: []string{"tenant-a"}}
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	svc.runDueSnapshots(ctx, cfg, now)
+	if pub.Count("audit.sbom.generated") != 1 || pub.Count("audit.sbom.cbom_generated") != 1 {
+		t.Fatalf("missing snapshots were not generated: sbom=%d cbom=%d",
+			pub.Count("audit.sbom.generated"), pub.Count("audit.sbom.cbom_generated"))
+	}
+
+	svc.runDueSnapshots(ctx, cfg, now.Add(time.Hour))
+	if pub.Count("audit.sbom.generated") != 1 || pub.Count("audit.sbom.cbom_generated") != 1 {
+		t.Fatalf("fresh snapshots were generated again")
+	}
+
+	svc.runDueSnapshots(ctx, cfg, now.Add(25*time.Hour))
+	if pub.Count("audit.sbom.generated") != 2 || pub.Count("audit.sbom.cbom_generated") != 2 {
+		t.Fatalf("stale snapshots were not regenerated")
+	}
+
+	off := SchedulerConfig{SBOMMode: "off", CBOMMode: "off", Tenants: []string{"tenant-a"}}
+	svc.runDueSnapshots(ctx, off, now.Add(72*time.Hour))
+	if pub.Count("audit.sbom.generated") != 2 || pub.Count("audit.sbom.cbom_generated") != 2 {
+		t.Fatalf("a schedule that is off generated a snapshot")
+	}
+}

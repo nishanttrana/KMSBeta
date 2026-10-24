@@ -250,11 +250,13 @@ func (h *Handler) serviceError(c *route.Call, err error) {
 		return
 	}
 	status := httpStatusForErr(err)
-	msg := err.Error()
-	if status >= 500 {
-		msg = "internal server error"
+	if status == http.StatusNotFound {
+		// For latest, summary and readiness this means none generated yet;
+		// the dashboard reads the code that way.
+		c.Error(status, "not_found", "snapshot not found")
+		return
 	}
-	c.Error(status, "internal_error", msg)
+	c.Error(status, "internal_error", "internal server error")
 }
 
 // decodeOptional decodes a JSON body that may be absent, rejecting unknown
