@@ -27,15 +27,28 @@ type CertRenewalInfo struct {
 	UpdatedAt            time.Time `json:"updated_at"`
 }
 
+// CertRenewalScheduleEntry is one day's renewals (the bucket is the
+// scheduled renewal date). A day can hold certificates of several CAs, so
+// each is listed with its own count. CAID and CAName are set only when the
+// day has one CA; until 13.62.0-beta they named the first certificate's CA
+// whatever the day held.
 type CertRenewalScheduleEntry struct {
-	Bucket            string    `json:"bucket"`
-	CAID              string    `json:"ca_id"`
-	CAName            string    `json:"ca_name"`
-	Count             int       `json:"count"`
+	Bucket            string                  `json:"bucket"`
+	CAID              string                  `json:"ca_id"`
+	CAName            string                  `json:"ca_name"`
+	CAs               []CertRenewalScheduleCA `json:"cas"`
+	Count             int                     `json:"count"`
 	RiskLevel         string    `json:"risk_level"`
 	ScheduledStart    time.Time `json:"scheduled_start"`
 	ScheduledEnd      time.Time `json:"scheduled_end"`
 	CertIDs           []string  `json:"cert_ids"`
+}
+
+// CertRenewalScheduleCA is one CA's share of a day's renewals.
+type CertRenewalScheduleCA struct {
+	CAID   string `json:"ca_id"`
+	CAName string `json:"ca_name"`
+	Count  int    `json:"count"`
 }
 
 type CertRenewalSummary struct {

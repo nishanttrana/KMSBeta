@@ -18,6 +18,22 @@ const axisTick = { fill: C.muted, fontSize: 10 };
 const day = (v: unknown) => { const t = new Date(String(v || "")); return Number.isNaN(t.getTime()) || t.getTime() <= 0 ? "-" : t.toLocaleDateString(); };
 const tone = (risk: unknown) => { const w = riskWeight(risk); return w >= 4 ? "red" : w >= 2 ? "amber" : "green"; };
 
+// A day's bar names every CA renewing that day, with its share.
+const DayTip = ({ active, payload }: { active?: boolean; payload?: { payload?: any }[] }) => {
+  const e = active ? payload?.[0]?.payload : null;
+  if (!e) return null;
+  return (
+    <div style={{ background: C.surface, border: `1px solid ${C.borderHi}`, borderRadius: 4, padding: "6px 9px", fontSize: 11, color: C.text }}>
+      <div style={{ fontWeight: 700, marginBottom: 3 }}>{`${String(e.bucket)} · ${Number(e.count || 0)}`}</div>
+      {(Array.isArray(e.cas) ? e.cas : []).map((ca: any) => (
+        <div key={String(ca.ca_id)} style={{ display: "flex", justifyContent: "space-between", gap: 12, color: C.dim }}>
+          <span>{String(ca.ca_name || ca.ca_id || "-")}</span><span className="vk-num">{Number(ca.count || 0)}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const TILES: { id: RenewalFilter; l: string; key: string; i: any; attention: string }[] = [
   { id: "due", l: "Due in 72h", key: "due_soon_count", i: CalendarClock, attention: "amber" },
   { id: "missed", l: "Missed windows", key: "missed_window_count", i: AlertTriangle, attention: "red" },
@@ -71,7 +87,7 @@ export function CertRenewals({ summary, refreshing, onRefresh, onOpenCert }: Pro
             <BarChart data={schedule}>
               <XAxis dataKey="bucket" tick={axisTick} axisLine={false} tickLine={false} />
               <YAxis allowDecimals={false} tick={axisTick} axisLine={false} tickLine={false} width={30} />
-              <Tooltip />
+              <Tooltip content={<DayTip />} cursor={{ fill: C.accentDim }} />
               <Bar dataKey="count" name="Certificates" maxBarSize={56} radius={[3, 3, 0, 0]} style={clickable} onClick={(d) => pickDay(d?.payload)}>
                 {schedule.map((e) => <Cell key={e.bucket} fill={riskFill(e.risk_level)} />)}
               </Bar>

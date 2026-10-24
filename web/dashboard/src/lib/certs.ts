@@ -116,10 +116,13 @@ export type CertRenewalInfo = {
   updated_at?: string;
 };
 
+// One day's renewals; a day can hold several CAs, each with its count.
+// ca_id and ca_name are set only when the day has one CA.
 export type CertRenewalScheduleEntry = {
   bucket: string;
   ca_id: string;
   ca_name: string;
+  cas: { ca_id: string; ca_name: string; count: number }[];
   count: number;
   risk_level: string;
   scheduled_start?: string;

@@ -4,6 +4,20 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.62.0-beta] — 2026-10-24
+
+### Fixed
+- **A renewal day now names every CA in it.** Each entry of
+  `ca_directed_schedule` and `mass_renewal_risks` (`GET
+  /certs/renewal-intelligence`) is one day's renewals, which can come from
+  several CAs, but its `ca_id` and `ca_name` were the first certificate's
+  CA. Entries now carry `cas`: every CA renewing that day with its count.
+  `ca_id` and `ca_name` are set only when the day has a single CA, and are
+  empty otherwise.
+- Certificates → Renewals: hovering a day's bar lists each CA's share.
+- The schedule's order no longer depends on map order when two days start
+  at the same time, or two risky days have the same count.
+
 ## [13.61.0-beta] — 2026-10-24
 
 ### Changed

@@ -1661,7 +1661,7 @@ Fields: name, type (server/client/code_signing/email/ca), keyUsage[], extendedKe
 
 ### Renewal Intelligence
 
-- `GET /svc/certs/certs/renewal-intelligence` — Coordinated windows, hotspots, missed-window counters
+- `GET /svc/certs/certs/renewal-intelligence` — Coordinated windows, hotspots, missed-window counters. Each `ca_directed_schedule` / `mass_renewal_risks` entry is one day: `cas` lists every CA renewing that day with its count; `ca_id` / `ca_name` are set only for a single-CA day (13.62.0-beta; see docs/CERTIFICATES.md §8.7)
 - `GET /svc/certs/certs/renewal-intelligence/{id}` — Per-certificate record
 - `POST /svc/certs/certs/renewal-intelligence/refresh` — Recompute immediately
 

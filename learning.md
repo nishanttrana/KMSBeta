@@ -5,6 +5,20 @@ Newest entries on top.
 
 ## 2026-10-24
 
+### A group key decides what a group may claim (13.62.0-beta)
+- **The renewal schedule was grouped by day but labelled by CA.** The
+  entry took `ca_id` and `ca_name` from whichever certificate created it.
+  A field on a group must be true of the whole group: either part of the
+  key, or a list of what the group holds (`cas` with counts, whose sum is
+  the entry's count; `TestRenewalScheduleListsEveryCAOfADay`).
+- **Removing a wrong field would have broken API clients.** Leaving
+  `ca_id`/`ca_name` set only when the day has one CA keeps them true without
+  a breaking change.
+- **The new test failed one run in three.** The schedule was sorted by
+  start time alone, and entries come out of a map, so ties came back in
+  random order. A sort over map output needs a total order (here, the
+  day). `-count=20` found it before CI did.
+
 ### A cluttered page hid a mislabel and counts that went nowhere (13.61.0-beta)
 - **The renewal schedule is grouped by day, not by CA.** The certs service
   keys `ca_directed_schedule` on the renewal date alone and stamps each

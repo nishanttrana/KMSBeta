@@ -236,8 +236,6 @@ func buildCertRenewalSummary(tenantID string, items []CertRenewalInfo, options A
 		if entry == nil {
 			entry = &CertRenewalScheduleEntry{
 				Bucket:         item.MassRenewalBucket,
-				CAID:           item.CAID,
-				CAName:         item.CAName,
 				RiskLevel:      item.RiskLevel,
 				ScheduledStart: item.WindowStart,
 				ScheduledEnd:   item.WindowEnd,
@@ -246,6 +244,7 @@ func buildCertRenewalSummary(tenantID string, items []CertRenewalInfo, options A
 		}
 		entry.Count++
 		entry.CertIDs = append(entry.CertIDs, item.CertID)
+		entry.CAs = addScheduleCA(entry.CAs, item.CAID, item.CAName)
 		if entry.ScheduledStart.IsZero() || item.WindowStart.Before(entry.ScheduledStart) {
 			entry.ScheduledStart = item.WindowStart
 		}
@@ -257,18 +256,47 @@ func buildCertRenewalSummary(tenantID string, items []CertRenewalInfo, options A
 		}
 	}
 	for _, entry := range scheduleMap {
+		sort.Slice(entry.CAs, func(i, j int) bool {
+			if entry.CAs[i].Count != entry.CAs[j].Count {
+				return entry.CAs[i].Count > entry.CAs[j].Count
+			}
+			return entry.CAs[i].CAID < entry.CAs[j].CAID
+		})
+		if len(entry.CAs) == 1 {
+			entry.CAID, entry.CAName = entry.CAs[0].CAID, entry.CAs[0].CAName
+		}
 		out.CADirectedSchedule = append(out.CADirectedSchedule, *entry)
 		if riskSeverityWeight(entry.RiskLevel) >= riskSeverityWeight("medium") {
 			out.MassRenewalRisks = append(out.MassRenewalRisks, *entry)
 		}
 	}
+	// Entries come from a map: break ties by day so the order is stable.
 	sort.Slice(out.CADirectedSchedule, func(i, j int) bool {
-		return out.CADirectedSchedule[i].ScheduledStart.Before(out.CADirectedSchedule[j].ScheduledStart)
+		a, b := out.CADirectedSchedule[i], out.CADirectedSchedule[j]
+		if !a.ScheduledStart.Equal(b.ScheduledStart) {
+			return a.ScheduledStart.Before(b.ScheduledStart)
+		}
+		return a.Bucket < b.Bucket
 	})
 	sort.Slice(out.MassRenewalRisks, func(i, j int) bool {
-		return out.MassRenewalRisks[i].Count > out.MassRenewalRisks[j].Count
+		a, b := out.MassRenewalRisks[i], out.MassRenewalRisks[j]
+		if a.Count != b.Count {
+			return a.Count > b.Count
+		}
+		return a.Bucket < b.Bucket
 	})
 	return out
+}
+
+// addScheduleCA counts one more renewal for a CA in a day's entry.
+func addScheduleCA(cas []CertRenewalScheduleCA, caID, caName string) []CertRenewalScheduleCA {
+	for i := range cas {
+		if cas[i].CAID == caID {
+			cas[i].Count++
+			return cas
+		}
+	}
+	return append(cas, CertRenewalScheduleCA{CAID: caID, CAName: caName, Count: 1})
 }
 
 func buildCertRenewalInfo(cert Certificate, caName string, options ACMEProtocolOptions, now time.Time) CertRenewalInfo {

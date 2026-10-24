@@ -1422,13 +1422,25 @@ Certificates → Renewals (13.61.0-beta) reads `GET /certs/renewal-intelligence`
 - **Renewals per day:** one bar per entry of `ca_directed_schedule`,
   coloured by its highest risk. A bucket is the day a renewal is scheduled
   (`mass_renewal_bucket`), and a bar lists the certificates in its
-  `cert_ids`.
+  `cert_ids`. Hovering a bar shows each CA's share of the day (`cas`).
 - **A window opens its certificate** in Certificate Operations.
 - **Recompute** calls `POST /certs/renewal-intelligence/refresh`.
 
-A schedule entry's `ca_id` and `ca_name` are those of the first certificate
-in the day's bucket, which may hold certificates of several CAs, so the
-console doesn't show them per bar (open).
+A schedule entry (in `ca_directed_schedule` and `mass_renewal_risks`) is
+one day's renewals:
+
+```json
+{"bucket": "2026-10-29", "count": 24, "risk_level": "medium",
+ "cas": [{"ca_id": "ca_1", "ca_name": "vecta-internal-services", "count": 22},
+         {"ca_id": "ca_2", "ca_name": "issuing-2", "count": 2}],
+ "ca_id": "", "ca_name": "",
+ "scheduled_start": "...", "scheduled_end": "...", "cert_ids": ["..."]}
+```
+
+`cas` lists every CA renewing that day, most renewals first; their counts
+add up to `count`. `ca_id` and `ca_name` are set only when the day has a
+single CA (before 13.62.0-beta they named the first certificate's CA
+whatever the day held).
 
 ---
 

@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-24T08:16:46Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-24T08:31:46Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -589,7 +589,7 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/certs/CertOverview.tsx | 45 | - | Btn | (icon or dynamic label) | p.onRefresh} disabled={p.loading |
 | web/dashboard/src/components/v3/tabs/certs/CertOverview.tsx | 54 | - | Btn | p.openModal("issue")}> Issue certificate |  |
 | web/dashboard/src/components/v3/tabs/certs/CertOverview.tsx | 63 | - | button | Open Renewals | p.onOpenRenewals |
-| web/dashboard/src/components/v3/tabs/certs/CertRenewals.tsx | 51 | - | Btn | (icon or dynamic label) | onRefresh} disabled={refreshing |
+| web/dashboard/src/components/v3/tabs/certs/CertRenewals.tsx | 67 | - | Btn | (icon or dynamic label) | onRefresh} disabled={refreshing |
 | web/dashboard/src/components/v3/tabs/certs/CertTable.tsx | 56 | - | button | (icon or dynamic label) | onClear} aria-label={`Clear ${label |
 | web/dashboard/src/components/v3/tabs/certs/CertTable.tsx | 141 | - | Btn | setPage(current - 1)} disabled= >Prev |  |
 | web/dashboard/src/components/v3/tabs/certs/CertTable.tsx | 143 | - | Btn | setPage(current + 1)} disabled= >Next |  |

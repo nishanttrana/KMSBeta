@@ -43,11 +43,17 @@ const WINDOWS = [
   win("crt_5", "partner.example", "external", "missed_window", "high", day(1), at(1), at(-1)),
   win("crt_2", "web.corp", "issuing-1", "scheduled", "low", day(130), at(130)),
 ];
-const entry = (bucket: string, count: number, risk: string, ids: string[]) => ({ bucket, ca_id: "", ca_name: "", count, risk_level: risk, scheduled_start: at(1), scheduled_end: at(2), cert_ids: ids });
+const entry = (bucket: string, count: number, risk: string, ids: string[], cas: [string, number][]) => ({
+  bucket, cas: cas.map(([name, n]) => ({ ca_id: `id_${name}`, ca_name: name, count: n })), count, risk_level: risk, scheduled_start: at(1), scheduled_end: at(2), cert_ids: ids,
+});
 const RENEWAL = {
   tenant_id: "root", ari_enabled: true, recommended_poll_hours: 24, renewal_windows: WINDOWS,
-  ca_directed_schedule: [entry(day(1), 2, "critical", ["crt_3", "crt_5"]), entry(day(12), 1, "low", ["crt_1"]), entry(day(130), 1, "low", ["crt_2"])],
-  mass_renewal_risks: [entry(day(1), 2, "critical", ["crt_3", "crt_5"])],
+  ca_directed_schedule: [
+    entry(day(1), 2, "critical", ["crt_3", "crt_5"], [["issuing-2", 1], ["external", 1]]),
+    entry(day(12), 1, "low", ["crt_1"], [["issuing-1", 1]]),
+    entry(day(130), 1, "low", ["crt_2"], [["issuing-1", 1]]),
+  ],
+  mass_renewal_risks: [entry(day(1), 2, "critical", ["crt_3", "crt_5"], [["issuing-2", 1], ["external", 1]])],
   missed_window_count: 1, emergency_rotation_count: 1, due_soon_count: 2, non_compliant_count: 2,
   star_subscription_count: 0, star_delegated_count: 0, star_due_soon_count: 0, star_mass_rollout_risk_count: 0,
 };
@@ -131,6 +137,11 @@ test("each renewal tile and bar lists the windows it counts, and a window opens 
     await expect(view.getByText(`${label}: ${n} ${n === 1 ? "entry" : "entries"}`)).toBeVisible();
     await expect(rows).toHaveCount(n);
   }
+  // A day's bar names each CA renewing that day with its share.
+  await view.locator(".recharts-bar-rectangle").first().hover();
+  await expect(view.locator(".recharts-tooltip-wrapper")).toContainText(`${day(1)} · 2`);
+  await expect(view.locator(".recharts-tooltip-wrapper")).toContainText("issuing-2");
+  await expect(view.locator(".recharts-tooltip-wrapper")).toContainText("external");
   await view.locator(".recharts-bar-rectangle").first().click();
   await expect(view.getByText(`Renewing ${day(1)}: 2 entries`)).toBeVisible();
   await expect(rows).toHaveCount(2);
