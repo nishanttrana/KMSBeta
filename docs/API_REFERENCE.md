@@ -671,6 +671,9 @@ software: ECDSA signs in ASN.1, RSA with PSS, salt the hash's length; the
 signature is the one signing the message would make. Ed25519, ML-DSA,
 SLH-DSA and composite keys sign the message itself and answer `400`.
 
+Verify takes `prehashed: true` the same way (13.59.0-beta): `data` is the
+digest and `algorithm` its hash.
+
 ---
 
 ### POST /svc/keycore/keys/{id}/verify

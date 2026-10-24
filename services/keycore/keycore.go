@@ -284,7 +284,10 @@ type VerifyRequest struct {
 	SignatureB64 string `json:"signature"`
 	Algorithm    string `json:"algorithm"`
 	// Version is the key version that signed (sign returns it); 0 = current.
-	Version   int    `json:"version"`
+	Version int `json:"version"`
+	// Prehashed: data is the digest, hashed with Algorithm (SHA-256/384/
+	// 512), as sign's prehashed (13.59.0-beta). RSA and ECDSA keys.
+	Prehashed bool   `json:"prehashed"`
 	Operation string `json:"-"`
 }
 
@@ -3405,6 +3408,9 @@ func (s *Service) Verify(ctx context.Context, keyID string, req VerifyRequest) (
 		}
 		if kv.Protection == protectionHSMResident {
 			digest, hash, err := hsmDigest(k, req.Algorithm, data)
+			if req.Prehashed {
+				digest, hash, err = prehashedDigest(req.Algorithm, data)
+			}
 			if err != nil {
 				return CryptoTxResult{}, err
 			}
@@ -3420,7 +3426,11 @@ func (s *Service) Verify(ctx context.Context, keyID string, req VerifyRequest) (
 			return CryptoTxResult{}, err
 		}
 		defer crypto.Zeroize(raw)
-		ok, err := verifyWithKeyAlgorithm(k.Algorithm, k.KeyType, raw, data, sig, req.Algorithm)
+		verify := verifyWithKeyAlgorithm
+		if req.Prehashed {
+			verify = verifyDigestWithKeyAlgorithm
+		}
+		ok, err := verify(k.Algorithm, k.KeyType, raw, data, sig, req.Algorithm)
 		if err != nil {
 			return CryptoTxResult{}, err
 		}
@@ -4578,6 +4588,53 @@ func signDigestWithKeyAlgorithm(keyAlgorithm, keyType string, keyMaterial []byte
 		return ecdsa.SignASN1(rand.Reader, priv, digest)
 	default:
 		return nil, errors.New("prehashed signing is for RSA and ECDSA keys")
+	}
+}
+
+// verifyDigestWithKeyAlgorithm checks a signature over a digest the
+// caller computed (prehashed, 13.59.0-beta), the counterpart of
+// signDigestWithKeyAlgorithm: RSA with PSS (salt the hash's length), ECDSA
+// in ASN.1. The arguments are verifyWithKeyAlgorithm's, with digest for data.
+func verifyDigestWithKeyAlgorithm(keyAlgorithm, keyType string, keyMaterial, digest, signature []byte, hashHint string) (bool, error) {
+	digest, name, err := prehashedDigest(hashHint, digest)
+	if err != nil {
+		return false, err
+	}
+	hashAlg := map[string]stdcrypto.Hash{"SHA-256": stdcrypto.SHA256, "SHA-384": stdcrypto.SHA384, "SHA-512": stdcrypto.SHA512}[name]
+	alg := strings.ToUpper(strings.TrimSpace(keyAlgorithm))
+	switch {
+	case compositeSigParts(alg) != nil:
+		return false, errors.New("prehashed verification is for RSA and ECDSA keys")
+	case isRSAKeyAlgorithm(alg):
+		var pub *rsa.PublicKey
+		if isPublicKeyType(keyType) {
+			if pub, err = parseRSAPublicMaterial(keyMaterial); err != nil {
+				return false, err
+			}
+		} else {
+			priv, err := parseRSAPrivateMaterial(keyMaterial)
+			if err != nil {
+				return false, err
+			}
+			pub = &priv.PublicKey
+		}
+		return rsa.VerifyPSS(pub, hashAlg, digest, signature, &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}) == nil, nil
+	case isECDSAKeyAlgorithm(alg):
+		var pub *ecdsa.PublicKey
+		if isPublicKeyType(keyType) {
+			if pub, err = parseECDSAPublicMaterial(keyMaterial); err != nil {
+				return false, err
+			}
+		} else {
+			priv, err := parseECDSAPrivateMaterial(keyMaterial)
+			if err != nil {
+				return false, err
+			}
+			pub = &priv.PublicKey
+		}
+		return ecdsa.VerifyASN1(pub, digest, signature), nil
+	default:
+		return false, errors.New("prehashed verification is for RSA and ECDSA keys")
 	}
 }
 

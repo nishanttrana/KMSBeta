@@ -111,6 +111,14 @@ jobs:
           (cd sdk/node && node --test test/client.test.mjs)
       - name: Terraform provider (its own module; the tests download a checksum-verified Terraform and run real plans and applies)
         run: cd sdk/terraform-provider-vecta && go vet ./... && go test -count=1 ./... && go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+      - name: PKCS#11 module (unit tests under ASan/UBSan, then against keycore with pkcs11-tool)
+        env:
+          VECTA_REQUIRE_PKCS11: "1"
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libcurl4-openssl-dev opensc
+          make -C sdk/pkcs11 check
+          go test -count=1 -run 'TestPKCS11AgainstKeycore' ./services/keycore
 
   cluster-replication:
     # Three real Postgres 17 servers: selective per-component logical

@@ -7,6 +7,38 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-24 — The PKCS#11 module is C on libcurl, a REST client, one token per tenant
+**Decision.** `sdk/pkcs11` is a PKCS#11 v2.40 module in C, linked only
+against libcurl.
+- **Identity.** It signs in as a REST client; the PIN is the client's API
+  key, or a bearer token.
+- **Objects.** The keys the client can see are the objects of one token.
+- **Operations.** ECDSA and RSA-PSS signatures (hashed in the module, the
+  digest signed in the KMS), AES-GCM, and random bytes. Nothing is created
+  or destroyed through it.
+
+**Why.**
+- The owner's list (2026-10-22): "no PKCS#11 library". The 1.27.0-beta
+  decision left rebuilding the removed module to the owner's request.
+- A Go module can't be loaded into Go programs (Vault, cosign) and isn't
+  fork-safe (nginx, PostgreSQL).
+- Hashing locally keeps application data on the host and makes every
+  signature a fixed-size KMS call.
+
+**Rejected.**
+- A Go `c-shared` library (the two reasons above).
+- A local daemon with a thin shim: another process to run and secure.
+- `CKM_RSA_PKCS` (the KMS signs RSA with PSS only).
+- Object creation and key generation through the token: they would bypass
+  the KMS's metadata profiles, approvals and dashboard.
+- An OpenSSL dependency: the module verifies through the KMS and
+  implements SHA-2 itself, tested against FIPS 180-4 vectors.
+
+**Enforced.** `TestPKCS11AgainstKeycore` (with pkcs11-tool), `make check`,
+and the "PKCS#11 module" CI step.
+
+---
+
 ## 2026-10-24 — keycore finds the version for a version-less decrypt
 **Decision:** `any_version` on decrypt makes keycore try the key's versions
 newest-first, stopping at the first that opens the ciphertext (AES-GCM's tag

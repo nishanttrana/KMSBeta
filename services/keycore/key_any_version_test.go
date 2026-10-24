@@ -104,6 +104,16 @@ func TestPrehashedSigningWithSoftwareKeys(t *testing.T) {
 			if err != nil || !ok.Verified {
 				t.Fatalf("the prehashed signature doesn't verify over the message: %v", err)
 			}
+			// And over the digest (13.59.0-beta); another digest fails.
+			ok, err = svc.Verify(ctx, key.ID, VerifyRequest{TenantID: "t1", DataB64: b64(tc.digest), SignatureB64: sig.SignatureB64, Algorithm: tc.hash, Prehashed: true})
+			if err != nil || !ok.Verified {
+				t.Fatalf("prehashed verify: %v", err)
+			}
+			other := append([]byte{}, tc.digest...)
+			other[0] ^= 1
+			if ok, err := svc.Verify(ctx, key.ID, VerifyRequest{TenantID: "t1", DataB64: b64(other), SignatureB64: sig.SignatureB64, Algorithm: tc.hash, Prehashed: true}); err != nil || ok.Verified {
+				t.Fatalf("another digest verified: %v", err)
+			}
 			if _, err := svc.Sign(ctx, key.ID, SignRequest{TenantID: "t1", DataB64: b64(tc.digest[:20]), Algorithm: tc.hash, Prehashed: true}); err == nil {
 				t.Fatal("a short digest was signed")
 			}

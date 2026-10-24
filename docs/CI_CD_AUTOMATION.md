@@ -15,7 +15,8 @@ This page replaces the dashboard's former **DevSecOps / IaC** tab. See
 | Integration | Status |
 |---|---|
 | REST API (`/svc/<service>/...`) | Yes. Reference: [API_REFERENCE.md](API_REFERENCE.md), OpenAPI in Documentation → API: OpenAPI / Swagger |
-| PKCS#11 and JCA providers | Yes. Documentation → API: PKCS#11/JCA |
+| PKCS#11 module | Yes, built from this repository ([PKCS11.md](PKCS11.md), 13.59.0-beta) |
+| JCA provider | Yes ([DATA_PROTECTION.md](DATA_PROTECTION.md#6-jcajce-provider)) |
 | KMIP | Yes ([COMPONENT_GUIDE.md](COMPONENT_GUIDE.md)) |
 | Artifact signing with a CI OIDC token | Yes ([below](#sign-a-release-with-the-jobs-oidc-token)) |
 | Tenant manifests and automatic key rotation | Yes, server side ([AUTOMATION_ALKM_PQC.md](AUTOMATION_ALKM_PQC.md)) |

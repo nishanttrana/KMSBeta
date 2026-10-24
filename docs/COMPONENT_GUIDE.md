@@ -656,11 +656,11 @@ Use cases:
 
 ## Provider and Package Components
 
-### PKCS#11 Provider
+### PKCS#11 Module
 
-Use it when:
+`sdk/pkcs11` ([PKCS11.md](PKCS11.md)). Use it when:
 
-- third-party middleware expects a PKCS#11 shared library rather than a REST API
+- third-party software expects a PKCS#11 shared library rather than a REST API (OpenSSL, SunPKCS11, signing tools, Vault)
 
 ### JCA Provider
 

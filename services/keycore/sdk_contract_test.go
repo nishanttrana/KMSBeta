@@ -25,6 +25,7 @@ import (
 // may encrypt with, one it may sign with, and one it wasn't granted.
 type sdkRig struct {
 	srv                 *httptest.Server
+	svc                 *Service
 	caPEM               []byte
 	aes, signer, hidden string
 }
@@ -60,7 +61,7 @@ func newSDKRig(t *testing.T) sdkRig {
 		h.ServeHTTP(w, r.WithContext(pkgauth.ContextWithClaims(r.Context(), claims)))
 	}))
 	t.Cleanup(srv.Close)
-	return sdkRig{srv: srv, caPEM: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw}), aes: aes.ID, signer: signer.ID, hidden: hidden.ID}
+	return sdkRig{srv: srv, svc: svc, caPEM: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw}), aes: aes.ID, signer: signer.ID, hidden: hidden.ID}
 }
 
 // The Go SDK (sdk/go) against keycore's real routes: what it sends is what
@@ -116,6 +117,13 @@ func TestGoSDKAgainstKeycore(t *testing.T) {
 	}
 	if ok, err := c.Verify(ctx, dsig, []byte("release v1"), "SHA-256"); err != nil || !ok {
 		t.Fatalf("the digest's signature doesn't verify over the message: %v %v", ok, err)
+	}
+	if ok, err := c.VerifyDigest(ctx, dsig, digest[:], "SHA-256"); err != nil || !ok {
+		t.Fatalf("verify digest: %v %v", ok, err)
+	}
+	other := sha256.Sum256([]byte("release v2"))
+	if ok, _ := c.VerifyDigest(ctx, dsig, other[:], "SHA-256"); ok {
+		t.Fatal("a signature verified over another digest")
 	}
 	pub, err := c.PublicKey(ctx, signer.ID)
 	if err != nil {

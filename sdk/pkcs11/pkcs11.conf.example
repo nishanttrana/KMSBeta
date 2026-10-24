@@ -1,0 +1,11 @@
+# /etc/vecta/pkcs11.conf (or the file named by VECTA_PKCS11_CONF).
+# Environment variables override: VECTA_URL, VECTA_TENANT_ID,
+# VECTA_CLIENT_ID, VECTA_CA_FILE, VECTA_PKCS11_LOG. docs/PKCS11.md.
+url        = https://kms.example.com
+tenant_id  = acme
+# The REST client; the PIN is its API key. Leave out to use a bearer token as the PIN.
+client_id  = payments-signer
+# ca_file  = /etc/vecta/kms-ca.pem
+# token_label = acme
+# gcm_iv   = caller        # or generated: the KMS makes every AES-GCM IV
+# log_file = /var/log/vecta-pkcs11.log

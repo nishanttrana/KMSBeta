@@ -180,4 +180,5 @@ All API calls use the proxy path `http://{host}/svc/{service}/...`.
 - [Python SDK](../sdk/python/README.md)
 - [Node.js SDK](../sdk/node/README.md)
 - [Terraform provider](TERRAFORM.md)
+- [PKCS#11 module](PKCS11.md)
 - [Edge agent](SECURITY/EDGE_DEVICES.md)

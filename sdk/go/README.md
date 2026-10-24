@@ -47,7 +47,7 @@ err = c.ListKeys(ctx, func(k vecta.Key) bool { fmt.Println(k.ID, k.Name); return
 v, err := c.GetSecretValue(ctx, secretID)
 ```
 
-`SignDigest` signs a digest you computed (ECDSA and RSA keys), `PublicKey`
+`SignDigest` signs a digest you computed (ECDSA and RSA keys) and `VerifyDigest` checks one, `PublicKey`
 reads a key pair's public key, `Random` returns bytes from the KMS's random
 source, and `EncryptWithIV` encrypts with your own IV, for interfaces that
 require one (HSM keys and FIPS strict mode refuse it); never reuse an IV with a key. `Decrypt` with `Version` 0 uses

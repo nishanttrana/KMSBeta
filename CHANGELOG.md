@@ -4,6 +4,29 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.59.0-beta] — 2026-10-24
+
+### Added
+- **PKCS#11 module** (`sdk/pkcs11`, built from this repository): a
+  PKCS#11 v2.40 library that OpenSSL, Java SunPKCS11, pkcs11-tool, signing
+  tools and Vault can load.
+  - **Keys and operations.** A REST client's keys appear as token objects:
+    ECDSA and RSA-PSS signing and verification, AES-GCM encryption and
+    decryption, and random bytes. Key material never leaves the KMS, and
+    the module hashes locally, so only digests are sent.
+  - **Credential.** The PIN is the client's API key.
+  - **Robustness.** The module is in C on libcurl, so Go programs can load
+    it and it keeps working after `fork`. It is tested against keycore
+    under AddressSanitizer and with pkcs11-tool on every CI run. See
+    [docs/PKCS11.md](docs/PKCS11.md).
+- `POST /keys/{id}/verify` takes `prehashed: true`, matching sign. The Go
+  SDK adds `VerifyDigest`.
+
+### Fixed
+- The data-protection, component and CI/CD guides said there was no
+  PKCS#11 module, or pointed at one that didn't exist; they now describe
+  this one.
+
 ## [13.58.0-beta] — 2026-10-24
 
 ### Added

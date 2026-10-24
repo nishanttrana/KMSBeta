@@ -589,13 +589,15 @@ The re-encrypt endpoint accepts old ciphertext, decrypts with the current key ve
 
 ## 5. PKCS#11 Provider
 
-Vecta does not ship a PKCS#11 module. The earlier `services/pkcs11-provider`
-exported no `C_GetFunctionList` (so OpenSSL, Java SunPKCS11, pkcs11-tool and
-database TDE could not load it), ignored the requested mechanism and PIN, and
-always signed as `SHA256withRSA`. It was removed in 1.27.0-beta; see
-[REAL_CAPABILITY.md](SECURITY/REAL_CAPABILITY.md). Applications reach Vecta keys
-through the REST API, the KMIP server (port 5696, mTLS), or the JCA provider
-below. HSMs are integrated the other way round: Vecta loads the customer's own
+`sdk/pkcs11` (13.59.0-beta) is a PKCS#11 v2.40 module: OpenSSL, Java
+SunPKCS11, pkcs11-tool and other PKCS#11 applications sign, verify, encrypt
+and decrypt with the KMS keys a REST client may use. See
+[PKCS11.md](PKCS11.md). An earlier `services/pkcs11-provider` couldn't be
+loaded at all (no `C_GetFunctionList`). It ignored the mechanism and PIN,
+and was removed in 1.27.0-beta
+([REAL_CAPABILITY.md](SECURITY/REAL_CAPABILITY.md)). Applications also reach
+Vecta keys through the REST API, the KMIP server (port 5696, mTLS), or the
+JCA provider below. HSMs are integrated the other way round: Vecta loads the customer's own
 PKCS#11 library in `hsm-connector` ([HSM_INTEGRATION.md](SECURITY/HSM_INTEGRATION.md)).
 
 ## 6. JCA/JCE Provider

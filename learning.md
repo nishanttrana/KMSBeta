@@ -5,6 +5,27 @@ Newest entries on top.
 
 ## 2026-10-24
 
+### A PKCS#11 module lives in someone else's process (13.59.0-beta)
+- **Go is the wrong language for it.** A Go `c-shared` library can't be
+  loaded by a Go program: two Go runtimes don't share a process. That
+  rules out Vault's seal and cosign. It also breaks after `fork`
+  (nginx, Apache and PostgreSQL load it, then fork). C on libcurl has
+  neither problem.
+- **Interposition.** On Linux, a shared library's references to its own
+  exported functions resolve through the process's global symbols. The
+  function list pointed at OpenSC's `C_*` once pkcs11-tool had loaded
+  OpenSC; `-Bsymbolic` fixes it.
+- **Discovery.** `dlsym(handle, "C_GetInterface")` searches the module's
+  dependencies too: libcurl → librtmp → GnuTLS → p11-kit, which exports
+  one. pkcs11-tool then quietly talked to p11-kit's proxy. A module must
+  define every discovery symbol itself.
+- **macOS libcurl.** The system libcurl (SecureTransport) can't require
+  TLS 1.3. The module refuses rather than weaken the minimum, and the
+  contract test skips there with that reason.
+- **Testing.** Only a real consumer found the two linkage bugs; our own
+  driver passed with both. The contract test runs pkcs11-tool and checks
+  its signature in Go.
+
 ### Standard interfaces don't carry what our API assumes (13.58.0-beta)
 - PKCS#11 and X.509 signers pass a digest, never the message, so a KMS
   that signs only messages can't serve them. Prehashed signing had been

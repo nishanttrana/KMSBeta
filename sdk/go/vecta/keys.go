@@ -290,6 +290,17 @@ func (c *Client) SignDigest(ctx context.Context, keyID string, digest []byte, ha
 	return Signature{KeyID: out.KeyID, Version: out.Version, Signature: sig}, err
 }
 
+// VerifyDigest checks a signature over a digest the caller computed, the
+// counterpart of SignDigest (13.59.0-beta).
+func (c *Client) VerifyDigest(ctx context.Context, sig Signature, digest []byte, hash string) (bool, error) {
+	var out struct {
+		Verified bool `json:"verified"`
+	}
+	in := map[string]any{"tenant_id": c.tenant, "data": b64(digest), "signature": b64(sig.Signature), "algorithm": hash, "version": sig.Version, "prehashed": true}
+	err := c.call(ctx, http.MethodPost, "/svc/keycore/keys/"+url.PathEscape(sig.KeyID)+"/verify"+c.query(nil), in, &out)
+	return out.Verified, err
+}
+
 // PublicKey is a key pair's current public key.
 type PublicKey struct {
 	KeyID     string
