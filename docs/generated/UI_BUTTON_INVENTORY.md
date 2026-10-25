@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-24T09:13:28Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-24T23:12:15Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -17,14 +17,14 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/ThemeToggle.tsx | 17 | - | button | {isDark ? : } | toggle |
 | web/dashboard/src/components/ThemeToggle.tsx | 31 | - | button | } onMouseLeave={(e) => } > {isDark ? : } | toggle |
 | web/dashboard/src/components/ToastStack.tsx | 84 | - | button | dismiss(toast.id)} aria-label="Dismiss notification" style={ } > × |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 478 | - | button | setCollapsed((v) => !v)} title= aria-label= className="vk-icon-btn" style={{... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 731 | - | button | Sign out | onLogout |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 783 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 817 | - | Btn | selectTab("admin/cli")} style={cliEnabled ? : }> |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 854 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 889 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 466 | - | button | setCollapsed((v) => !v)} title= aria-label= className="vk-icon-btn" style={{... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 719 | - | button | Sign out | onLogout |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 771 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 805 | - | Btn | selectTab("admin/cli")} style={cliEnabled ? : }> |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 842 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 877 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
 | web/dashboard/src/components/v3/SidebarSearch.tsx | 60 | - | button | onOpen(src.tab, h.label)} title= style={ }> |  |
-| web/dashboard/src/components/v3/SidebarSubNav.tsx | 154 | - | button | onSelect(item.id)} style={ } > |  |
+| web/dashboard/src/components/v3/SidebarSubNav.tsx | 160 | - | button | onSelect(item.id)} style={ } > |  |
 | web/dashboard/src/components/v3/chartDrill.tsx | 133 | - | Btn | Clear | onClear |
 | web/dashboard/src/components/v3/chartDrill.tsx | 141 | - | Btn | (icon or dynamic label) | onMore} disabled={loading |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 56 | - | button | Close | onClose} aria-label="Close" style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", pa... |
@@ -194,11 +194,13 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | 900 | crypto | Btn | Download | downloadResult |
 | web/dashboard/src/components/v3/tabs/CryptoperiodPanel.tsx | 51 | - | Btn | void run(r.category, () => setCryptoperiod(session, r.category, Number(draft[... |  |
 | web/dashboard/src/components/v3/tabs/CryptoperiodPanel.tsx | 52 | - | Btn | void run(r.category, () => resetCryptoperiod(session, r.category))}>Reset |  |
-| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 221 | - | Btn | onNavigate?.("certs")}>View Certificates → |  |
-| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 248 | - | button | onUnpinTab?.(tabId)} title={`Unpin $ `} style={ } > |  |
-| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 258 | - | button | onNavigate?.(tabId)} style={{ display: "inline-flex", alignItems: "center", g... |  |
-| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 387 | - | Btn | void submitHomeApprovalVote(item, "approved")} disabled={approvalVoteBusy ===... |  |
-| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 388 | - | Btn | void submitHomeApprovalVote(item, "denied")} disabled={approvalVoteBusy === `... |  |
+| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 104 | - | Btn | onNavigate?.("approvals")}>Approvals |  |
+| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 108 | - | Btn | onNavigate?.("certs/cert-renewals")}>Renewals |  |
+| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 130 | - | Btn | onNavigate?.("cluster")}>Cluster |  |
+| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 163 | - | Btn | void submitHomeApprovalVote?.(item, "approved")} disabled= >Approve |  |
+| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 164 | - | Btn | void submitHomeApprovalVote?.(item, "denied")} disabled= >Deny |  |
+| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 184 | - | button | onUnpinTab?.(id)} title={`Unpin $ `} aria-label={`Unpin $ `} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 189 | - | Btn | onNavigate?.(id)}>Open |  |
 | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 213 | discovery | Btn | void load()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 214 | discovery | Btn | setScheduleOpen(true)} title={schedule?.paused_reason \|\| (schedule?.enabled ?... |  |
 | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 218 | discovery | Btn | void runScan(scanAllTypes)} disabled= title={scanAllTypes.length ? `Scan $ `... |  |
@@ -316,9 +318,7 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/KeyDerivationPanel.tsx | 77 | - | Btn | void run(k.key_id, "start migration", () => kdfTransition(session, k.key_id,... |  |
 | web/dashboard/src/components/v3/tabs/KeyDerivationPanel.tsx | 81 | - | Btn | void run(k.key_id, "re-protect vault tokens", () => kdfReprotectVault(session... |  |
 | web/dashboard/src/components/v3/tabs/KeyDerivationPanel.tsx | 83 | - | Btn | void run(k.key_id, "abort", () => kdfTransition(session, k.key_id, "abort"))}... |  |
-| web/dashboard/src/components/v3/tabs/KeyInventoryPanel.tsx | 16 | - | button | (icon or dynamic label) | onClick} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: small ? "4px 10px" : "6px 14px", bor... |
-| web/dashboard/src/components/v3/tabs/KeyInventoryPanel.tsx | 60 | - | Btn | Export JSON | handleExport |
-| web/dashboard/src/components/v3/tabs/KeyInventoryPanel.tsx | 61 | - | Btn | (icon or dynamic label) | load |
+| web/dashboard/src/components/v3/tabs/KeyInventoryPanel.tsx | 58 | - | Btn | void load()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 17 | - | button | (icon or dynamic label) | disabled ? undefined : onClick} disabled={disabled |
 | web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 84 | - | Btn | setShowForm(!showForm)} small> New Job |  |
 | web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 85 | - | Btn | (icon or dynamic label) | load |
@@ -384,9 +384,8 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/MetadataProfilesPanel.tsx | 146 | - | Btn | set({ labels: [...value.labels, ] })}>Add label |  |
 | web/dashboard/src/components/v3/tabs/MetadataProfilesPanel.tsx | 148 | - | Btn | Cancel | onCancel |
 | web/dashboard/src/components/v3/tabs/MetadataProfilesPanel.tsx | 149 | - | Btn | Save profile | onSave |
-| web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 97 | - | button | setTimeWindow(w)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 104 | - | button | Refresh | load} style={{ background: "transparent", border: `1px solid ${C.border |
-| web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 144 | - | button | setSection(s.id as any)} style={{ padding: "8px 16px", border: "none", backgr... |  |
+| web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 87 | - | Btn | void load()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 138 | - | button | openGroup("node", n.key \|\| "(unclustered)", n)} style={{ ...clickable, backgr... |  |
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 76 | playbooks | button | (icon or dynamic label) | disabled ? undefined : onClick} style={{ ...base, ...styles[variant] |
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 177 | playbooks | button | onChange(filters.filter((_: any, idx: number) => idx !== i))} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 181 | playbooks | Btn | onChange([...filters, ])}> Add filter |  |

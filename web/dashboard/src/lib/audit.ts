@@ -53,6 +53,12 @@ export type AuditEventQuery = {
   service?: string;
   // Drop generic HTTP request records, as the Activity statistics do.
   exclude_http_requests?: boolean;
+  // The operations Operations metrics count: one metered operation, or any
+  // with "*"; outcome "error" (refused or failed) or "success"; node is the
+  // chain node that ran them ("" for an unclustered node).
+  metered_op?: string;
+  outcome?: "error" | "success";
+  node?: string;
   from?: string;
   to?: string;
   limit?: number;
@@ -127,6 +133,9 @@ export async function listAuditEvents(
   if (query?.risk_max && query.risk_max > 0) q.set("risk_max", String(Math.trunc(query.risk_max)));
   if (String(query?.service || "").trim()) q.set("service", String(query!.service).trim());
   if (query?.exclude_http_requests) q.set("exclude_http_requests", "true");
+  if (String(query?.metered_op || "").trim()) q.set("metered_op", String(query!.metered_op).trim());
+  if (query?.outcome) q.set("outcome", query.outcome);
+  if (typeof query?.node === "string") q.set("node", query.node);
   if (String(query?.from || "").trim()) q.set("from", String(query!.from).trim());
   if (String(query?.to || "").trim()) q.set("to", String(query!.to).trim());
   q.set("limit", String(Math.max(1, Math.min(500, Math.trunc(Number(query?.limit || 200))))));

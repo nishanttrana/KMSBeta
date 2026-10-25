@@ -7,6 +7,37 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-25 — Operations' views are sidebar sub-options, and every number on them is counted by its service (13.65.0-beta)
+
+- **Decision:** Operations has three sub-options, Status, Operation metrics
+  and Key inventory, listed under it in the sidebar (`SUB_PANES.ops`); the
+  tab strip in the page is gone. Operation metrics reads one aggregate,
+  `GET /ops-metrics/stats`, over the console's chart windows, and every bar
+  lists its operations through `GET /audit/events` (`metered_op`, `outcome`,
+  `service`, `node`). Key inventory reads keycore's `GET /inventory/stats`,
+  counted over the keys themselves, and its bars list keys through
+  `GET /inventory/stats/keys` with the same predicate. Status shows runtime,
+  counts that open their home view, cluster nodes, approvals waiting for
+  the signed-in person and pinned views. Its key count is keycore's, and
+  its algorithm bars, counted in the browser over a fetched key list, are
+  gone: algorithms have one home, Key inventory.
+- **Why:** owner, 2026-10-25 ("can operations tab have brand new good UI
+  view"). The old page broke three standing rules: a tab strip instead of
+  sidebar sub-options, charts without drill-downs or the standard windows
+  (1h/24h/7d/30d), and a key count and algorithm mix computed in the page.
+  Key inventory read fields keycore's enterprise summary nests under
+  `summary`, so it showed only dashes.
+- **Rejected:** building Key inventory on the enterprise summary. Its
+  counts come from `key_inventory`, which fills only on a manual
+  `POST /inventory/sync`, and its health score is a weighting with guessed
+  inputs (an unknown backup scores 50, rotation defaults to quarterly).
+  Charting the latency histogram: a bucket's operations can't be listed
+  without a duration filter matching the histogram's rounding, so latency
+  is shown as percentiles, which are measures.
+- **Enforced by:** `tests/operations.spec.ts` (sub-options, tiles, drill
+  queries, unavailable state), `TestOpsStatsWindows`,
+  `TestKeyStatsCountTheKeysTheyList`, `tests/smoke-tabs.spec.ts`.
+
 ## 2026-10-24 — Federation replicates chosen keys, fences by epoch, and never replaces material
 **Decision.** Keys replicate between installations one key at a time.
 - **Links.** A link is pushed by the key's primary to a registered peer:
@@ -1862,6 +1893,7 @@ oversized file and a stale entry each fail) and the CI dashboard job.
 - **Enforced by:** `tests/smoke-tabs.spec.ts` ("analytics, alerts and audit
   each have a single home"): no Analytics entry in the menu, and Operations
   has the three tabs. `RETIRED_TABS` sends old links to Operations.
+  (Amended 2026-10-25: the three views are sidebar sub-options.)
 
 ## 2026-10-01 — runtime-certs is real tmpfs; an external edge certificate is kept on the certs key volume (7.21.0-beta)
 

@@ -117,6 +117,12 @@ export const SUB_PANES: Record<string, SubPane[]> = {
     { id: "encrypted", label: "Encrypted Backups", hint: "Create, verify, restore and download encrypted backups", icon: DatabaseBackup, platformOnly: true },
     { id: "schedules", label: "Schedules", hint: "Encrypted backups on a schedule, with retention", icon: RefreshCw, platformOnly: true }
   ],
+  // Operations' views (they were a tab strip in the page until 13.65.0-beta).
+  ops: [
+    { id: "status", label: "Status", hint: "Runtime, cluster, approvals waiting for you and pinned views", icon: Activity },
+    { id: "metrics", label: "Operation metrics", hint: "Cryptographic operations over a window, each chart drilling into its events", icon: Zap },
+    { id: "inventory", label: "Key inventory", hint: "Keys by state and algorithm, and keys created over a window", icon: KeyRound }
+  ],
   home: [
     { id: "overview", label: "Overview", hint: "Posture score, KPIs, top recommended actions and control coverage", icon: Activity },
     { id: "recommendations", label: "Recommendations", hint: "Every open recommendation, filterable", icon: ListChecks }
@@ -183,3 +189,20 @@ export function SidebarSubNav({ tabId, items, activeId, onSelect }: {
     </div>
   );
 }
+
+// The view a module opens on before one is chosen (moved from the shell,
+// 13.65.0-beta). A module not listed opens on its first sub-option.
+export const DEFAULT_SUB: Record<string, string> = {
+  workbench: "crypto",
+  dataprotection: "fieldenc",
+  cloudctl: "byok",
+  ekm: "db",
+  certs: "cert-overview",
+  hsm: "hsm-generic",
+  cluster: "topology",
+  playbooks: "overview",
+  admin: "health",
+  backup: "encrypted",
+  approvals: "requests",
+  home: "overview",
+};

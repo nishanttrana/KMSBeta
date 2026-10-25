@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-24T09:13:28Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-24T23:12:15Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -8,14 +8,14 @@ This file is generated from source. Re-run the script after UI or API changes.
 
 - Dashboard navigation items: `25`
 - Tab/component mappings: `32`
-- Sub-pane groups: `14`
-- Backend HTTP routes discovered: `948` across `27` services
-- Backend routes on the `pkg/route` kernel: `583` (permission and audit action in `backend-routes.csv`)
+- Sub-pane groups: `15`
+- Backend HTTP routes discovered: `951` across `27` services
+- Backend routes on the `pkg/route` kernel: `586` (permission and audit action in `backend-routes.csv`)
 - Frontend API call sites discovered: `538`
-- Frontend call sites with exact backend route match: `507`
-- Frontend call sites needing review or dynamic/runtime confirmation: `31`
-- Clickable controls with static `onClick` handlers: `795`
-- Backend request flows with handler/service/package summaries: `948`
+- Frontend call sites with exact backend route match: `506`
+- Frontend call sites needing review or dynamic/runtime confirmation: `32`
+- Clickable controls with static `onClick` handlers: `794`
+- Backend request flows with handler/service/package summaries: `951`
 
 ## How To Use This For Launch
 
@@ -134,7 +134,7 @@ flowchart LR
   tab_restapi --> svc_auth_edge
   tab_restapi --> svc_certs
   tab_restapi --> svc_secrets
-  svc_audit["audit (34 routes)"]
+  svc_audit["audit (35 routes)"]
   svc_auth["auth (92 routes)"]
   svc_auth_edge["auth-edge"]
   svc_autokey["autokey (15 routes)"]
@@ -148,7 +148,7 @@ flowchart LR
   svc_governance["governance (40 routes)"]
   svc_hyok["hyok (25 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (191 routes)"]
+  svc_keycore["keycore (193 routes)"]
   svc_posture["posture (13 routes)"]
   svc_pqc["pqc (14 routes)"]
   svc_reporting["reporting (34 routes)"]
@@ -168,12 +168,12 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Home | Command Center | home | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
 | Home | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 208 |
 | Home | Workbench | workbench | web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx | - | 0 |
-| Keys & certificates | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 100 |
-| Keys & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 104 |
+| Keys & certificates | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 102 |
+| Keys & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 106 |
 | Keys & certificates | Rotation & Scheduling | rotation | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | - | 0 |
 | Keys & certificates | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 12 |
 | Keys & certificates | Crypto Discovery | discovery | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | compliance, discovery | 23 |
-| Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, keycore, secrets | 77 |
+| Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, keycore, secrets | 79 |
 | Data & integrations | Data Protection | dataprotection | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | Data & integrations | Cloud Key Control | cloudctl | web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | - | 0 |
 | Data & integrations | Enterprise KM | ekm | web/dashboard/src/components/v3/tabs/EKMTab.tsx | ekm, tfe | 26 |
@@ -191,7 +191,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Platform | Backup & Restore | backup | web/dashboard/src/modules/backup/BackupModule.tsx | auth-edge | 4 |
 | Platform | Administration | admin | web/dashboard/src/components/v3/tabs/AdminTab.tsx | - | 0 |
 | UNLISTED | byok | byok | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | cloud | 8 |
-| UNLISTED | crypto | crypto | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | keycore | 51 |
+| UNLISTED | crypto | crypto | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | keycore | 53 |
 | UNLISTED | dataenc | dataenc | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | UNLISTED | hyok | hyok | web/dashboard/src/components/v3/tabs/HYOKTab.tsx | hyok | 7 |
 | UNLISTED | pkcs11 | pkcs11 | web/dashboard/src/components/v3/tabs/ClientSDKTab.tsx | ekm, tfe | 26 |
@@ -202,7 +202,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 
 | Service | Routes | Frontend call sites |
 | --- | --- | --- |
-| audit | 34 | 20 |
+| audit | 35 | 18 |
 | auth | 92 | 49 |
 | autokey | 15 | 11 |
 | certs | 78 | 61 |
@@ -217,7 +217,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | hsm-connector | 14 | 0 |
 | hyok | 25 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 191 | 82 |
+| keycore | 193 | 84 |
 | kmip | 12 | 11 |
 | policy | 12 | 0 |
 | posture | 13 | 10 |
@@ -258,6 +258,7 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | tfe | GET | /tfe/file-encrypt/download | serviceRequest | web/dashboard/src/lib/ekm.ts | 726 |
 | keycore | GET | /{param}{param}{param} | serviceRequest | web/dashboard/src/lib/federation.ts | 25 |
 | hyok | POST | /hyok/{param}/v1/keys/{param}/{param} | serviceRequest | web/dashboard/src/lib/hyok.ts | 188 |
+| audit | GET | /ops-metrics/stats{param} | serviceRequest | web/dashboard/src/lib/opsMetrics.ts | 64 |
 | reporting | PUT | /alerts/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/reporting.ts | 311 |
 | reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 350 |
 | keycore | GET | /rotation/runs{param} | serviceRequest | web/dashboard/src/lib/rotationScheduler.ts | 88 |
@@ -268,7 +269,7 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | secrets | GET | /secrets/database/leases/{param}/renew | serviceRequest | web/dashboard/src/lib/secretsDatabase.ts | 64 |
 | secrets | GET | /secrets/database/leases/{param}/revoke | serviceRequest | web/dashboard/src/lib/secretsDatabase.ts | 69 |
 
-Showing `31` of `31`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
+Showing `32` of `32`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
 
 ## Backend Routes Not Directly Called From Dashboard
 
@@ -282,11 +283,15 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | audit | POST | /audit/cluster/signing-key/join-key | h.handleClusterKeyJoinKey |  | services/audit/handler.go | 90 |
 | audit | POST | /audit/cluster/signing-key/export | h.handleClusterKeyExport |  | services/audit/handler.go | 91 |
 | audit | POST | /audit/cluster/signing-key/import | h.handleClusterKeyImport |  | services/audit/handler.go | 92 |
-| audit | GET | /ops-metrics/timeseries | h.handleGetOpsTimeSeries |  | services/audit/handler.go | 99 |
-| audit | GET | /audit/fips/boundary | h.handleFIPSBoundary |  | services/audit/handler.go | 105 |
-| audit | GET | /audit/cbom/inventory | h.handleCBOMInventory |  | services/audit/handler.go | 108 |
-| audit | GET | /audit/cbom/diff | h.handleCBOMDiff |  | services/audit/handler.go | 109 |
-| audit | GET | /metrics | h.handlePrometheusMetrics |  | services/audit/handler.go | 112 |
+| audit | GET | /ops-metrics/timeseries | h.handleGetOpsTimeSeries |  | services/audit/handler.go | 100 |
+| audit | GET | /ops-metrics/latency | h.handleGetLatencyPercentiles |  | services/audit/handler.go | 101 |
+| audit | GET | /ops-metrics/by-service | h.handleGetServiceStats |  | services/audit/handler.go | 102 |
+| audit | GET | /ops-metrics/errors | h.handleGetErrorBreakdown |  | services/audit/handler.go | 103 |
+| audit | GET | /audit/fips/boundary | h.handleFIPSBoundary |  | services/audit/handler.go | 106 |
+| audit | GET | /audit/cbom/inventory | h.handleCBOMInventory |  | services/audit/handler.go | 109 |
+| audit | GET | /audit/cbom/diff | h.handleCBOMDiff |  | services/audit/handler.go | 110 |
+| audit | GET | /metrics | h.handlePrometheusMetrics |  | services/audit/handler.go | 113 |
+| audit | GET | /ops-metrics/stats | h.opsStats | audit.events.read | services/audit/ops_stats.go | 184 |
 | auth | DELETE | /auth/api-keys/{id} | h.deleteAPIKey | auth.api_key.write | services/auth/clients_admin.go | 30 |
 | auth | POST | /auth/delegated/authority | h.delegatedAuthority | authenticated | services/auth/delegated.go | 77 |
 | auth | POST | /auth/delegated/users/{id}/disable | h.delegatedDisableUser | authenticated | services/auth/delegated.go | 78 |
@@ -392,12 +397,8 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/posture | h.handlePosture |  | services/compliance/handler.go | 59 |
 | compliance | GET | /compliance/posture/history | h.handlePostureHistory |  | services/compliance/handler.go | 60 |
 | compliance | GET | /compliance/templates/{id} | h.handleGetComplianceTemplate |  | services/compliance/handler.go | 70 |
-| compliance | GET | /compliance/frameworks/{id}/controls | h.handleFrameworkControls |  | services/compliance/handler.go | 74 |
-| compliance | GET | /compliance/keys/orphaned | h.handleOrphaned |  | services/compliance/handler.go | 78 |
-| compliance | GET | /compliance/keys/expired | h.handleExpired |  | services/compliance/handler.go | 79 |
-| compliance | GET | /compliance/cbom | h.handleCBOM |  | services/compliance/handler.go | 83 |
 
-Showing `120` of `435`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `439`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

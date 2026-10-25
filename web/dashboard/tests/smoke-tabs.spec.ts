@@ -226,13 +226,14 @@ test("analytics, alerts and audit each have a single home", async ({ page }) => 
   for (const fake of ["Disk Encryption", "vecta-kms-01", "34.2 / 120 GB", "Violations"]) {
     await expect(page.getByText(fake)).toHaveCount(0);
   }
-  for (const t of ["Status", "Key inventory", "Operation metrics"]) {
-    await expect(page.getByRole("button", { name: t, exact: true })).toHaveCount(1);
-  }
-  await page.getByRole("button", { name: "Operation metrics", exact: true }).click();
-  await expect(page.getByText("Operations Breakdown")).toBeVisible();
-  await page.getByRole("button", { name: "Key inventory", exact: true }).click();
-  await expect(page.getByText("By Algorithm")).toBeVisible();
+  // Its views are sidebar sub-options (13.65.0-beta), and a source that
+  // answers nothing usable reads "unavailable".
+  const opsNav = page.getByTestId("subnav-ops");
+  await expect(opsNav.getByRole("button")).toHaveText(["Status", "Operation metrics", "Key inventory"]);
+  await opsNav.getByRole("button", { name: "Operation metrics", exact: true }).click();
+  await expect(page.getByText(/^Operation metrics unavailable: /)).toBeVisible();
+  await opsNav.getByRole("button", { name: "Key inventory", exact: true }).click();
+  await expect(page.getByText(/^Key inventory unavailable: /)).toBeVisible();
   await assertNoRenderBoundary(page);
 
   await nav("Compliance");
@@ -270,7 +271,7 @@ test("operations status shows unavailable, not zero, when a source fails", async
   await page.route("**/svc/keycore/**", (r) => r.fulfill(fail));
   await page.route("**/svc/reporting/**", (r) => r.fulfill(fail));
   await page.getByText("Operations", { exact: true }).first().click();
-  for (const label of ["Total Keys", "Open Alerts"]) {
+  for (const label of [/^Keys/, /^Open alerts/]) {
     const card = page.locator(".vecta-stat-card", { hasText: label });
     await expect(card.getByText("Unavailable", { exact: true })).toBeVisible();
     await expect(card.getByText("—", { exact: true })).toBeVisible();

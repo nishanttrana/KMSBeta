@@ -4,6 +4,54 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.65.0-beta] — 2026-10-25
+
+### Changed
+- **Operations is redesigned.** Its three views, Status, Operation metrics
+  and Key inventory, are now sub-options under Operations in the sidebar
+  (`#ops/status`, `#ops/metrics`, `#ops/inventory`); the tab strip inside
+  the page is gone.
+  - **Operation metrics:** count tiles (operations and values processed,
+    refused or failed, average and p99 latency), a throughput chart of
+    succeeded and refused-or-failed operations per bucket, bars by operation
+    and by service, nodes when clustered, and latency percentiles per
+    operation. It offers the console's standard windows (last day to last
+    year, or since uptime) instead of 1h/24h/7d/30d. Every bar segment and
+    table row lists exactly the operations it counts, and each opens its
+    audit event.
+  - **Key inventory:** tiles (keys, active, created in the window,
+    algorithms), keys created per bucket, and bars by state and by
+    algorithm, each listing its keys; a key opens in Key Management.
+  - **Status:** one runtime strip (FIPS mode, crypto module, TLS, RNG,
+    cluster), count tiles that open the view owning each number, cluster
+    nodes, approvals waiting for you (approve or deny in place) and pinned
+    views. The key count is now keycore's; the algorithm bars, counted in
+    the browser, moved to Key inventory. A cluster that reports no nodes is
+    no longer shown in green.
+- New `GET /svc/audit/ops-metrics/stats` (`audit.events.read`, audited as
+  `audit.audit.ops_stats_read`), and `GET /audit/events` filters
+  `metered_op`, `outcome` and `node`; an outcome without `metered_op`, or
+  other than `error` or `success`, is refused with `400 bad_outcome`.
+- New keycore `GET /inventory/stats` and `GET /inventory/stats/keys`
+  (`key.inventory.read`, audited as `audit.key.inventory_stats_read` and
+  `audit.key.inventory_stats_keys_read`).
+
+### Fixed
+- **Key inventory showed only dashes.** It read the enterprise summary's
+  fields at the top level, where keycore nests them under `summary`, and a
+  `by_algorithm` list keycore never returned, so every tile read "—" and the
+  algorithm list "No data available". It now reads key counts made over the
+  keys themselves. The JSON export of the enterprise summary went with it.
+
+### Known
+- The other ops-metrics reads (`overview`, `timeseries`, `latency`,
+  `by-service`, `errors`) are kept for API callers and the Status view;
+  they are still on the legacy mux, so reading them is not audited.
+- Rotation & Scheduling → Scheduling jobs never ran: keycore stores the jobs
+  and nothing executes them, and the page reads `jobs` where keycore answers
+  `items` and creates jobs with fields keycore refuses. Left for the owner's
+  decision (remove, or mark as a preview).
+
 ## [13.64.0-beta] — 2026-10-24
 
 ### Fixed

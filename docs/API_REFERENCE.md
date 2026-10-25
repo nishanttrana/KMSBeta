@@ -1122,6 +1122,8 @@ These endpoints provide the Tier 1 enterprise audit surface for rotation analyti
 | GET | `/svc/keycore/health/summary` | Tenant health summary plus lowest-scoring keys. |
 | POST | `/svc/keycore/inventory/sync` | Sync KeyCore metadata into enterprise inventory and recalculate health. |
 | GET | `/svc/keycore/inventory/keys` | List inventory records. Query: `status`, `owner`, `limit`, `offset`. |
+| GET | `/svc/keycore/inventory/stats` | Operations → Key inventory (13.65.0-beta). Keys that are not deleted, counted by keycore over every key of the tenant (not the synced inventory table): `{"stats": {from, to, bucket_seconds, total, created, by_state, by_algorithm, series}}`. `by_state` and `by_algorithm` are `{key, count}` over every key; `created` and `series` (`{start, count}` per `pkg/timebucket` bucket) count keys created in `from`..`to` (RFC 3339; without `from`, since the first key). A malformed window is refused with `reason` `bad_window`. |
+| GET | `/svc/keycore/inventory/stats/keys` | The keys behind one of those counts, with the same predicate: query `state` (lifecycle state as `by_state` names it), `algorithm`, `from`, `to`, `offset`, `limit` (at most 100). `{"items": [Key, ...], "has_more": bool}` (`TestKeyStatsCountTheKeysTheyList`). |
 | GET | `/svc/keycore/inventory/orphans` | List active/pre-active/suspended keys with no dependency records. |
 | GET | `/svc/keycore/inventory/duplicates` | List duplicate key groups by algorithm and KCV. |
 | GET | `/svc/keycore/inventory/dependencies` | List dependency records. Query: `key_id`, `limit`. |
@@ -1228,7 +1230,7 @@ roles need the permission named here. Service principals are allowed.
 | `PUT /keys/{id}/usage/limit`, `POST /keys/{id}/usage/reset` | `key.usage_limit_update` | `usage_limit_update_requested`, `usage_reset_requested` |
 | `POST /tags`, `DELETE /tags/{name}` | `key.tags.write` | `tag_upsert_requested`, `tag_delete_requested` |
 
-| `GET /inventory/keys`, `/inventory/orphans`, `/inventory/duplicates`, `/inventory/dependencies`, `/rotation/analytics`, `/rotation/analytics/overdue`, `/enterprise/summary`, `/health/summary`, `/compromise/events`, `/analytics/usage`, `/analytics/hotspots`, `/analytics/trends`, `/enterprise/dspm/findings`, `/enterprise/dspm/events`, `/enterprise/compliance/dashboard`, `/enterprise/cost/optimization` (5.0.0-beta) | `key.inventory.read` | `inventory_keys_read`, ... (AUDIT_EVENTS_2026-09.md) |
+| `GET /inventory/keys`, `/inventory/orphans`, `/inventory/duplicates`, `/inventory/dependencies`, `/rotation/analytics`, `/rotation/analytics/overdue`, `/enterprise/summary`, `/health/summary`, `/compromise/events`, `/analytics/usage`, `/analytics/hotspots`, `/analytics/trends`, `/enterprise/dspm/findings`, `/enterprise/dspm/events`, `/enterprise/compliance/dashboard`, `/enterprise/cost/optimization` (5.0.0-beta), `/inventory/stats`, `/inventory/stats/keys` (13.65.0-beta) | `key.inventory.read` | `inventory_keys_read`, ... (AUDIT_EVENTS_2026-09.md) |
 | `GET /ceremony`, `GET /ceremony/{id}`, `GET /ceremony/guardians` | `key.ceremony.read` | `ceremonies_listed`, `ceremony_read`, `ceremony_guardians_listed` |
 | `POST /ceremony`, `POST /ceremony/{id}/complete`, `POST /ceremony/{id}/abort`, `POST /ceremony/guardians`, `DELETE /ceremony/guardians/{id}` | `key.ceremony.write` | `ceremony_created`, `ceremony_completed`, `ceremony_aborted`, `ceremony_guardian_created`, `ceremony_guardian_deleted` |
 | `POST /ceremony/{id}/shares` | `key.ceremony.share` | `ceremony_share_submitted` |
@@ -1722,7 +1724,13 @@ OR-ed; matched literally, so `_` and `%` are not wildcards; the HSM tab uses
 `risk_max` (inclusive; 7.17.0-beta), `service` (7.17.0-beta),
 `source_ip` (the bare address) and `user_agent` (exact) (13.42.0-beta),
 `exclude_http_requests=true` (drops generic HTTP request records;
-7.17.0-beta), `from` and `to` (RFC 3339, inclusive; a value that is not a
+7.17.0-beta), `metered_op` (13.65.0-beta: the operations Operations
+metrics count, from `details.metered_op`; one operation name, or `*` for
+any; with a known service and a `success`, `refused` or `failure` result,
+read from `details.result` when a publisher put it there), `outcome`
+(`error` for refused or failed, `success`; only with `metered_op`, anything
+else is refused with `400 bad_outcome`), `node` (with `metered_op`: the
+chain node that ran the operation, empty for an unclustered node), `from` and `to` (RFC 3339, inclusive; a value that is not a
 time is refused with `400 bad_window` since 13.42.0-beta, where it was
 ignored), `order=asc` (oldest
 first with a stable tiebreak, for readers that follow a cursor; default
@@ -1805,6 +1813,25 @@ primary, so every node returns the cluster figures (2.3.0-beta).
 | GET | `/svc/audit/ops-metrics/latency` | `items`: per service and `op_type`, `avg_ms` (exact) and `p50_ms` / `p90_ms` / `p99_ms`: the upper bound of the histogram bucket (0.1 to 1000 ms) each percentile falls in; `null` is slower than 1000 ms |
 | GET | `/svc/audit/ops-metrics/by-service` | `items`: `total_ops`, `total_errors`, `error_rate`, `avg_latency_ms` |
 | GET | `/svc/audit/ops-metrics/errors` | `items`: `service`, `op_type`, `error_count`, `total_count` |
+
+#### GET /svc/audit/ops-metrics/stats
+
+Permission `audit.events.read`; kernel event `audit.audit.ops_stats_read`
+(details `from`, `to`, `total`); a malformed window is refused with `reason`
+`bad_window` (13.65.0-beta). The Operations → Operation metrics view. Query
+`from` and `to` (RFC 3339); without `from`, the window starts at the first
+recorded hour ("since uptime"). The rows are hourly, so `from` is moved back
+to the start of its hour. Response `{"stats": {...}}`: `from`, `to`,
+`bucket_seconds` (`pkg/timebucket`), `scope`, `recorded_since`, `total` and
+each entry of `by_op`, `by_service` and `by_node` as
+`{key, ops, errors, avg_latency_ms, p50_ms, p90_ms, p99_ms}` (percentiles
+as in `latency` above), `total_values`, and `series`
+(`{start, ops, errors, avg_latency_ms}` per bucket). Each count equals the
+number of events `GET /audit/events` returns for the same window with
+`metered_op=*` (or the operation), `outcome=error` for errors, and the
+matching `service`, `node` or bucket `from`/`to` (`TestOpsStatsWindows`, on
+SQLite and Postgres). A member forwards it to the primary, as the other
+ops-metrics reads.
 
 ### GET /svc/audit/audit/events/{id}
 
@@ -4517,6 +4544,8 @@ Selected events with dedicated audit classification:
 - `audit.key.rotation_policies_listed`, `audit.key.rotation_policy_created`, `audit.key.rotation_policy_updated`, `audit.key.rotation_policy_deleted`, `audit.key.rotation_policy_triggered`, `audit.key.rotation_runs_listed`, `audit.key.rotation_upcoming_listed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.key.rotation_policy_run` (scheduled run; `result: failure` when any key failed): key rotation policies
 - `audit.audit.checkpoints_listed` (kernel event for `GET /audit/checkpoints`; details `checkpoints`, `failed`), `audit.audit.checkpoint_signed` (a signed chain head: `chain_node`, `sequence`, `chain_hash`, `signed_at`, `key_id`, `algorithm`, `signature`), `audit.audit.checkpoint_key_created` (root; `target_id` key ID, `public_key_pem`), `audit.audit.checkpoint_refused` (`reason` `key_generation_failed`/`signing_failed`), `audit.audit.checkpoint_timestamped` (an RFC 3161 token for a checkpoint: `imprint_sha256`, `gen_time`, `tsa`, `tsa_serial`, `trust`, `token_b64`), `audit.audit.checkpoint_timestamp_failed` (`reason` `credential_unavailable`/`trust_roots`/`timestamp_refused`), `audit.audit.anchor_settings_read`, `audit.audit.anchor_settings_updated`, `audit.audit.event_hmac_key_installed` (root; HMAC key derived from the audit master key; `mek_version`, `unavailable_mek_versions`).
 - `audit.audit.activity_stats_read` (kernel event for `GET /audit/activity/stats`, 7.17.0-beta; details `from`, `to`, `total`; refusals `result: refused`, `reason` `bad_window` or the kernel's).
+- `audit.audit.ops_stats_read` (kernel event for `GET /ops-metrics/stats`, 13.65.0-beta; details `from`, `to`, `total`; refusals `result: refused`, `reason` `bad_window` or the kernel's).
+- `audit.key.inventory_stats_read`, `audit.key.inventory_stats_keys_read` (kernel events for `GET /inventory/stats` and `GET /inventory/stats/keys`, 13.65.0-beta; details `total` / `count`; refusals `reason` `bad_window` or the kernel's).
 - `audit.audit.investigation_read` (kernel event for `GET /audit/investigate`, 13.42.0-beta; details: each pivot given and `total`, so who investigated whom is on record; refusals `result: refused`, `reason` `bad_window` or the kernel's).
 - `audit.audit.target_integrity_verified` (kernel event for `GET /audit/targets/{target_id}/integrity`; details `verdict`, `events_checked`, `failed`), `audit.audit.chain_broken` (critical; `scope: target` with `target_id` and per-event `breaks`, or the whole tenant chain; `break_count`). Published on the `AUDIT` stream (recorded by ingest, directly if the publish fails), so playbooks can trigger on it: audit trail integrity
 - `audit.key.key_consumers_read` (kernel event for `GET /keys/{id}/consumers`; detail `consumers`): a key's callers and rotate/delete impact
@@ -4650,6 +4679,7 @@ from the code; do not edit by hand.
 - `GET /svc/audit/ops-metrics/errors`
 - `GET /svc/audit/ops-metrics/latency`
 - `GET /svc/audit/ops-metrics/overview`
+- `GET /svc/audit/ops-metrics/stats`
 - `GET /svc/audit/ops-metrics/timeseries`
 - `GET /svc/audit/webhooks`
 - `POST /svc/audit/webhooks`
@@ -5340,6 +5370,8 @@ from the code; do not edit by hand.
 - `GET /svc/keycore/inventory/duplicates`
 - `GET /svc/keycore/inventory/keys`
 - `GET /svc/keycore/inventory/orphans`
+- `GET /svc/keycore/inventory/stats`
+- `GET /svc/keycore/inventory/stats/keys`
 - `POST /svc/keycore/inventory/sync`
 - `GET /svc/keycore/keys`
 - `POST /svc/keycore/keys`

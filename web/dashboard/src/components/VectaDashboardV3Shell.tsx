@@ -26,7 +26,7 @@ import { getUnreadAlertCounts } from "../lib/reporting";
 import { usePopover } from "./v3/usePopover";
 import { B, Btn } from "./v3/legacyPrimitives";
 import { isFipsModeEnabled, normalizeFipsModeValue, TabErrorBoundary } from "./v3/runtimeUtils";
-import { SidebarSubNav, SUB_PANES, type SubPane } from "./v3/SidebarSubNav";
+import { DEFAULT_SUB, SidebarSubNav, SUB_PANES, type SubPane } from "./v3/SidebarSubNav";
 import { NAV, parseNavHash } from "./v3/shellNav";
 import { SidebarSearch } from "./v3/SidebarSearch";
 import { C } from "./v3/theme";
@@ -253,21 +253,7 @@ export default function VectaDashboardV3Shell(props: Props) {
   const [subNavTick, setSubNavTick] = useState(0);
   const [subPaneSelection, setSubPaneSelection] = useState<any>(() => {
     const linked = parseNavHash(window.location.hash);
-    return {
-      workbench: "crypto",
-      dataprotection: "fieldenc",
-      cloudctl: "byok",
-      ekm: "db",
-      certs: "cert-overview",
-      hsm: "hsm-generic",
-      cluster: "topology",
-      playbooks: "overview",
-      admin: "health",
-      backup: "encrypted",
-      approvals: "requests",
-    home: "overview",
-      ...(linked.tab && linked.sub ? { [linked.tab]: linked.sub } : {})
-    };
+    return { ...DEFAULT_SUB, ...(linked.tab && linked.sub ? { [linked.tab]: linked.sub } : {}) };
   });
   // The one module whose sub-options are listed in the sidebar.
   const [expandedTab, setExpandedTab] = useState(tab);
@@ -437,6 +423,8 @@ export default function VectaDashboardV3Shell(props: Props) {
       }
     });
   };
+  // Opens a module with its page search set (a search result, or a key from Operations).
+  const searchIn = (target: string, text: string) => { setPageSearch((p) => ({ tab: target.split("/")[0]!, text, n: p.n + 1 })); selectTab(target); };
 
   // The address follows the view: the first write replaces (and drops any
   // query string), later ones add a history entry.
@@ -694,7 +682,7 @@ export default function VectaDashboardV3Shell(props: Props) {
             );
           })}
           {!collapsed && <SidebarSearch session={session} query={navFilter} visibleTabs={visibleTabIDs}
-            onOpen={(target, text) => { setPageSearch((p) => ({ tab: target.split("/")[0]!, text, n: p.n + 1 })); selectTab(target); }} />}
+            onOpen={searchIn} />}
         </div>
 
         {/* User footer */}
@@ -952,6 +940,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                   pinnedTabs={pinnedTabs}
                   onTogglePin={togglePin}
                   onNavigate={(tabId: string) => selectTab(tabId)}
+                  onSearchIn={searchIn}
                   searchQuery={pageSearch.tab === tab ? pageSearch : undefined}
                 />
               </Suspense>

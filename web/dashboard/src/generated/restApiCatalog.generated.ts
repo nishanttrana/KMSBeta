@@ -843,6 +843,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "audit-get-ops-metrics-stats",
+    "group": "Audit & Alerts (audit)",
+    "title": "GET /ops-metrics/stats",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/ops-metrics/stats?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "GET /svc/audit/ops-metrics/stats?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "audit-get-ops-metrics-timeseries",
     "group": "Audit & Alerts (audit)",
     "title": "GET /ops-metrics/timeseries",
@@ -17148,6 +17176,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "GET /svc/keycore/inventory/orphans?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-inventory-stats",
+    "group": "Key Management (keycore)",
+    "title": "GET /inventory/stats",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/inventory/stats?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/inventory/stats?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-inventory-stats-keys",
+    "group": "Key Management (keycore)",
+    "title": "GET /inventory/stats/keys",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/inventory/stats/keys?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/inventory/stats/keys?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

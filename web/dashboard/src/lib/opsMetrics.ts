@@ -24,49 +24,47 @@ export interface OpsOverview {
   recorded_since: string | null;
 }
 
-// Percentiles are histogram bucket upper bounds; null means the sample
-// fell in the overflow bucket (slower than 1000 ms).
-export interface LatencyPercentiles {
-  service: string;
-  op_type: string;
-  avg_ms: number;
-  p50_ms: number | null;
-  p90_ms: number | null;
-  p99_ms: number | null;
-  sample_ops: number;
-}
-
-export interface ServiceOpsStats {
-  service: string;
-  total_ops: number;
-  total_errors: number;
-  error_rate: number;
-  avg_latency_ms: number;
-}
-
-export interface ErrorBreakdown {
-  service: string;
-  op_type: string;
-  error_count: number;
-  total_count: number;
-}
-
 export async function getOverview(session: AuthSession, window: OpsWindow): Promise<OpsOverview> {
   const res = await serviceRequest<{ overview: OpsOverview }>(session, "audit", `/ops-metrics/overview?window=${window}`);
   return res.overview;
 }
 
-export async function getLatencyPercentiles(session: AuthSession, window: OpsWindow): Promise<LatencyPercentiles[]> {
-  const res = await serviceRequest<{ items: LatencyPercentiles[] | null }>(session, "audit", `/ops-metrics/latency?window=${window}`);
-  return res.items ?? [];
+// Percentiles are histogram bucket upper bounds; null means the sample fell
+// in the overflow bucket (slower than 1000 ms) or there were none.
+export interface OpsGroup {
+  key: string;
+  ops: number;
+  errors: number;
+  avg_latency_ms: number;
+  p50_ms: number | null;
+  p90_ms: number | null;
+  p99_ms: number | null;
 }
 
-export async function getServiceStats(session: AuthSession, window: OpsWindow): Promise<ServiceOpsStats[]> {
-  const res = await serviceRequest<{ items: ServiceOpsStats[] | null }>(session, "audit", `/ops-metrics/by-service?window=${window}`);
-  return res.items ?? [];
+// GET /ops-metrics/stats (services/audit/ops_stats.go): the whole window,
+// from the hour it starts on, bucketed by pkg/timebucket. Each count has a
+// GET /audit/events filter (metered_op, outcome, service, node) listing
+// exactly the operations it counts.
+export interface OpsStats {
+  from: string;
+  to: string;
+  bucket_seconds: number;
+  scope: OpsOverview["scope"];
+  recorded_since: string | null;
+  total: OpsGroup;
+  total_values: number;
+  series: { start: string; ops: number; errors: number; avg_latency_ms: number }[];
+  by_op: OpsGroup[];
+  by_service: OpsGroup[];
+  by_node: OpsGroup[];
 }
 
-export async function getErrorBreakdown(session: AuthSession, window: OpsWindow): Promise<ErrorBreakdown[]> {
-  const res = await serviceRequest<{ items: ErrorBreakdown[] | null }>(session, "audit", `/ops-metrics/errors?window=${window}`);
-  return res.items ?? [];
+export async function getOpsStats(session: AuthSession, window: { from?: string }): Promise<OpsStats> {
+  const q = window.from ? `?from=${encodeURIComponent(window.from)}` : "";
+  const res = await serviceRequest<{ stats?: OpsStats }>(session, "audit", `/ops-metrics/stats${q}`);
+  const st = res?.stats;
+  if (!st || !st.total || !Array.isArray(st.series) || !Array.isArray(st.by_op) || !Array.isArray(st.by_service) || !Array.isArray(st.by_node)) {
+    throw new Error("the audit service answered without operations statistics");
+  }
+  return st;
 }

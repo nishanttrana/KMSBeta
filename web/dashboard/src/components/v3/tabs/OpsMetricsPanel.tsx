@@ -1,304 +1,244 @@
-// @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
-import { useCallback, useEffect, useState } from "react";
-import { Activity, BarChart2, Clock, RefreshCw, Zap } from "lucide-react";
-import { C } from "../../v3/theme";
-import { getOverview, getLatencyPercentiles, getServiceStats, getErrorBreakdown } from "../../../lib/opsMetrics";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Activity, AlertTriangle, Gauge, Timer, Zap } from "lucide-react";
+import type { AuthSession } from "../../../lib/auth";
+import { listAuditEvents, type AuditEvent, type AuditEventQuery } from "../../../lib/audit";
+import { getOpsStats, type OpsGroup, type OpsStats } from "../../../lib/opsMetrics";
+import { B, Btn, Card, Stat } from "../legacyPrimitives";
+import { errMsg } from "../runtimeUtils";
+import {
+  bucketBounds, bucketLabel, bucketUnit, clickable, DEFAULT_WINDOW, DrillHint, DrillPanel,
+  usePagedDrill, windowFrom, WindowSelect, type ServerDrill, type WindowId
+} from "../chartDrill";
+import { C } from "../theme";
+import { AuditEventDetail } from "./AuditEventDetail";
 
-const OP_COLORS: Record<string, string> = {
-  encrypt: C.accent,
-  decrypt: C.purple,
-  sign: C.green,
-  verify: C.blue,
-  wrap: C.amber,
-  unwrap: C.orange,
-  generate: C.pink,
-};
+// Operation metrics view of Operations: cryptographic operations counted by
+// the audit service over the whole window (GET /ops-metrics/stats). Every
+// bar lists exactly the operations it counts through the event list's
+// metered_op / outcome / service / node filters over the same window; a row
+// opens the event.
+const OK = "var(--cls-op-ok)";
+const ERR = "var(--cls-op-err)";
+const axisTick = { fill: C.muted, fontSize: 10 };
+const title: React.CSSProperties = { fontSize: 10.5, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: "var(--font-mono)" };
+const TH: React.CSSProperties = { fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, padding: "6px 8px", textAlign: "left", borderBottom: `1px solid ${C.border}` };
+const TD: React.CSSProperties = { fontSize: 11, color: C.dim, padding: "6px 8px", borderBottom: `1px solid ${C.border}`, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 240 };
 
-const OP_ICONS: Record<string, string> = {
-  encrypt: "ENC", decrypt: "DEC", sign: "SGN",
-  verify: "VRF", wrap: "WRP", unwrap: "UWP", generate: "GEN",
-};
+const compact = (n: number) => n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e4 ? `${(n / 1e3).toFixed(1)}K` : n.toLocaleString();
+const ms = (n: number) => n < 1 ? `${n.toFixed(3)} ms` : `${n.toFixed(1)} ms`;
+// A percentile is the upper bound of the histogram bucket it fell in.
+const le = (n: number | null) => n == null ? "> 1000 ms" : `≤ ${n} ms`;
+const pct = (part: number, whole: number) => whole ? `${((part / whole) * 100).toFixed(part && part / whole < 0.001 ? 3 : 1)}%` : "0%";
+const shortService = (s: string) => String(s || "").replace(/^kms-/, "");
+const SCOPE: Record<string, string> = { cluster: "Cluster-wide", node: "This node only", standalone: "Single node" };
 
-function fmt(n: number): string {
-  if (!n) return "0";
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
-  return String(n);
-}
+type Seg = "ok" | "err";
+const outcomeOf = (seg?: Seg): Pick<AuditEventQuery, "outcome"> => seg === "ok" ? { outcome: "success" } : seg === "err" ? { outcome: "error" } : {};
 
-function pct(n: number): string { return ((n ?? 0) * 100).toFixed(3) + "%"; }
-function ms(n: number): string { return (n ?? 0) < 1 ? (n ?? 0).toFixed(3) + "ms" : (n ?? 0).toFixed(1) + "ms"; }
-// A percentile is the histogram bucket bound it fell in; null is the
-// overflow bucket (slower than the last bound).
-function le(n: number | null | undefined): string { return n == null ? "> 1000ms" : "≤ " + n + "ms"; }
-
-const CELL: React.CSSProperties = { padding: "8px 12px", color: C.dim, fontSize: 12, verticalAlign: "middle" };
-const TH: React.CSSProperties = { padding: "7px 12px", fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "left" };
-
-// Operation metrics section of Overview → Operations: key-operation throughput,
-// latency and errors, built by the audit service from keycore's
-// audit.key.<op> events.
-export function OpsMetricsPanel({ session }: { session: any }) {
-  const [timeWindow, setTimeWindow] = useState<"1h" | "24h" | "7d" | "30d">("24h");
-  const [section, setSection] = useState<"ops" | "latency" | "services" | "errors">("ops");
-  const [overview, setOverview] = useState<any>(null);
-  const [latency, setLatency] = useState<any[]>([]);
-  const [services, setServices] = useState<any[]>([]);
-  const [errors, setErrors] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadErr, setLoadErr] = useState("");
+export function OpsMetricsPanel({ session }: { session: AuthSession }) {
+  const [windowId, setWindowId] = useState<WindowId>(DEFAULT_WINDOW);
+  const [stats, setStats] = useState<OpsStats | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+  const [drill, setDrill] = useState<ServerDrill<AuditEventQuery> | null>(null);
+  const [event, setEvent] = useState<AuditEvent | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setLoadErr("");
+    if (!session?.token) return;
+    setLoading(true); setErr(""); setDrill(null);
     try {
-      const [ov, lat, svc, err] = await Promise.all([
-        getOverview(session, timeWindow),
-        getLatencyPercentiles(session, timeWindow),
-        getServiceStats(session, timeWindow),
-        getErrorBreakdown(session, timeWindow),
-      ]);
-      setOverview(ov);
-      setLatency(lat);
-      setServices(svc);
-      setErrors(err);
-    } catch (e: any) {
-      setOverview(null); setLatency([]); setServices([]); setErrors([]);
-      setLoadErr(e?.message || String(e));
-    }
-    setLoading(false);
-  }, [session, timeWindow]);
+      setStats(await getOpsStats(session, { from: windowFrom(windowId) }));
+    } catch (e) {
+      setStats(null); setErr(errMsg(e));
+    } finally { setLoading(false); }
+  }, [session, windowId]);
+  useEffect(() => { void load(); }, [load]);
 
-  useEffect(() => { load(); }, [load]);
+  const fetchPage = useCallback((q: AuditEventQuery, offset: number, limit: number) => listAuditEvents(session, { ...q, offset, limit }), [session]);
+  const paged = usePagedDrill(drill, fetchPage);
 
-  const ov = overview ?? {};
-  const totalOps = latency.reduce((s, r) => s + (r.sample_ops ?? 0), 0);
-  const na = loading || loadErr;
+  const open = (label: string, count: number, query: AuditEventQuery) => {
+    if (!stats || !count) return;
+    setDrill({ label, count, query: { from: stats.from, to: stats.to, metered_op: "*", ...query } });
+  };
+  const openGroup = (dim: "metered_op" | "service" | "node", name: string, g: OpsGroup, seg?: Seg) => {
+    const count = seg === "ok" ? g.ops - g.errors : seg === "err" ? g.errors : g.ops;
+    const what = seg === "err" ? "Refused or failed" : seg === "ok" ? "Succeeded" : "Operations";
+    open(`${what}: ${name}`, count, { [dim]: g.key, ...outcomeOf(seg) });
+  };
 
-  const statCard = (icon: React.ReactNode, label: string, value: string, sub?: string, color?: string) => (
-    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: "14px 16px", flex: 1, display: "flex", gap: 10, alignItems: "flex-start" }}>
-      <div style={{ color: color || C.accentFg, marginTop: 2 }}>{icon}</div>
-      <div>
-        <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
-        <div style={{ fontSize: 20, fontWeight: 700, color: color || C.text }}>{value}</div>
-        {sub && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{sub}</div>}
-      </div>
-    </div>
-  );
+  const series = useMemo(() => (stats?.series ?? []).map((p) => ({
+    ...p, ok: p.ops - p.errors, time: bucketLabel(p.start, stats?.bucket_seconds || 3600),
+  })), [stats]);
+  const openBucket = (i: number, seg: Seg) => {
+    const p = series[i];
+    if (!p || !stats) return;
+    const unit = bucketUnit(stats.bucket_seconds);
+    open(`${seg === "err" ? "Refused or failed" : "Succeeded"} in the ${unit} from ${p.time} UTC`, seg === "err" ? p.errors : p.ok,
+      { ...bucketBounds(p.start, stats.bucket_seconds, stats.from, stats.to), ...outcomeOf(seg) });
+  };
 
+  const t = stats?.total;
   return (
-    <div style={{ color: C.text }}>
-      {/* Controls */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <div className="vk-fold" tabIndex={0} style={{ fontSize: 12, color: C.muted }}>Cryptographic operation throughput, latency and errors, from the audit event of every operation that ran, was refused or failed</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ display: "flex", gap: 2, background: C.surface, borderRadius: 3, padding: 2, border: `1px solid ${C.border}` }}>
-            {(["1h", "24h", "7d", "30d"] as const).map(w => (
-              <button key={w} onClick={() => setTimeWindow(w)} style={{
-                padding: "4px 10px", borderRadius: 4, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600,
-                background: timeWindow === w ? C.accent : "transparent",
-                color: timeWindow === w ? "#000" : C.muted,
-              }}>{w}</button>
-            ))}
+    <div style={{ display: "grid", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <WindowSelect value={windowId} onChange={setWindowId} />
+        <Btn small onClick={() => void load()} disabled={loading}>{loading ? "Loading…" : "Refresh"}</Btn>
+        {stats && <B c={stats.scope === "node" ? "amber" : "neutral"}>{SCOPE[stats.scope] ?? stats.scope}</B>}
+        {stats && <span style={{ fontSize: 10.5, color: C.muted }} title="Operations before the first recorded hour were not measured">
+          {stats.recorded_since ? `Measured since ${new Date(stats.recorded_since).toLocaleString()}` : "Nothing recorded yet"}
+        </span>}
+      </div>
+
+      {err ? <Card><div style={{ fontSize: 11, color: C.redFg }}>{`Operation metrics unavailable: ${err}`}</div></Card> : !stats || !t ? null : <>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 10 }}>
+          <Stat l="Operations" v={compact(t.ops)} s={`${compact(stats.total_values)} values processed`} i={Zap} />
+          <Stat l="Refused or failed" v={compact(t.errors)} s={`${pct(t.errors, t.ops)} of operations`} c={t.errors ? "amber" : "accent"} i={AlertTriangle} />
+          <Stat l="Average latency" v={t.ops ? ms(t.avg_latency_ms) : "—"} s={t.ops ? `p50 ${le(t.p50_ms)}` : "no operations"} i={Timer} />
+          <Stat l="p99 latency" v={t.ops ? le(t.p99_ms) : "—"} s={t.ops ? `p90 ${le(t.p90_ms)}` : "no operations"} i={Gauge} />
+        </div>
+
+        {t.ops === 0 ? (
+          <Card>
+            <div style={{ textAlign: "center", padding: 28, color: C.muted, fontSize: 12 }}>
+              <Activity size={22} style={{ opacity: 0.5, marginBottom: 6 }} />
+              <div>No operations in this window.</div>
+            </div>
+          </Card>
+        ) : <>
+          <DrillHint />
+          <Card>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={title}>{`Throughput · per ${bucketUnit(stats.bucket_seconds)} (UTC)`}</span>
+              <Legend />
+            </div>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={series} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke={C.border} />
+                <XAxis dataKey="time" tick={axisTick} axisLine={{ stroke: C.border }} tickLine={false} interval="preserveStartEnd" minTickGap={24} />
+                <YAxis tick={axisTick} axisLine={false} tickLine={false} allowDecimals={false} width={44} tickFormatter={compact} />
+                <Tooltip cursor={{ fill: C.dimTint }} content={<SeriesTip />} />
+                <Bar dataKey="ok" name="Succeeded" stackId="o" fill={OK} style={clickable} onClick={(_d, i) => openBucket(i, "ok")} />
+                <Bar dataKey="errors" name="Refused or failed" stackId="o" fill={ERR} radius={[2, 2, 0, 0]} style={clickable} onClick={(_d, i) => openBucket(i, "err")} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 12 }}>
+            <GroupBars label="By operation" rows={stats.by_op} name={(k) => k} onPick={(g, seg) => openGroup("metered_op", g.key, g, seg)} />
+            <GroupBars label="By service" rows={stats.by_service} name={shortService} onPick={(g, seg) => openGroup("service", shortService(g.key), g, seg)} />
           </div>
-          <button onClick={load} style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 3, padding: "5px 10px", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 11 }}>
-            <RefreshCw size={12} /> Refresh
-          </button>
-        </div>
-      </div>
 
-      {loadErr && <div style={{ padding: 12, borderRadius: 3, background: C.redDim, color: C.redFg, fontSize: 12, marginBottom: 16 }}>Operations metrics unavailable: {loadErr}</div>}
-
-      {!loadErr && !loading && overview && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", fontSize: 11, color: C.muted, marginBottom: 12 }}>
-          <span style={{ padding: "2px 8px", borderRadius: 4, border: `1px solid ${C.border}`, color: ov.scope === "node" ? C.amberFg : C.dim }}>
-            {ov.scope === "cluster" ? "Cluster-wide: every node's operations" : ov.scope === "node" ? "This node only" : "Single node"}
-          </span>
-          {(ov.by_node ?? []).length > 1 && (ov.by_node ?? []).map((n: any) => (
-            <span key={n.node || "local"} style={{ fontFamily: "var(--font-mono)" }}>{n.node || "(unclustered)"}: {fmt(n.total_ops)}</span>
-          ))}
-          <span>
-            {ov.recorded_since
-              ? `Measured since ${new Date(ov.recorded_since).toLocaleString()}; earlier operations were not recorded.`
-              : "Nothing recorded yet."}
-          </span>
-        </div>
-      )}
-
-      {/* Stat Cards */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-        {statCard(<Zap size={16} />, "Total Ops", na ? "—" : fmt(ov.total_ops ?? 0), `${fmt(ov.total_values ?? 0)} values · window: ${ov.window ?? timeWindow}`, C.accent)}
-        {statCard(<Activity size={16} />, "Avg Latency", na ? "—" : ms(ov.avg_latency_ms ?? 0), "across all operations", (ov.avg_latency_ms ?? 0) > 10 ? C.amber : C.green)}
-        {statCard(<Clock size={16} />, "Error Rate", na ? "—" : pct(ov.error_rate ?? 0), `${ov.total_errors ?? 0} errors`, (ov.error_rate ?? 0) > 0.02 ? C.red : C.green)}
-        {statCard(<BarChart2 size={16} />, "Total Errors", na ? "—" : String(ov.total_errors ?? 0), "in selected window", (ov.total_errors ?? 0) > 0 ? C.amber : C.green)}
-      </div>
-
-      {/* Section Tabs */}
-      <div style={{ display: "flex", gap: 2, marginBottom: 16, borderBottom: `1px solid ${C.border}` }}>
-        {[
-          { id: "ops", label: "Operations Breakdown" },
-          { id: "latency", label: "Latency Percentiles" },
-          { id: "services", label: "By Service" },
-          { id: "errors", label: "Error Breakdown" },
-        ].map(s => (
-          <button key={s.id} onClick={() => setSection(s.id as any)} style={{
-            padding: "8px 16px", border: "none", background: "transparent", cursor: "pointer",
-            fontSize: 12, fontWeight: section === s.id ? 700 : 400,
-            color: section === s.id ? C.accentFg : C.muted,
-            borderBottom: section === s.id ? `2px solid ${C.accent}` : "2px solid transparent",
-            marginBottom: -1,
-          }}>{s.label}</button>
-        ))}
-      </div>
-
-      {/* Operations Breakdown */}
-      {!loadErr && section === "ops" && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: 20 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 16 }}>Operations by Type — {timeWindow}</div>
-          {loading ? <div style={{ color: C.muted, padding: 20, textAlign: "center" }}>Loading...</div> : latency.length === 0 ? (
-            <div style={{ textAlign: "center", padding: 40, color: C.muted }}>
-              <Activity size={28} style={{ margin: "0 auto 8px", opacity: 0.4 }} />
-              <div className="vk-fold" tabIndex={0} style={{ fontSize: 13 }}>No operations in this window. Key operations, tokenization and FPE, and certificate and OCSP signing appear here as they run.</div>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {latency.map(row => {
-                const count = row.sample_ops ?? 0;
-                const p = totalOps > 0 ? (count / totalOps) * 100 : 0;
-                const color = OP_COLORS[row.op_type] || C.dim;
-                return (
-                  <div key={row.op_type + row.service} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 36, height: 22, borderRadius: 4, background: color + "22", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <span style={{ fontSize: 10, fontWeight: 800, color, fontFamily: "var(--font-mono)" }}>{OP_ICONS[row.op_type] ?? row.op_type?.toUpperCase().slice(0, 3)}</span>
-                    </div>
-                    <div style={{ width: 90, fontSize: 12, fontWeight: 600, color: C.text, textTransform: "capitalize" }}>{row.service ? `${row.service}/${row.op_type}` : row.op_type}</div>
-                    <div style={{ flex: 1, background: C.border, borderRadius: 3, height: 6, overflow: "hidden" }}>
-                      <div style={{ width: `${p}%`, height: "100%", background: color, borderRadius: 3, transition: "width 0.4s" }} />
-                    </div>
-                    <div style={{ width: 60, textAlign: "right", fontSize: 12, color: C.dim }}>{fmt(count)}</div>
-                    <div style={{ width: 44, textAlign: "right", fontSize: 11, color: C.muted }}>{p.toFixed(1)}%</div>
-                  </div>
-                );
-              })}
-              <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "flex-end", gap: 8 }}>
-                <span style={{ fontSize: 12, color: C.muted }}>Total:</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{fmt(totalOps)}</span>
+          {stats.by_node.length > 1 && (
+            <Card>
+              <div style={{ ...title, marginBottom: 8 }}>By node</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {stats.by_node.map((n) => (
+                  <button key={n.key || "local"} onClick={() => openGroup("node", n.key || "(unclustered)", n)}
+                    style={{ ...clickable, background: C.surface, border: `1px solid ${C.border}`, borderRadius: "var(--radius-md)", padding: "6px 10px", color: C.text, fontSize: 11, fontFamily: "var(--font-mono)" }}>
+                    {`${n.key || "(unclustered)"} · ${compact(n.ops)}`}
+                  </button>
+                ))}
               </div>
-            </div>
+            </Card>
           )}
-        </div>
-      )}
 
-      {/* Latency Percentiles */}
-      {!loadErr && section === "latency" && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, overflow: "hidden" }}>
-          <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, fontSize: 13, fontWeight: 700 }}>Latency by Operation Type <span style={{ fontSize: 11, fontWeight: 400, color: C.muted, marginLeft: 8 }}>average is exact; percentiles are the histogram bucket each falls in</span></div>
-          {loading ? <div style={{ padding: 24, textAlign: "center", color: C.muted }}>Loading...</div> : latency.length === 0 ? (
-            <div style={{ padding: 40, textAlign: "center", color: C.muted }}>No operations in this window.</div>
-          ) : (
+          <Card style={{ padding: 0, overflow: "hidden" }}>
+            <div style={{ ...title, padding: "12px 14px 8px" }}>Latency by operation</div>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                  {["Service", "Op Type", "Avg", "P50", "P90", "P99", "Samples"].map(h => <th key={h} style={TH}>{h}</th>)}
-                </tr>
-              </thead>
+              <thead><tr>{["Operation", "Operations", "Refused or failed", "Average", "p50", "p90", "p99"].map((h) => <th key={h} style={TH}>{h}</th>)}</tr></thead>
               <tbody>
-                {latency.map((row, i) => {
-                  const color = OP_COLORS[row.op_type] || C.dim;
-                  return (
-                    <tr key={i} style={{ borderBottom: `1px solid ${C.border}22` }}>
-                      <td style={{ ...CELL, fontWeight: 600, color: C.text }}>{row.service || "—"}</td>
-                      <td style={CELL}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />
-                          <span style={{ fontWeight: 600, color: C.text, textTransform: "capitalize" }}>{row.op_type}</span>
-                        </div>
-                      </td>
-                      <td style={{ ...CELL, color: C.dim }}>{ms(row.avg_ms ?? 0)}</td>
-                      <td style={{ ...CELL, color: C.greenFg }}>{le(row.p50_ms)}</td>
-                      <td style={{ ...CELL, color: row.p90_ms == null || row.p90_ms > 25 ? C.amberFg : C.dim }}>{le(row.p90_ms)}</td>
-                      <td style={{ ...CELL, color: row.p99_ms == null || row.p99_ms > 50 ? C.orangeFg : C.dim }}>{le(row.p99_ms)}</td>
-                      <td style={{ ...CELL, fontFamily: "var(--font-mono)" }}>{fmt(row.sample_ops ?? 0)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
-
-      {/* By Service */}
-      {!loadErr && section === "services" && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, overflow: "hidden" }}>
-          <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, fontSize: 13, fontWeight: 700 }}>Operations by Service</div>
-          {loading ? <div style={{ padding: 24, textAlign: "center", color: C.muted }}>Loading...</div> : services.length === 0 ? (
-            <div style={{ padding: 40, textAlign: "center", color: C.muted }}>No operations in this window.</div>
-          ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                  {["Service", "Total Ops", "Errors", "Error Rate", "Avg Latency"].map(h => <th key={h} style={TH}>{h}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {services.map(svc => (
-                  <tr key={svc.service} style={{ borderBottom: `1px solid ${C.border}22` }}>
-                    <td style={{ ...CELL, color: C.text, fontWeight: 600 }}>{svc.service}</td>
-                    <td style={{ ...CELL, fontFamily: "var(--font-mono)" }}>{fmt(svc.total_ops ?? 0)}</td>
-                    <td style={{ ...CELL, fontFamily: "var(--font-mono)", color: (svc.total_errors ?? 0) > 0 ? C.amberFg : C.muted }}>{svc.total_errors ?? 0}</td>
-                    <td style={CELL}>
-                      <span style={{ color: (svc.error_rate ?? 0) > 0.02 ? C.redFg : C.greenFg, fontWeight: 600 }}>
-                        {pct(svc.error_rate ?? 0)}
-                      </span>
-                    </td>
-                    <td style={{ ...CELL, color: (svc.avg_latency_ms ?? 0) > 10 ? C.amberFg : C.dim }}>{ms(svc.avg_latency_ms ?? 0)}</td>
+                {stats.by_op.map((g) => (
+                  <tr key={g.key} onClick={() => openGroup("metered_op", g.key, g)} style={clickable}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = C.cardHover; }} onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}>
+                    <td style={{ ...TD, color: C.text, fontWeight: 600, fontFamily: "var(--font-mono)" }}>{g.key}</td>
+                    <td style={TD}>{g.ops.toLocaleString()}</td>
+                    <td style={{ ...TD, color: g.errors ? C.amberFg : C.muted }}>{g.errors ? `${g.errors.toLocaleString()} (${pct(g.errors, g.ops)})` : "0"}</td>
+                    <td style={TD}>{ms(g.avg_latency_ms)}</td>
+                    <td style={TD}>{le(g.p50_ms)}</td>
+                    <td style={TD}>{le(g.p90_ms)}</td>
+                    <td style={{ ...TD, color: g.p99_ms == null || g.p99_ms > 50 ? C.amberFg : C.dim }}>{le(g.p99_ms)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          )}
-        </div>
-      )}
+          </Card>
+        </>}
 
-      {/* Error Breakdown */}
-      {!loadErr && section === "errors" && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, overflow: "hidden" }}>
-          <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, fontSize: 13, fontWeight: 700 }}>
-            Error Breakdown <span style={{ fontSize: 11, fontWeight: 400, color: C.muted, marginLeft: 8 }}>by service and operation</span>
-          </div>
-          {loading ? <div style={{ padding: 24, textAlign: "center", color: C.muted }}>Loading...</div> : errors.length === 0 ? (
-            <div style={{ padding: 40, textAlign: "center", color: C.greenFg }}>
-              <Activity size={32} style={{ margin: "0 auto 8px", opacity: 0.5 }} />
-              <div>No errors recorded in this window</div>
-            </div>
-          ) : (
+        {drill && (
+          <DrillPanel label={drill.label} count={drill.count} onClear={() => setDrill(null)}
+            loaded={paged.rows.length} loading={paged.loading} error={paged.error} onMore={paged.done ? undefined : paged.loadMore}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                  {["Service", "Op Type", "Errors", "Total Ops", "Error Rate"].map(h => <th key={h} style={TH}>{h}</th>)}
-                </tr>
-              </thead>
+              <thead><tr>{["Time", "Service", "Operation", "Actor", "Target", "Result", "Latency"].map((h) => <th key={h} style={TH}>{h}</th>)}</tr></thead>
               <tbody>
-                {errors.map((err, i) => {
-                  const rate = (err.total_count ?? 0) > 0 ? (err.error_count ?? 0) / (err.total_count ?? 1) : 0;
-                  return (
-                    <tr key={i} style={{ borderBottom: `1px solid ${C.border}22` }}>
-                      <td style={{ ...CELL, fontWeight: 600, color: C.text }}>{err.service}</td>
-                      <td style={{ ...CELL, fontFamily: "var(--font-mono)", color: C.amberFg, fontWeight: 600, fontSize: 11, textTransform: "capitalize" }}>{err.op_type}</td>
-                      <td style={{ ...CELL, fontFamily: "var(--font-mono)", fontWeight: 700, color: C.redFg }}>{err.error_count ?? 0}</td>
-                      <td style={{ ...CELL, fontFamily: "var(--font-mono)" }}>{fmt(err.total_count ?? 0)}</td>
-                      <td style={CELL}>
-                        <span style={{ color: rate > 0.05 ? C.redFg : rate > 0.01 ? C.amberFg : C.greenFg, fontWeight: 600 }}>{pct(rate)}</span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {paged.rows.map((e) => (
+                  <tr key={e.id} onClick={() => setEvent(e)} style={clickable}
+                    onMouseEnter={(ev) => { ev.currentTarget.style.background = C.cardHover; }} onMouseLeave={(ev) => { ev.currentTarget.style.background = ""; }}>
+                    <td style={TD}>{new Date(e.timestamp).toLocaleString()}</td>
+                    <td style={TD}><B c="neutral">{shortService(e.service)}</B></td>
+                    <td style={{ ...TD, color: C.text, fontFamily: "var(--font-mono)" }} title={e.action}>{String(e.details?.metered_op ?? e.action)}</td>
+                    <td style={TD}>{e.actor_id || "-"}</td>
+                    <td style={TD}>{e.target_id || "-"}</td>
+                    <td style={TD}><B c={eventFailed(e) ? "amber" : "green"}>{eventResult(e)}</B></td>
+                    <td style={TD}>{ms(eventMs(e))}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
-          )}
-        </div>
-      )}
+          </DrillPanel>
+        )}
+      </>}
+      <AuditEventDetail event={event} onClose={() => setEvent(null)} />
     </div>
+  );
+}
+
+// The result and latency the metrics counted: a legacy publisher's details
+// carry them (services/audit opSampleFromEvent).
+const eventResult = (e: AuditEvent) => String((typeof e.details?.result === "string" && e.details.result) || e.result);
+const eventFailed = (e: AuditEvent) => eventResult(e) !== "success";
+const eventMs = (e: AuditEvent) => Number(e.duration_ms || e.details?.duration_ms || 0);
+
+const Legend = () => (
+  <span style={{ display: "inline-flex", gap: 12, fontSize: 10.5, color: C.muted }}>
+    {[["Succeeded", OK], ["Refused or failed", ERR]].map(([l, c]) => (
+      <span key={l} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 2, background: c }} />{l}</span>
+    ))}
+  </span>
+);
+
+type TipProps = { active?: boolean; payload?: Array<{ payload?: { time: string; ops: number; errors: number; avg_latency_ms: number } }> };
+const SeriesTip = ({ active, payload }: TipProps) => {
+  const p = active ? payload?.[0]?.payload : undefined;
+  if (!p) return null;
+  return (
+    <div style={{ background: C.elevated, border: `1px solid ${C.border}`, borderRadius: "var(--radius-md)", padding: "8px 10px", fontSize: 11, color: C.text, boxShadow: "var(--shadow-md)" }}>
+      <div style={{ fontWeight: 600, marginBottom: 4 }}>{`${p.time} UTC`}</div>
+      <div style={{ color: C.dim }}>{`${p.ops.toLocaleString()} operations · ${p.errors.toLocaleString()} refused or failed`}</div>
+      {p.ops > 0 && <div style={{ color: C.dim }}>{`Average ${ms(p.avg_latency_ms)}`}</div>}
+    </div>
+  );
+};
+
+// Horizontal stacked bars of a breakdown: each segment drills into its operations.
+function GroupBars({ label, rows, name, onPick }: { label: string; rows: OpsGroup[]; name: (k: string) => string; onPick: (g: OpsGroup, seg: Seg) => void }) {
+  const top = rows.slice(0, 10);
+  const data = top.map((g) => ({ ...g, ok: g.ops - g.errors, name: name(g.key) }));
+  return (
+    <Card>
+      <div style={{ ...title, marginBottom: 8 }}>{label}{rows.length > top.length ? ` · top ${top.length} of ${rows.length}` : ""}</div>
+      <div data-testid={`bars-${label.toLowerCase().replace(/\s+/g, "-")}`}>
+      <ResponsiveContainer width="100%" height={Math.max(120, data.length * 28 + 24)}>
+        <BarChart data={data} layout="vertical" margin={{ left: 8, right: 12, top: 0, bottom: 0 }}>
+          <XAxis type="number" tick={axisTick} axisLine={{ stroke: C.border }} tickLine={false} allowDecimals={false} tickFormatter={compact} />
+          <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 10.5 }} axisLine={false} tickLine={false} width={96} />
+          <Tooltip cursor={{ fill: C.dimTint }} />
+          <Bar dataKey="ok" name="Succeeded" stackId="g" fill={OK} barSize={14} style={clickable} onClick={(_d, i) => { const g = top[i]; if (g) onPick(g, "ok"); }} />
+          <Bar dataKey="errors" name="Refused or failed" stackId="g" fill={ERR} barSize={14} radius={[0, 2, 2, 0]} style={clickable} onClick={(_d, i) => { const g = top[i]; if (g) onPick(g, "err"); }} />
+        </BarChart>
+      </ResponsiveContainer>
+      </div>
+    </Card>
   );
 }

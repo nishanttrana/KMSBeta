@@ -1,116 +1,137 @@
-// @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
-import { apiFetch } from "../../../lib/apiFetch";
-import { parseServiceJSON } from "../../../lib/wire";
-import { useCallback, useEffect, useState } from "react";
-import { BarChart3, RefreshCcw, Download, TrendingUp } from "lucide-react";
-import { C } from "../../v3/theme";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CheckCircle2, KeyRound, Layers, PlusCircle } from "lucide-react";
+import type { AuthSession } from "../../../lib/auth";
+import { getKeyStats, listKeyStatKeys, type KeyItem, type KeyStatCount, type KeyStatQuery, type KeyStats } from "../../../lib/keycore";
+import { B, Btn, Card, Stat } from "../legacyPrimitives";
+import { errMsg } from "../runtimeUtils";
+import {
+  bucketBounds, bucketLabel, bucketUnit, clickable, DEFAULT_WINDOW, DrillHint, DrillPanel,
+  usePagedDrill, windowFrom, windowLabel, WindowSelect, type ServerDrill, type WindowId
+} from "../chartDrill";
+import { C } from "../theme";
 
-const base = "/svc/keycore";
-const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
+// Key inventory view of Operations: keys that are not deleted, counted by
+// keycore (GET /inventory/stats). Each bar lists exactly the keys it counts
+// (GET /inventory/stats/keys, same predicate); a row opens the key in Key
+// Management. Until 13.65.0-beta this view read fields the enterprise
+// summary never returned at the top level, so it showed only dashes.
+const axisTick = { fill: C.muted, fontSize: 10 };
+const title: React.CSSProperties = { fontSize: 10.5, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: "var(--font-mono)" };
+const TH: React.CSSProperties = { fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, padding: "6px 8px", textAlign: "left", borderBottom: `1px solid ${C.border}` };
+const TD: React.CSSProperties = { fontSize: 11, color: C.dim, padding: "6px 8px", borderBottom: `1px solid ${C.border}`, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 260 };
+const FILL = "var(--cls-op-ok)";
+// States that need someone's attention; the rest are neutral.
+const STATE_TONE: Record<string, string> = { active: "green", compromised: "red", "destroy-pending": "amber", disabled: "amber", deactivated: "neutral", "pre-active": "neutral" };
 
-const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
-const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "var(--font-mono)" } : {}) }}>{c ?? "—"}</td>;
-const Badge = ({ color, children }: any) => <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 4, background: color + "18", color, fontSize: 10, fontWeight: 600 }}>{children}</span>;
-const Btn = ({ onClick, children, small, variant = "default" }: any) => {
-  const s: any = { default: { background: C.accent, color: C.bg }, ghost: { background: "rgba(255,255,255,.06)", color: C.dim, border: `1px solid ${C.border}` } };
-  return <button onClick={onClick} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: small ? "4px 10px" : "6px 14px", borderRadius: 3, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none", ...s[variant] }}>{children}</button>;
-};
-const Card = ({ children, style }: any) => <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: 16, ...style }}>{children}</div>;
+type Props = { session: AuthSession; onOpenKey?: (keyId: string) => void };
 
-// Key inventory section of Overview → Operations: key counts, algorithm
-// mix and rotation summary from keycore's enterprise summary.
-export function KeyInventoryPanel({ session }: any) {
-  const [analytics, setAnalytics] = useState<any>({});
-  const [keyStats, setKeyStats] = useState<any[]>([]);
+export function KeyInventoryPanel({ session, onOpenKey }: Props) {
+  const [windowId, setWindowId] = useState<WindowId>(DEFAULT_WINDOW);
+  const [stats, setStats] = useState<KeyStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [drill, setDrill] = useState<ServerDrill<KeyStatQuery> | null>(null);
 
   const load = useCallback(async () => {
     if (!session?.token) return;
-    const tid = session?.tenantId ?? "";
-    setLoading(true); setErr("");
+    setLoading(true); setErr(""); setDrill(null);
     try {
-      const aRes = await apiFetch(`${base}/enterprise/summary`, { headers: hdr(session.token, tid) });
-      const a = await aRes.text().then((t) => parseServiceJSON<any>(t)).catch(() => ({}));
-      if (!aRes.ok) throw new Error(a?.error?.message || a?.message || `key analytics unavailable (HTTP ${aRes.status})`);
-      setAnalytics(a);
-      setKeyStats(Array.isArray(a.by_algorithm) ? a.by_algorithm : []);
-    } catch (e: any) { setAnalytics({}); setKeyStats([]); setErr(e.message); }
-    finally { setLoading(false); }
-  }, [session?.token, session?.tenantId]);
+      setStats(await getKeyStats(session, { from: windowFrom(windowId) }));
+    } catch (e) {
+      setStats(null); setErr(errMsg(e));
+    } finally { setLoading(false); }
+  }, [session, windowId]);
+  useEffect(() => { void load(); }, [load]);
 
-  useEffect(() => { load(); }, [load]);
+  const fetchPage = useCallback((q: KeyStatQuery, offset: number, limit: number) => listKeyStatKeys(session, q, offset, limit), [session]);
+  const paged = usePagedDrill(drill, fetchPage);
+  const open = (label: string, count: number, query: KeyStatQuery) => { if (count) setDrill({ label, count, query }); };
 
-  const handleExport = async () => {
-    const tid = session?.tenantId ?? "";
-    const r = await apiFetch(`${base}/enterprise/summary`, { headers: hdr(session.token, tid) });
-    const d = await r.text().then((t) => parseServiceJSON<any>(t)).catch(() => ({}));
-    if (!r.ok) { setErr(d?.error?.message || `export failed (HTTP ${r.status})`); return; }
-    const blob = new Blob([JSON.stringify(d, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "key-analytics-report.json"; a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const algColor = (a: string) => a?.includes("RSA") ? C.accent : a?.includes("EC") ? C.green : C.amber;
+  const series = useMemo(() => (stats?.series ?? []).map((p) => ({ ...p, time: bucketLabel(p.start, stats?.bucket_seconds || 86400) })), [stats]);
+  const active = stats?.by_state.find((s) => s.key === "active")?.count ?? 0;
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 14 }}>
-        <Btn onClick={handleExport} variant="ghost" small><Download size={12} /> Export JSON</Btn>
-        <Btn onClick={load} small><RefreshCcw size={12} />{loading ? "Loading…" : "Refresh"}</Btn>
+    <div style={{ display: "grid", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <WindowSelect value={windowId} onChange={setWindowId} />
+        <Btn small onClick={() => void load()} disabled={loading}>{loading ? "Loading…" : "Refresh"}</Btn>
       </div>
 
-      {err && <div style={{ padding: 12, borderRadius: 3, background: C.redDim, color: C.redFg, fontSize: 12, marginBottom: 16 }}>{err}</div>}
+      {err ? <Card><div style={{ fontSize: 11, color: C.redFg }}>{`Key inventory unavailable: ${err}`}</div></Card> : !stats ? null : <>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 10 }}>
+          <Stat l="Keys" v={stats.total.toLocaleString()} s="not deleted" i={KeyRound} />
+          <Stat l="Active" v={active.toLocaleString()} s={stats.total ? `${Math.round((active / stats.total) * 100)}% of keys` : "no keys"} i={CheckCircle2} />
+          <Stat l="Created" v={stats.created.toLocaleString()} s={windowLabel(windowId).toLowerCase()} i={PlusCircle} />
+          <Stat l="Algorithms" v={stats.by_algorithm.length.toLocaleString()} s="in use" i={Layers} />
+        </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 12, marginBottom: 24 }}>
-        {[
-          { label: "Total Keys", value: analytics.total_keys, icon: TrendingUp },
-          { label: "Active Keys", value: analytics.active_keys, icon: BarChart3 },
-          { label: "Total Rotations", value: analytics.total_rotations?.toLocaleString?.(), icon: BarChart3 },
-          { label: "Avg Key Age (days)", value: analytics.avg_age_days?.toFixed?.(1), icon: TrendingUp },
-        ].map(({ label, value, icon: Icon }: any) => (
-          <Card key={label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ background: C.accent + "22", borderRadius: 4, padding: 10 }}><Icon size={16} style={{ color: C.accentFg }} /></div>
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: C.text }}>{value ?? "—"}</div>
-              <div style={{ fontSize: 11, color: C.muted }}>{label}</div>
-            </div>
+        {stats.total === 0 ? <Card><div style={{ textAlign: "center", padding: 28, color: C.muted, fontSize: 12 }}>No keys yet.</div></Card> : <>
+          <DrillHint />
+          <Card>
+            <div style={{ ...title, marginBottom: 8 }}>{`Keys created · per ${bucketUnit(stats.bucket_seconds)} (UTC)`}</div>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={series} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke={C.border} />
+                <XAxis dataKey="time" tick={axisTick} axisLine={{ stroke: C.border }} tickLine={false} interval="preserveStartEnd" minTickGap={24} />
+                <YAxis tick={axisTick} axisLine={false} tickLine={false} allowDecimals={false} width={36} />
+                <Tooltip cursor={{ fill: C.dimTint }} />
+                <Bar dataKey="count" name="Keys created" fill={FILL} radius={[2, 2, 0, 0]} style={clickable}
+                  onClick={(_d, i) => {
+                    const p = series[i];
+                    if (p) open(`Created in the ${bucketUnit(stats.bucket_seconds)} from ${p.time} UTC`, p.count, bucketBounds(p.start, stats.bucket_seconds, stats.from, stats.to));
+                  }} />
+              </BarChart>
+            </ResponsiveContainer>
           </Card>
-        ))}
-      </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <Card>
-          <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 12 }}>By Algorithm</div>
-          {keyStats.length === 0 ? (
-            <div style={{ color: C.muted, fontSize: 12 }}>No data available.</div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {keyStats.map((s: any, i: number) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <Badge color={algColor(s.algorithm)}>{s.algorithm}</Badge>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{s.count}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-        <Card>
-          <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 12 }}>Rotation Summary</div>
-          {[
-            { label: "Total Rotations", val: analytics.total_rotations },
-            { label: "Successful", val: analytics.successful },
-            { label: "Failed", val: analytics.failed },
-            { label: "Avg Duration (s)", val: analytics.avg_duration_seconds?.toFixed?.(1) },
-          ].map(({ label, val }: any) => (
-            <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
-              <span style={{ fontSize: 12, color: C.dim }}>{label}</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{val?.toLocaleString?.() ?? val ?? "—"}</span>
-            </div>
-          ))}
-        </Card>
-      </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 12 }}>
+            <CountBars label="By state" rows={stats.by_state} onPick={(r) => open(`State: ${r.key}`, r.count, { state: r.key })} />
+            <CountBars label="By algorithm" rows={stats.by_algorithm} onPick={(r) => open(`Algorithm: ${r.key}`, r.count, { algorithm: r.key })} />
+          </div>
+        </>}
+
+        {drill && (
+          <DrillPanel label={drill.label} count={drill.count} onClear={() => setDrill(null)}
+            loaded={paged.rows.length} loading={paged.loading} error={paged.error} onMore={paged.done ? undefined : paged.loadMore}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead><tr>{["Name", "Algorithm", "State", "Version", "Created"].map((h) => <th key={h} style={TH}>{h}</th>)}</tr></thead>
+              <tbody>
+                {paged.rows.map((k: KeyItem) => (
+                  <tr key={k.id} onClick={() => onOpenKey?.(k.id)} style={onOpenKey ? clickable : undefined} title={onOpenKey ? "Open in Key Management" : undefined}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = C.cardHover; }} onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}>
+                    <td style={{ ...TD, color: C.text, fontWeight: 600 }}>{k.name}</td>
+                    <td style={{ ...TD, fontFamily: "var(--font-mono)" }}>{k.algorithm}</td>
+                    <td style={TD}><B c={STATE_TONE[String(k.status).toLowerCase()] ?? "neutral"}>{k.status}</B></td>
+                    <td style={TD}>{`v${k.current_version}`}</td>
+                    <td style={TD}>{k.created_at ? new Date(k.created_at).toLocaleString() : "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </DrillPanel>
+        )}
+      </>}
     </div>
+  );
+}
+
+function CountBars({ label, rows, onPick }: { label: string; rows: KeyStatCount[]; onPick: (r: KeyStatCount) => void }) {
+  const top = rows.slice(0, 12);
+  return (
+    <Card>
+      <div style={{ ...title, marginBottom: 8 }}>{label}{rows.length > top.length ? ` · top ${top.length} of ${rows.length}` : ""}</div>
+      <div data-testid={`bars-${label.toLowerCase().replace(/\s+/g, "-")}`}>
+      <ResponsiveContainer width="100%" height={Math.max(110, top.length * 26 + 24)}>
+        <BarChart data={top} layout="vertical" margin={{ left: 8, right: 12, top: 0, bottom: 0 }}>
+          <XAxis type="number" tick={axisTick} axisLine={{ stroke: C.border }} tickLine={false} allowDecimals={false} />
+          <YAxis type="category" dataKey="key" tick={{ fill: C.dim, fontSize: 10.5 }} axisLine={false} tickLine={false} width={110} />
+          <Tooltip cursor={{ fill: C.dimTint }} />
+          <Bar dataKey="count" name="Keys" fill={FILL} barSize={14} radius={[0, 2, 2, 0]} style={clickable}
+            onClick={(_d, i) => { const r = top[i]; if (r) onPick(r); }} />
+        </BarChart>
+      </ResponsiveContainer>
+      </div>
+    </Card>
   );
 }

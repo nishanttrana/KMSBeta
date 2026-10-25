@@ -170,8 +170,9 @@ GROUP BY %[1]s ORDER BY COUNT(*) DESC, 1 LIMIT %[4]d`, col, kind, where, facetTo
 }
 
 // eventQueryFrom reads GET /audit/events' filters, which GET
-// /audit/investigate shares. ok is false when from or to is not a time.
-func eventQueryFrom(r *http.Request) (EventQuery, bool) {
+// /audit/investigate shares. A malformed filter returns its refusal reason
+// and message.
+func eventQueryFrom(r *http.Request) (EventQuery, string, string) {
 	v := r.URL.Query()
 	get := func(k string) string { return strings.TrimSpace(v.Get(k)) }
 	q := EventQuery{
@@ -182,8 +183,15 @@ func eventQueryFrom(r *http.Request) (EventQuery, bool) {
 		ExcludeHTTPRequests: get("exclude_http_requests") == "true", Ascending: get("order") == "asc",
 		Limit: atoi(get("limit")), Offset: atoi(get("offset")),
 		From: parseTS(get("from")), To: parseTS(get("to")),
+		MeteredOp: get("metered_op"), Outcome: get("outcome"), Node: get("node"), HasNode: v.Has("node"),
 	}
-	return q, (get("from") == "" || !q.From.IsZero()) && (get("to") == "" || !q.To.IsZero())
+	if (get("from") != "" && q.From.IsZero()) || (get("to") != "" && q.To.IsZero()) {
+		return q, "bad_window", "from and to must be RFC 3339 times"
+	}
+	if q.Outcome != "" && (q.MeteredOp == "" || (q.Outcome != "error" && q.Outcome != "success")) {
+		return q, "bad_outcome", "outcome is error or success, with metered_op"
+	}
+	return q, "", ""
 }
 
 func (h *Handler) investigateRouter(audit route.Emitter) *route.Router {
@@ -195,9 +203,9 @@ func (h *Handler) investigateRouter(audit route.Emitter) *route.Router {
 }
 
 func (h *Handler) investigate(c *route.Call) {
-	q, ok := eventQueryFrom(c.R)
-	if !ok {
-		c.Refuse(http.StatusBadRequest, "bad_window", "from and to must be RFC 3339 times")
+	q, reason, msg := eventQueryFrom(c.R)
+	if reason != "" {
+		c.Refuse(http.StatusBadRequest, reason, msg)
 		return
 	}
 	// Who investigated whom is part of the record.

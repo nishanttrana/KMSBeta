@@ -52,6 +52,7 @@ type Store interface {
 	GetLatencyPercentiles(ctx context.Context, tenantID string, window string) ([]LatencyPercentiles, error)
 	GetServiceStats(ctx context.Context, tenantID string, window string) ([]ServiceOpsStats, error)
 	GetErrorBreakdown(ctx context.Context, tenantID string, window string) ([]ErrorBreakdown, error)
+	OpsStats(ctx context.Context, tenantID string, from, to time.Time) (OpsStats, error)
 	// GetAllServiceStats returns cross-tenant per-service/op-type aggregates for Prometheus.
 	GetAllServiceStats(ctx context.Context) ([]PrometheusMetricRow, error)
 
@@ -110,6 +111,14 @@ type EventQuery struct {
 	// ExcludeHTTPRequests drops the generic HTTP request records, as the
 	// Activity statistics do.
 	ExcludeHTTPRequests bool
+	// MeteredOp selects the events Operations metrics count
+	// (opSampleFromEvent): this metered operation, or any with "*".
+	// Outcome ("error" or "success") and Node (the chain node, applied when
+	// HasNode) narrow it as the metrics' errors and by-node figures do.
+	MeteredOp string
+	Outcome   string
+	Node      string
+	HasNode   bool
 	// Ascending returns oldest first, so a reader can follow a cursor
 	// forward without gaps (posture's audit sync).
 	Ascending bool
@@ -239,6 +248,26 @@ func (s *SQLStore) eventFilter(tenantID string, q EventQuery) (string, []interfa
 	if q.ExcludeHTTPRequests {
 		where = append(where, notHTTPRequest)
 	}
+	if q.MeteredOp != "" {
+		op, res := s.detailText("metered_op"), "COALESCE(NULLIF("+s.detailText("result")+",''), result)"
+		if q.MeteredOp == "*" {
+			where = append(where, "COALESCE("+op+",'') <> ''")
+		} else {
+			add(op+" = $%d", q.MeteredOp)
+		}
+		where = append(where, "service <> ''")
+		switch q.Outcome {
+		case "error":
+			where = append(where, res+" IN ('failure','refused')")
+		case "success":
+			where = append(where, res+" = 'success'")
+		default:
+			where = append(where, res+" IN ('success','failure','refused')")
+		}
+		if q.HasNode {
+			add("COALESCE(chain_node,'') = $%d", q.Node)
+		}
+	}
 	var likes []string
 	for _, p := range q.ActionPrefixes {
 		p = strings.TrimSpace(p)
@@ -252,6 +281,14 @@ func (s *SQLStore) eventFilter(tenantID string, q EventQuery) (string, []interfa
 		where = append(where, "("+strings.Join(likes, " OR ")+")")
 	}
 	return "WHERE " + strings.Join(where, " AND "), args
+}
+
+// detailText is a top-level details field as text.
+func (s *SQLStore) detailText(key string) string {
+	if s.isPostgres {
+		return "(details->>'" + key + "')"
+	}
+	return "json_extract(details,'$." + key + "')"
 }
 
 // sourceIPText is source_ip as the bare address text the API filters and

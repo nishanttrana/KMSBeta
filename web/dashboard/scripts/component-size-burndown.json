@@ -18,7 +18,7 @@
   "src/components/v3/tabs/SBOMTab.tsx": 735,
   "src/components/v3/tabs/TokenizeTab.tsx": 2459,
   "src/components/v3/tabs/WorkloadIdentityTab.tsx": 600,
-  "src/components/VectaDashboardV3Shell.tsx": 982,
+  "src/components/VectaDashboardV3Shell.tsx": 971,
   "src/modules/admin/SystemAdminTab.tsx": 1486,
   "src/modules/admin/TenantAdminTab.tsx": 822
 }

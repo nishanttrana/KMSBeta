@@ -3,6 +3,34 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-10-25
+
+### Operations → Key inventory showed only dashes since 7.24.0-beta (13.65.0-beta)
+- **A panel that called its service directly read a shape the service
+  never had.** `KeyInventoryPanel` fetched `/enterprise/summary` with
+  `apiFetch` and read `total_keys`, `active_keys` and `by_algorithm` at the
+  top level; keycore answers `{"summary": {"inventory": ...}}` and has no
+  `by_algorithm`. Every tile read "—" and nothing failed, because a missing
+  field reads as "no value", not as an error.
+- **How it slipped through:** the smoke test checked that the heading "By
+  Algorithm" rendered, which it did with no data, and no typed client stood
+  between the page and the response. The rule "a client function that gets
+  a response without the shape it returns throws" (13.31.0-beta) only
+  applies to code that goes through a client function.
+- **Fix and check:** the view now reads keycore's own counts through
+  `getKeyStats` and `listKeyStatKeys` in `lib/keycore.ts`, which throw on a
+  response without its lists; `tests/operations.spec.ts` asserts the
+  numbers on the tiles and the filters each drill-down sends. The one other
+  component calling `apiFetch` directly, `KeySchedulingTab`, has the same
+  fault (it reads `jobs`, keycore answers `items`) and a worse one: nothing
+  runs the jobs it creates. It is listed in CHANGELOG "Known" for the
+  owner's decision, so the gate that bans `apiFetch` in components waits
+  for it.
+- **The enterprise summary is not a key count.** It reads `key_inventory`,
+  filled only by a manual `POST /inventory/sync`, and a health score built
+  from guessed inputs. A page that needs key counts asks keycore to count
+  the keys (`GET /inventory/stats`).
+
 ## 2026-10-24
 
 ### SBOM / CBOM read "not found" on every fresh stack (13.64.0-beta)

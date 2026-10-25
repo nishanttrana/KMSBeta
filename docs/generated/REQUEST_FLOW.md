@@ -1,16 +1,16 @@
 # Generated Request Flow Map
 
-Generated at `2026-10-24T09:13:28Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-24T23:12:15Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `948`
-- Routes with exact frontend call sites: `513`
-- Routes whose handlers call `h.svc.*`: `568`
-- Routes with detected store calls: `682`
-- Routes with detected internal `pkg/*` calls: `211`
+- Backend routes analyzed: `951`
+- Routes with exact frontend call sites: `512`
+- Routes whose handlers call `h.svc.*`: `570`
+- Routes with detected store calls: `683`
+- Routes with detected internal `pkg/*` calls: `212`
 
 ## How To Trace One Frontend Click
 
@@ -24,26 +24,23 @@ This file connects frontend requests to backend Go processing. It is static anal
 
 | Route key | Route | Handler | Service methods | Store calls | Receiver/client calls | Internal package calls | Frontend call sites |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| audit\|GET\|/audit/anchor | GET /audit/anchor | getAnchor (services/audit/anchor.go:351) |  | AnchorSettings |  |  | web/dashboard/src/lib/audit.ts:291 |
-| audit\|PUT\|/audit/anchor | PUT /audit/anchor | putAnchor (services/audit/anchor.go:363) | openTSA, tsaClient | PutAnchorSettings, AnchorSettings | s.tsaCreds.Resolve | pkg/crypto.SHA256, pkg/route.Allowed, pkg/tenantcheck.IsServicePrincipal, pkg/ssrfguard.NewHTTPSClient | web/dashboard/src/lib/audit.ts:297 |
-| audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:181) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:134 |
-| audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:200) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:182 |
-| audit\|GET\|/audit/chain/verify | GET /audit/chain/verify | handleChainVerify (services/audit/handler.go:223) | VerifyChainWalk | LastChainVerified, VerifyChainWalk |  | pkg/tenantcheck.Enforce | web/dashboard/src/lib/audit.ts:229 |
-| audit\|GET\|/audit/config | GET /audit/config | handleAuditConfig (services/audit/handler.go:248) |  |  |  |  | web/dashboard/src/lib/audit.ts:245 |
-| audit\|GET\|/ops-metrics/overview | GET /ops-metrics/overview | handleGetOpsOverview (services/audit/handler_ops_metrics.go:8) |  | GetOpsOverview |  |  | web/dashboard/src/lib/opsMetrics.ts:55 |
-| audit\|GET\|/ops-metrics/latency | GET /ops-metrics/latency | handleGetLatencyPercentiles (services/audit/handler_ops_metrics.go:45) |  | GetLatencyPercentiles |  |  | web/dashboard/src/lib/opsMetrics.ts:60 |
-| audit\|GET\|/ops-metrics/by-service | GET /ops-metrics/by-service | handleGetServiceStats (services/audit/handler_ops_metrics.go:62) |  | GetServiceStats |  |  | web/dashboard/src/lib/opsMetrics.ts:65 |
-| audit\|GET\|/ops-metrics/errors | GET /ops-metrics/errors | handleGetErrorBreakdown (services/audit/handler_ops_metrics.go:79) |  | GetErrorBreakdown |  |  | web/dashboard/src/lib/opsMetrics.ts:70 |
+| audit\|GET\|/audit/anchor | GET /audit/anchor | getAnchor (services/audit/anchor.go:351) |  | AnchorSettings |  |  | web/dashboard/src/lib/audit.ts:300 |
+| audit\|PUT\|/audit/anchor | PUT /audit/anchor | putAnchor (services/audit/anchor.go:363) | openTSA, tsaClient | PutAnchorSettings, AnchorSettings | s.tsaCreds.Resolve | pkg/crypto.SHA256, pkg/route.Allowed, pkg/tenantcheck.IsServicePrincipal, pkg/ssrfguard.NewHTTPSClient | web/dashboard/src/lib/audit.ts:306 |
+| audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:182) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:143 |
+| audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:201) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:191 |
+| audit\|GET\|/audit/chain/verify | GET /audit/chain/verify | handleChainVerify (services/audit/handler.go:224) | VerifyChainWalk | LastChainVerified, VerifyChainWalk |  | pkg/tenantcheck.Enforce | web/dashboard/src/lib/audit.ts:238 |
+| audit\|GET\|/audit/config | GET /audit/config | handleAuditConfig (services/audit/handler.go:249) |  |  |  |  | web/dashboard/src/lib/audit.ts:254 |
+| audit\|GET\|/ops-metrics/overview | GET /ops-metrics/overview | handleGetOpsOverview (services/audit/handler_ops_metrics.go:8) |  | GetOpsOverview |  |  | web/dashboard/src/lib/opsMetrics.ts:28 |
 | audit\|GET\|/webhooks | GET /webhooks | listWebhooks (services/audit/handler_webhook.go:44) |  | ListWebhooks |  |  | web/dashboard/src/lib/webhooks.ts:52 |
 | audit\|POST\|/webhooks | POST /webhooks | createWebhook (services/audit/handler_webhook.go:61) |  | CreateWebhook |  |  | web/dashboard/src/lib/webhooks.ts:57 |
 | audit\|PATCH\|/webhooks/{param} | PATCH /webhooks/{id} | updateWebhook (services/audit/handler_webhook.go:160) |  | GetWebhook, UpdateWebhook |  |  | web/dashboard/src/lib/webhooks.ts:62 |
 | audit\|DELETE\|/webhooks/{param} | DELETE /webhooks/{id} | deleteWebhook (services/audit/handler_webhook.go:220) |  | DeleteWebhook |  |  | web/dashboard/src/lib/webhooks.ts:67 |
 | audit\|POST\|/webhooks/{param}/test | POST /webhooks/{id}/test | testWebhook (services/audit/handler_webhook.go:234) |  | GetWebhook |  |  | web/dashboard/src/lib/webhooks.ts:71 |
 | audit\|GET\|/webhooks/{param}/deliveries | GET /webhooks/{id}/deliveries | listDeliveries (services/audit/handler_webhook.go:259) |  | ListDeliveries |  |  | web/dashboard/src/lib/webhooks.ts:75 |
-| audit\|GET\|/audit/investigate | GET /audit/investigate | investigate (services/audit/investigate.go:197) |  | Investigate |  |  | web/dashboard/src/lib/audit.ts:173 |
-| audit\|GET\|/audit/activity/stats | GET /audit/activity/stats | activityStats (services/audit/stats.go:153) |  | AuditStats |  |  | web/dashboard/src/lib/audit.ts:85 |
-| audit\|GET\|/audit/targets/{param}/integrity | GET /audit/targets/{target_id}/integrity | verifyTargetIntegrity (services/audit/target_integrity.go:359) | VerifyTarget | VerifyTarget |  |  | web/dashboard/src/lib/audit.ts:221 |
-| audit\|GET\|/audit/checkpoints | GET /audit/checkpoints | listCheckpoints (services/audit/checkpoint.go:559) | ListCheckpoints | ListCheckpoints |  |  | web/dashboard/src/lib/audit.ts:305 |
+| audit\|GET\|/audit/investigate | GET /audit/investigate | investigate (services/audit/investigate.go:205) |  | Investigate |  |  | web/dashboard/src/lib/audit.ts:182 |
+| audit\|GET\|/audit/activity/stats | GET /audit/activity/stats | activityStats (services/audit/stats.go:153) |  | AuditStats |  |  | web/dashboard/src/lib/audit.ts:91 |
+| audit\|GET\|/audit/targets/{param}/integrity | GET /audit/targets/{target_id}/integrity | verifyTargetIntegrity (services/audit/target_integrity.go:359) | VerifyTarget | VerifyTarget |  |  | web/dashboard/src/lib/audit.ts:230 |
+| audit\|GET\|/audit/checkpoints | GET /audit/checkpoints | listCheckpoints (services/audit/checkpoint.go:559) | ListCheckpoints | ListCheckpoints |  |  | web/dashboard/src/lib/audit.ts:314 |
 | auth\|GET\|/auth/clients/{param}/role | GET /auth/clients/{id}/role | getClientRole (services/auth/client_roles.go:70) |  | GetClientRegistration |  |  | web/dashboard/src/lib/authAdmin.ts:791 |
 | auth\|PUT\|/auth/clients/{param}/role | PUT /auth/clients/{id}/role | setClientRole (services/auth/client_roles.go:88) |  | DeleteClientRole, GetRolePermissions, SetClientRole |  | pkg/route.Allowed, pkg/tenantcheck.ServicePermissionReserved, pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/authAdmin.ts:795 |
 | auth\|POST\|/auth/clients/{param}/revoke | POST /auth/clients/{id}/revoke | revokeClient (services/auth/clients_admin.go:53) |  | RevokeClientRegistration |  |  | web/dashboard/src/lib/authAdmin.ts:510 |
@@ -409,6 +406,8 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|GET\|/hsm/objects | GET /hsm/objects | listHSMObjects (services/keycore/hsm.go:619) | ListHSMObjects |  |  | pkg/hsm.TenantPrefix, pkg/hsm.TenantKeyLabel | web/dashboard/src/lib/keycore.ts:666 |
 | keycore\|GET\|/keys/{param}/hsm | GET /keys/{id}/hsm | inspectHSMKey (services/keycore/hsm.go:640) | InspectHSMKey | ListVersions |  | pkg/hsm.TenantPrefix, pkg/hsm.TenantKeyLabel, pkg/route.New | web/dashboard/src/lib/keycore.ts:672 |
 | keycore\|GET\|/keys/{param}/consumers | GET /keys/{id}/consumers | getKeyConsumers (services/keycore/key_consumers.go:157) | KeyConsumers | GetKey, ListVersions, ListKeyConsumers |  |  | web/dashboard/src/lib/keyConsumers.ts:35 |
+| keycore\|GET\|/inventory/stats | GET /inventory/stats | keyStats (services/keycore/inventory_stats.go:169) | KeyStats |  |  | pkg/timebucket.Buckets, pkg/timebucket.Index | web/dashboard/src/lib/keycore.ts:1466 |
+| keycore\|GET\|/inventory/stats/keys | GET /inventory/stats/keys | keyStatsKeys (services/keycore/inventory_stats.go:183) | KeysMatching |  |  |  | web/dashboard/src/lib/keycore.ts:1480 |
 | keycore\|GET\|/metadata-profiles | GET /metadata-profiles | listMetadataProfiles (services/keycore/metadata_profiles.go:453) |  | ListMetadataProfiles |  |  | web/dashboard/src/lib/metadataProfiles.ts:27 |
 | keycore\|DELETE\|/metadata-profiles/{param} | DELETE /metadata-profiles/{id} | deleteMetadataProfile (services/keycore/metadata_profiles.go:509) |  | GetMetadataProfile, DeleteMetadataProfile |  |  | web/dashboard/src/lib/metadataProfiles.ts:39 |
 | keycore\|GET\|/metadata-profiles/{param}/violations | GET /metadata-profiles/{id}/violations | metadataProfileViolations (services/keycore/metadata_profiles.go:522) | MetadataProfileViolations | GetMetadataProfile |  |  | web/dashboard/src/lib/metadataProfiles.ts:43 |
@@ -542,24 +541,24 @@ This file connects frontend requests to backend Go processing. It is static anal
 
 | Route key | Route | Handler | Service methods | Store calls | Receiver/client calls | Internal package calls | Frontend call sites |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| audit\|GET\|/audit/anchor | GET /audit/anchor | getAnchor (services/audit/anchor.go:351) |  | AnchorSettings |  |  | web/dashboard/src/lib/audit.ts:291 |
-| audit\|PUT\|/audit/anchor | PUT /audit/anchor | putAnchor (services/audit/anchor.go:363) | openTSA, tsaClient | PutAnchorSettings, AnchorSettings | s.tsaCreds.Resolve | pkg/crypto.SHA256, pkg/route.Allowed, pkg/tenantcheck.IsServicePrincipal, pkg/ssrfguard.NewHTTPSClient | web/dashboard/src/lib/audit.ts:297 |
-| audit\|POST\|/audit/publish | POST /audit/publish | handlePublish (services/audit/handler.go:117) | PublishAudit, VerifyChainWalk | QueryEvents, GetEvent, LastChainVerified, VerifyChainWalk | s.wal.Append, s.publisher.Publish | pkg/auth.ClaimsFromContext, pkg/tenantcheck.Enforce |  |
-| audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:181) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:134 |
-| audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:200) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:182 |
-| audit\|POST\|/audit/search | POST /audit/search | handleSearch (services/audit/handler.go:218) |  |  |  |  |  |
-| audit\|GET\|/audit/chain/verify | GET /audit/chain/verify | handleChainVerify (services/audit/handler.go:223) | VerifyChainWalk | LastChainVerified, VerifyChainWalk |  | pkg/tenantcheck.Enforce | web/dashboard/src/lib/audit.ts:229 |
+| audit\|GET\|/audit/anchor | GET /audit/anchor | getAnchor (services/audit/anchor.go:351) |  | AnchorSettings |  |  | web/dashboard/src/lib/audit.ts:300 |
+| audit\|PUT\|/audit/anchor | PUT /audit/anchor | putAnchor (services/audit/anchor.go:363) | openTSA, tsaClient | PutAnchorSettings, AnchorSettings | s.tsaCreds.Resolve | pkg/crypto.SHA256, pkg/route.Allowed, pkg/tenantcheck.IsServicePrincipal, pkg/ssrfguard.NewHTTPSClient | web/dashboard/src/lib/audit.ts:306 |
+| audit\|POST\|/audit/publish | POST /audit/publish | handlePublish (services/audit/handler.go:118) | PublishAudit, VerifyChainWalk | QueryEvents, GetEvent, LastChainVerified, VerifyChainWalk | s.wal.Append, s.publisher.Publish | pkg/auth.ClaimsFromContext, pkg/tenantcheck.Enforce |  |
+| audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:182) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:143 |
+| audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:201) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:191 |
+| audit\|POST\|/audit/search | POST /audit/search | handleSearch (services/audit/handler.go:219) |  |  |  |  |  |
+| audit\|GET\|/audit/chain/verify | GET /audit/chain/verify | handleChainVerify (services/audit/handler.go:224) | VerifyChainWalk | LastChainVerified, VerifyChainWalk |  | pkg/tenantcheck.Enforce | web/dashboard/src/lib/audit.ts:238 |
 | audit\|GET\|/audit/stream | GET /audit/stream | handleStream (services/audit/stream.go:76) |  |  |  |  |  |
-| audit\|GET\|/audit/config | GET /audit/config | handleAuditConfig (services/audit/handler.go:248) |  |  |  |  | web/dashboard/src/lib/audit.ts:245 |
+| audit\|GET\|/audit/config | GET /audit/config | handleAuditConfig (services/audit/handler.go:249) |  |  |  |  | web/dashboard/src/lib/audit.ts:254 |
 | audit\|POST\|/audit/cluster/signing-key/join-key | POST /audit/cluster/signing-key/join-key | handleClusterKeyJoinKey (services/audit/cluster.go:169) | auditCluster |  |  |  |  |
 | audit\|POST\|/audit/cluster/signing-key/export | POST /audit/cluster/signing-key/export | handleClusterKeyExport (services/audit/cluster.go:182) | signing, auditCluster |  |  | pkg/clusterkey.Seal |  |
 | audit\|POST\|/audit/cluster/signing-key/import | POST /audit/cluster/signing-key/import | handleClusterKeyImport (services/audit/cluster.go:212) | auditCluster, signing |  |  | pkg/clusterkey.WriteFileAtomic, pkg/crypto.Zeroize |  |
-| audit\|GET\|/ops-metrics/overview | GET /ops-metrics/overview | handleGetOpsOverview (services/audit/handler_ops_metrics.go:8) |  | GetOpsOverview |  |  | web/dashboard/src/lib/opsMetrics.ts:55 |
+| audit\|GET\|/ops-metrics/overview | GET /ops-metrics/overview | handleGetOpsOverview (services/audit/handler_ops_metrics.go:8) |  | GetOpsOverview |  |  | web/dashboard/src/lib/opsMetrics.ts:28 |
 | audit\|GET\|/ops-metrics/timeseries | GET /ops-metrics/timeseries | handleGetOpsTimeSeries (services/audit/handler_ops_metrics.go:26) |  | GetOpsTimeSeries |  |  |  |
-| audit\|GET\|/ops-metrics/latency | GET /ops-metrics/latency | handleGetLatencyPercentiles (services/audit/handler_ops_metrics.go:45) |  | GetLatencyPercentiles |  |  | web/dashboard/src/lib/opsMetrics.ts:60 |
-| audit\|GET\|/ops-metrics/by-service | GET /ops-metrics/by-service | handleGetServiceStats (services/audit/handler_ops_metrics.go:62) |  | GetServiceStats |  |  | web/dashboard/src/lib/opsMetrics.ts:65 |
-| audit\|GET\|/ops-metrics/errors | GET /ops-metrics/errors | handleGetErrorBreakdown (services/audit/handler_ops_metrics.go:79) |  | GetErrorBreakdown |  |  | web/dashboard/src/lib/opsMetrics.ts:70 |
-| audit\|GET\|/audit/fips/boundary | GET /audit/fips/boundary | handleFIPSBoundary (services/audit/handler.go:263) |  |  |  |  |  |
+| audit\|GET\|/ops-metrics/latency | GET /ops-metrics/latency | handleGetLatencyPercentiles (services/audit/handler_ops_metrics.go:45) |  | GetLatencyPercentiles |  |  |  |
+| audit\|GET\|/ops-metrics/by-service | GET /ops-metrics/by-service | handleGetServiceStats (services/audit/handler_ops_metrics.go:62) |  | GetServiceStats |  |  |  |
+| audit\|GET\|/ops-metrics/errors | GET /ops-metrics/errors | handleGetErrorBreakdown (services/audit/handler_ops_metrics.go:79) |  | GetErrorBreakdown |  |  |  |
+| audit\|GET\|/audit/fips/boundary | GET /audit/fips/boundary | handleFIPSBoundary (services/audit/handler.go:264) |  |  |  |  |  |
 | audit\|GET\|/audit/cbom/inventory | GET /audit/cbom/inventory | handleCBOMInventory (services/audit/handler_cbom.go:17) |  | CBOMSamples |  | pkg/cbom.Tier, pkg/cbom.Build |  |
 | audit\|GET\|/audit/cbom/diff | GET /audit/cbom/diff | handleCBOMDiff (services/audit/handler_cbom.go:51) |  | CBOMSamples |  | pkg/cbom.Tier, pkg/cbom.Build |  |
 | audit\|GET\|/metrics | GET /metrics | handlePrometheusMetrics (services/audit/handler_prometheus.go:14) |  | GetAllServiceStats |  |  |  |
@@ -569,10 +568,11 @@ This file connects frontend requests to backend Go processing. It is static anal
 | audit\|DELETE\|/webhooks/{param} | DELETE /webhooks/{id} | deleteWebhook (services/audit/handler_webhook.go:220) |  | DeleteWebhook |  |  | web/dashboard/src/lib/webhooks.ts:67 |
 | audit\|POST\|/webhooks/{param}/test | POST /webhooks/{id}/test | testWebhook (services/audit/handler_webhook.go:234) |  | GetWebhook |  |  | web/dashboard/src/lib/webhooks.ts:71 |
 | audit\|GET\|/webhooks/{param}/deliveries | GET /webhooks/{id}/deliveries | listDeliveries (services/audit/handler_webhook.go:259) |  | ListDeliveries |  |  | web/dashboard/src/lib/webhooks.ts:75 |
-| audit\|GET\|/audit/investigate | GET /audit/investigate | investigate (services/audit/investigate.go:197) |  | Investigate |  |  | web/dashboard/src/lib/audit.ts:173 |
-| audit\|GET\|/audit/activity/stats | GET /audit/activity/stats | activityStats (services/audit/stats.go:153) |  | AuditStats |  |  | web/dashboard/src/lib/audit.ts:85 |
-| audit\|GET\|/audit/targets/{param}/integrity | GET /audit/targets/{target_id}/integrity | verifyTargetIntegrity (services/audit/target_integrity.go:359) | VerifyTarget | VerifyTarget |  |  | web/dashboard/src/lib/audit.ts:221 |
-| audit\|GET\|/audit/checkpoints | GET /audit/checkpoints | listCheckpoints (services/audit/checkpoint.go:559) | ListCheckpoints | ListCheckpoints |  |  | web/dashboard/src/lib/audit.ts:305 |
+| audit\|GET\|/audit/investigate | GET /audit/investigate | investigate (services/audit/investigate.go:205) |  | Investigate |  |  | web/dashboard/src/lib/audit.ts:182 |
+| audit\|GET\|/ops-metrics/stats | GET /ops-metrics/stats | opsStats (services/audit/ops_stats.go:190) |  | OpsStats |  |  |  |
+| audit\|GET\|/audit/activity/stats | GET /audit/activity/stats | activityStats (services/audit/stats.go:153) |  | AuditStats |  |  | web/dashboard/src/lib/audit.ts:91 |
+| audit\|GET\|/audit/targets/{param}/integrity | GET /audit/targets/{target_id}/integrity | verifyTargetIntegrity (services/audit/target_integrity.go:359) | VerifyTarget | VerifyTarget |  |  | web/dashboard/src/lib/audit.ts:230 |
+| audit\|GET\|/audit/checkpoints | GET /audit/checkpoints | listCheckpoints (services/audit/checkpoint.go:559) | ListCheckpoints | ListCheckpoints |  |  | web/dashboard/src/lib/audit.ts:314 |
 | auth\|GET\|/auth/clients/{param}/role | GET /auth/clients/{id}/role | getClientRole (services/auth/client_roles.go:70) |  | GetClientRegistration |  |  | web/dashboard/src/lib/authAdmin.ts:791 |
 | auth\|PUT\|/auth/clients/{param}/role | PUT /auth/clients/{id}/role | setClientRole (services/auth/client_roles.go:88) |  | DeleteClientRole, GetRolePermissions, SetClientRole |  | pkg/route.Allowed, pkg/tenantcheck.ServicePermissionReserved, pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/authAdmin.ts:795 |
 | auth\|POST\|/auth/clients/{param}/revoke | POST /auth/clients/{id}/revoke | revokeClient (services/auth/clients_admin.go:53) |  | RevokeClientRegistration |  |  | web/dashboard/src/lib/authAdmin.ts:510 |
@@ -1258,6 +1258,8 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|GET\|/inventory/dependencies | GET /inventory/dependencies | handleListKeyDependencies (services/keycore/handler_enterprise_audit.go:214) |  | ListKeyDependencies |  |  |  |
 | keycore\|GET\|/rotation/analytics | GET /rotation/analytics | handleGetRotationAnalytics (services/keycore/handler_enterprise_audit.go:26) |  | GetRotationAnalyticsSummary |  |  |  |
 | keycore\|GET\|/rotation/analytics/overdue | GET /rotation/analytics/overdue | handleListOverdueRotationMetrics (services/keycore/handler_enterprise_audit.go:40) |  | ListOverdueRotationMetrics |  |  |  |
+| keycore\|GET\|/inventory/stats | GET /inventory/stats | keyStats (services/keycore/inventory_stats.go:169) | KeyStats |  |  | pkg/timebucket.Buckets, pkg/timebucket.Index | web/dashboard/src/lib/keycore.ts:1466 |
+| keycore\|GET\|/inventory/stats/keys | GET /inventory/stats/keys | keyStatsKeys (services/keycore/inventory_stats.go:183) | KeysMatching |  |  |  | web/dashboard/src/lib/keycore.ts:1480 |
 | keycore\|GET\|/enterprise/summary | GET /enterprise/summary | handleGetEnterpriseAuditSummary (services/keycore/handler_enterprise_audit.go:12) | GetEnterpriseAuditSummary | GetRotationAnalyticsSummary, GetKeyHealthSummary, GetInventorySummary, GetCompromiseSummary, ListKeyHotspots, GetAlgorithmBenchmarks, ListDSPMFindings, ListEnterpriseControlRecords |  |  |  |
 | keycore\|GET\|/health/summary | GET /health/summary | handleGetHealthSummary (services/keycore/handler_enterprise_audit.go:137) |  | GetKeyHealthSummary, ListKeyHealthScores |  |  |  |
 | keycore\|GET\|/compromise/events | GET /compromise/events | handleListCompromiseEvents (services/keycore/handler_enterprise_audit.go:251) |  | ListCompromiseEvents, GetCompromiseSummary |  |  |  |

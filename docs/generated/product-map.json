@@ -185,7 +185,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetOpsOverview",
-      "line": 98,
+      "line": 99,
       "match_key": "audit|GET|/ops-metrics/overview",
       "method": "GET",
       "normalized_path": "/ops-metrics/overview",
@@ -200,7 +200,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetOpsTimeSeries",
-      "line": 99,
+      "line": 100,
       "match_key": "audit|GET|/ops-metrics/timeseries",
       "method": "GET",
       "normalized_path": "/ops-metrics/timeseries",
@@ -215,7 +215,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetLatencyPercentiles",
-      "line": 100,
+      "line": 101,
       "match_key": "audit|GET|/ops-metrics/latency",
       "method": "GET",
       "normalized_path": "/ops-metrics/latency",
@@ -230,7 +230,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetServiceStats",
-      "line": 101,
+      "line": 102,
       "match_key": "audit|GET|/ops-metrics/by-service",
       "method": "GET",
       "normalized_path": "/ops-metrics/by-service",
@@ -245,7 +245,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetErrorBreakdown",
-      "line": 102,
+      "line": 103,
       "match_key": "audit|GET|/ops-metrics/errors",
       "method": "GET",
       "normalized_path": "/ops-metrics/errors",
@@ -260,7 +260,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleFIPSBoundary",
-      "line": 105,
+      "line": 106,
       "match_key": "audit|GET|/audit/fips/boundary",
       "method": "GET",
       "normalized_path": "/audit/fips/boundary",
@@ -275,7 +275,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMInventory",
-      "line": 108,
+      "line": 109,
       "match_key": "audit|GET|/audit/cbom/inventory",
       "method": "GET",
       "normalized_path": "/audit/cbom/inventory",
@@ -290,7 +290,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMDiff",
-      "line": 109,
+      "line": 110,
       "match_key": "audit|GET|/audit/cbom/diff",
       "method": "GET",
       "normalized_path": "/audit/cbom/diff",
@@ -305,7 +305,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handlePrometheusMetrics",
-      "line": 112,
+      "line": 113,
       "match_key": "audit|GET|/metrics",
       "method": "GET",
       "normalized_path": "/metrics",
@@ -410,7 +410,7 @@
       "code_scope": "audit",
       "file": "services/audit/investigate.go",
       "handler": "h.investigate",
-      "line": 191,
+      "line": 199,
       "match_key": "audit|GET|/audit/investigate",
       "method": "GET",
       "normalized_path": "/audit/investigate",
@@ -418,6 +418,21 @@
       "permission": "audit.events.read",
       "registration": "kernel",
       "resource": "audit_trail",
+      "service": "audit"
+    },
+    {
+      "action": "ops_stats_read",
+      "code_scope": "audit",
+      "file": "services/audit/ops_stats.go",
+      "handler": "h.opsStats",
+      "line": 184,
+      "match_key": "audit|GET|/ops-metrics/stats",
+      "method": "GET",
+      "normalized_path": "/ops-metrics/stats",
+      "path": "/ops-metrics/stats",
+      "permission": "audit.events.read",
+      "registration": "kernel",
+      "resource": "ops_metrics",
       "service": "audit"
     },
     {
@@ -10741,11 +10756,41 @@
       "service": "keycore"
     },
     {
+      "action": "inventory_stats_read",
+      "code_scope": "keycore",
+      "file": "services/keycore/key_visibility.go",
+      "handler": "h.keyStats",
+      "line": 190,
+      "match_key": "keycore|GET|/inventory/stats",
+      "method": "GET",
+      "normalized_path": "/inventory/stats",
+      "path": "/inventory/stats",
+      "permission": "key.inventory.read",
+      "registration": "kernel",
+      "resource": "key_inventory",
+      "service": "keycore"
+    },
+    {
+      "action": "inventory_stats_keys_read",
+      "code_scope": "keycore",
+      "file": "services/keycore/key_visibility.go",
+      "handler": "h.keyStatsKeys",
+      "line": 191,
+      "match_key": "keycore|GET|/inventory/stats/keys",
+      "method": "GET",
+      "normalized_path": "/inventory/stats/keys",
+      "path": "/inventory/stats/keys",
+      "permission": "key.inventory.read",
+      "registration": "kernel",
+      "resource": "key_inventory",
+      "service": "keycore"
+    },
+    {
       "action": "enterprise_summary_read",
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleGetEnterpriseAuditSummary)",
-      "line": 189,
+      "line": 192,
       "match_key": "keycore|GET|/enterprise/summary",
       "method": "GET",
       "normalized_path": "/enterprise/summary",
@@ -10760,7 +10805,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleGetHealthSummary)",
-      "line": 190,
+      "line": 193,
       "match_key": "keycore|GET|/health/summary",
       "method": "GET",
       "normalized_path": "/health/summary",
@@ -10775,7 +10820,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListCompromiseEvents)",
-      "line": 191,
+      "line": 194,
       "match_key": "keycore|GET|/compromise/events",
       "method": "GET",
       "normalized_path": "/compromise/events",
@@ -10790,7 +10835,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleGetKeyUsageMetrics)",
-      "line": 192,
+      "line": 195,
       "match_key": "keycore|GET|/analytics/usage",
       "method": "GET",
       "normalized_path": "/analytics/usage",
@@ -10805,7 +10850,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListKeyHotspots)",
-      "line": 193,
+      "line": 196,
       "match_key": "keycore|GET|/analytics/hotspots",
       "method": "GET",
       "normalized_path": "/analytics/hotspots",
@@ -10820,7 +10865,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleGetKeyTrend)",
-      "line": 194,
+      "line": 197,
       "match_key": "keycore|GET|/analytics/trends",
       "method": "GET",
       "normalized_path": "/analytics/trends",
@@ -10835,7 +10880,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListKeyDSPMFindings)",
-      "line": 195,
+      "line": 198,
       "match_key": "keycore|GET|/enterprise/dspm/findings",
       "method": "GET",
       "normalized_path": "/enterprise/dspm/findings",
@@ -10850,7 +10895,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleExportKeyDSPMEvents)",
-      "line": 196,
+      "line": 199,
       "match_key": "keycore|GET|/enterprise/dspm/events",
       "method": "GET",
       "normalized_path": "/enterprise/dspm/events",
@@ -10865,7 +10910,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleEnterpriseComplianceDashboard)",
-      "line": 197,
+      "line": 200,
       "match_key": "keycore|GET|/enterprise/compliance/dashboard",
       "method": "GET",
       "normalized_path": "/enterprise/compliance/dashboard",
@@ -10880,7 +10925,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleEnterpriseCostOptimization)",
-      "line": 198,
+      "line": 201,
       "match_key": "keycore|GET|/enterprise/cost/optimization",
       "method": "GET",
       "normalized_path": "/enterprise/cost/optimization",
@@ -14317,7 +14362,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetOpsTimeSeries",
-      "line": 99,
+      "line": 100,
       "match_key": "audit|GET|/ops-metrics/timeseries",
       "method": "GET",
       "normalized_path": "/ops-metrics/timeseries",
@@ -14331,8 +14376,53 @@
       "action": "",
       "code_scope": "audit",
       "file": "services/audit/handler.go",
+      "handler": "h.handleGetLatencyPercentiles",
+      "line": 101,
+      "match_key": "audit|GET|/ops-metrics/latency",
+      "method": "GET",
+      "normalized_path": "/ops-metrics/latency",
+      "path": "/ops-metrics/latency",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "audit"
+    },
+    {
+      "action": "",
+      "code_scope": "audit",
+      "file": "services/audit/handler.go",
+      "handler": "h.handleGetServiceStats",
+      "line": 102,
+      "match_key": "audit|GET|/ops-metrics/by-service",
+      "method": "GET",
+      "normalized_path": "/ops-metrics/by-service",
+      "path": "/ops-metrics/by-service",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "audit"
+    },
+    {
+      "action": "",
+      "code_scope": "audit",
+      "file": "services/audit/handler.go",
+      "handler": "h.handleGetErrorBreakdown",
+      "line": 103,
+      "match_key": "audit|GET|/ops-metrics/errors",
+      "method": "GET",
+      "normalized_path": "/ops-metrics/errors",
+      "path": "/ops-metrics/errors",
+      "permission": "",
+      "registration": "mux",
+      "resource": "",
+      "service": "audit"
+    },
+    {
+      "action": "",
+      "code_scope": "audit",
+      "file": "services/audit/handler.go",
       "handler": "h.handleFIPSBoundary",
-      "line": 105,
+      "line": 106,
       "match_key": "audit|GET|/audit/fips/boundary",
       "method": "GET",
       "normalized_path": "/audit/fips/boundary",
@@ -14347,7 +14437,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMInventory",
-      "line": 108,
+      "line": 109,
       "match_key": "audit|GET|/audit/cbom/inventory",
       "method": "GET",
       "normalized_path": "/audit/cbom/inventory",
@@ -14362,7 +14452,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMDiff",
-      "line": 109,
+      "line": 110,
       "match_key": "audit|GET|/audit/cbom/diff",
       "method": "GET",
       "normalized_path": "/audit/cbom/diff",
@@ -14377,7 +14467,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handlePrometheusMetrics",
-      "line": 112,
+      "line": 113,
       "match_key": "audit|GET|/metrics",
       "method": "GET",
       "normalized_path": "/metrics",
@@ -14385,6 +14475,21 @@
       "permission": "",
       "registration": "mux",
       "resource": "",
+      "service": "audit"
+    },
+    {
+      "action": "ops_stats_read",
+      "code_scope": "audit",
+      "file": "services/audit/ops_stats.go",
+      "handler": "h.opsStats",
+      "line": 184,
+      "match_key": "audit|GET|/ops-metrics/stats",
+      "method": "GET",
+      "normalized_path": "/ops-metrics/stats",
+      "path": "/ops-metrics/stats",
+      "permission": "audit.events.read",
+      "registration": "kernel",
+      "resource": "ops_metrics",
       "service": "audit"
     },
     {
@@ -19192,7 +19297,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleGetEnterpriseAuditSummary)",
-      "line": 189,
+      "line": 192,
       "match_key": "keycore|GET|/enterprise/summary",
       "method": "GET",
       "normalized_path": "/enterprise/summary",
@@ -19207,7 +19312,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleGetHealthSummary)",
-      "line": 190,
+      "line": 193,
       "match_key": "keycore|GET|/health/summary",
       "method": "GET",
       "normalized_path": "/health/summary",
@@ -19222,7 +19327,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListCompromiseEvents)",
-      "line": 191,
+      "line": 194,
       "match_key": "keycore|GET|/compromise/events",
       "method": "GET",
       "normalized_path": "/compromise/events",
@@ -19237,7 +19342,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleGetKeyUsageMetrics)",
-      "line": 192,
+      "line": 195,
       "match_key": "keycore|GET|/analytics/usage",
       "method": "GET",
       "normalized_path": "/analytics/usage",
@@ -19252,7 +19357,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListKeyHotspots)",
-      "line": 193,
+      "line": 196,
       "match_key": "keycore|GET|/analytics/hotspots",
       "method": "GET",
       "normalized_path": "/analytics/hotspots",
@@ -19267,7 +19372,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleGetKeyTrend)",
-      "line": 194,
+      "line": 197,
       "match_key": "keycore|GET|/analytics/trends",
       "method": "GET",
       "normalized_path": "/analytics/trends",
@@ -19282,7 +19387,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListKeyDSPMFindings)",
-      "line": 195,
+      "line": 198,
       "match_key": "keycore|GET|/enterprise/dspm/findings",
       "method": "GET",
       "normalized_path": "/enterprise/dspm/findings",
@@ -19297,7 +19402,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleExportKeyDSPMEvents)",
-      "line": 196,
+      "line": 199,
       "match_key": "keycore|GET|/enterprise/dspm/events",
       "method": "GET",
       "normalized_path": "/enterprise/dspm/events",
@@ -19312,7 +19417,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleEnterpriseComplianceDashboard)",
-      "line": 197,
+      "line": 200,
       "match_key": "keycore|GET|/enterprise/compliance/dashboard",
       "method": "GET",
       "normalized_path": "/enterprise/compliance/dashboard",
@@ -19327,7 +19432,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleEnterpriseCostOptimization)",
-      "line": 198,
+      "line": 201,
       "match_key": "keycore|GET|/enterprise/cost/optimization",
       "method": "GET",
       "normalized_path": "/enterprise/cost/optimization",
@@ -20841,7 +20946,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setCollapsed((v) => !v)} title= aria-label= className=\"vk-icon-btn\" style={{...",
-      "line": 478,
+      "line": 466,
       "tabs": [],
       "tag": "button"
     },
@@ -20849,7 +20954,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "onLogout",
       "label": "Sign out",
-      "line": 731,
+      "line": 719,
       "tabs": [],
       "tag": "button"
     },
@@ -20857,7 +20962,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "togglePin(tab)} title= style={{ display: \"inline-flex\", alignItems: \"center\",...",
-      "line": 783,
+      "line": 771,
       "tabs": [],
       "tag": "button"
     },
@@ -20865,7 +20970,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "selectTab(\"admin/cli\")} style={cliEnabled ? : }>",
-      "line": 817,
+      "line": 805,
       "tabs": [],
       "tag": "Btn"
     },
@@ -20873,7 +20978,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" aria-label=\"About this KMS build\" aria-expanded= ti...",
-      "line": 854,
+      "line": 842,
       "tabs": [],
       "tag": "button"
     },
@@ -20881,7 +20986,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" style={{ display: \"inline-flex\", alignItems: \"cente...",
-      "line": 889,
+      "line": 877,
       "tabs": [],
       "tag": "button"
     },
@@ -20897,7 +21002,7 @@
       "file": "web/dashboard/src/components/v3/SidebarSubNav.tsx",
       "handler": "",
       "label": "onSelect(item.id)} style={ } >",
-      "line": 154,
+      "line": 160,
       "tabs": [],
       "tag": "button"
     },
@@ -22490,40 +22595,56 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
-      "label": "onNavigate?.(\"certs\")}>View Certificates \u2192",
-      "line": 221,
+      "label": "onNavigate?.(\"approvals\")}>Approvals",
+      "line": 104,
       "tabs": [],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
-      "label": "onUnpinTab?.(tabId)} title={`Unpin $ `} style={ } >",
-      "line": 248,
-      "tabs": [],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
-      "handler": "",
-      "label": "onNavigate?.(tabId)} style={{ display: \"inline-flex\", alignItems: \"center\", g...",
-      "line": 258,
-      "tabs": [],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
-      "handler": "",
-      "label": "void submitHomeApprovalVote(item, \"approved\")} disabled={approvalVoteBusy ===...",
-      "line": 387,
+      "label": "onNavigate?.(\"certs/cert-renewals\")}>Renewals",
+      "line": 108,
       "tabs": [],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
-      "label": "void submitHomeApprovalVote(item, \"denied\")} disabled={approvalVoteBusy === `...",
-      "line": 388,
+      "label": "onNavigate?.(\"cluster\")}>Cluster",
+      "line": 130,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
+      "handler": "",
+      "label": "void submitHomeApprovalVote?.(item, \"approved\")} disabled= >Approve",
+      "line": 163,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
+      "handler": "",
+      "label": "void submitHomeApprovalVote?.(item, \"denied\")} disabled= >Deny",
+      "line": 164,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
+      "handler": "",
+      "label": "onUnpinTab?.(id)} title={`Unpin $ `} aria-label={`Unpin $ `} style={ }>",
+      "line": 184,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
+      "handler": "",
+      "label": "onNavigate?.(id)}>Open",
+      "line": 189,
       "tabs": [],
       "tag": "Btn"
     },
@@ -23591,25 +23712,9 @@
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/KeyInventoryPanel.tsx",
-      "handler": "onClick} style={{ display: \"inline-flex\", alignItems: \"center\", gap: 5, padding: small ? \"4px 10px\" : \"6px 14px\", bor...",
-      "label": "(icon or dynamic label)",
-      "line": 16,
-      "tabs": [],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeyInventoryPanel.tsx",
-      "handler": "handleExport",
-      "label": "Export JSON",
-      "line": 60,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeyInventoryPanel.tsx",
-      "handler": "load",
-      "label": "(icon or dynamic label)",
-      "line": 61,
+      "handler": "",
+      "label": "void load()} disabled= >",
+      "line": 58,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24236,24 +24341,16 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx",
       "handler": "",
-      "label": "setTimeWindow(w)} style={ }>",
-      "line": 97,
+      "label": "void load()} disabled= >",
+      "line": 87,
       "tabs": [],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx",
-      "handler": "load} style={{ background: \"transparent\", border: `1px solid ${C.border",
-      "label": "Refresh",
-      "line": 104,
-      "tabs": [],
-      "tag": "button"
+      "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx",
       "handler": "",
-      "label": "setSection(s.id as any)} style={{ padding: \"8px 16px\", border: \"none\", backgr...",
-      "line": 144,
+      "label": "openGroup(\"node\", n.key || \"(unclustered)\", n)} style={{ ...clickable, backgr...",
+      "line": 138,
       "tabs": [],
       "tag": "button"
     },
@@ -27729,7 +27826,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/activity/stats?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 85,
+      "line": 91,
       "match_key": "audit|GET|/audit/activity/stats",
       "method": "GET",
       "normalized_path": "/audit/activity/stats",
@@ -27742,7 +27839,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/events?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 134,
+      "line": 143,
       "match_key": "audit|GET|/audit/events",
       "method": "GET",
       "normalized_path": "/audit/events",
@@ -27755,7 +27852,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/investigate?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 173,
+      "line": 182,
       "match_key": "audit|GET|/audit/investigate",
       "method": "GET",
       "normalized_path": "/audit/investigate",
@@ -27768,7 +27865,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 182,
+      "line": 191,
       "match_key": "audit|GET|/audit/events/{param}",
       "method": "GET",
       "normalized_path": "/audit/events/{param}",
@@ -27781,7 +27878,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 221,
+      "line": 230,
       "match_key": "audit|GET|/audit/targets/{param}/integrity",
       "method": "GET",
       "normalized_path": "/audit/targets/{param}/integrity",
@@ -27794,7 +27891,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 229,
+      "line": 238,
       "match_key": "audit|GET|/audit/chain/verify",
       "method": "GET",
       "normalized_path": "/audit/chain/verify",
@@ -27807,7 +27904,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 245,
+      "line": 254,
       "match_key": "audit|GET|/audit/config",
       "method": "GET",
       "normalized_path": "/audit/config",
@@ -27820,7 +27917,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"audit\", \"/audit/anchor\")",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 291,
+      "line": 300,
       "match_key": "audit|GET|/audit/anchor",
       "method": "GET",
       "normalized_path": "/audit/anchor",
@@ -27833,7 +27930,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"audit\", \"/audit/anchor\")",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 297,
+      "line": 306,
       "match_key": "audit|PUT|/audit/anchor",
       "method": "PUT",
       "normalized_path": "/audit/anchor",
@@ -27846,7 +27943,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/checkpoints?${tenantQuery(session)}&limit=${limit}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 305,
+      "line": 314,
       "match_key": "audit|GET|/audit/checkpoints",
       "method": "GET",
       "normalized_path": "/audit/checkpoints",
@@ -32745,6 +32842,32 @@
     },
     {
       "dynamic": true,
+      "expression": "apiRequest(`/inventory/stats?${q.toString()}`)",
+      "file": "web/dashboard/src/lib/keycore.ts",
+      "line": 1466,
+      "match_key": "keycore|GET|/inventory/stats",
+      "method": "GET",
+      "normalized_path": "/inventory/stats",
+      "path": "/inventory/stats?{param}",
+      "service": "keycore",
+      "service_key": "keycore",
+      "source": "keycore.apiRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "apiRequest(`/inventory/stats/keys?${q.toString()}`)",
+      "file": "web/dashboard/src/lib/keycore.ts",
+      "line": 1480,
+      "match_key": "keycore|GET|/inventory/stats/keys",
+      "method": "GET",
+      "normalized_path": "/inventory/stats/keys",
+      "path": "/inventory/stats/keys?{param}",
+      "service": "keycore",
+      "service_key": "keycore",
+      "source": "keycore.apiRequest"
+    },
+    {
+      "dynamic": true,
       "expression": "serviceRequest(\"kmip\", `/kmip/profiles?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/kmip.ts",
       "line": 177,
@@ -32955,7 +33078,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/ops-metrics/overview?window=${window}`)",
       "file": "web/dashboard/src/lib/opsMetrics.ts",
-      "line": 55,
+      "line": 28,
       "match_key": "audit|GET|/ops-metrics/overview",
       "method": "GET",
       "normalized_path": "/ops-metrics/overview",
@@ -32966,39 +33089,13 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"audit\", `/ops-metrics/latency?window=${window}`)",
+      "expression": "serviceRequest(\"audit\", `/ops-metrics/stats${q}`)",
       "file": "web/dashboard/src/lib/opsMetrics.ts",
-      "line": 60,
-      "match_key": "audit|GET|/ops-metrics/latency",
+      "line": 64,
+      "match_key": "audit|GET|/ops-metrics/stats{param}",
       "method": "GET",
-      "normalized_path": "/ops-metrics/latency",
-      "path": "/ops-metrics/latency?window={param}",
-      "service": "audit",
-      "service_key": "audit",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"audit\", `/ops-metrics/by-service?window=${window}`)",
-      "file": "web/dashboard/src/lib/opsMetrics.ts",
-      "line": 65,
-      "match_key": "audit|GET|/ops-metrics/by-service",
-      "method": "GET",
-      "normalized_path": "/ops-metrics/by-service",
-      "path": "/ops-metrics/by-service?window={param}",
-      "service": "audit",
-      "service_key": "audit",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"audit\", `/ops-metrics/errors?window=${window}`)",
-      "file": "web/dashboard/src/lib/opsMetrics.ts",
-      "line": 70,
-      "match_key": "audit|GET|/ops-metrics/errors",
-      "method": "GET",
-      "normalized_path": "/ops-metrics/errors",
-      "path": "/ops-metrics/errors?window={param}",
+      "normalized_path": "/ops-metrics/stats{param}",
+      "path": "/ops-metrics/stats{param}",
       "service": "audit",
       "service_key": "audit",
       "source": "serviceRequest"
@@ -34720,7 +34817,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-24T09:13:28Z",
+  "generated_at": "2026-10-24T23:12:15Z",
   "navigation": [
     {
       "group": "Home",
@@ -34854,7 +34951,7 @@
         {
           "expression": "serviceRequest(\"audit\", \"/audit/anchor\")",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 291,
+          "line": 300,
           "source": "serviceRequest"
         }
       ],
@@ -34891,7 +34988,7 @@
         {
           "expression": "serviceRequest(\"audit\", \"/audit/anchor\")",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 297,
+          "line": 306,
           "source": "serviceRequest"
         }
       ],
@@ -35016,7 +35113,7 @@
         "pkg/auth.ClaimsFromContext",
         "pkg/tenantcheck.Enforce"
       ],
-      "handler_line": 117,
+      "handler_line": 118,
       "handler_name": "handlePublish",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -35094,7 +35191,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/events?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 134,
+          "line": 143,
           "source": "serviceRequest"
         }
       ],
@@ -35111,7 +35208,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 181,
+      "handler_line": 182,
       "handler_name": "handleEvents",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35136,7 +35233,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 182,
+          "line": 191,
           "source": "serviceRequest"
         }
       ],
@@ -35154,7 +35251,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 200,
+      "handler_line": 201,
       "handler_name": "handleEvent",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35183,7 +35280,7 @@
         "handleEvents"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 218,
+      "handler_line": 219,
       "handler_name": "handleSearch",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35206,7 +35303,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 229,
+          "line": 238,
           "source": "serviceRequest"
         }
       ],
@@ -35239,7 +35336,7 @@
       "handler_internal_package_calls": [
         "pkg/tenantcheck.Enforce"
       ],
-      "handler_line": 223,
+      "handler_line": 224,
       "handler_name": "handleChainVerify",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -35314,7 +35411,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 245,
+          "line": 254,
           "source": "serviceRequest"
         }
       ],
@@ -35328,7 +35425,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 248,
+      "handler_line": 249,
       "handler_name": "handleAuditConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35523,7 +35620,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/ops-metrics/overview?window=${window}`)",
           "file": "web/dashboard/src/lib/opsMetrics.ts",
-          "line": 55,
+          "line": 28,
           "source": "serviceRequest"
         }
       ],
@@ -35550,7 +35647,7 @@
       "normalized_path": "/ops-metrics/overview",
       "path": "/ops-metrics/overview",
       "route_file": "services/audit/handler.go",
-      "route_line": 98,
+      "route_line": 99,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -35584,7 +35681,7 @@
       "normalized_path": "/ops-metrics/timeseries",
       "path": "/ops-metrics/timeseries",
       "route_file": "services/audit/handler.go",
-      "route_line": 99,
+      "route_line": 100,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -35594,14 +35691,7 @@
       "service_store_calls": []
     },
     {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"audit\", `/ops-metrics/latency?window=${window}`)",
-          "file": "web/dashboard/src/lib/opsMetrics.ts",
-          "line": 60,
-          "source": "serviceRequest"
-        }
-      ],
+      "frontend_call_sites": [],
       "handler": "h.handleGetLatencyPercentiles",
       "handler_external_package_calls": [],
       "handler_file": "services/audit/handler_ops_metrics.go",
@@ -35625,7 +35715,7 @@
       "normalized_path": "/ops-metrics/latency",
       "path": "/ops-metrics/latency",
       "route_file": "services/audit/handler.go",
-      "route_line": 100,
+      "route_line": 101,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -35635,14 +35725,7 @@
       "service_store_calls": []
     },
     {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"audit\", `/ops-metrics/by-service?window=${window}`)",
-          "file": "web/dashboard/src/lib/opsMetrics.ts",
-          "line": 65,
-          "source": "serviceRequest"
-        }
-      ],
+      "frontend_call_sites": [],
       "handler": "h.handleGetServiceStats",
       "handler_external_package_calls": [],
       "handler_file": "services/audit/handler_ops_metrics.go",
@@ -35666,7 +35749,7 @@
       "normalized_path": "/ops-metrics/by-service",
       "path": "/ops-metrics/by-service",
       "route_file": "services/audit/handler.go",
-      "route_line": 101,
+      "route_line": 102,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -35676,14 +35759,7 @@
       "service_store_calls": []
     },
     {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"audit\", `/ops-metrics/errors?window=${window}`)",
-          "file": "web/dashboard/src/lib/opsMetrics.ts",
-          "line": 70,
-          "source": "serviceRequest"
-        }
-      ],
+      "frontend_call_sites": [],
       "handler": "h.handleGetErrorBreakdown",
       "handler_external_package_calls": [],
       "handler_file": "services/audit/handler_ops_metrics.go",
@@ -35707,7 +35783,7 @@
       "normalized_path": "/ops-metrics/errors",
       "path": "/ops-metrics/errors",
       "route_file": "services/audit/handler.go",
-      "route_line": 102,
+      "route_line": 103,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -35727,7 +35803,7 @@
         "signing"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 263,
+      "handler_line": 264,
       "handler_name": "handleFIPSBoundary",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35736,7 +35812,7 @@
       "normalized_path": "/audit/fips/boundary",
       "path": "/audit/fips/boundary",
       "route_file": "services/audit/handler.go",
-      "route_line": 105,
+      "route_line": 106,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -35775,7 +35851,7 @@
       "normalized_path": "/audit/cbom/inventory",
       "path": "/audit/cbom/inventory",
       "route_file": "services/audit/handler.go",
-      "route_line": 108,
+      "route_line": 109,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -35814,7 +35890,7 @@
       "normalized_path": "/audit/cbom/diff",
       "path": "/audit/cbom/diff",
       "route_file": "services/audit/handler.go",
-      "route_line": 109,
+      "route_line": 110,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -35847,7 +35923,7 @@
       "normalized_path": "/metrics",
       "path": "/metrics",
       "route_file": "services/audit/handler.go",
-      "route_line": 112,
+      "route_line": 113,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36112,7 +36188,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/investigate?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 173,
+          "line": 182,
           "source": "serviceRequest"
         }
       ],
@@ -36127,7 +36203,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 197,
+      "handler_line": 205,
       "handler_name": "investigate",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36138,7 +36214,38 @@
       "normalized_path": "/audit/investigate",
       "path": "/audit/investigate",
       "route_file": "services/audit/investigate.go",
-      "route_line": 191,
+      "route_line": 199,
+      "service": "audit",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.opsStats",
+      "handler_external_package_calls": [],
+      "handler_file": "services/audit/ops_stats.go",
+      "handler_helper_calls": [
+        "parseTS",
+        "OpsStats",
+        "Error"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 190,
+      "handler_name": "opsStats",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "OpsStats"
+      ],
+      "method": "GET",
+      "normalized_path": "/ops-metrics/stats",
+      "path": "/ops-metrics/stats",
+      "route_file": "services/audit/ops_stats.go",
+      "route_line": 184,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36152,7 +36259,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/activity/stats?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 85,
+          "line": 91,
           "source": "serviceRequest"
         }
       ],
@@ -36190,7 +36297,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 221,
+          "line": 230,
           "source": "serviceRequest"
         }
       ],
@@ -36249,7 +36356,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/checkpoints?${tenantQuery(session)}&limit=${limit}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 305,
+          "line": 314,
           "source": "serviceRequest"
         }
       ],
@@ -82986,6 +83093,135 @@
       "service_store_calls": []
     },
     {
+      "frontend_call_sites": [
+        {
+          "expression": "apiRequest(`/inventory/stats?${q.toString()}`)",
+          "file": "web/dashboard/src/lib/keycore.ts",
+          "line": 1466,
+          "source": "keycore.apiRequest"
+        }
+      ],
+      "handler": "h.keyStats",
+      "handler_external_package_calls": [],
+      "handler_file": "services/keycore/inventory_stats.go",
+      "handler_helper_calls": [
+        "statWindow",
+        "KeyStats",
+        "Error"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 169,
+      "handler_name": "keyStats",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "KeyStats"
+      ],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/inventory/stats",
+      "path": "/inventory/stats",
+      "route_file": "services/keycore/key_visibility.go",
+      "route_line": 190,
+      "service": "keycore",
+      "service_external_package_calls": [
+        "time.Now"
+      ],
+      "service_helper_calls": [
+        "liveKeys",
+        "normalizeLifecycleStatus",
+        "match",
+        "rankCounts"
+      ],
+      "service_internal_package_calls": [
+        "pkg/timebucket.Buckets",
+        "pkg/timebucket.Index"
+      ],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "time.Now"
+          ],
+          "file": "services/keycore/inventory_stats.go",
+          "helper_calls": [
+            "liveKeys",
+            "normalizeLifecycleStatus",
+            "match",
+            "rankCounts"
+          ],
+          "internal_package_calls": [
+            "pkg/timebucket.Buckets",
+            "pkg/timebucket.Index"
+          ],
+          "line": 77,
+          "name": "KeyStats",
+          "receiver_calls": [],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "apiRequest(`/inventory/stats/keys?${q.toString()}`)",
+          "file": "web/dashboard/src/lib/keycore.ts",
+          "line": 1480,
+          "source": "keycore.apiRequest"
+        }
+      ],
+      "handler": "h.keyStatsKeys",
+      "handler_external_package_calls": [
+        "strconv.Atoi",
+        "strings.TrimSpace"
+      ],
+      "handler_file": "services/keycore/inventory_stats.go",
+      "handler_helper_calls": [
+        "statWindow",
+        "Get",
+        "KeysMatching",
+        "Error",
+        "renderKeys"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 183,
+      "handler_name": "keyStatsKeys",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "KeysMatching"
+      ],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/inventory/stats/keys",
+      "path": "/inventory/stats/keys",
+      "route_file": "services/keycore/key_visibility.go",
+      "route_line": 191,
+      "service": "keycore",
+      "service_external_package_calls": [],
+      "service_helper_calls": [
+        "liveKeys",
+        "match"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [],
+          "file": "services/keycore/inventory_stats.go",
+          "helper_calls": [
+            "liveKeys",
+            "match"
+          ],
+          "internal_package_calls": [],
+          "line": 116,
+          "name": "KeysMatching",
+          "receiver_calls": [],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
       "frontend_call_sites": [],
       "handler": "legacy(h.handleGetEnterpriseAuditSummary)",
       "handler_external_package_calls": [],
@@ -83011,7 +83247,7 @@
       "normalized_path": "/enterprise/summary",
       "path": "/enterprise/summary",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 189,
+      "route_line": 192,
       "service": "keycore",
       "service_external_package_calls": [
         "time.Now"
@@ -83103,7 +83339,7 @@
       "normalized_path": "/health/summary",
       "path": "/health/summary",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 190,
+      "route_line": 193,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -83143,7 +83379,7 @@
       "normalized_path": "/compromise/events",
       "path": "/compromise/events",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 191,
+      "route_line": 194,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -83181,7 +83417,7 @@
       "normalized_path": "/analytics/usage",
       "path": "/analytics/usage",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 192,
+      "route_line": 195,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -83217,7 +83453,7 @@
       "normalized_path": "/analytics/hotspots",
       "path": "/analytics/hotspots",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 193,
+      "route_line": 196,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -83255,7 +83491,7 @@
       "normalized_path": "/analytics/trends",
       "path": "/analytics/trends",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 194,
+      "route_line": 197,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -83290,7 +83526,7 @@
       "normalized_path": "/enterprise/dspm/findings",
       "path": "/enterprise/dspm/findings",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 195,
+      "route_line": 198,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -83325,7 +83561,7 @@
       "normalized_path": "/enterprise/dspm/events",
       "path": "/enterprise/dspm/events",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 196,
+      "route_line": 199,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -83378,7 +83614,7 @@
       "normalized_path": "/enterprise/compliance/dashboard",
       "path": "/enterprise/compliance/dashboard",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 197,
+      "route_line": 200,
       "service": "keycore",
       "service_external_package_calls": [
         "time.Now"
@@ -83454,7 +83690,7 @@
       "normalized_path": "/enterprise/cost/optimization",
       "path": "/enterprise/cost/optimization",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 198,
+      "route_line": 201,
       "service": "keycore",
       "service_external_package_calls": [
         "strings.HasPrefix",
@@ -95794,7 +96030,7 @@
   ],
   "service_counts": {
     "backend_routes": {
-      "audit": 34,
+      "audit": 35,
       "auth": 92,
       "autokey": 15,
       "certs": 78,
@@ -95809,7 +96045,7 @@
       "hsm-connector": 14,
       "hyok": 25,
       "keyaccess": 9,
-      "keycore": 191,
+      "keycore": 193,
       "kmip": 12,
       "policy": 12,
       "posture": 13,
@@ -95824,7 +96060,7 @@
     },
     "frontend_calls": {
       "$dynamic-service": 2,
-      "audit": 20,
+      "audit": 18,
       "auth": 49,
       "auth-edge": 4,
       "autokey": 11,
@@ -95839,7 +96075,7 @@
       "governance": 26,
       "hyok": 7,
       "keyaccess": 6,
-      "keycore": 82,
+      "keycore": 84,
       "kmip": 11,
       "posture": 10,
       "pqc": 8,
@@ -96109,6 +96345,20 @@
         "label": "Generic PKCS#11 HSM"
       }
     ],
+    "ops": [
+      {
+        "id": "status",
+        "label": "Status"
+      },
+      {
+        "id": "metrics",
+        "label": "Operation metrics"
+      },
+      {
+        "id": "inventory",
+        "label": "Key inventory"
+      }
+    ],
     "playbooks": [
       {
         "id": "overview",
@@ -96169,20 +96419,20 @@
     ]
   },
   "summary": {
-    "backend_routes": 948,
+    "backend_routes": 951,
     "backend_services": 27,
-    "button_inventory": 795,
+    "button_inventory": 794,
     "frontend_call_sites": 538,
-    "matched_frontend_call_sites": 507,
+    "matched_frontend_call_sites": 506,
     "nav_items": 25,
-    "request_flows": 948,
-    "request_flows_with_frontend": 513,
-    "request_flows_with_internal_package_calls": 211,
-    "request_flows_with_service_calls": 568,
-    "request_flows_with_store_calls": 682,
-    "subpane_groups": 14,
+    "request_flows": 951,
+    "request_flows_with_frontend": 512,
+    "request_flows_with_internal_package_calls": 212,
+    "request_flows_with_service_calls": 570,
+    "request_flows_with_store_calls": 683,
+    "subpane_groups": 15,
     "tab_components": 32,
-    "unmatched_frontend_call_sites": 31
+    "unmatched_frontend_call_sites": 32
   },
   "tabs": [
     {
@@ -96239,7 +96489,7 @@
       "support_files": []
     },
     {
-      "call_count": 100,
+      "call_count": 102,
       "component": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "group": "Keys & certificates",
       "id": "keys",
@@ -96261,7 +96511,7 @@
       ]
     },
     {
-      "call_count": 104,
+      "call_count": 106,
       "component": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "group": "Keys & certificates",
       "id": "certs",
@@ -96313,7 +96563,7 @@
       ]
     },
     {
-      "call_count": 77,
+      "call_count": 79,
       "component": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "group": "Data & integrations",
       "id": "vault",
@@ -96569,7 +96819,7 @@
       ]
     },
     {
-      "call_count": 51,
+      "call_count": 53,
       "component": "web/dashboard/src/components/v3/tabs/CryptoTab.tsx",
       "group": "UNLISTED",
       "id": "crypto",
@@ -96971,6 +97221,19 @@
     },
     {
       "dynamic": true,
+      "expression": "serviceRequest(\"audit\", `/ops-metrics/stats${q}`)",
+      "file": "web/dashboard/src/lib/opsMetrics.ts",
+      "line": 64,
+      "match_key": "audit|GET|/ops-metrics/stats{param}",
+      "method": "GET",
+      "normalized_path": "/ops-metrics/stats{param}",
+      "path": "/ops-metrics/stats{param}",
+      "service": "audit",
+      "service_key": "audit",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/${encodeURIComponent(String(alertID || \"\").trim())}/acknowledge?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
       "line": 311,
@@ -97096,7 +97359,7 @@
           {
             "expression": "serviceRequest(\"audit\", \"/audit/anchor\")",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 291,
+            "line": 300,
             "source": "serviceRequest"
           }
         ],
@@ -97131,7 +97394,7 @@
           {
             "expression": "serviceRequest(\"audit\", \"/audit/anchor\")",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 297,
+            "line": 306,
             "source": "serviceRequest"
           }
         ],
@@ -97183,7 +97446,7 @@
         "frontendSites": [],
         "handler": "handlePublish",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 117,
+        "handlerLine": 118,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext",
@@ -97221,13 +97484,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/events?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 134,
+            "line": 143,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleEvents",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 181,
+        "handlerLine": 182,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -97255,13 +97518,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 182,
+            "line": 191,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleEvent",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 200,
+        "handlerLine": 201,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -97286,7 +97549,7 @@
         "frontendSites": [],
         "handler": "handleSearch",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 218,
+        "handlerLine": 219,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -97317,13 +97580,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 229,
+            "line": 238,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleChainVerify",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 223,
+        "handlerLine": 224,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/tenantcheck.Enforce"
@@ -97379,13 +97642,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 245,
+            "line": 254,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleAuditConfig",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 248,
+        "handlerLine": 249,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -97493,7 +97756,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/ops-metrics/overview?window=${window}`)",
             "file": "web/dashboard/src/lib/opsMetrics.ts",
-            "line": 55,
+            "line": 28,
             "source": "serviceRequest"
           }
         ],
@@ -97546,18 +97809,11 @@
       {
         "complexity": 1,
         "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"audit\", `/ops-metrics/latency?window=${window}`)",
-            "file": "web/dashboard/src/lib/opsMetrics.ts",
-            "line": 60,
-            "source": "serviceRequest"
-          }
-        ],
+        "frontendSites": [],
         "handler": "handleGetLatencyPercentiles",
         "handlerFile": "services/audit/handler_ops_metrics.go",
         "handlerLine": 45,
-        "hasFrontend": true,
+        "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
         "normalizedPath": "/ops-metrics/latency",
@@ -97572,24 +97828,17 @@
           "GetLatencyPercentiles"
         ],
         "uiLabels": [
-          "Operations"
+          "API only"
         ]
       },
       {
         "complexity": 1,
         "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"audit\", `/ops-metrics/by-service?window=${window}`)",
-            "file": "web/dashboard/src/lib/opsMetrics.ts",
-            "line": 65,
-            "source": "serviceRequest"
-          }
-        ],
+        "frontendSites": [],
         "handler": "handleGetServiceStats",
         "handlerFile": "services/audit/handler_ops_metrics.go",
         "handlerLine": 62,
-        "hasFrontend": true,
+        "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
         "normalizedPath": "/ops-metrics/by-service",
@@ -97604,24 +97853,17 @@
           "GetServiceStats"
         ],
         "uiLabels": [
-          "Operations"
+          "API only"
         ]
       },
       {
         "complexity": 1,
         "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"audit\", `/ops-metrics/errors?window=${window}`)",
-            "file": "web/dashboard/src/lib/opsMetrics.ts",
-            "line": 70,
-            "source": "serviceRequest"
-          }
-        ],
+        "frontendSites": [],
         "handler": "handleGetErrorBreakdown",
         "handlerFile": "services/audit/handler_ops_metrics.go",
         "handlerLine": 79,
-        "hasFrontend": true,
+        "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
         "normalizedPath": "/ops-metrics/errors",
@@ -97636,7 +97878,7 @@
           "GetErrorBreakdown"
         ],
         "uiLabels": [
-          "Operations"
+          "API only"
         ]
       },
       {
@@ -97645,7 +97887,7 @@
         "frontendSites": [],
         "handler": "handleFIPSBoundary",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 263,
+        "handlerLine": 264,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -97960,13 +98202,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/investigate?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 173,
+            "line": 182,
             "source": "serviceRequest"
           }
         ],
         "handler": "investigate",
         "handlerFile": "services/audit/investigate.go",
-        "handlerLine": 197,
+        "handlerLine": 205,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -97988,11 +98230,36 @@
       {
         "complexity": 1,
         "externalPackages": [],
+        "frontendSites": [],
+        "handler": "opsStats",
+        "handlerFile": "services/audit/ops_stats.go",
+        "handlerLine": 190,
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/ops-metrics/stats",
+        "path": "/ops-metrics/stats",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "audit|GET|/ops-metrics/stats",
+        "sensitive": false,
+        "service": "audit",
+        "serviceCalls": [],
+        "storeCalls": [
+          "OpsStats"
+        ],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
         "frontendSites": [
           {
             "expression": "serviceRequest(\"audit\", `/audit/activity/stats?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 85,
+            "line": 91,
             "source": "serviceRequest"
           }
         ],
@@ -98026,7 +98293,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 221,
+            "line": 230,
             "source": "serviceRequest"
           }
         ],
@@ -98060,7 +98327,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/checkpoints?${tenantQuery(session)}&limit=${limit}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 305,
+            "line": 314,
             "source": "serviceRequest"
           }
         ],
@@ -122360,6 +122627,84 @@
         ]
       },
       {
+        "complexity": 2,
+        "externalPackages": [
+          "time.Now"
+        ],
+        "frontendSites": [
+          {
+            "expression": "apiRequest(`/inventory/stats?${q.toString()}`)",
+            "file": "web/dashboard/src/lib/keycore.ts",
+            "line": 1466,
+            "source": "keycore.apiRequest"
+          }
+        ],
+        "handler": "keyStats",
+        "handlerFile": "services/keycore/inventory_stats.go",
+        "handlerLine": 169,
+        "hasFrontend": true,
+        "internalPackages": [
+          "pkg/timebucket.Buckets",
+          "pkg/timebucket.Index"
+        ],
+        "method": "GET",
+        "normalizedPath": "/inventory/stats",
+        "path": "/inventory/stats",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|GET|/inventory/stats",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [
+          "KeyStats"
+        ],
+        "storeCalls": [],
+        "uiLabels": [
+          "Operations",
+          "Key Management",
+          "Certificates / PKI",
+          "+2 tabs"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [
+          "strconv.Atoi",
+          "strings.TrimSpace"
+        ],
+        "frontendSites": [
+          {
+            "expression": "apiRequest(`/inventory/stats/keys?${q.toString()}`)",
+            "file": "web/dashboard/src/lib/keycore.ts",
+            "line": 1480,
+            "source": "keycore.apiRequest"
+          }
+        ],
+        "handler": "keyStatsKeys",
+        "handlerFile": "services/keycore/inventory_stats.go",
+        "handlerLine": 183,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/inventory/stats/keys",
+        "path": "/inventory/stats/keys",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|GET|/inventory/stats/keys",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [
+          "KeysMatching"
+        ],
+        "storeCalls": [],
+        "uiLabels": [
+          "Operations",
+          "Key Management",
+          "Certificates / PKI",
+          "+2 tabs"
+        ]
+      },
+      {
         "complexity": 8,
         "externalPackages": [
           "time.Now"
@@ -129895,7 +130240,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-24T09:13:28Z",
+    "generatedAt": "2026-10-24T23:12:15Z",
     "methods": [
       "DELETE",
       "GET",
@@ -129934,9 +130279,9 @@
       "workload"
     ],
     "summary": {
-      "flows": 948,
-      "frontendBacked": 513,
-      "highRisk": 366,
+      "flows": 951,
+      "frontendBacked": 512,
+      "highRisk": 368,
       "services": 27
     }
   }

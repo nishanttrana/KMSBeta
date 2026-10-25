@@ -1444,3 +1444,40 @@ export async function listCanaryTrips(session: AuthSession, id: string): Promise
   const out = await apiRequest<{ items?: CanaryTrip[] }>(session, `/canary/keys/${encodeURIComponent(id)}/trips?${tenantQ(session)}`);
   return Array.isArray(out?.items) ? out.items : [];
 }
+
+// GET /inventory/stats (services/keycore/inventory_stats.go): the tenant's
+// keys that are not deleted, counted by keycore; series counts keys created
+// per pkg/timebucket bucket of the window. Needs key.inventory.read.
+export type KeyStatCount = { key: string; count: number };
+export type KeyStats = {
+  from: string;
+  to: string;
+  bucket_seconds: number;
+  total: number;
+  created: number;
+  by_state: KeyStatCount[];
+  by_algorithm: KeyStatCount[];
+  series: { start: string; count: number }[];
+};
+
+export async function getKeyStats(session: AuthSession, window: { from?: string }): Promise<KeyStats> {
+  const q = new URLSearchParams({ tenant_id: session.tenantId });
+  if (window.from) q.set("from", window.from);
+  const out = await apiRequest<{ stats?: KeyStats }>(session, `/inventory/stats?${q.toString()}`);
+  const st = out?.stats;
+  if (!st || !Array.isArray(st.by_state) || !Array.isArray(st.by_algorithm) || !Array.isArray(st.series)) {
+    throw new Error("keycore answered without key statistics");
+  }
+  return st;
+}
+
+// The keys behind one of those counts, with the predicate keycore counted with.
+export type KeyStatQuery = { state?: string; algorithm?: string; from?: string; to?: string };
+
+export async function listKeyStatKeys(session: AuthSession, query: KeyStatQuery, offset: number, limit: number): Promise<KeyItem[]> {
+  const q = new URLSearchParams({ tenant_id: session.tenantId, offset: String(offset), limit: String(limit) });
+  for (const [k, v] of Object.entries(query)) if (v) q.set(k, v);
+  const out = await apiRequest<{ items?: KeyItem[] }>(session, `/inventory/stats/keys?${q.toString()}`);
+  if (!Array.isArray(out?.items)) throw new Error("keycore answered without a key list");
+  return out.items;
+}

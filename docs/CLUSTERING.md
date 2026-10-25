@@ -185,7 +185,8 @@ entirely. So:
   column. The primary counts members' metered operations when its audit relay
   passes their replicated events, in the cursor's transaction, so its
   Overview > Operations > Operation metrics view is cluster-wide. A member forwards those reads
-  to the primary (`clusterroute.ForwardReads`, 2.3.0-beta), so every node
+  to the primary (`clusterroute.ForwardReads`, 2.3.0-beta; the chart
+  statistics `GET /ops-metrics/stats` too, 13.65.0-beta), so every node
   shows the cluster.
 
 Still open (slice 3b): the event-driven consumers that write replicated

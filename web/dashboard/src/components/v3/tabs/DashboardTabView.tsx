@@ -1,266 +1,192 @@
-// @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
+import type { ReactNode } from "react";
 import {
-  ArrowRight, BarChart3, Bell, CheckCircle2, ClipboardCheck,
-  Cpu, Database, FileText, Gauge, GitBranch, KeyRound, Lock,
-  ScrollText, Settings, ShieldCheck, TrendingDown, TrendingUp,
-  X, Zap
+  ArrowRight, Bell, CheckCircle2, ClipboardCheck, Cpu, Database, FileText, Gauge, GitBranch, KeyRound,
+  Lock, ScrollText, Settings, ShieldCheck, X, Zap, type LucideIcon
 } from "lucide-react";
-import { B, Btn, Card } from "../legacyPrimitives";
+import { B, Btn, Card, Stat } from "../legacyPrimitives";
 import { C } from "../theme";
 
-function statusTone(status: string) {
-  const s = String(status || "").toLowerCase();
+// Status view of Operations: what the platform runs on, the counts other
+// views own (each tile opens its home), what waits for the signed-in
+// person, and pinned views. Every figure is a service's answer; a source
+// that did not answer reads "unavailable", never 0.
+
+const WIDGET_CONF: Record<string, { icon: LucideIcon; label: string }> = {
+  keys: { icon: KeyRound, label: "Keys" },
+  certs: { icon: FileText, label: "Certificates" },
+  vault: { icon: Database, label: "Vault" },
+  secrets: { icon: Database, label: "Vault" },
+  alerts: { icon: Bell, label: "Alerts" },
+  audit: { icon: ScrollText, label: "Audit Log" },
+  posture: { icon: Gauge, label: "Posture" },
+  compliance: { icon: ClipboardCheck, label: "Compliance" },
+  cluster: { icon: GitBranch, label: "Cluster" },
+  approvals: { icon: CheckCircle2, label: "Approvals" },
+  hsm: { icon: Cpu, label: "HSM" },
+  admin: { icon: Settings, label: "Admin" },
+};
+
+const title: React.CSSProperties = { fontSize: 10.5, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: "var(--font-mono)" };
+
+const nodeTone = (status: string) => {
+  const s = status.toLowerCase();
   if (s.includes("online") || s.includes("running") || s.includes("ok") || s.includes("active")) return "green";
   if (s.includes("degraded") || s.includes("warn")) return "amber";
   if (s.includes("down") || s.includes("failed") || s.includes("error")) return "red";
-  return "blue";
-}
-
-function statusPill(label: string, tone: string, pulse = false) {
-  return <B c={tone as any} pulse={pulse}>{label}</B>;
-}
-
-const WIDGET_CONF: Record<string, { icon: any; label: string; color: string }> = {
-  keys: { icon: KeyRound, label: "Keys", color: C.accent },
-  certs: { icon: FileText, label: "Certificates", color: C.blue },
-  vault: { icon: Database, label: "Vault", color: C.purple },
-  secrets: { icon: Database, label: "Vault", color: C.purple },
-  alerts: { icon: Bell, label: "Alerts", color: C.red },
-  audit: { icon: ScrollText, label: "Audit Log", color: C.amber },
-  posture: { icon: Gauge, label: "Posture", color: C.green },
-  compliance: { icon: ClipboardCheck, label: "Compliance", color: C.blue },
-  cluster: { icon: GitBranch, label: "Cluster", color: C.accent },
-  approvals: { icon: CheckCircle2, label: "Approvals", color: C.amber },
-  governance: { icon: Settings, label: "Governance", color: C.purple },
-  reporting: { icon: BarChart3, label: "Reporting", color: C.green },
-  hsm: { icon: Cpu, label: "HSM", color: C.accent },
-  admin: { icon: Settings, label: "Admin", color: C.muted },
+  return "neutral";
 };
+
+// A tile that opens the view owning its number.
+const Tile = ({ to, onNavigate, children }: { to: string; onNavigate?: (id: string) => void; children: ReactNode }) => (
+  <div role="button" tabIndex={0} title="Open" onClick={() => onNavigate?.(to)} onKeyDown={(e) => { if (e.key === "Enter") onNavigate?.(to); }}
+    style={{ display: "flex", cursor: "pointer", borderRadius: "var(--radius-md)" }}>{children}</div>
+);
+
+const Cell = ({ label, value, note, tone }: { label: string; value: ReactNode; note?: ReactNode; tone?: string }) => (
+  <div style={{ minWidth: 0, padding: "12px 16px", borderRight: `1px solid ${C.border}` }}>
+    <div style={title}>{label}</div>
+    <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginTop: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={typeof value === "string" ? value : undefined}>{value}</div>
+    {note && <div style={{ marginTop: 5 }}>{tone ? <B c={tone}>{note}</B> : <span style={{ fontSize: 10.5, color: C.muted }}>{note}</span>}</div>}
+  </div>
+);
 
 export const DashboardTabView = (props: any) => {
   const {
-    homeSummary = {},
-    homeLoading = false,
-    approvalVoteBusy = "",
-    globalFipsEnabled = false,
-    fmtInt = (v: number) => String(v || 0),
-    fmtCompact = (v: number) => String(v || 0),
-    clusterNodes = [],
-    clusterSummary = { total_nodes: 0, online_nodes: 0, degraded_nodes: 0, down_nodes: 0 },
-    clusterLagText = "n/a",
-    cryptoLibraryLabel = "",
-    cryptoLibraryValidated = false,
-    homeSystemState = {},
-    modal = null,
-    setModal,
-    submitHomeApprovalVote,
-    promptUI,
-    pinnedTabs = [],
-    onNavigate,
-    onUnpinTab,
+    homeSummary = {}, homeLoading = false, approvalVoteBusy = "", globalFipsEnabled = false,
+    fmtInt = (v: number) => String(v || 0), fmtCompact = (v: number) => String(v || 0),
+    clusterNodes = [], clusterSummary = { total_nodes: 0, online_nodes: 0, degraded_nodes: 0, down_nodes: 0 }, clusterLagText = "n/a",
+    cryptoLibraryLabel = "", cryptoLibraryValidated = false, homeSystemState = {},
+    submitHomeApprovalVote, promptUI, pinnedTabs = [], onNavigate, onUnpinTab,
   } = props || {};
 
-  const pending = Array.isArray(homeSummary?.pendingApprovals) ? homeSummary.pendingApprovals : [];
-  const algos = Array.isArray(homeSummary?.algorithms) ? homeSummary.algorithms : [];
-  const nodes = clusterNodes;
-  const clusterTone = clusterSummary?.unavailable ? "amber" : clusterSummary?.down_nodes > 0 ? "red" : clusterSummary?.degraded_nodes > 0 ? "amber" : "green";
-  const complianceHasAssessment = Boolean(homeSummary?.complianceHasAssessment);
-  const complianceTrendPos = Number(homeSummary?.complianceDeltaWeek || 0) >= 0;
-  const alertTrendPos = Number(homeSummary?.criticalAlerts || 0) === 0;
+  const s = homeSummary;
+  const pending: any[] = Array.isArray(s?.pendingApprovals) ? s.pendingApprovals : [];
+  const nodes: any[] = Array.isArray(clusterNodes) ? clusterNodes : [];
+  // No nodes reported is not a healthy cluster: it carries no colour.
+  const clusterTone = clusterSummary?.unavailable ? "amber" : !Number(clusterSummary?.total_nodes) ? "neutral" : clusterSummary?.down_nodes > 0 ? "red" : clusterSummary?.degraded_nodes > 0 ? "amber" : "green";
+  const assessed = Boolean(s?.complianceHasAssessment);
   // A count whose source did not answer is null: shown as a dash, never 0.
   const num = (v: any) => (v == null ? "—" : fmtInt(v));
   const sub = (v: any, text: string) => (v == null ? (homeLoading ? "Loading…" : "Unavailable") : text);
-  const pinnedList = Array.isArray(pinnedTabs) ? pinnedTabs.filter((id: string) => id !== "home") : [];
+  const pinned: string[] = (Array.isArray(pinnedTabs) ? pinnedTabs : []).filter((id: string) => id !== "home");
 
-  const getWidgetPrimary = (tabId: string) => {
-    switch (tabId) {
-      case "keys": return num(homeSummary?.keys);
-      case "certs": return num(homeSummary?.certs);
-      case "vault": case "secrets": return num(homeSummary?.secrets);
-      case "alerts": return num(homeSummary?.alerts);
-      case "posture": return homeSummary?.postureRisk != null ? `${Number(homeSummary.postureRisk).toFixed(0)}%` : "—";
-      case "compliance": return complianceHasAssessment ? `${homeSummary?.complianceScore || 0}/100` : "Not assessed";
-      case "cluster": return clusterSummary?.unavailable ? "unavailable" : `${fmtInt(clusterSummary?.online_nodes || 0)}/${fmtInt(clusterSummary?.total_nodes || 0)}`;
-      case "approvals": case "governance": return fmtInt(homeSummary?.myPendingApprovals || 0);
-      default: return "—";
+  const widget = (id: string): [string, string] => {
+    switch (id) {
+      case "keys": return [num(s?.keys), sub(s?.keyGrowthWeek, `+${fmtInt(s?.keyGrowthWeek)} this week`)];
+      case "certs": return [num(s?.certs), sub(s?.expiring, Number(s?.expiring) > 0 ? `${fmtInt(s.expiring)} expiring` : "None expiring")];
+      case "vault": case "secrets": return [num(s?.secrets), "encrypted at rest"];
+      case "alerts": return [num(s?.alerts), sub(s?.criticalAlerts, `${fmtInt(s?.criticalAlerts)} critical`)];
+      case "compliance": return [assessed ? `${s?.complianceScore || 0}/100` : "Not assessed", assessed ? "latest assessment" : "No score yet"];
+      case "cluster": return [clusterSummary?.unavailable ? "unavailable" : `${fmtInt(clusterSummary?.online_nodes || 0)}/${fmtInt(clusterSummary?.total_nodes || 0)}`, `Lag: ${clusterLagText}`];
+      case "approvals": return [fmtInt(s?.myPendingApprovals || 0), "pending review"];
+      case "audit": return ["—", "Integrity in Checkpoints"];
+      case "hsm": return ["—", globalFipsEnabled ? "FIPS strict" : "Standard mode"];
+      default: return ["—", ""];
     }
   };
-
-  const getWidgetSecondary = (tabId: string) => {
-    switch (tabId) {
-      case "keys": return sub(homeSummary?.keyGrowthWeek, `+${fmtInt(homeSummary?.keyGrowthWeek)} this week`);
-      case "certs": return sub(homeSummary?.expiring, Number(homeSummary?.expiring) > 0 ? `${fmtInt(homeSummary.expiring)} expiring` : "None expiring");
-      case "vault": case "secrets": return "encrypted at rest";
-      case "alerts": return sub(homeSummary?.criticalAlerts, `${fmtInt(homeSummary?.criticalAlerts)} critical`);
-      case "audit": return "Integrity in Checkpoints";
-      case "posture": return "24h risk score";
-      case "compliance": return complianceHasAssessment ? `+${fmtInt(homeSummary?.complianceDeltaWeek || 0)} this week` : "No score yet";
-      case "cluster": return `Lag: ${clusterLagText}`;
-      case "approvals": case "governance": return "pending review";
-      case "hsm": return globalFipsEnabled ? "FIPS strict" : "Standard mode";
-      default: return "";
-    }
-  };
-
-  const getWidgetPrimaryColor = (tabId: string) => {
-    if (tabId === "alerts") return Number(homeSummary?.criticalAlerts || 0) > 0 ? C.red : C.amber;
-    if (tabId === "approvals" || tabId === "governance") return Number(homeSummary?.myPendingApprovals || 0) > 0 ? C.amber : C.green;
-    return (WIDGET_CONF[tabId] || WIDGET_CONF["keys"]).color;
-  };
-
-  const Kpi = ({ label, value, icon: KIcon, color, dim, delta, deltaColor, deltaIcon: DIcon, barPct }: any) => (
-    <div className="vecta-stat-card" style={{ position: "relative", overflow: "hidden", background: C.card, border: `1px solid ${C.border}`, borderRadius: "var(--radius-md)", padding: "16px 18px", boxShadow: "var(--shadow-sm)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ fontSize: 10, fontWeight: 600, color: C.muted, letterSpacing: 1.1, textTransform: "uppercase" }}>{label}</div>
-        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 4, background: dim, color }}><KIcon size={15} strokeWidth={2.2} /></span>
-      </div>
-      <div className="vk-num" style={{ fontSize: 34, fontWeight: 800, color: C.text, lineHeight: 1.05, marginTop: 8 }}>{value}</div>
-      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10.5, color: deltaColor, marginTop: 7, fontWeight: 500 }}>
-        {DIcon && <DIcon size={11} strokeWidth={2.2} />}
-        {delta}
-      </div>
-      {barPct != null && <div style={{ height: 3, borderRadius: 999, background: C.border, overflow: "hidden", marginTop: 10 }}>
-        <div style={{ height: "100%", width: `${barPct}%`, background: color, borderRadius: 4, transition: "width .6s cubic-bezier(.4,0,.2,1)" }} />
-      </div>}
-    </div>
-  );
 
   return (
-    <div style={{ display: "grid", gap: 14 }}>
-      {/* ── Hero header ── */}
-      <div style={{
-        position: "relative", overflow: "hidden",
-        borderRadius: "var(--radius-lg)", border: `1px solid ${C.border}`,
-        background: C.card,
-        padding: "20px 24px",
-      }}>
-        <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: C.text, letterSpacing: -0.4, lineHeight: 1.2 }}>
-              Security Operations Overview
-            </div>
-            <div style={{ fontSize: 11.5, color: C.dim, marginTop: 4 }}>
-              {new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
-              {homeLoading ? "  ·  refreshing…" : ""}
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 4, fontSize: 10.5, fontWeight: 700, color: globalFipsEnabled ? C.greenFg : C.amberFg, background: globalFipsEnabled ? C.greenDim : C.amberDim, border: `1px solid color-mix(in oklab, ${globalFipsEnabled ? C.green : C.amber} 30%, transparent)` }}>
-              <ShieldCheck size={12} strokeWidth={2.4} /> {globalFipsEnabled ? "FIPS 140-3 MODE" : "STANDARD MODE"}
-            </span>
-            <span title={cryptoLibraryLabel} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 4, fontSize: 10.5, fontWeight: 700, color: cryptoLibraryValidated ? C.accentFg : C.dim, background: C.accentDim, border: `1px solid color-mix(in oklab, ${C.accent} 25%, transparent)`, maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              <Cpu size={12} strokeWidth={2.4} /> {cryptoLibraryValidated ? "VALIDATED CRYPTO" : (cryptoLibraryLabel || "CRYPTO LIBRARY")}
-            </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 4, fontSize: 10.5, fontWeight: 700, color: (C as any)[`${clusterTone}Fg`], background: (C as any)[`${clusterTone}Dim`], border: `1px solid color-mix(in oklab, ${(C as any)[clusterTone]} 30%, transparent)` }}>
-              <GitBranch size={12} strokeWidth={2.4} /> {clusterSummary?.unavailable ? "CLUSTER unavailable" : `CLUSTER ${fmtInt(clusterSummary.online_nodes)}/${fmtInt(clusterSummary.total_nodes)}`}
-            </span>
-          </div>
+    <div style={{ display: "grid", gap: 12 }}>
+      {/* Runtime: what every operation runs on. */}
+      <Card style={{ padding: 0 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))" }}>
+          <Cell label="FIPS mode" value={globalFipsEnabled ? "Strict (FIPS 140-3)" : "Standard"} note={globalFipsEnabled ? "approved algorithms only" : "all algorithms"} />
+          <Cell label="Crypto module" value={cryptoLibraryLabel} note={cryptoLibraryValidated ? "validated" : "not validated"} tone={cryptoLibraryValidated ? "green" : "amber"} />
+          <Cell label="TLS" value={String(homeSystemState?.fips_tls_profile || "not reported")} />
+          <Cell label="RNG" value={String(homeSystemState?.fips_rng_mode || "not reported")} />
+          <Cell label="Cluster" value={clusterSummary?.unavailable ? "unavailable" : `${fmtInt(clusterSummary.online_nodes)}/${fmtInt(clusterSummary.total_nodes)} online`}
+            note={clusterSummary?.unavailable ? "did not answer" : `lag ${clusterLagText}`} tone={clusterTone} />
         </div>
-      </div>
+      </Card>
 
-      {/* Pending Approvals Banner */}
-      {Number(homeSummary?.myPendingApprovals || 0) > 0 && (
-        <Card style={{ borderColor: C.amber, background: C.amberDim }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-              <Bell size={14} color={C.amber} />
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 11, color: C.text, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {`You have ${fmtInt(homeSummary.myPendingApprovals)} pending approval${Number(homeSummary.myPendingApprovals) === 1 ? "" : "s"}.`}
-                </div>
-                <div style={{ fontSize: 10, color: C.dim }}>
-                  {`Review below or open Governance > Approvals${homeSummary.approverIdentity ? ` as ${homeSummary.approverIdentity}` : ""}.`}
-                </div>
-              </div>
-            </div>
-            <B c="amber" pulse={true}>Action Required</B>
-          </div>
-        </Card>
+      {Number(s?.myPendingApprovals || 0) > 0 && (
+        <Banner icon={Bell} text={`${fmtInt(s.myPendingApprovals)} approval${Number(s.myPendingApprovals) === 1 ? "" : "s"} waiting for you`}
+          action={<Btn small onClick={() => onNavigate?.("approvals")}>Approvals <ArrowRight size={12} /></Btn>} />
+      )}
+      {Number(s?.expiring || 0) > 0 && (
+        <Banner icon={FileText} text={`${fmtInt(s.expiring)} certificate${Number(s.expiring) === 1 ? "" : "s"} expiring within ${fmtInt(s.alertDays || 30)} days`}
+          action={<Btn small onClick={() => onNavigate?.("certs/cert-renewals")}>Renewals <ArrowRight size={12} /></Btn>} />
       )}
 
-      {/* KPI hero cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
-        <Kpi label="Total Keys" value={num(homeSummary.keys)} icon={KeyRound}
-          color={C.accentFg} dim={C.accentDim}
-          deltaIcon={homeSummary.keyGrowthWeek == null ? undefined : TrendingUp}
-          deltaColor={homeSummary.keyGrowthWeek == null ? C.dim : C.greenFg}
-          delta={sub(homeSummary.keyGrowthWeek, `+${fmtInt(homeSummary.keyGrowthWeek)} this week`)}
-          />
-        <Kpi label="Ops / Day" value={homeSummary.opsPerDay == null ? "—" : fmtCompact(homeSummary.opsPerDay)} icon={Zap}
-          color={C.greenFg} dim={C.greenDim} deltaColor={C.dim}
-          delta={homeSummary.opsPerDay == null ? "Unavailable" : homeSummary.opsWeekTotal == null ? "Last 24 hours" : `${fmtCompact(homeSummary.opsWeekTotal)} in the last 7 days`}
-          />
-        <Kpi label="Compliance" value={complianceHasAssessment ? `${homeSummary.complianceScore}` : "—"} icon={ShieldCheck}
-          color={C.blueFg} dim={C.blueDim}
-          deltaIcon={complianceHasAssessment ? (complianceTrendPos ? TrendingUp : TrendingDown) : undefined}
-          deltaColor={complianceHasAssessment ? (complianceTrendPos ? C.greenFg : C.redFg) : C.dim}
-          delta={complianceHasAssessment ? `${homeSummary.complianceDeltaWeek >= 0 ? "+" : ""}${fmtInt(homeSummary.complianceDeltaWeek)} this week · score /100` : "Not assessed"}
-          barPct={complianceHasAssessment ? Math.max(0, Math.min(100, Number(homeSummary?.complianceScore || 0))) : undefined} />
-        <Kpi label="Open Alerts" value={num(homeSummary.alerts)} icon={Bell}
-          color={Number(homeSummary?.criticalAlerts || 0) > 0 ? C.redFg : C.amberFg}
-          dim={Number(homeSummary?.criticalAlerts || 0) > 0 ? C.redDim : C.amberDim}
-          deltaIcon={homeSummary.criticalAlerts == null ? undefined : alertTrendPos ? TrendingDown : TrendingUp}
-          deltaColor={homeSummary.criticalAlerts == null ? C.dim : alertTrendPos ? C.greenFg : C.redFg}
-          delta={sub(homeSummary.criticalAlerts, `${fmtInt(homeSummary.criticalAlerts)} critical`)}
-          />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 10 }}>
+        <Tile to="ops/inventory" onNavigate={onNavigate}>
+          <Stat l="Keys" v={num(s?.keys)} s={sub(s?.keyGrowthWeek, `+${fmtInt(s?.keyGrowthWeek)} created this week`)} i={KeyRound} />
+        </Tile>
+        <Tile to="ops/metrics" onNavigate={onNavigate}>
+          <Stat l="Operations · 24h" v={s?.opsPerDay == null ? "—" : fmtCompact(s.opsPerDay)} s={s?.opsPerDay == null ? (homeLoading ? "Loading…" : "Unavailable") : s?.opsWeekTotal == null ? "last 24 hours" : `${fmtCompact(s.opsWeekTotal)} in 7 days`} i={Zap} />
+        </Tile>
+        <Tile to="compliance" onNavigate={onNavigate}>
+          <Stat l="Compliance" v={assessed ? `${s.complianceScore}/100` : "Not assessed"} s={assessed ? `${s.complianceDeltaWeek >= 0 ? "+" : ""}${fmtInt(s.complianceDeltaWeek)} since the previous assessment` : "no assessment yet"} i={ShieldCheck} />
+        </Tile>
+        <Tile to="alerts" onNavigate={onNavigate}>
+          <Stat l="Open alerts" v={num(s?.alerts)} s={sub(s?.criticalAlerts, `${fmtInt(s?.criticalAlerts)} critical`)} c={Number(s?.criticalAlerts || 0) > 0 ? "red" : Number(s?.alerts || 0) > 0 ? "amber" : "accent"} i={Bell} />
+        </Tile>
       </div>
 
-      {/* Expiring Certificates Warning */}
-      {Number(homeSummary?.expiring || 0) > 0 && (
-        <Card style={{ borderColor: C.amber, background: C.amberDim }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <FileText size={14} color={C.amber} />
-              <div>
-                <div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>
-                  {`${fmtInt(homeSummary.expiring)} certificate${Number(homeSummary.expiring) === 1 ? "" : "s"} expiring within ${fmtInt(homeSummary.alertDays || 30)} days`}
-                </div>
-                <div style={{ fontSize: 10, color: C.dim }}>Renew before expiry to avoid service disruption.</div>
-              </div>
-            </div>
-            <Btn small onClick={() => onNavigate?.("certs")}>View Certificates →</Btn>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 12 }}>
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={title}>Cluster nodes</span>
+            <Btn small onClick={() => onNavigate?.("cluster")}>Cluster <ArrowRight size={12} /></Btn>
           </div>
-        </Card>
-      )}
-
-      {/* Pinned Tab Widgets */}
-      {pinnedList.length > 0 && (
-        <div>
-          <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
-            <Lock size={10} color={C.muted} />
-            Pinned Views
-            <span style={{ marginLeft: "auto", fontSize: 10, color: C.dim }}>{`${pinnedList.length} pinned`}</span>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(190px,1fr))", gap: 10 }}>
-            {pinnedList.map((tabId: string) => {
-              const conf = WIDGET_CONF[tabId] || { icon: Settings, label: tabId, color: C.muted };
-              const TabIcon = conf.icon;
-              const primary = getWidgetPrimary(tabId);
-              const secondary = getWidgetSecondary(tabId);
-              const primaryColor = getWidgetPrimaryColor(tabId);
-              return (
-                <Card key={`pinned-${tabId}`}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                      <TabIcon size={11} color={conf.color} />
-                      <span style={{ fontSize: 10, color: C.muted, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 600 }}>{conf.label}</span>
-                    </div>
-                    <button
-                      onClick={() => onUnpinTab?.(tabId)}
-                      title={`Unpin ${conf.label}`}
-                      style={{ background: "transparent", border: "none", cursor: "pointer", color: C.muted, padding: 2, display: "flex", alignItems: "center", borderRadius: 4 }}
-                    >
-                      <X size={11} strokeWidth={2} />
-                    </button>
+          {clusterSummary?.unavailable ? <div style={{ fontSize: 11, color: C.muted }}>Cluster status unavailable (the cluster service did not answer).</div>
+            : !nodes.length ? <div style={{ fontSize: 11, color: C.muted }}>No nodes reported.</div>
+              : nodes.map((n: any) => (
+                <div key={String(n?.id || n?.name)} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 8, alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.border}` }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 12, color: C.text, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(n?.name || n?.id || "node")}</div>
+                    <div style={{ fontSize: 10.5, color: C.muted, fontFamily: "var(--font-mono)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(n?.address || n?.endpoint || "n/a")}</div>
                   </div>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: primaryColor, fontFamily: "var(--font-mono)", lineHeight: 1.15, marginBottom: 4 }}>{primary}</div>
-                  <div style={{ fontSize: 10, color: C.dim, marginBottom: 12 }}>{secondary}</div>
-                  <button
-                    onClick={() => onNavigate?.(tabId)}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 3, padding: "4px 10px", cursor: "pointer", color: C.accentFg, fontSize: 10, fontWeight: 600, transition: "border-color .15s" }}
-                  >
-                    Open <ArrowRight size={10} strokeWidth={2} />
-                  </button>
+                  <B c="neutral">{String(n?.role || "follower")}</B>
+                  <B c={nodeTone(String(n?.status || "unknown"))}>{String(n?.status || "unknown")}</B>
+                </div>
+              ))}
+        </Card>
+
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={title}>Waiting for your approval</span>
+            <B c={pending.length ? "amber" : "neutral"}>{fmtInt(s?.myPendingApprovals || 0)}</B>
+          </div>
+          {!pending.length ? <div style={{ fontSize: 11, color: C.muted }}>Nothing is waiting for you.</div> : pending.slice(0, 4).map((item: any) => {
+            const id = String(item?.id || "");
+            const busy = approvalVoteBusy === `${id}:approved` || approvalVoteBusy === `${id}:denied` || homeLoading;
+            return (
+              <div key={id} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8, alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{String(item?.action || "approval").replace(/^key\./, "").replaceAll("_", " ")}</div>
+                  <div style={{ fontSize: 10.5, color: C.muted, fontFamily: "var(--font-mono)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {`${String(item?.target_id || "-")} · ${Number(item?.current_approvals || 0)}/${Number(item?.required_approvals || 1)} votes`}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <Btn small primary onClick={() => void submitHomeApprovalVote?.(item, "approved")} disabled={busy}>Approve</Btn>
+                  <Btn small danger onClick={() => void submitHomeApprovalVote?.(item, "denied")} disabled={busy}>Deny</Btn>
+                </div>
+              </div>
+            );
+          })}
+        </Card>
+      </div>
+
+      {pinned.length > 0 && (
+        <div>
+          <div style={{ ...title, display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}><Lock size={11} /> Pinned views</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(190px,1fr))", gap: 10 }}>
+            {pinned.map((id) => {
+              const conf = WIDGET_CONF[id] || { icon: Settings, label: id };
+              const Icon = conf.icon;
+              const [value, note] = widget(id);
+              return (
+                <Card key={id}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ ...title, display: "inline-flex", alignItems: "center", gap: 6 }}><Icon size={12} />{conf.label}</span>
+                    <button onClick={() => onUnpinTab?.(id)} title={`Unpin ${conf.label}`} aria-label={`Unpin ${conf.label}`}
+                      style={{ background: "transparent", border: "none", cursor: "pointer", color: C.muted, padding: 2, display: "flex" }}><X size={12} /></button>
+                  </div>
+                  <div className="vk-num" style={{ fontSize: 22, fontWeight: 600, color: C.text, marginTop: 6 }}>{value}</div>
+                  <div style={{ fontSize: 10.5, color: C.muted, margin: "2px 0 10px" }}>{note}</div>
+                  <Btn small onClick={() => onNavigate?.(id)}>Open <ArrowRight size={12} /></Btn>
                 </Card>
               );
             })}
@@ -268,135 +194,14 @@ export const DashboardTabView = (props: any) => {
         </div>
       )}
 
-      {/* Infrastructure Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 10 }}>
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>
-              <ShieldCheck size={12} color={C.dim} />
-              FIPS Mode
-            </div>
-            {statusPill(globalFipsEnabled ? "STRICT" : "STANDARD", globalFipsEnabled ? "green" : "blue", true)}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>Go Crypto</div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: C.text, lineHeight: 1.3, wordBreak: "break-word" }}>{cryptoLibraryLabel}</div>
-              <div style={{ fontSize: 10, color: cryptoLibraryValidated ? C.greenFg : C.amberFg, marginTop: 3 }}>{cryptoLibraryValidated ? "FIPS validated build" : "Non-validated build"}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>TLS</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{String(homeSystemState?.fips_tls_profile || "not reported")}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>RNG</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{String(homeSystemState?.fips_rng_mode || "not reported")}</div>
-            </div>
-          </div>
-        </Card>
-
-      </div>
-
-      {/* Algorithm Distribution + Cluster + Approvals */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10 }}>
-        <Card>
-          <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>Algorithm Distribution</div>
-          <div style={{ display: "grid", gap: 8 }}>
-            {algos.map((item: any) => {
-              const pct = Math.max(0, Math.min(100, Number(item?.pct || 0)));
-              return (
-                <div key={`algo-${String(item?.name || "")}`} style={{ display: "grid", gridTemplateColumns: "130px 1fr 42px", alignItems: "center", gap: 10 }}>
-                  <div style={{ fontSize: 11, color: C.text, textAlign: "right" }}>{String(item?.name || "-")}</div>
-                  <div style={{ height: 10, borderRadius: 999, background: C.border, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${pct}%`, background: String(item?.color || C.accent), borderRadius: 4, transition: "width .4s" }} />
-                  </div>
-                  <div style={{ fontSize: 11, color: String(item?.color || C.accentFg), fontWeight: 700, textAlign: "right" }}>{`${pct}%`}</div>
-                </div>
-              );
-            })}
-            {!algos.length && <div style={{ fontSize: 10, color: C.muted }}>{homeSummary?.keys == null ? "Unavailable" : "No keys yet."}</div>}
-          </div>
-        </Card>
-
-        <div style={{ display: "grid", gap: 10 }}>
-          <Card>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>Cluster</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                {Number(clusterSummary?.degraded_nodes || 0) > 0 && (
-                  <span style={{ padding: "2px 6px", borderRadius: 4, background: C.amberDim, color: C.amberFg, fontSize: 10, fontWeight: 700 }}>
-                    {`${fmtInt(clusterSummary.degraded_nodes)} degraded`}
-                  </span>
-                )}
-                <B c={clusterTone}>
-                  {clusterSummary?.unavailable ? "unavailable" : `${fmtInt(clusterSummary?.online_nodes || 0)}/${fmtInt(clusterSummary?.total_nodes || 0)}`}
-                </B>
-              </div>
-            </div>
-            <div style={{ display: "grid", gap: 6 }}>
-              {nodes.map((node: any) => {
-                const tone = statusTone(String(node?.status || "unknown"));
-                const dotColor = (C as any)[tone] || C.blue;
-                const pillBg = (C as any)[`${tone}Dim`] || C.blueDim;
-                const roleColor = String(node?.role || "") === "leader" ? C.green : C.accent;
-                const roleBg = String(node?.role || "") === "leader" ? C.greenDim : C.accentDim;
-                return (
-                  <div key={`cluster-${String(node?.id || node?.name || "node")}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.border}` }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 12, color: C.text, display: "inline-flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ width: 9, height: 9, borderRadius: 999, background: dotColor, display: "inline-block", flexShrink: 0, animation: tone === "red" ? "none" : "pulse 1.8s infinite" }} />
-                        <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 130 }}>{String(node?.name || node?.id || "node")}</span>
-                        <span style={{ padding: "2px 6px", borderRadius: 4, background: pillBg, color: dotColor, fontSize: 10, fontWeight: 700, textTransform: "uppercase", whiteSpace: "nowrap" }}>{String(node?.status || "unknown")}</span>
-                      </div>
-                      <div style={{ fontSize: 10, color: C.dim, fontFamily: "var(--font-mono)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {String(node?.address || node?.endpoint || "n/a")}
-                      </div>
-                    </div>
-                    <div style={{ padding: "3px 8px", borderRadius: 4, background: roleBg, color: roleColor, fontSize: 10, fontWeight: 700, display: "inline-flex", alignItems: "center", textTransform: "capitalize", whiteSpace: "nowrap", flexShrink: 0, marginLeft: 6 }}>
-                      {String(node?.role || "follower")}
-                    </div>
-                  </div>
-                );
-              })}
-              {!nodes.length && !clusterSummary?.unavailable && <div style={{ fontSize: 10, color: C.muted }}>No nodes reported.</div>}
-            </div>
-            <div style={{ fontSize: 10, color: C.dim, marginTop: 10, fontFamily: "var(--font-mono)" }}>
-              {clusterSummary?.unavailable ? "Cluster status unavailable (cluster service did not answer)" : `Lag: ${clusterLagText} | Nodes: ${fmtInt(clusterSummary.total_nodes)} | Quorum: ${fmtInt(clusterSummary.online_nodes)}/${fmtInt(clusterSummary.total_nodes)}`}
-            </div>
-          </Card>
-
-          <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>My Pending Approvals</div>
-              <B c={Number(homeSummary?.myPendingApprovals || 0) > 0 ? "amber" : "green"} pulse={Number(homeSummary?.myPendingApprovals || 0) > 0}>
-                {fmtInt(homeSummary?.myPendingApprovals || 0)}
-              </B>
-            </div>
-            <div style={{ display: "grid", gap: 8 }}>
-              {pending.slice(0, 4).map((item: any) => {
-                const reqID = String(item?.id || "");
-                return (
-                  <div key={`home-approval-${reqID}`} style={{ border: `1px solid ${C.border}`, borderRadius: 4, padding: 8 }}>
-                    <div style={{ fontSize: 10, color: C.text, fontWeight: 700, marginBottom: 3 }}>
-                      {String(item?.action || "approval").replace(/^key\./, "").replaceAll("_", " ")}
-                    </div>
-                    <div style={{ fontSize: 10, color: C.dim, marginBottom: 6 }}>
-                      {`Target: ${String(item?.target_id || "-")} | Votes ${Number(item?.current_approvals || 0)}/${Number(item?.required_approvals || 1)}`}
-                    </div>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <Btn small primary onClick={() => void submitHomeApprovalVote(item, "approved")} disabled={approvalVoteBusy === `${reqID}:approved` || approvalVoteBusy === `${reqID}:denied` || homeLoading}>Approve</Btn>
-                      <Btn small danger onClick={() => void submitHomeApprovalVote(item, "denied")} disabled={approvalVoteBusy === `${reqID}:approved` || approvalVoteBusy === `${reqID}:denied` || homeLoading}>Deny</Btn>
-                    </div>
-                  </div>
-                );
-              })}
-              {!pending.length && <div style={{ fontSize: 10, color: C.muted }}>No pending approvals assigned to this user.</div>}
-            </div>
-          </Card>
-        </div>
-      </div>
-
       {promptUI}
     </div>
   );
 };
+
+const Banner = ({ icon: Icon, text, action }: { icon: LucideIcon; text: string; action: ReactNode }) => (
+  <div data-keep style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 14px", borderRadius: "var(--radius-md)", border: `1px solid ${C.border}`, background: C.amberDim }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 600, color: C.text }}><Icon size={14} color={C.amberFg} />{text}</span>
+    {action}
+  </div>
+);

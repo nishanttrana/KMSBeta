@@ -141,7 +141,7 @@ const (
 var ForwardReads = map[string][]string{
 	"kms-audit": {
 		"GET /ops-metrics/overview", "GET /ops-metrics/timeseries", "GET /ops-metrics/latency",
-		"GET /ops-metrics/by-service", "GET /ops-metrics/errors",
+		"GET /ops-metrics/by-service", "GET /ops-metrics/errors", "GET /ops-metrics/stats",
 	},
 }
 

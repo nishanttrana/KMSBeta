@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { AuthSession } from "../../../lib/auth";
 import { getOverview } from "../../../lib/opsMetrics";
-import { listKeys } from "../../../lib/keycore";
+import { getKeyStats } from "../../../lib/keycore";
 import { getCertExpiryAlertPolicy, getCertSummary } from "../../../lib/certs";
 import { listSecrets } from "../../../lib/secrets";
 import { getUnreadAlertCounts } from "../../../lib/reporting";
@@ -14,9 +14,9 @@ import {
   listGovernanceRequests,
   voteGovernanceRequest
 } from "../../../lib/governance";
-import { Tabs, usePromptDialog } from "../legacyPrimitives";
+import { windowFrom } from "../chartDrill";
+import { usePromptDialog } from "../legacyPrimitives";
 import { errMsg, isFipsModeEnabled } from "../runtimeUtils";
-import { C } from "../theme";
 import { DashboardTabView } from "./DashboardTabView";
 import { KeyInventoryPanel } from "./KeyInventoryPanel";
 import { OpsMetricsPanel } from "./OpsMetricsPanel";
@@ -28,11 +28,23 @@ type DashboardTabProps = {
   pinnedTabs?: string[];
   onTogglePin?: (tabId: string) => void;
   onNavigate?: (tabId: string) => void;
+  // Opens a module with its page search set (Key Management on one key).
+  onSearchIn?: (target: string, text: string) => void;
+  // The sidebar sub-option: status, metrics or inventory (13.65.0-beta;
+  // they were a tab strip in the page).
+  subView?: string;
 };
-const VIEWS=["Status","Key inventory","Operation metrics"];
-export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNavigate}: DashboardTabProps)=>{
-  const [view,setView]=useState("Status");
-  const [modal,setModal]=useState<string|null>(null);
+
+// Operations: Status, Operation metrics and Key inventory.
+export const DashboardTab=(props: DashboardTabProps)=>{
+  const {session,subView,onSearchIn}=props;
+  if(!session) return null;
+  if(subView==="metrics") return <OpsMetricsPanel session={session}/>;
+  if(subView==="inventory") return <KeyInventoryPanel session={session} onOpenKey={(id)=>onSearchIn?.("keys",id)}/>;
+  return <OpsStatus {...props}/>;
+};
+
+const OpsStatus=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNavigate}: DashboardTabProps)=>{
   const [homeLoading,setHomeLoading]=useState(false);
   const [approvalVoteBusy,setApprovalVoteBusy]=useState("");
   const [homeRefreshNonce,setHomeRefreshNonce]=useState(0);
@@ -59,8 +71,7 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     cryptoLibraryValidated:false,
     clusterNodes:[],
     clusterSummary:{total_nodes:0,online_nodes:0,degraded_nodes:0,down_nodes:0},
-    clusterLagSec:null,
-    algorithms:[]
+    clusterLagSec:null
   });
   const globalFipsEnabled=isFipsModeEnabled(fipsMode);
   const fmtInt=(value:number)=>Number(value||0).toLocaleString("en-US");
@@ -76,38 +87,6 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
       return `${(n/1_000).toFixed(1).replace(/\.0$/,"")}K`;
     }
     return String(n);
-  };
-  const normalizeAlgoLabel=(raw:any)=>{
-    const src=String(raw||"").trim();
-    const upper=src.toUpperCase();
-    if(!upper){
-      return "Other";
-    }
-    if(upper.includes("AES")&&upper.includes("GCM")&&upper.includes("256")){
-      return "AES-256-GCM";
-    }
-    if(upper.includes("RSA")&&upper.includes("4096")){
-      return "RSA-4096";
-    }
-    if((upper.includes("ECDSA")||upper.includes("EC"))&&upper.includes("P384")){
-      return "ECDSA-P384";
-    }
-    if(upper.includes("ML-KEM")&&upper.includes("768")){
-      return "ML-KEM-768";
-    }
-    if(upper.includes("ED25519")){
-      return "Ed25519";
-    }
-    if(upper.includes("AES")){
-      return "AES";
-    }
-    if(upper.includes("RSA")){
-      return "RSA";
-    }
-    if(upper.includes("ECDSA")){
-      return "ECDSA";
-    }
-    return src.length>24?`${src.slice(0,24)}...`:src;
   };
   const allowedApproversForRequest=(requestItem:any,policyItems:any[])=>{
     const seen=new Set<string>();
@@ -150,8 +129,7 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     systemState:{},
     clusterNodes:[],
     clusterSummary:{total_nodes:0,online_nodes:0,degraded_nodes:0,down_nodes:0},
-    clusterLagSec:null,
-    algorithms:[]
+    clusterLagSec:null
   });
 
   useEffect(()=>{
@@ -164,8 +142,9 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
       setHomeLoading(true);
       try{
         const [keys,secretItems,certSummary,counts,policy,pendingRequests,governancePolicies,governanceSettings,clusterOverview,governanceSystemState,complianceAssessment,complianceHistory,opsDay,opsWeek]=await Promise.all([
-          // A failed source is null and shows "unavailable", never 0.
-          listKeys(session).catch(()=>null),
+          // A failed source is null and shows "unavailable", never 0. Keys
+          // are counted by keycore, never over a list fetched here.
+          getKeyStats(session,{from:windowFrom("7d")}).catch(()=>null),
           listSecrets(session).catch(()=>null),
           getCertSummary(session).catch(()=>null),
           getUnreadAlertCounts(session).catch(()=>null),
@@ -183,16 +162,12 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
         if(cancelled){
           return;
         }
-        const keyItems=Array.isArray(keys)?keys:[];
-        const keyCount=keyItems.length;
         // Certificate counts come from the certs service over every
         // certificate; counting a capped list here showed 500 (13.21.0-beta).
         const alertDays=certSummary?Math.max(1,Number(certSummary.alert_days||30)):Math.max(1,Math.min(3650,Number(policy?.days_before||30)));
-        const now=Date.now();
         const unreadTotal=counts?Object.values(counts).reduce((sum:any,val:any)=>sum+Math.max(0,Number(val||0)),0):null;
         const criticalAlerts=counts?Math.max(0,Number(counts.critical||0)):null;
-        const weekAgo=now-7*24*60*60*1000;
-        const keyGrowthWeek=!Array.isArray(keys)?null:keyItems.filter((k:any)=>new Date(String(k?.created_at||"")).getTime()>=weekAgo).length;
+        const keyGrowthWeek=keys?keys.created:null;
         // Metered cryptographic operations (the Operation metrics tab's source).
         const opsPerDay=opsDay?Math.max(0,Number(opsDay.total_ops||0)):null;
         const opsWeekTotal=opsWeek?Math.max(0,Number(opsWeek.total_ops||0)):null;
@@ -223,40 +198,6 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
           }
           return Math.round(latest-previous);
         })();
-
-        const algoBuckets:any={};
-        for(const item of keyItems){
-          const label=normalizeAlgoLabel((item as any)?.algorithm||(item as any)?.type||"");
-          algoBuckets[label]=(Number(algoBuckets[label]||0)+1);
-        }
-        const algoTotal=Object.values(algoBuckets).reduce((sum:any,val:any)=>sum+Number(val||0),0) as number;
-        const palette=[C.accent,C.blue,C.purple,C.green,C.amber];
-        const algorithms=algoTotal>0
-          ? (()=>{
-              const ranked=Object.entries(algoBuckets).sort((a:any,b:any)=>Number(b[1]||0)-Number(a[1]||0));
-              const top=ranked.slice(0,5).map((entry:any,idx:number)=>({
-                name:String(entry[0]||"Other"),
-                count:Number(entry[1]||0),
-                color:palette[idx]||C.accent
-              }));
-              const used=top.reduce((sum:number,item:any)=>sum+item.count,0);
-              const rest=Math.max(0,Number(algoTotal)-used);
-              const mapped=top.map((item:any)=>({
-                name:item.name,
-                pct:Math.round((item.count/Number(algoTotal||1))*100),
-                color:item.color
-              }));
-              if(rest>0){
-                mapped.push({name:"Other",pct:Math.round((rest/Number(algoTotal||1))*100),color:C.muted});
-              }
-              const totalPct=mapped.reduce((sum:number,item:any)=>sum+Number(item.pct||0),0);
-              if(mapped.length&&totalPct!==100&&mapped[0]){
-                const first:any=mapped[0];
-                first.pct=Math.max(0,Number(first.pct||0)+(100-totalPct));
-              }
-              return mapped;
-            })()
-          : [];
 
         const policyItems=(Array.isArray(governancePolicies)?governancePolicies:[]);
         const pendingItems=(Array.isArray(pendingRequests)?pendingRequests:[]);
@@ -347,7 +288,7 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
 
 
         setHomeSummary({
-          keys:Array.isArray(keys)?keyCount:null,
+          keys:keys?keys.total:null,
           secrets:Array.isArray(secretItems)?secretItems.length:null,
           certs:certSummary?certSummary.total:null,
           alerts:unreadTotal,
@@ -371,8 +312,7 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
             : {},
           clusterNodes,
           clusterSummary,
-          clusterLagSec,
-          algorithms
+          clusterLagSec
         });
       }catch(error){
         if(!cancelled){
@@ -443,15 +383,7 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     ? homeSummary.systemState
     : {};
 
-  if(view!=="Status"){
-    return <div>
-      <Tabs tabs={VIEWS} active={view} onChange={setView}/>
-      {view==="Key inventory"?<KeyInventoryPanel session={session}/>:<OpsMetricsPanel session={session}/>}
-    </div>;
-  }
-  return <div>
-    <Tabs tabs={VIEWS} active={view} onChange={setView}/>
-    <DashboardTabView
+  return <DashboardTabView
     homeSummary={homeSummary}
     homeLoading={homeLoading}
     approvalVoteBusy={approvalVoteBusy}
@@ -464,13 +396,10 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     cryptoLibraryLabel={cryptoLibraryLabel}
     cryptoLibraryValidated={cryptoLibraryValidated}
     homeSystemState={homeSystemState}
-    modal={modal}
-    setModal={setModal}
     submitHomeApprovalVote={submitHomeApprovalVote}
     promptUI={promptDialog.ui}
     pinnedTabs={pinnedTabs||[]}
     onNavigate={onNavigate}
     onUnpinTab={onTogglePin}
-    />
-  </div>;
+    />;
 };

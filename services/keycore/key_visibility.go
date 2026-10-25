@@ -186,6 +186,9 @@ func (h *Handler) inventoryRouter(audit route.Emitter) *route.Router {
 	r.Handle("GET /inventory/dependencies", route.Spec{Action: "inventory_dependencies_read", Permission: permInventoryRead, Resource: "key_inventory"}, legacy(h.handleListKeyDependencies))
 	r.Handle("GET /rotation/analytics", route.Spec{Action: "rotation_analytics_read", Permission: permInventoryRead, Resource: "key_inventory"}, legacy(h.handleGetRotationAnalytics))
 	r.Handle("GET /rotation/analytics/overdue", route.Spec{Action: "rotation_overdue_read", Permission: permInventoryRead, Resource: "key_inventory"}, legacy(h.handleListOverdueRotationMetrics))
+	// Key inventory counts and the keys behind each (inventory_stats.go).
+	r.Handle("GET /inventory/stats", route.Spec{Action: "inventory_stats_read", Permission: permInventoryRead, Resource: "key_inventory"}, h.keyStats)
+	r.Handle("GET /inventory/stats/keys", route.Spec{Action: "inventory_stats_keys_read", Permission: permInventoryRead, Resource: "key_inventory"}, h.keyStatsKeys)
 	r.Handle("GET /enterprise/summary", route.Spec{Action: "enterprise_summary_read", Permission: permInventoryRead, Resource: "key_inventory"}, legacy(h.handleGetEnterpriseAuditSummary))
 	r.Handle("GET /health/summary", route.Spec{Action: "health_summary_read", Permission: permInventoryRead, Resource: "key_inventory"}, legacy(h.handleGetHealthSummary))
 	r.Handle("GET /compromise/events", route.Spec{Action: "compromise_events_read", Permission: permInventoryRead, Resource: "key_inventory"}, legacy(h.handleListCompromiseEvents))

@@ -94,7 +94,8 @@ func (h *Handler) routes() *http.ServeMux {
 	// Webhook routes
 	h.webhookRouter(selfEmitter{h.svc}).MountOn(mux)
 
-	// Ops metrics routes
+	// Ops metrics routes; the chart statistics are on the kernel (ops_stats.go).
+	h.opsStatsRouter(selfEmitter{h.svc}).MountOn(mux)
 	mux.HandleFunc("GET /ops-metrics/overview", h.handleGetOpsOverview)
 	mux.HandleFunc("GET /ops-metrics/timeseries", h.handleGetOpsTimeSeries)
 	mux.HandleFunc("GET /ops-metrics/latency", h.handleGetLatencyPercentiles)
@@ -184,9 +185,9 @@ func (h *Handler) handleEvents(w http.ResponseWriter, r *http.Request) {
 	if tenantID == "" {
 		return
 	}
-	q, ok := eventQueryFrom(r)
-	if !ok {
-		writeErr(w, http.StatusBadRequest, "bad_window", "from and to must be RFC 3339 times", reqID, tenantID)
+	q, reason, msg := eventQueryFrom(r)
+	if reason != "" {
+		writeErr(w, http.StatusBadRequest, reason, msg, reqID, tenantID)
 		return
 	}
 	items, err := h.store.QueryEvents(r.Context(), tenantID, q)
