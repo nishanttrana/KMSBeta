@@ -246,6 +246,11 @@ func createReportingSchemaForTest(conn *pkgdb.DB) error {
 			enabled BOOLEAN NOT NULL DEFAULT TRUE,
 			last_run_at TIMESTAMP,
 			next_run_at TIMESTAMP,
+			authorized_by TEXT NOT NULL DEFAULT '',
+			paused_reason TEXT NOT NULL DEFAULT '',
+			last_result TEXT NOT NULL DEFAULT '',
+			last_error TEXT NOT NULL DEFAULT '',
+			last_job_id TEXT NOT NULL DEFAULT '',
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, id)

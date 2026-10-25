@@ -127,6 +127,7 @@ func (h *Handler) routes() {
 	r.Handle("DELETE /reports/jobs/{id}", delJob, h.deleteReportJob)
 	r.Handle("GET /reports/scheduled", spec("scheduled_reports_listed", permRead, "scheduled_report", ""), h.listScheduledReports)
 	r.Handle("POST /reports/scheduled", spec("report_scheduled", permWrite, "scheduled_report", ""), h.createScheduledReport)
+	h.scheduleRoutes(r, spec) // schedule.go
 	// Any signed-in dashboard reports its own errors, under its own tenant.
 	r.Handle("POST /telemetry/errors", spec("error_telemetry_captured", route.Authenticated, "error_telemetry", ""), h.captureErrorTelemetry)
 	r.Handle("GET /telemetry/errors", spec("error_telemetry_listed", permRead, "error_telemetry", ""), h.listErrorTelemetry)
@@ -527,21 +528,16 @@ func (h *Handler) listScheduledReports(c *route.Call) {
 	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
+// createScheduledReport saves a schedule on the caller's authority
+// (schedule.go).
 func (h *Handler) createScheduledReport(c *route.Call) {
-	var body struct {
-		TenantID   string                 `json:"tenant_id"` // verified by the kernel; c.Tenant is used
-		Name       string                 `json:"name"`
-		TemplateID string                 `json:"template_id"`
-		Format     string                 `json:"format"`
-		Schedule   string                 `json:"schedule"`
-		Filters    map[string]interface{} `json:"filters"`
-	}
-	if !c.Decode(&body) {
+	var in scheduledReportInput
+	if !c.Decode(&in) {
 		return
 	}
-	item, err := h.svc.ScheduleReport(c.R.Context(), c.Tenant, body.Name, body.TemplateID, body.Format, body.Schedule, body.Filters)
+	item, err := h.svc.ScheduleReport(c.R.Context(), c.Tenant, c.Actor(), in)
 	if err != nil {
-		h.serviceError(c, err)
+		h.scheduleError(c, err)
 		return
 	}
 	c.Target(item.ID)

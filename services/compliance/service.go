@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"vecta-kms/pkg/authority"
 	"vecta-kms/pkg/clusterstate"
 )
 
@@ -19,6 +20,8 @@ type Service struct {
 	audit   AuditClient
 	certs   CertsClient
 	events  EventPublisher
+	// authority is asked before each scheduled assessment (assessment_schedule.go).
+	authority authority.Checker
 }
 
 func NewService(store Store, keycore KeyCoreClient, policy PolicyClient, audit AuditClient, certs CertsClient, events EventPublisher) *Service {
@@ -608,57 +611,6 @@ func (s *Service) GetAssessmentSchedule(ctx context.Context, tenantID string) (A
 	}
 	item.Frequency = normalizeAssessmentFrequency(item.Frequency)
 	return item, nil
-}
-
-func (s *Service) UpsertAssessmentSchedule(ctx context.Context, req AssessmentSchedule) (AssessmentSchedule, error) {
-	req.TenantID = strings.TrimSpace(req.TenantID)
-	if req.TenantID == "" {
-		return AssessmentSchedule{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
-	}
-	req.Frequency = normalizeAssessmentFrequency(req.Frequency)
-
-	current, err := s.store.GetAssessmentSchedule(ctx, req.TenantID)
-	if err != nil {
-		return AssessmentSchedule{}, err
-	}
-	current.Enabled = req.Enabled
-	current.Frequency = req.Frequency
-	if current.Enabled {
-		base := current.LastRunAt
-		if base.IsZero() {
-			base = time.Now().UTC()
-		}
-		current.NextRunAt = nextAssessmentRunTime(base, current.Frequency)
-	} else {
-		current.NextRunAt = time.Time{}
-	}
-	if err := s.store.UpsertAssessmentSchedule(ctx, current); err != nil {
-		return AssessmentSchedule{}, err
-	}
-	updated, err := s.store.GetAssessmentSchedule(ctx, req.TenantID)
-	if err != nil {
-		return AssessmentSchedule{}, err
-	}
-	_ = s.publishAudit(ctx, "audit.compliance.assessment_schedule_updated", req.TenantID, map[string]interface{}{
-		"enabled":   updated.Enabled,
-		"frequency": updated.Frequency,
-		"next_run":  updated.NextRunAt,
-	})
-	return updated, nil
-}
-
-func (s *Service) RunDueSchedules(ctx context.Context) error {
-	now := time.Now().UTC()
-	items, err := s.store.ListDueAssessmentSchedules(ctx, now, 100)
-	if err != nil {
-		return err
-	}
-	for _, item := range items {
-		_, _ = s.RunAssessment(ctx, item.TenantID, "scheduled", true, "")
-		next := nextAssessmentRunTime(now, item.Frequency)
-		_ = s.store.UpdateAssessmentScheduleRun(ctx, item.TenantID, now, next)
-	}
-	return nil
 }
 
 func (s *Service) ListComplianceTemplates(ctx context.Context, tenantID string) ([]ComplianceTemplate, error) {

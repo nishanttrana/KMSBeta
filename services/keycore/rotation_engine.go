@@ -10,6 +10,7 @@ import (
 	"time"
 
 	pkgaudit "vecta-kms/pkg/audit"
+	"vecta-kms/pkg/authority"
 	"vecta-kms/pkg/clusterstate"
 	"vecta-kms/pkg/route"
 )
@@ -156,25 +157,37 @@ func (s *Service) RunRotationPolicy(ctx context.Context, p RotationPolicy, trigg
 	return out, nil
 }
 
-// schedulerContext is the identity scheduled runs act under. It is set in
-// process, never from a request, so it cannot be forged (CLAUDE.md rule 4).
-func schedulerContext(ctx context.Context) context.Context {
+// Permissions a scheduled run needs its authorizing person to hold now:
+// those of saving the policy and of rotating a key by hand.
+var rotationRunPermissions = []string{"key.rotation.write", "key.rotate"}
+
+// rotationRetry is how long a run waits when auth did not answer.
+const rotationRetry = 15 * time.Minute
+
+// personContext is the identity a scheduled run acts under: the person who
+// saved the policy, with the permissions auth says they hold now, so their
+// key grants decide each rotation exactly as for a manual trigger. It is
+// built in process from auth's answer, never from a request (CLAUDE.md
+// rule 4); Via names the scheduler in every key-access audit.
+func personContext(ctx context.Context, p RotationPolicy, role string, perms []string) context.Context {
 	return contextWithAccessActor(ctx, AccessActor{
-		ClientID: rotationSchedulerTag, Role: "client-service", Authenticated: true, ServicePrincipal: true,
+		UserID: p.AuthorizedBy, Role: role, Permissions: perms, Authenticated: true,
+		Via: rotationSchedulerTag, TenantID: p.TenantID,
 	})
 }
 
 // RotationScheduler runs due auto-rotate policies on the primary.
 type RotationScheduler struct {
-	svc      *Service
-	audit    route.Emitter
-	interval time.Duration
-	logger   *log.Logger
-	primary  func(context.Context) bool
+	svc       *Service
+	audit     route.Emitter
+	authority authority.Checker
+	interval  time.Duration
+	logger    *log.Logger
+	primary   func(context.Context) bool
 }
 
-func NewRotationScheduler(svc *Service, audit *pkgaudit.Client, logger *log.Logger) *RotationScheduler {
-	r := &RotationScheduler{svc: svc, interval: time.Minute, logger: logger, primary: clusterstate.RunsPrimaryJobs}
+func NewRotationScheduler(svc *Service, audit *pkgaudit.Client, auth authority.Checker, logger *log.Logger) *RotationScheduler {
+	r := &RotationScheduler{svc: svc, authority: auth, interval: time.Minute, logger: logger, primary: clusterstate.RunsPrimaryJobs}
 	if audit != nil {
 		r.audit = audit
 	}
@@ -205,11 +218,48 @@ func (r *RotationScheduler) Tick(ctx context.Context) {
 		r.logger.Printf("rotation scheduler: %v", err)
 		return
 	}
-	sctx := schedulerContext(ctx)
 	for _, p := range due {
-		out, err := r.svc.RunRotationPolicy(sctx, p, "schedule")
-		r.emit(ctx, p, out, err)
+		r.runDue(ctx, p)
 	}
+	r.tickIntegrity(ctx)
+}
+
+// runDue re-checks the policy's authority and runs it as that person. A run
+// that can't happen is audited as refused: postponed when auth did not
+// answer, paused when the authority is gone.
+func (r *RotationScheduler) runDue(ctx context.Context, p RotationPolicy) {
+	a, reason, detail := authority.Check(ctx, r.authority, p.TenantID, p.AuthorizedBy, rotationRunPermissions)
+	if reason != "" {
+		paused := ""
+		if reason == authority.ReasonRevoked {
+			paused = detail
+		}
+		if err := r.svc.store.HoldRotationPolicy(ctx, p.TenantID, p.ID, time.Now().UTC().Add(rotationRetry), paused); err != nil {
+			r.logger.Printf("rotation scheduler: hold %s: %v", p.ID, err)
+		}
+		r.refused(ctx, p, reason, detail)
+		return
+	}
+	perms := append([]string{}, rotationRunPermissions...)
+	// Administrator key access is optional: asked separately so its absence
+	// is not a refusal.
+	if admin, err := r.authority.Authority(ctx, p.TenantID, p.AuthorizedBy, []string{permAccessAdmin}); err == nil && admin.Active && len(admin.Missing) == 0 {
+		perms = append(perms, permAccessAdmin)
+	}
+	out, err := r.svc.RunRotationPolicy(personContext(ctx, p, a.Role, perms), p, "schedule:"+p.AuthorizedBy)
+	r.emit(ctx, p, out, err)
+}
+
+func (r *RotationScheduler) refused(ctx context.Context, p RotationPolicy, reason, detail string) {
+	if r.audit == nil {
+		return
+	}
+	_ = r.audit.Emit(ctx, "rotation_policy_run", pkgaudit.Event{
+		TenantID: p.TenantID, ActorID: rotationSchedulerTag, ActorType: "service",
+		TargetType: "rotation_policy", TargetID: p.ID, Result: "refused",
+		Details: map[string]interface{}{"policy_name": p.Name, "authorized_by": p.AuthorizedBy, "reason": reason,
+			"description": detail, "triggered_by": "schedule", "severity": "warning"},
+	})
 }
 
 func (r *RotationScheduler) emit(ctx context.Context, p RotationPolicy, out RotationOutcome, err error) {
@@ -220,6 +270,7 @@ func (r *RotationScheduler) emit(ctx context.Context, p RotationPolicy, out Rota
 	details := map[string]interface{}{
 		"policy_name": p.Name, "target_filter": p.TargetFilter,
 		"matched": out.Matched, "rotated": out.Rotated, "failed": out.Failed, "triggered_by": "schedule",
+		"authorized_by": p.AuthorizedBy,
 	}
 	switch {
 	case err != nil:

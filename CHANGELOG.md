@@ -4,6 +4,76 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [13.66.0-beta] — 2026-10-26
+
+### Added
+- **Scheduling: one home for every schedule** (docs/SCHEDULING.md). The
+  sidebar's Rotation & Scheduling is now **Scheduling**, with sub-options
+  Overview, Key rotation, Key integrity, Secret rotation, Reports, Scans &
+  assessments, Backups (platform administrators) and Cryptoperiods.
+  - **Overview** lists every schedule from every service: what it runs, how
+    often, next and last run, the last result, and on whose authority. Tiles
+    (active, due in 24 hours, paused, last run failed or refused) and the
+    runs-due-this-week bars filter the table to exactly what they count; a
+    row opens its view. A source that fails reads "unavailable", never "no
+    schedules".
+  - **Key integrity** (new): a schedule checks that each matching key's
+    current material still decrypts under the master key and matches its
+    KCV, with checked, failed and not-assessed counts per run. A failed check
+    is audited as critical and is a Playbooks trigger.
+  - **Secret rotation** (new): a secret the KMS generated (an SSH key or a
+    key pair) gets fresh material of the same kind as its next version on a
+    schedule. A secret whose value came from outside can't be rotated by the
+    KMS and is not offered (`409 not_generated`).
+  - **Reports** moved here from Compliance and can now be edited, paused,
+    run now and deleted, and show their last result. **Scans &
+    assessments** holds the crypto discovery scan and the compliance
+    assessment schedule; **Backups** moved from Backup & Restore. Crypto
+    Discovery and Compliance show each schedule's state with a link here.
+    Old addresses (`#rotation`, `#backup/schedules`) redirect.
+
+### Changed
+- **Every schedule runs on the authority of the person who last saved it**,
+  asked of auth before every run through one client (`pkg/authority`):
+  key rotation policies, key integrity checks, secret rotation, scheduled
+  reports and the compliance assessment join discovery scans, backups and
+  playbooks. A person who is no longer active or lost the permission pauses
+  the schedule with the reason; saving it again resumes it. A scheduled key
+  rotation now runs **as that person**, so their key grants decide each key.
+  Each run records its last result and is audited, refusals included.
+- **Action needed after upgrading:** rotation policies, scheduled reports
+  and the assessment schedule saved before this release have no one on
+  record and pause at their next run. Open Scheduling → Overview, filter
+  **Paused** and save each one (docs/OPERATIONS_GUIDE.md).
+- `POST /auth/delegated/authority` also returns the person's `role` and
+  admits keycore, secrets and reporting.
+- Scheduled reports validate their cadence, template and format; a failed
+  or refused run is recorded and audited (`scheduled_report_run`) instead of
+  being skipped silently.
+- New Playbooks triggers: "Key integrity check failed" and "Scheduled
+  rotation failed".
+
+### Fixed
+- **Key integrity reported HSM-held keys as corrupt.** Verifying a key
+  whose material lives in the HSM said "failed to decrypt/authenticate —
+  corruption, tampering, or wrong MEK". It now reads "not assessed"
+  (`audit.key.integrity_verified` with `result: refused`, `reason:
+  material_in_hsm`), and a real mismatch is audited as a failure.
+- **Another tenant's assessment schedule or compliance template could be
+  changed.** Both saves took `tenant_id` from the request body without
+  checking it against the caller. The schedule's routes are now on the route
+  kernel, which refuses any tenant but the caller's own; the template save
+  checks it too.
+
+### Removed
+- **Rotation & Scheduling → Scheduled Jobs.** Keycore stored the jobs and
+  nothing ever ran them; the page read a field the service never returned
+  (so the list was always empty) and created jobs with fields the service
+  refused (so every create failed without saying so). The routes
+  (`/scheduling/jobs`), the store and the `key_scheduling_jobs` table
+  (migration 039) are removed. Key integrity schedules are the real work
+  that replaces its "verify" job.
+
 ## [13.65.0-beta] — 2026-10-25
 
 ### Changed
@@ -47,10 +117,8 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 - The other ops-metrics reads (`overview`, `timeseries`, `latency`,
   `by-service`, `errors`) are kept for API callers and the Status view;
   they are still on the legacy mux, so reading them is not audited.
-- Rotation & Scheduling → Scheduling jobs never ran: keycore stores the jobs
-  and nothing executes them, and the page reads `jobs` where keycore answers
-  `items` and creates jobs with fields keycore refuses. Left for the owner's
-  decision (remove, or mark as a preview).
+- Rotation & Scheduling → Scheduling jobs never ran (removed in
+  13.66.0-beta, replaced by real schedules).
 
 ## [13.64.0-beta] — 2026-10-24
 

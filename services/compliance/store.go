@@ -40,7 +40,6 @@ type Store interface {
 	GetAssessmentSchedule(ctx context.Context, tenantID string) (AssessmentSchedule, error)
 	UpsertAssessmentSchedule(ctx context.Context, item AssessmentSchedule) error
 	ListDueAssessmentSchedules(ctx context.Context, now time.Time, limit int) ([]AssessmentSchedule, error)
-	UpdateAssessmentScheduleRun(ctx context.Context, tenantID string, lastRunAt time.Time, nextRunAt time.Time) error
 
 	// Automated Incident Playbooks
 	ListPlaybooks(ctx context.Context, tenantID string) ([]Playbook, error)
@@ -434,7 +433,7 @@ WHERE tenant_id = $1 AND id = $2
 
 func (s *SQLStore) GetAssessmentSchedule(ctx context.Context, tenantID string) (AssessmentSchedule, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT tenant_id, enabled, frequency, last_run_at, next_run_at, updated_at
+SELECT `+assessmentScheduleColumns+`
 FROM compliance_assessment_schedules
 WHERE tenant_id = $1
 `, tenantID)
@@ -452,28 +451,38 @@ WHERE tenant_id = $1
 func (s *SQLStore) UpsertAssessmentSchedule(ctx context.Context, item AssessmentSchedule) error {
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO compliance_assessment_schedules (
-	tenant_id, enabled, frequency, last_run_at, next_run_at, updated_at
+	tenant_id, enabled, frequency, last_run_at, next_run_at, authorized_by, paused_reason, last_result, last_error,
+	last_assessment_id, updated_at
 ) VALUES (
-	$1,$2,$3,$4,$5,CURRENT_TIMESTAMP
+	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,CURRENT_TIMESTAMP
 )
 ON CONFLICT (tenant_id) DO UPDATE SET
 	enabled = excluded.enabled,
 	frequency = excluded.frequency,
 	last_run_at = excluded.last_run_at,
 	next_run_at = excluded.next_run_at,
+	authorized_by = excluded.authorized_by,
+	paused_reason = excluded.paused_reason,
+	last_result = excluded.last_result,
+	last_error = excluded.last_error,
+	last_assessment_id = excluded.last_assessment_id,
 	updated_at = CURRENT_TIMESTAMP
-`, item.TenantID, item.Enabled, item.Frequency, nullableTime(item.LastRunAt), nullableTime(item.NextRunAt))
+`, item.TenantID, item.Enabled, item.Frequency, nullableTime(item.LastRunAt), nullableTime(item.NextRunAt),
+		item.AuthorizedBy, item.PausedReason, item.LastResult, item.LastError, item.LastAssessmentID)
 	return err
 }
+
+const assessmentScheduleColumns = `tenant_id, enabled, frequency, last_run_at, next_run_at, authorized_by, paused_reason,
+	last_result, last_error, last_assessment_id, updated_at`
 
 func (s *SQLStore) ListDueAssessmentSchedules(ctx context.Context, now time.Time, limit int) ([]AssessmentSchedule, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT tenant_id, enabled, frequency, last_run_at, next_run_at, updated_at
+SELECT `+assessmentScheduleColumns+`
 FROM compliance_assessment_schedules
-WHERE enabled = TRUE
+WHERE enabled = TRUE AND paused_reason = ''
   AND next_run_at IS NOT NULL
   AND next_run_at <= $1
 ORDER BY next_run_at ASC
@@ -492,17 +501,6 @@ LIMIT $2
 		out = append(out, item)
 	}
 	return out, rows.Err()
-}
-
-func (s *SQLStore) UpdateAssessmentScheduleRun(ctx context.Context, tenantID string, lastRunAt time.Time, nextRunAt time.Time) error {
-	_, err := s.db.SQL().ExecContext(ctx, `
-UPDATE compliance_assessment_schedules
-SET last_run_at = $1,
-    next_run_at = $2,
-    updated_at = CURRENT_TIMESTAMP
-WHERE tenant_id = $3
-`, nullableTime(lastRunAt), nullableTime(nextRunAt), tenantID)
-	return err
 }
 
 func scanPostureSnapshot(scanner interface {
@@ -645,7 +643,8 @@ func scanAssessmentSchedule(scanner interface {
 		nextRunRaw interface{}
 		updatedRaw interface{}
 	)
-	err := scanner.Scan(&item.TenantID, &item.Enabled, &item.Frequency, &lastRunRaw, &nextRunRaw, &updatedRaw)
+	err := scanner.Scan(&item.TenantID, &item.Enabled, &item.Frequency, &lastRunRaw, &nextRunRaw, &item.AuthorizedBy,
+		&item.PausedReason, &item.LastResult, &item.LastError, &item.LastAssessmentID, &updatedRaw)
 	if err != nil {
 		return AssessmentSchedule{}, err
 	}

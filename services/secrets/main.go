@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"vecta-kms/pkg/authority"
 	"vecta-kms/pkg/clusterstate"
 	"vecta-kms/pkg/credstore"
 	"vecta-kms/pkg/mek"
@@ -65,6 +66,9 @@ func main() {
 		}
 	}
 	go h.runRetention(rt.Ctx, time.Hour)
+	// Generated secrets rotate on their schedules, on the saver's authority.
+	h.authority = authority.New(envOr("AUTH_URL", "https://auth:8001"))
+	go h.runRotationSchedules(rt.Ctx, time.Minute)
 	// Dynamic database credentials: admin credentials come from the
 	// credential store; expired leases are revoked every minute.
 	h.creds = credstore.FromEnv()

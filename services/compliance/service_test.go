@@ -113,15 +113,11 @@ func TestServiceAssessmentRunAndSchedule(t *testing.T) {
 		t.Fatalf("unexpected run result: %+v", run)
 	}
 
-	sched, err := svc.UpsertAssessmentSchedule(ctx, AssessmentSchedule{
-		TenantID:  "tenant-c",
-		Enabled:   true,
-		Frequency: "daily",
-	})
+	sched, _, err := svc.SaveAssessmentSchedule(ctx, "tenant-c", "alice", true, "daily")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !sched.Enabled || sched.NextRunAt.IsZero() {
+	if !sched.Enabled || sched.NextRunAt.IsZero() || sched.AuthorizedBy != "alice" {
 		t.Fatalf("unexpected schedule: %+v", sched)
 	}
 

@@ -362,6 +362,19 @@ an approach, record it here or in the matching doc below.
   server acts on: approval triggers come from `lib/approvalActions.ts`, each
   proven against the Go code that submits it; a new approval-guarded
   operation adds its action there (13.27.0-beta).
+- **Every schedule's home is Scheduling, and it runs on a person's
+  authority** (owner directive, 2026-10-25: "all the scheduling for keys,
+  backup, reporting etc anything in the scheduling and secrets schedule
+  should be under scheduling, build new but not fake"). A scheduled job is
+  stored and run by the service that does the work and listed in the
+  Scheduling module (`modules/scheduling`, its kind in `rows.ts`); no other
+  page edits it, they show its state and link there. It records
+  `authorized_by` (the caller who saved it), asks auth before every run
+  through `pkg/authority` and acts as that person, pauses with
+  `paused_reason` when the authority is gone, records `last_result`, audits
+  each run and each refusal, and runs on the primary only. Work a service
+  cannot do is never offered as a schedule (docs/SCHEDULING.md).
+
 - **Every chart drills into its entries** (owner directive, 2026-09-30:
   "clicking on graphs / bar should show related entries"). Every bar, slice,
   point and legend row with a count is clickable and lists exactly the
@@ -698,7 +711,9 @@ Security rules are explained in
 - A missing or failed source reads "unavailable" or "not assessed" with the
   error; a composite with a failed source is an error; a zero is shown only
   when a check ran. The dashboard never catches a fetch into an empty list
-  or renders constants.
+  or renders constants. A check that cannot read what it checks says "not
+  assessed", never "failed": key integrity reported every HSM-held key as
+  corrupt until 13.66.0-beta.
 - "None yet" is not a failure. A read that answers 404 before anything
   exists uses code `not_found`, and the dashboard reads it through
   `serviceRequestOrNone` and shows "Not generated" with the action that
@@ -843,7 +858,10 @@ Security rules are explained in
 - Unattended work (playbooks, schedulers) re-checks the person's authority
   when it runs and fails closed when it can't ask; a detection runs on a
   scheduler, primary-only if it writes replicated data, tested by driving
-  the tick.
+  the tick. It acts as that person, never as the service: scheduled key
+  rotation ran as keycore's own identity, past key access, until
+  13.66.0-beta. One client asks (`pkg/authority`); a stored job with no
+  runner is not a feature (keycore's scheduled jobs, removed 13.66.0-beta).
 
 **Dashboard**
 - The console's feature set is the stack's own deployment file, mounted

@@ -1,21 +1,16 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	neturl "net/url"
 	"strings"
 	"sync"
 	"time"
 
 	"vecta-kms/pkg/route"
-	"vecta-kms/pkg/servicetoken"
 )
 
 // Scheduled encrypted backups (13.43.0-beta; docs/SECURITY/BACKUP_KEYS.md,
@@ -85,12 +80,6 @@ type BackupScheduleInput struct {
 	RetainCount        int    `json:"retain_count"`
 	KeyProtection      string `json:"key_protection"`
 	RecipientPublicKey string `json:"recipient_public_key"`
-}
-
-// backupAuthority asks auth whether a person is still active and still
-// holds permissions, now.
-type backupAuthority interface {
-	Authority(ctx context.Context, tenantID, userID string, perms []string) (active bool, missing []string, err error)
 }
 
 // backupScheduleRunner serialises runs: the tick and "run now" never take
@@ -272,7 +261,7 @@ func (s *Service) RunBackupSchedule(ctx context.Context, sch BackupSchedule) (Ba
 		audit("audit.governance.scheduled_backup_refused", "refused", "authority_unknown", nil)
 		return BackupJob{}, errors.New("authority unknown")
 	}
-	active, missing, err := s.authority.Authority(ctx, sch.TenantID, sch.AuthorizedBy, []string{backupSchedulePermission})
+	a, err := s.authority.Authority(ctx, sch.TenantID, sch.AuthorizedBy, []string{backupSchedulePermission})
 	switch {
 	case err != nil:
 		// Auth didn't answer: neither run on unverified authority nor
@@ -280,7 +269,7 @@ func (s *Service) RunBackupSchedule(ctx context.Context, sch BackupSchedule) (Ba
 		finish("refused", "auth could not be asked: "+err.Error(), "", retry)
 		audit("audit.governance.scheduled_backup_refused", "refused", "authority_unknown", nil)
 		return BackupJob{}, err
-	case !active || len(missing) > 0:
+	case !a.Active || len(a.Missing) > 0:
 		sch.PausedReason = "the administrator who saved this schedule is no longer active or no longer holds " + backupSchedulePermission + "; save it again to resume"
 		finish("refused", sch.PausedReason, "", retry)
 		audit("audit.governance.scheduled_backup_refused", "refused", "authority_revoked", nil)
@@ -575,48 +564,4 @@ func (h *Handler) runBackupSchedule(c *route.Call) {
 	}
 	c.Detail("backup_id", job.ID)
 	c.JSON(http.StatusOK, map[string]interface{}{"job": job})
-}
-
-// ── auth ─────────────────────────────────────────────────────────────
-
-// authAuthority asks auth (POST /auth/delegated/authority) as
-// kms-governance, which auth admits as a caller of that route.
-type authAuthority struct {
-	url  string
-	http *http.Client
-}
-
-func newAuthAuthority(authURL string) authAuthority {
-	return authAuthority{url: strings.TrimRight(authURL, "/"), http: &http.Client{Timeout: 10 * time.Second}}
-}
-
-func (a authAuthority) Authority(ctx context.Context, tenantID, userID string, perms []string) (bool, []string, error) {
-	raw, err := json.Marshal(map[string]interface{}{"tenant_id": tenantID, "user_id": userID, "permissions": perms})
-	if err != nil {
-		return false, nil, err
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.url+"/auth/delegated/authority?tenant_id="+neturl.QueryEscape(tenantID), bytes.NewReader(raw))
-	if err != nil {
-		return false, nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Tenant-ID", tenantID)
-	servicetoken.Authorize(ctx, req)
-	resp, err := a.http.Do(req)
-	if err != nil {
-		return false, nil, fmt.Errorf("%s unreachable: %w", req.URL.Hostname(), err)
-	}
-	defer resp.Body.Close() //nolint:errcheck
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if resp.StatusCode != http.StatusOK {
-		return false, nil, fmt.Errorf("%s HTTP %d", req.URL.Hostname(), resp.StatusCode)
-	}
-	var out struct {
-		Active  bool     `json:"active"`
-		Missing []string `json:"missing"`
-	}
-	if err := json.Unmarshal(body, &out); err != nil {
-		return false, nil, fmt.Errorf("%s answered without an authority", req.URL.Hostname())
-	}
-	return out.Active, out.Missing, nil
 }

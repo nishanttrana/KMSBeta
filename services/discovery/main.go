@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"vecta-kms/pkg/authority"
 	"vecta-kms/pkg/servicetoken"
 	pkgsvctls "vecta-kms/pkg/svctls"
 
@@ -90,8 +91,8 @@ func main() {
 	)
 	svc.cloud = NewHTTPCloudClient(envOr("CLOUD_URL", "https://cloud:8080"), 30*time.Second)
 	svc.audit = audit
-	platform := newPlatformClient(envOr("COMPLIANCE_URL", "https://compliance:8110"), envOr("AUTH_URL", "https://auth:8001"))
-	svc.conns, svc.authority = platform, platform
+	svc.conns = newPlatformClient(envOr("COMPLIANCE_URL", "https://compliance:8110"))
+	svc.authority = authority.New(envOr("AUTH_URL", "https://auth:8001"))
 	svc.primary = clusterstate.RunsPrimaryJobs
 	svc.StartScheduler(ctx)
 	// Every route needs a verified platform JWT; the kernel checks the

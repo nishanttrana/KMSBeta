@@ -62,13 +62,14 @@ func (h *Handler) createRotationPolicy(c *route.Call) {
 	created, err := h.svc.store.CreateRotationPolicy(c.R.Context(), RotationPolicy{
 		ID: newID("rp"), TenantID: c.Tenant, Name: req.Name, TargetType: rotationTargetKey,
 		TargetFilter: req.TargetFilter, IntervalDays: req.IntervalDays, AutoRotate: req.AutoRotate,
-		Enabled: true, Status: "active", NextRotationAt: &next,
+		Enabled: true, Status: "active", NextRotationAt: &next, AuthorizedBy: c.Actor(),
 	})
 	if err != nil {
 		c.Error(http.StatusInternalServerError, "create_rotation_policy_failed", err.Error())
 		return
 	}
 	c.Target(created.ID)
+	c.Detail("authorized_by", created.AuthorizedBy)
 	c.Detail("target_filter", created.TargetFilter)
 	c.Detail("interval_days", created.IntervalDays)
 	c.Detail("auto_rotate", created.AutoRotate)
@@ -140,6 +141,11 @@ func (h *Handler) updateRotationPolicy(c *route.Call) {
 		p.Enabled = *req.Enabled
 		c.Detail("enabled", p.Enabled)
 	}
+	// Saving makes the caller the policy's authority and resumes a pause.
+	if p.PausedReason != "" {
+		c.Detail("resumed", p.PausedReason)
+	}
+	p.AuthorizedBy, p.PausedReason = c.Actor(), ""
 	updated, err := h.svc.store.UpdateRotationPolicy(c.R.Context(), c.Tenant, p.ID, p)
 	if err != nil {
 		c.Error(http.StatusInternalServerError, "update_rotation_policy_failed", err.Error())

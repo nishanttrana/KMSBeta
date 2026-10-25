@@ -117,7 +117,7 @@ request is refused (`403` with `delegator_unknown`, `delegator_inactive` or
 
 | Route | Needs (of `on_behalf_of`) | Audit action | Also refused |
 |---|---|---|---|
-| `POST /svc/auth/auth/delegated/authority` (body `user_id`, `permissions[]`; returns `active`, `missing[]`; callable by `kms-compliance` and, since 7.20.0-beta, `kms-discovery`) | none | `delegated_authority_checked` | none |
+| `POST /svc/auth/auth/delegated/authority` (body `user_id`, `permissions[]`; returns `active`, `missing[]` and, since 13.66.0-beta, the person's `role`; callable by `kms-compliance`, `kms-discovery` (7.20.0-beta), `kms-governance` (13.43.0-beta), `kms-keycore`, `kms-secrets` and `kms-reporting` (13.66.0-beta), each through `pkg/authority`) | none | `delegated_authority_checked` | none |
 | `POST /svc/auth/auth/delegated/users/{id}/disable` | `auth.user.write` | `delegated_user_disabled` | `self_target`, `last_administrator` (409) |
 | `POST /svc/auth/auth/delegated/api-keys/{id}/revoke` | `auth.api_key.write` | `delegated_api_key_revoked` | `service_identity_protected` (409) |
 | `POST /svc/auth/auth/delegated/clients/{id}/revoke` | `auth.client.write` | `delegated_client_revoked` | `service_identity_protected` (409) |
@@ -843,6 +843,15 @@ real outcome. Served by the `pkg/route` kernel.
 | `GET /rotation/runs[?policy_id=]` | `key.rotation.read` | `audit.key.rotation_runs_listed` |
 | `GET /rotation/upcoming` | `key.rotation.read` | `audit.key.rotation_upcoming_listed` |
 
+- **Authority (13.66.0-beta, docs/SCHEDULING.md):** a policy records
+  `authorized_by`, the caller who last created or saved it. A scheduled run
+  asks auth whether that person is active and holds `key.rotation.write` and
+  `key.rotate`, then rotates **as that person** (their key grants decide each
+  key). Otherwise the policy pauses (`paused_reason`; a save resumes it) and
+  `audit.key.rotation_policy_run` records `result: refused` with `reason`
+  `authority_revoked`, or `authority_unknown` (postponed 15 minutes) when auth
+  did not answer. `triggered_by` on a scheduled run is `schedule:<user>`.
+
 - **Create body:** `name`, `target_filter`, `interval_days` (1–3650) and
   `auto_rotate`. `target_type` may be omitted or `key`; `secret` and
   `certificate` are refused (`unsupported_target_type`).
@@ -1238,8 +1247,7 @@ roles need the permission named here. Service principals are allowed.
 | `POST /enterprise/orchestration/runs` | `key.rotate` | `orchestration_run_requested` |
 | `GET /enterprise/controls`, `GET /enterprise/controls/{category}/{id}` | `key.enterprise.read` | `enterprise_controls_listed`, `enterprise_control_read` |
 | `POST /enterprise/controls`, `POST /enterprise/anomaly/scan`, `POST /enterprise/dspm/findings`, `POST /enterprise/kdf/derive`, `POST /enterprise/verification/fingerprint` (key must be visible), `POST /enterprise/advanced-encryption/search-token`, and the `POST /enterprise/{area}/{kind}` control upserts | `key.enterprise.write` | `enterprise_control_upserted`, `enterprise_anomaly_scan`, `dspm_finding_upserted`, `enterprise_kdf_derive`, `fingerprint_verified`, `search_token_created`, `enterprise_<category>_upserted` |
-| `GET /scheduling/jobs` | `key.scheduling.read` | `scheduling_jobs_listed` |
-| `POST /scheduling/jobs`, `PATCH /scheduling/jobs/{id}`, `DELETE /scheduling/jobs/{id}` | `key.scheduling.write` | `scheduling_job_created`, `scheduling_job_updated`, `scheduling_job_deleted` |
+| `GET /integrity/schedules`, `POST /integrity/schedules`, `PATCH /integrity/schedules/{id}`, `DELETE /integrity/schedules/{id}`, `POST /integrity/schedules/{id}/run` (13.66.0-beta) | `key.integrity.verify` | `integrity_schedules_listed`, `integrity_schedule_created`, `integrity_schedule_updated`, `integrity_schedule_deleted` (warning), `integrity_schedule_run_requested`; refusals `invalid_schedule`, `schedule_paused` |
 | `POST /inventory/sync`, `POST /inventory/dependencies` | `key.inventory.write` | `inventory_synced`, `inventory_dependency_upserted` |
 | `POST /analytics/metrics` | `key.analytics.write` | `analytics_metric_recorded` |
 | `POST /keys/{id}/health/recalculate` | `key.health.write` (key must be visible) | `health_recalculated` |
@@ -2157,6 +2165,21 @@ Query: `template_id` (optional), `limit`. Response `items[]`: past assessments, 
 
 ---
 
+### Assessment schedule: /svc/compliance/compliance/assessment/schedule
+
+The tenant's assessment schedule (13.66.0-beta on the route kernel; before,
+the save took `tenant_id` from the body without checking it). `GET` needs
+`compliance.assessment.read`; `PUT` (body `enabled`, `frequency`
+`hourly`/`daily`/`weekly`, else `400 invalid_schedule`) and
+`POST /svc/compliance/compliance/assessment/schedule/run` need
+`compliance.assessment.write`. A save makes the caller the schedule's
+authority (`authorized_by`) and resumes a pause; each run re-checks that
+person's `compliance.assessment.write` with auth, and records
+`last_result` (`assessed` with `last_assessment_id`, `refused`, `failed`),
+`last_error` and `paused_reason` (docs/SCHEDULING.md). Audited as
+`audit.compliance.assessment_schedule_read`, `_updated`, `_run_requested` and
+`audit.compliance.assessment_schedule_run`.
+
 ### POST /svc/compliance/compliance/assessment/run
 
 Body (or query): `template_id`, `recompute` (optional). Runs synchronously. Response `200`: `assessment`.
@@ -2275,7 +2298,10 @@ this.
   `incident_opened` (`audit.reporting.incident_opened`), `canary_tripped`,
   `threat_signal_raised`, `threat_finding_raised`,
   `sustained_risk_detected` (`audit.security.sustained_risk_detected`),
-  `key_compromised`,
+  `key_compromised`, `key_integrity_failed`
+  (`audit.key.integrity_check_run`, failures only, 13.66.0-beta),
+  `scheduled_rotation_failed` (`audit.key.rotation_policy_run`,
+  `audit.secrets.rotation_schedule_run`, failures only, 13.66.0-beta),
   `audit_chain_broken` (`audit.audit.chain_broken`),
   `audit_timestamp_failed` (`audit.audit.checkpoint_timestamp_failed`,
   13.47.0-beta),
@@ -2697,6 +2723,26 @@ alert in the window. Response: `{"mttr_minutes": {...}}`
 Top ten actors, source IPs and services among every alert in the window. Response: `{"top_actors": [{"key", "count"}], "top_ips": [...], "top_services": [...]}`
 
 ---
+
+### Scheduled reports: /svc/reporting/reports/scheduled
+
+A schedule queues a report job every `hourly`, `daily` or `weekly` period; the
+job is listed with the other report jobs (reports are not emailed). Since
+13.66.0-beta (docs/SCHEDULING.md) the service validates the cadence and that
+the template exists and is produced in the format (`400 invalid_schedule`,
+audited as a refusal), and each run is requested on the authority of the
+person who last saved it (`authorized_by`; `reporting.write` re-checked with
+auth), recorded as `last_result` (`requested` with `last_job_id`, `refused`,
+`failed`), `last_error` and `paused_reason`, and audited as
+`audit.reporting.scheduled_report_run`.
+
+| Method | Path | Permission | Body / answer |
+|---|---|---|---|
+| GET | `/reports/scheduled` | `reporting.read` | `items` |
+| POST | `/reports/scheduled` | `reporting.write` | `name`, `template_id`, `format`, `schedule`, `enabled`, `filters`; `item` |
+| PATCH | `/reports/scheduled/{id}` | `reporting.write` | any of those fields; makes the caller its authority and resumes a pause; `item` |
+| DELETE | `/reports/scheduled/{id}` | `reporting.write` | `deleted` |
+| POST | `/reports/scheduled/{id}/run` | `reporting.write` | `item` with the run's result; `409 schedule_paused` when paused |
 
 ### GET /svc/reporting/reports/jobs/{id} / GET /svc/reporting/reports/jobs/{id}/download / DELETE /svc/reporting/reports/jobs/{id}
 
@@ -3751,6 +3797,9 @@ and disagreeing sources with `403 tenant_conflict`. Each request emits one
 | `GET /secrets/{id}/versions` | `secrets.read` | `versions_listed` |
 | `GET /secrets/{id}/audit` | `secrets.read` | `audit_log_read` |
 | `POST /secrets/{id}/rotate` | `secrets.write` | `rotated` |
+| `GET /secrets/rotation-schedules` (13.66.0-beta; only secrets the caller may read) | `secrets.read` | `rotation_schedules_listed` |
+| `PUT /secrets/rotation-schedules/{id}` (body `interval_hours` 1–8760, `enabled`; only a secret the KMS generated, else `409 not_generated`) | `secrets.write` and write on the path | `rotation_schedule_saved` |
+| `DELETE /secrets/rotation-schedules/{id}`, `POST /secrets/rotation-schedules/{id}/run` (`409 schedule_paused` when paused) | `secrets.write` and write on the path | `rotation_schedule_deleted`, `rotation_schedule_run_requested` (warning) |
 | `GET /secrets/stats` | `secrets.read` | `stats_read` |
 | `GET /v1/sys/health`, `/v1/sys/seal-status` | any identity | `vault_health_read`, `vault_seal_status_read`
 - `audit.<svc>.dev_mek_rewrapped`, `dev_mek_rewrap_refused`, `mek_rewrapped`, `mek_rewrap_refused`, `mek_unreadable`, `mek_check_refused`, `mek_exposure_remediated`, `mek_exposure_listed`, `mek_exposure_acknowledged`, `mek_backup_rewrap` for `<svc>` in secrets, cert, cloud, ekm, audit, compliance, workload: service master keys (docs/SECURITY/SERVICE_MASTER_KEYS.md)
@@ -4544,6 +4593,8 @@ Selected events with dedicated audit classification:
 - `audit.key.rotation_policies_listed`, `audit.key.rotation_policy_created`, `audit.key.rotation_policy_updated`, `audit.key.rotation_policy_deleted`, `audit.key.rotation_policy_triggered`, `audit.key.rotation_runs_listed`, `audit.key.rotation_upcoming_listed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.key.rotation_policy_run` (scheduled run; `result: failure` when any key failed): key rotation policies
 - `audit.audit.checkpoints_listed` (kernel event for `GET /audit/checkpoints`; details `checkpoints`, `failed`), `audit.audit.checkpoint_signed` (a signed chain head: `chain_node`, `sequence`, `chain_hash`, `signed_at`, `key_id`, `algorithm`, `signature`), `audit.audit.checkpoint_key_created` (root; `target_id` key ID, `public_key_pem`), `audit.audit.checkpoint_refused` (`reason` `key_generation_failed`/`signing_failed`), `audit.audit.checkpoint_timestamped` (an RFC 3161 token for a checkpoint: `imprint_sha256`, `gen_time`, `tsa`, `tsa_serial`, `trust`, `token_b64`), `audit.audit.checkpoint_timestamp_failed` (`reason` `credential_unavailable`/`trust_roots`/`timestamp_refused`), `audit.audit.anchor_settings_read`, `audit.audit.anchor_settings_updated`, `audit.audit.event_hmac_key_installed` (root; HMAC key derived from the audit master key; `mek_version`, `unavailable_mek_versions`).
 - `audit.audit.activity_stats_read` (kernel event for `GET /audit/activity/stats`, 7.17.0-beta; details `from`, `to`, `total`; refusals `result: refused`, `reason` `bad_window` or the kernel's).
+- `audit.key.rotation_policy_run` (a scheduled rotation: `success`/`failure` with counts, or `refused` with `reason` `authority_revoked`/`authority_unknown`, `authorized_by`), `audit.key.integrity_check_run` (a key integrity schedule run: `checked`, `verified`, `not_assessed`, `failed`, `failed_keys`; `failure` is critical; `refused` with `reason`), `audit.key.integrity_schedule_*` (kernel events), `audit.key.integrity_verified` (each key checked: `result` `success`, `failure` (critical) or, for a key held in an HSM, `refused` with `reason` `material_in_hsm`, 13.66.0-beta): docs/SCHEDULING.md
+- `audit.secrets.rotation_schedule_run` (a generated secret rotated on schedule: `new_version`; `refused` with `reason` `authority_revoked`, `authority_unknown` or the access rule's reason; `failure`), `audit.secrets.rotation_schedule_*` (kernel events), `audit.reporting.scheduled_report_run` (`job_id`; `refused`; `failure`), `audit.reporting.scheduled_report_updated` / `_deleted` / `_run_requested`, `audit.compliance.assessment_schedule_run` (`assessment_id`; `refused`; `failure`), `audit.compliance.assessment_schedule_read` / `_updated` / `_run_requested` (13.66.0-beta): docs/SCHEDULING.md
 - `audit.audit.ops_stats_read` (kernel event for `GET /ops-metrics/stats`, 13.65.0-beta; details `from`, `to`, `total`; refusals `result: refused`, `reason` `bad_window` or the kernel's).
 - `audit.key.inventory_stats_read`, `audit.key.inventory_stats_keys_read` (kernel events for `GET /inventory/stats` and `GET /inventory/stats/keys`, 13.65.0-beta; details `total` / `count`; refusals `reason` `bad_window` or the kernel's).
 - `audit.audit.investigation_read` (kernel event for `GET /audit/investigate`, 13.42.0-beta; details: each pivot given and `total`, so who investigated whom is on record; refusals `result: refused`, `reason` `bad_window` or the kernel's).
@@ -4970,6 +5021,7 @@ from the code; do not edit by hand.
 - `POST /svc/compliance/compliance/assessment/run`
 - `GET /svc/compliance/compliance/assessment/schedule`
 - `PUT /svc/compliance/compliance/assessment/schedule`
+- `POST /svc/compliance/compliance/assessment/schedule/run`
 - `GET /svc/compliance/compliance/audit/anomalies`
 - `GET /svc/compliance/compliance/cbom`
 - `GET /svc/compliance/compliance/cbom/diff`
@@ -5365,6 +5417,11 @@ from the code; do not edit by hand.
 - `GET /svc/keycore/hsm/settings`
 - `PUT /svc/keycore/hsm/settings`
 - `GET /svc/keycore/hsm/targets`
+- `GET /svc/keycore/integrity/schedules`
+- `POST /svc/keycore/integrity/schedules`
+- `DELETE /svc/keycore/integrity/schedules/{id}`
+- `PATCH /svc/keycore/integrity/schedules/{id}`
+- `POST /svc/keycore/integrity/schedules/{id}/run`
 - `GET /svc/keycore/inventory/dependencies`
 - `POST /svc/keycore/inventory/dependencies`
 - `GET /svc/keycore/inventory/duplicates`
@@ -5452,10 +5509,6 @@ from the code; do not edit by hand.
 - `POST /svc/keycore/rotation/policies/{id}/trigger`
 - `GET /svc/keycore/rotation/runs`
 - `GET /svc/keycore/rotation/upcoming`
-- `GET /svc/keycore/scheduling/jobs`
-- `POST /svc/keycore/scheduling/jobs`
-- `DELETE /svc/keycore/scheduling/jobs/{id}`
-- `PATCH /svc/keycore/scheduling/jobs/{id}`
 - `POST /svc/keycore/system-keys/ensure`
 - `GET /svc/keycore/tags`
 - `POST /svc/keycore/tags`
@@ -5561,6 +5614,9 @@ from the code; do not edit by hand.
 - `GET /svc/reporting/reports/jobs/{id}/download`
 - `GET /svc/reporting/reports/scheduled`
 - `POST /svc/reporting/reports/scheduled`
+- `DELETE /svc/reporting/reports/scheduled/{id}`
+- `PATCH /svc/reporting/reports/scheduled/{id}`
+- `POST /svc/reporting/reports/scheduled/{id}/run`
 - `GET /svc/reporting/reports/templates`
 - `GET /svc/reporting/telemetry/errors`
 - `POST /svc/reporting/telemetry/errors`
@@ -5600,6 +5656,10 @@ from the code; do not edit by hand.
 - `POST /svc/secrets/secrets/database/roles/{name}/creds`
 - `POST /svc/secrets/secrets/generate/keypair`
 - `POST /svc/secrets/secrets/generate/ssh_key`
+- `GET /svc/secrets/secrets/rotation-schedules`
+- `DELETE /svc/secrets/secrets/rotation-schedules/{id}`
+- `PUT /svc/secrets/secrets/rotation-schedules/{id}`
+- `POST /svc/secrets/secrets/rotation-schedules/{id}/run`
 - `GET /svc/secrets/secrets/settings`
 - `PUT /svc/secrets/secrets/settings`
 - `GET /svc/secrets/secrets/stats`

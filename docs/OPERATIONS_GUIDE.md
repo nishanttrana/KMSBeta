@@ -288,6 +288,19 @@ Use `Governance` to confirm:
 - backup coverage matches enabled features
 - restore path is documented and approved
 
+### Check Schedules
+
+Scheduling → Overview lists every schedule (key rotation, key integrity,
+secret rotation, reports, scans and assessments, backups) with what is due,
+paused, or failed or refused on its last run (docs/SCHEDULING.md). A paused
+schedule names why, usually that the person who saved it left or lost a
+permission: someone who holds it opens the schedule and saves it again.
+
+**After upgrading to 13.66.0-beta**, rotation policies, scheduled reports
+and the assessment schedule saved before it have no one on record and pause
+at their next run. Filter the Overview by **Paused** and save each one; until
+then they do not run.
+
 ## Weekly Operational Tasks
 
 - run or review compliance assessments
@@ -351,8 +364,9 @@ Examples:
 
 ### Scheduled Backups
 
-Backup & Restore → Schedules (root administrators). A schedule takes a
-backup every N hours and keeps the newest M it took.
+Scheduling → Backups (root administrators; Backup & Restore → Schedules
+until 13.66.0-beta, whose address redirects). A schedule takes a backup
+every N hours and keeps the newest M it took.
 
 1. Choose how its key is kept. With an enabled HSM profile, choose the HSM.
    Otherwise make a key pair on a machine you control and keep the private

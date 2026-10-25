@@ -8,11 +8,7 @@ import (
 
 // ListRotationPolicies returns all rotation policies for a tenant.
 func (s *SQLStore) ListRotationPolicies(ctx context.Context, tenantID string) ([]RotationPolicy, error) {
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, tenant_id, name, target_type, target_filter, interval_days,
-       COALESCE(cron_expr,''), auto_rotate, notify_days_before, enabled, status,
-       last_rotation_at, next_rotation_at, total_rotations, COALESCE(last_error,''),
-       created_at, updated_at
+	rows, err := s.db.SQL().QueryContext(ctx, `SELECT `+rotationPolicyColumns+`
 FROM rotation_policies
 WHERE tenant_id = $1
 ORDER BY name ASC
@@ -38,15 +34,12 @@ func (s *SQLStore) CreateRotationPolicy(ctx context.Context, p RotationPolicy) (
 	row := s.db.SQL().QueryRowContext(ctx, `
 INSERT INTO rotation_policies
   (id, tenant_id, name, target_type, target_filter, interval_days, cron_expr,
-   auto_rotate, notify_days_before, enabled, status, next_rotation_at, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-RETURNING id, tenant_id, name, target_type, target_filter, interval_days,
-          COALESCE(cron_expr,''), auto_rotate, notify_days_before, enabled, status,
-          last_rotation_at, next_rotation_at, total_rotations, COALESCE(last_error,''),
-          created_at, updated_at
+   auto_rotate, notify_days_before, enabled, status, next_rotation_at, authorized_by, paused_reason, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+RETURNING `+rotationPolicyColumns+`
 `, p.ID, p.TenantID, p.Name, p.TargetType, p.TargetFilter, p.IntervalDays,
 		nullable(p.CronExpr), p.AutoRotate, p.NotifyDaysBefore, p.Enabled, p.Status,
-		nullableTime(p.NextRotationAt))
+		nullableTime(p.NextRotationAt), p.AuthorizedBy, p.PausedReason)
 
 	return scanRotationPolicy(row)
 }
@@ -65,15 +58,14 @@ SET name = $1,
     enabled = $8,
     status = $9,
     next_rotation_at = $10,
+    authorized_by = $11,
+    paused_reason = $12,
     updated_at = CURRENT_TIMESTAMP
-WHERE tenant_id = $11 AND id = $12
-RETURNING id, tenant_id, name, target_type, target_filter, interval_days,
-          COALESCE(cron_expr,''), auto_rotate, notify_days_before, enabled, status,
-          last_rotation_at, next_rotation_at, total_rotations, COALESCE(last_error,''),
-          created_at, updated_at
+WHERE tenant_id = $13 AND id = $14
+RETURNING `+rotationPolicyColumns+`
 `, p.Name, p.TargetType, p.TargetFilter, p.IntervalDays, nullable(p.CronExpr),
 		p.AutoRotate, p.NotifyDaysBefore, p.Enabled, p.Status, nullableTime(p.NextRotationAt),
-		tenantID, id)
+		p.AuthorizedBy, p.PausedReason, tenantID, id)
 
 	out, err := scanRotationPolicy(row)
 	if err != nil {
@@ -156,7 +148,7 @@ RETURNING id, tenant_id, policy_id, policy_name, target_id, target_name, target_
 const rotationPolicyColumns = `id, tenant_id, name, target_type, target_filter, interval_days,
        COALESCE(cron_expr,''), auto_rotate, notify_days_before, enabled, status,
        last_rotation_at, next_rotation_at, total_rotations, COALESCE(last_error,''),
-       created_at, updated_at`
+       authorized_by, paused_reason, created_at, updated_at`
 
 // GetRotationPolicy returns one of a tenant's rotation policies.
 func (s *SQLStore) GetRotationPolicy(ctx context.Context, tenantID, id string) (RotationPolicy, error) {
@@ -173,7 +165,7 @@ func (s *SQLStore) GetRotationPolicy(ctx context.Context, tenantID, id string) (
 func (s *SQLStore) ListDueRotationPolicies(ctx context.Context, now time.Time, limit int) ([]RotationPolicy, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `SELECT `+rotationPolicyColumns+`
 FROM rotation_policies
-WHERE enabled = TRUE AND auto_rotate = TRUE AND next_rotation_at IS NOT NULL AND next_rotation_at <= $1
+WHERE enabled = TRUE AND auto_rotate = TRUE AND paused_reason = '' AND next_rotation_at IS NOT NULL AND next_rotation_at <= $1
 ORDER BY next_rotation_at ASC
 LIMIT $2`, now, limit)
 	if err != nil {
@@ -198,6 +190,22 @@ UPDATE rotation_policies
 SET last_rotation_at = $1, next_rotation_at = $2, total_rotations = total_rotations + $3,
     status = $4, last_error = $5, updated_at = CURRENT_TIMESTAMP
 WHERE tenant_id = $6 AND id = $7`, ranAt, next, rotated, status, nullable(lastErr), tenantID, id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errStoreNotFound
+	}
+	return nil
+}
+
+// HoldRotationPolicy records a scheduled run that did not happen: paused
+// with a reason (authority gone), or only postponed to next (auth did not
+// answer).
+func (s *SQLStore) HoldRotationPolicy(ctx context.Context, tenantID, id string, next time.Time, pausedReason string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE rotation_policies SET next_rotation_at = $1, paused_reason = $2, updated_at = CURRENT_TIMESTAMP
+WHERE tenant_id = $3 AND id = $4`, next, pausedReason, tenantID, id)
 	if err != nil {
 		return err
 	}
@@ -284,6 +292,8 @@ func scanRotationPolicy(scanner interface {
 		&nextRotationAt,
 		&p.TotalRotations,
 		&p.LastError,
+		&p.AuthorizedBy,
+		&p.PausedReason,
 		&p.CreatedAt,
 		&p.UpdatedAt,
 	); err != nil {

@@ -47,23 +47,17 @@ type ConnectionResolver interface {
 	Resolve(ctx context.Context, tenantID, id string) (ResolvedConnection, error)
 }
 
-// AuthorityChecker asks auth whether a user is active and holds permissions
-// now (POST /auth/delegated/authority).
-type AuthorityChecker interface {
-	Authority(ctx context.Context, tenantID, userID string, perms []string) (active bool, missing []string, err error)
-}
-
 // platformClient calls compliance and auth over internal mTLS as
 // kms-discovery.
 type platformClient struct {
-	complianceURL, authURL string
-	http                   *http.Client
+	complianceURL string
+	http          *http.Client
 }
 
-func newPlatformClient(complianceURL, authURL string) platformClient {
+func newPlatformClient(complianceURL string) platformClient {
 	return platformClient{
-		complianceURL: strings.TrimRight(complianceURL, "/"), authURL: strings.TrimRight(authURL, "/"),
-		http: &http.Client{Timeout: 10 * time.Second},
+		complianceURL: strings.TrimRight(complianceURL, "/"),
+		http:          &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
@@ -108,13 +102,4 @@ func (p platformClient) Resolve(ctx context.Context, tenantID, id string) (Resol
 	}
 	err := p.post(ctx, p.complianceURL+"/compliance/connections/"+neturl.PathEscape(id)+"/resolve?tenant_id="+neturl.QueryEscape(tenantID), tenantID, map[string]string{"tenant_id": tenantID}, &out)
 	return out.Data, err
-}
-
-func (p platformClient) Authority(ctx context.Context, tenantID, userID string, perms []string) (bool, []string, error) {
-	var out struct {
-		Active  bool     `json:"active"`
-		Missing []string `json:"missing"`
-	}
-	err := p.post(ctx, p.authURL+"/auth/delegated/authority?tenant_id="+neturl.QueryEscape(tenantID), tenantID, map[string]interface{}{"tenant_id": tenantID, "user_id": userID, "permissions": perms}, &out)
-	return out.Active, out.Missing, err
 }

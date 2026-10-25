@@ -11,6 +11,7 @@ import (
 	neturl "net/url"
 	"strings"
 
+	"vecta-kms/pkg/authority"
 	"vecta-kms/pkg/servicetoken"
 )
 
@@ -33,17 +34,12 @@ func platformURLsFromEnv() platformURLs {
 	}
 }
 
-// Authority is what auth says about a person's current standing.
-type Authority struct {
-	Active  bool     `json:"active"`
-	Missing []string `json:"missing"`
-}
-
-// AuthorityChecker asks auth whether a user is still active and still holds
-// permissions, now (not when the playbook was saved).
-type AuthorityChecker interface {
-	Authority(ctx context.Context, tenantID, userID string, perms []string) (Authority, error)
-}
+// Authority is what auth says about a person's current standing, asked
+// through pkg/authority (not when the playbook was saved).
+type (
+	Authority        = authority.Answer
+	AuthorityChecker = authority.Checker
+)
 
 // GovernanceApproval is the part of a governance approval request a resume
 // checks.
@@ -82,11 +78,7 @@ type platformClient struct {
 }
 
 func (p platformClient) Authority(ctx context.Context, tenantID, userID string, perms []string) (Authority, error) {
-	var out Authority
-	_, err := callJSON(ctx, p.http, http.MethodPost, p.urls.Auth+"/auth/delegated/authority", tenantID, "", map[string]interface{}{
-		"user_id": userID, "permissions": perms,
-	}, &out)
-	return out, err
+	return authority.New(p.urls.Auth).Authority(ctx, tenantID, userID, perms)
 }
 
 func (p platformClient) RequestApproval(ctx context.Context, in ApprovalRequestInput) (string, error) {

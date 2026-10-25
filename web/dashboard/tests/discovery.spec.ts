@@ -183,8 +183,11 @@ test("a private repository is added with a Git connection and tested", async ({ 
 test("the scan schedule is saved with its sources", async ({ page }) => {
   const writes = await stub(page);
   await open(page);
-  // The header shows the saved schedule.
+  // The header shows the saved schedule and opens its home, Scheduling →
+  // Scans & assessments (13.66.0-beta), where it is edited.
   await page.getByRole("button", { name: "Daily" }).click();
+  await expect(page).toHaveURL(/#scheduling\/scans$/);
+  await page.getByRole("button", { name: "Edit" }).click();
   await expect(page.getByText(/saved by admin/)).toBeVisible();
   await page.getByRole("button", { name: "Weekly" }).click();
   await page.getByRole("button", { name: "Cloud KMS" }).last().click();
@@ -193,7 +196,7 @@ test("the scan schedule is saved with its sources", async ({ page }) => {
   await expect.poll(() => writes.length).toBe(1);
   expect(writes[0]!.method()).toBe("PUT");
   expect(writes[0]!.postDataJSON()).toEqual({ enabled: true, interval_hours: 168, sources: ["network", "certs", "git"] });
-  await expect(page.getByRole("button", { name: "Weekly" })).toBeVisible();
+  await expect(page.getByText("every 7 days")).toBeVisible();
 });
 
 // Before 7.34.0-beta these two buttons named tab ids the shell doesn't have

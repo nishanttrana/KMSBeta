@@ -9,6 +9,7 @@ import (
 	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/authority"
 	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/route/routetest"
 )
@@ -21,9 +22,9 @@ type stubAuthority struct {
 	asked   []string
 }
 
-func (a *stubAuthority) Authority(_ context.Context, tenantID, userID string, perms []string) (bool, []string, error) {
+func (a *stubAuthority) Authority(_ context.Context, tenantID, userID string, perms []string) (authority.Answer, error) {
 	a.asked = append(a.asked, tenantID+"/"+userID+"/"+strings.Join(perms, ","))
-	return a.active, a.missing, a.err
+	return authority.Answer{Active: a.active, Missing: a.missing}, a.err
 }
 
 func scheduled(t *testing.T, rec *routetest.Recorder) []routetest.Recorded {

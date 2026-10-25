@@ -3,7 +3,7 @@
   "src/components/v3/tabs/BYOKTab.tsx": 556,
   "src/components/v3/tabs/CertsTab.tsx": 1954,
   "src/components/v3/tabs/ClusterTabView.tsx": 595,
-  "src/components/v3/tabs/ComplianceTab.tsx": 1177,
+  "src/components/v3/tabs/ComplianceTab.tsx": 1115,
   "src/components/v3/tabs/ConfidentialComputeTab.tsx": 656,
   "src/components/v3/tabs/CryptoAgilityTab.tsx": 518,
   "src/components/v3/tabs/CryptoTab.tsx": 909,

@@ -282,6 +282,12 @@ voters and, on a member, **Promote this node**.
 
 ## Operating notes
 
+- **Schedules run on the primary** (docs/SCHEDULING.md): `rotation_policies`,
+  `key_integrity_schedules`, `secret_rotation_schedules`,
+  `reporting_scheduled_reports` and `compliance_assessment_schedules` are
+  replicated; their schedulers check `clusterstate.RunsPrimaryJobs` every
+  minute, and "run now" is a write a member forwards to the primary.
+
 - **Sign-ins belong to the node that issued them** (`auth_sessions` is
   node-local). Since 13.42.0-beta a token renews only on a node that holds its
   session, so a user moved to another node (a failover, or a load balancer

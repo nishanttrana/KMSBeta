@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"vecta-kms/pkg/authority"
 	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/route/routetest"
 )
@@ -237,10 +238,39 @@ func TestAuthorityCheckForDiscoveryOnly(t *testing.T) {
 	}
 	wantAuthRefusal(t, d.last(t), "delegated_user_disabled", reasonServiceIdentityRequired)
 	admin, _, _ := d.logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "u-admin", false, "")
-	for _, tok := range []string{admin, d.token(t, "kms-keycore")} {
+	for _, tok := range []string{admin, d.token(t, "kms-cloud")} {
 		if w := d.call(t, "/auth/delegated/authority", tok, map[string]any{"user_id": "u-ops", "permissions": []string{"key.rotate"}}); w.Code != http.StatusForbidden {
 			t.Fatalf("authority check by another caller: %d %s", w.Code, w.Body.String())
 		}
 		wantAuthRefusal(t, d.last(t), "delegated_authority_checked", reasonServiceIdentityRequired)
+	}
+}
+
+// pkg/authority, which every scheduler uses, against this handler: the
+// request it builds is the one auth decodes, and each new scheduler's
+// service identity is admitted (13.66.0-beta).
+func TestAuthorityClientAgainstTheHandler(t *testing.T) {
+	d := newDelegatedHarness(t)
+	for _, svc := range []string{"kms-keycore", "kms-secrets", "kms-reporting", "kms-governance", "kms-discovery", delegatingService} {
+		tok := d.token(t, svc)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.Header.Set("Authorization", "Bearer "+tok) // what servicetoken.Authorize adds in a running service
+			d.h.ServeHTTP(w, r)
+		}))
+		c := authority.New(srv.URL)
+		a, err := c.Authority(context.Background(), "t1", "u-ops", []string{"auth.user.write", "key.rotate"})
+		if err != nil || !a.Active || a.Role != "ops" || len(a.Missing) != 1 || a.Missing[0] != "key.rotate" {
+			t.Fatalf("%s: %+v %v", svc, a, err)
+		}
+		if _, reason, _ := authority.Check(context.Background(), c, "t1", "u-gone", []string{"auth.user.write"}); reason != authority.ReasonRevoked {
+			t.Fatalf("%s: inactive user: %q", svc, reason)
+		}
+		if _, reason, _ := authority.Check(context.Background(), c, "t1", "u-ops", []string{"auth.user.write"}); reason != "" {
+			t.Fatalf("%s: holder refused: %q", svc, reason)
+		}
+		srv.Close()
+		if _, reason, _ := authority.Check(context.Background(), c, "t1", "u-ops", []string{"auth.user.write"}); reason != authority.ReasonUnknown {
+			t.Fatalf("%s: unreachable auth: %q", svc, reason)
+		}
 	}
 }

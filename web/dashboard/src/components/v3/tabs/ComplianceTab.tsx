@@ -49,11 +49,9 @@ import {
   listComplianceFrameworkCatalog,
   listComplianceTemplates,
   runComplianceAssessment,
-  updateComplianceAssessmentSchedule,
   upsertComplianceTemplate
 } from "../../../lib/compliance";
 import {
-  createReportingScheduledReport,
   deleteReportingReportJob,
   downloadReportingReport,
   generateReportingReport,
@@ -83,7 +81,7 @@ function isRealAssessment(item: any) {
   return Boolean(item && typeof item === "object" && String(item?.id || "").trim() && !/^auto$/i.test(String(item?.trigger || "").trim()));
 }
 
-export const ComplianceTab = ({ session, onToast }: any) => {
+export const ComplianceTab = ({ session, onToast, onNavigate }: any) => {
   const promptDialog = usePromptDialog();
   const [assessment, setAssessment] = useState<any>(null);
   const [assessmentDelta, setAssessmentDelta] = useState<any>(null);
@@ -95,7 +93,6 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   const [templateDraft, setTemplateDraft] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
-  const [savingSchedule, setSavingSchedule] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [deletingTemplate, setDeletingTemplate] = useState(false);
   const [view, setView] = useState("assessment");
@@ -118,7 +115,6 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   const [reportJobs, setReportJobs] = useState<any[]>([]);
   const [scheduledReports, setScheduledReports] = useState<any[]>([]);
   const [reportForm, setReportForm] = useState<any>({ template_id: "", format: "pdf" });
-  const [scheduleForm, setScheduleForm] = useState<any>({ name: "weekly-compliance", template_id: "", format: "pdf", schedule: "weekly" });
   const [reportBusy, setReportBusy] = useState(false);
 
 
@@ -255,7 +251,6 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       setReportJobs(Array.isArray(jobsOut) ? jobsOut : []);
       setScheduledReports(Array.isArray(scheduledOut) ? scheduledOut : []);
       if (!reportForm.template_id && tpls.length) setReportForm((prev: any) => ({ ...prev, template_id: String(tpls[0]?.id || "") }));
-      if (!scheduleForm.template_id && tpls.length) setScheduleForm((prev: any) => ({ ...prev, template_id: String(tpls[0]?.id || "") }));
     } catch (error) { onToast?.(`Reporting load failed: ${errMsg(error)}`); }
   };
 
@@ -274,17 +269,6 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       onToast?.("Compliance assessment completed.");
     } catch (error) { onToast?.(`Assessment run failed: ${errMsg(error)}`); }
     finally { setRunning(false); }
-  };
-
-  const saveSchedule = async () => {
-    if (!session?.token) { onToast?.("Login is required."); return; }
-    setSavingSchedule(true);
-    try {
-      const out = await updateComplianceAssessmentSchedule(session, { enabled: Boolean(schedule?.enabled), frequency: String(schedule?.frequency || "daily") as any });
-      setSchedule(out || schedule);
-      onToast?.("Assessment schedule updated.");
-    } catch (error) { onToast?.(`Schedule update failed: ${errMsg(error)}`); }
-    finally { setSavingSchedule(false); }
   };
 
   const createTemplate = async () => {
@@ -412,19 +396,8 @@ export const ComplianceTab = ({ session, onToast }: any) => {
     catch (error) { onToast?.(`Delete report failed: ${errMsg(error)}`); }
   };
 
-  const createScheduleReport = async () => {
-    if (!session?.token) { onToast?.("Login is required."); return; }
-    if (!String(scheduleForm?.template_id || "").trim()) { onToast?.("Select a template for schedule."); return; }
-    setReportBusy(true);
-    try {
-      await createReportingScheduledReport(session, { name: String(scheduleForm?.name || "weekly-compliance").trim() || "weekly-compliance", template_id: String(scheduleForm?.template_id || "").trim(), format: String(scheduleForm?.format || "pdf").trim().toLowerCase(), schedule: String(scheduleForm?.schedule || "weekly").trim().toLowerCase() as any });
-      onToast?.("Scheduled report created.");
-      await loadReporting();
-    } catch (error) { onToast?.(`Create schedule failed: ${errMsg(error)}`); }
-    finally { setReportBusy(false); }
-  };
-
   /* ── Computed data ── */
+  const nextScheduledReport = scheduledReports.filter((r: any) => r?.enabled && !r?.paused_reason).map((r: any) => Date.parse(String(r?.next_run_at))).filter(Number.isFinite).sort((a: number, b: number) => a - b)[0];
   const templateOptions = [{ id: "default", name: "Built-in Baseline" }, ...(Array.isArray(templates) ? templates : []).map((item: any) => ({ id: String(item?.id || ""), name: String(item?.name || item?.id || "Custom Template") }))];
 
   const frameworkScores = assessment?.framework_scores || {};
@@ -544,36 +517,19 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                 <div><Btn small primary onClick={() => void triggerReportNow()} disabled={reportBusy}>{reportBusy ? "Generating..." : "Run Report"}</Btn></div>
               </div>
             </Card>
+            {/* Report schedules live in Scheduling → Reports (13.66.0-beta); this shows their state. */}
             <Card>
-              <div style={{ fontSize: 12, color: C.text, fontWeight: 700, marginBottom: 8 }}>Create Schedule</div>
-              <div style={{ display: "grid", gap: 8 }}>
-                <FG label="Name"><Inp value={String(scheduleForm?.name || "")} onChange={(e) => setScheduleForm((prev: any) => ({ ...prev, name: e.target.value }))} /></FG>
-                <FG label="Template">
-                  <Sel value={String(scheduleForm?.template_id || "")} onChange={(e) => setScheduleForm((prev: any) => ({ ...prev, template_id: e.target.value }))}>
-                    <option value="">Select template</option>
-                    {(Array.isArray(reportTemplates) ? reportTemplates : []).map((t: any) => <option key={String(t?.id || "")} value={String(t?.id || "")}>{String(t?.name || t?.id || "template")}</option>)}
-                  </Sel>
-                </FG>
-                <Row2>
-                  <FG label="Format">
-                    <Sel value={String(scheduleForm?.format || "pdf")} onChange={(e) => setScheduleForm((prev: any) => ({ ...prev, format: e.target.value }))}>
-                      <option value="pdf">PDF</option><option value="json">JSON</option><option value="csv">CSV</option>
-                    </Sel>
-                  </FG>
-                  <FG label="Schedule">
-                    <Sel value={String(scheduleForm?.schedule || "weekly")} onChange={(e) => setScheduleForm((prev: any) => ({ ...prev, schedule: e.target.value }))}>
-                      <option value="hourly">Hourly</option><option value="daily">Daily</option><option value="weekly">Weekly</option>
-                    </Sel>
-                  </FG>
-                </Row2>
-                <div style={{ fontSize: 10, color: C.dim }}>Scheduled reports are generated into the report jobs list for download; they are not emailed.</div>
-                <div><Btn small onClick={() => void createScheduleReport()} disabled={reportBusy}>{reportBusy ? "Saving..." : "Create Schedule"}</Btn></div>
+              <div style={{ fontSize: 12, color: C.text, fontWeight: 700, marginBottom: 8 }}>Scheduled reports</div>
+              <div style={{ fontSize: 11, color: C.dim, marginBottom: 10 }}>
+                {scheduledReports.length ? `${scheduledReports.length} scheduled${nextScheduledReport ? ` · next ${new Date(nextScheduledReport).toLocaleString()}` : ""}` : "None scheduled"}
+                {scheduledReports.some((r: any) => r?.paused_reason) ? <B c="amber">paused</B> : null}
               </div>
+              <Btn small onClick={() => onNavigate?.("scheduling/reports")}>Open in Scheduling</Btn>
             </Card>
           </Row2>
 
           <div style={{ height: 10 }} />
-          <Row2>
+          <div>
             <Card>
               <div style={{ fontSize: 12, color: C.text, fontWeight: 700, marginBottom: 8 }}>Recent Reports</div>
               <div style={{ display: "grid", gap: 6, maxHeight: 240, overflowY: "auto" }}>
@@ -595,23 +551,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                 {!Array.isArray(reportJobs) || !reportJobs.length ? <div style={{ fontSize: 10, color: C.muted }}>No reports generated yet.</div> : null}
               </div>
             </Card>
-            <Card>
-              <div style={{ fontSize: 12, color: C.text, fontWeight: 700, marginBottom: 8 }}>Scheduled Reports</div>
-              <div style={{ display: "grid", gap: 6, maxHeight: 240, overflowY: "auto" }}>
-                {(Array.isArray(scheduledReports) ? scheduledReports : []).map((item: any) => (
-                  <div key={String(item?.id || Math.random())} style={{ padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                      <div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{String(item?.name || item?.id || "-")}</div>
-                      <B c={Boolean(item?.enabled) ? "green" : "red"}>{Boolean(item?.enabled) ? "Enabled" : "Disabled"}</B>
-                    </div>
-                    <div style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>{`${String(item?.template_id || "-")} • ${String(item?.format || "").toUpperCase()} • ${String(item?.schedule || "").toUpperCase()}`}</div>
-                    <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{`Next run: ${item?.next_run_at ? new Date(String(item.next_run_at)).toLocaleString() : "-"}`}</div>
-                  </div>
-                ))}
-                {!Array.isArray(scheduledReports) || !scheduledReports.length ? <div style={{ fontSize: 10, color: C.muted }}>No scheduled reports configured.</div> : null}
-              </div>
-            </Card>
-          </Row2>
+          </div>
         </Section>
         {promptDialog.ui}
       </div>
@@ -640,13 +580,11 @@ export const ComplianceTab = ({ session, onToast }: any) => {
             <Btn small onClick={() => void loadAssessment({ templateId: selectedTemplateID })} disabled={loading}>Refresh</Btn>
             <Btn small onClick={() => void exportEvidencePack("pdf")} disabled={reportBusy}>Evidence Pack</Btn>
             <Btn small primary onClick={() => void runNow()} disabled={running}>{running ? "Running..." : "Run Assessment"}</Btn>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "2px 8px", border: `1px solid ${C.border}`, borderRadius: 8 }}>
-              <Chk label="Scheduled" checked={Boolean(schedule?.enabled)} onChange={() => setSchedule((prev: any) => ({ ...prev, enabled: !prev?.enabled }))} />
-              <Sel w={96} value={String(schedule?.frequency || "daily")} onChange={(e) => setSchedule((prev: any) => ({ ...prev, frequency: e.target.value }))}>
-                <option value="hourly">Hourly</option><option value="daily">Daily</option><option value="weekly">Weekly</option>
-              </Sel>
-              <Btn small onClick={() => void saveSchedule()} disabled={savingSchedule}>{savingSchedule ? "Saving..." : "Save"}</Btn>
-            </div>
+            {/* The schedule's home is Scheduling → Scans & assessments (13.66.0-beta). */}
+            <Btn small onClick={() => onNavigate?.("scheduling/scans")} title={schedule?.paused_reason || (schedule?.enabled ? `Next run ${new Date(String(schedule?.next_run_at)).toLocaleString()}` : "Run assessments on a schedule")}
+              style={schedule?.paused_reason ? { borderColor: C.amberFg, color: C.amberFg } : {}}>
+              {schedule?.paused_reason ? "Schedule paused" : schedule?.enabled ? `Scheduled ${String(schedule?.frequency || "")}` : "Not scheduled"}
+            </Btn>
           </div>
         }
       >

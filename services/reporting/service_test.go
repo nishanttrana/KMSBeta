@@ -195,24 +195,29 @@ func TestServiceReportsAndSchedules(t *testing.T) {
 		t.Fatalf("invalid pdf header")
 	}
 
-	sched, err := svc.ScheduleReport(context.Background(), tenantID, "daily-alerts", "alert_summary", "pdf", "daily", nil)
+	str := func(v string) *string { return &v }
+	svc.authority = holderAuthority{}
+	sched, err := svc.ScheduleReport(context.Background(), tenantID, "alice", scheduledReportInput{Name: str("daily-alerts"), TemplateID: str("alert_summary"), Format: str("pdf"), Schedule: str("daily")})
 	if err != nil {
 		t.Fatalf("schedule report: %v", err)
 	}
-	if sched.ID == "" {
-		t.Fatalf("expected schedule id")
+	if sched.ID == "" || sched.AuthorizedBy != "alice" {
+		t.Fatalf("schedule %+v", sched)
 	}
 	// Make the schedule due, then run it.
-	past := time.Now().UTC().Add(-time.Hour)
-	if err := svc.store.UpdateScheduledReportRun(context.Background(), tenantID, sched.ID, past, past); err != nil {
+	sched.NextRunAt = time.Now().UTC().Add(-time.Hour)
+	if err := svc.store.SaveScheduledReport(context.Background(), sched); err != nil {
 		t.Fatalf("make schedule due: %v", err)
 	}
 	if err := svc.RunDueSchedules(context.Background()); err != nil {
 		t.Fatalf("run due schedules: %v", err)
 	}
 	// A scheduled run is audited by the scheduler (API requests by the kernel).
-	if pub.Count("audit.reporting.report_requested") == 0 {
-		t.Fatalf("expected the scheduled run to publish audit.reporting.report_requested")
+	if pub.Count("audit.reporting.scheduled_report_run") == 0 {
+		t.Fatalf("expected the scheduled run to publish audit.reporting.scheduled_report_run")
+	}
+	if ran, _ := svc.store.GetScheduledReport(context.Background(), tenantID, sched.ID); ran.LastResult != "requested" || ran.LastJobID == "" {
+		t.Fatalf("after the run: %+v", ran)
 	}
 
 	evidenceJob, err := svc.GenerateReport(context.Background(), tenantID, "evidence_pack", "json", "tester", nil)

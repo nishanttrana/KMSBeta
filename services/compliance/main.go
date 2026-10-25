@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"vecta-kms/pkg/authority"
 	"vecta-kms/pkg/servicetoken"
 	pkgsvctls "vecta-kms/pkg/svctls"
 
@@ -96,6 +97,8 @@ func main() {
 		NewHTTPCertsClient(certsURL, 5*time.Second),
 		publisher,
 	)
+	// The assessment schedule runs on its saver's authority (assessment_schedule.go).
+	svc.authority = authority.New(platformURLsFromEnv().Auth)
 	svc.StartScheduler(ctx)
 
 	// Playbooks: one executor for manual, triggered and resumed runs.

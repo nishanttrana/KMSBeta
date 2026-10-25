@@ -103,6 +103,11 @@ func createSecretsSchemaForTest(conn *pkgdb.DB) error {
 			PRIMARY KEY (tenant_id, id),
 			UNIQUE (tenant_id, path)
 		);`,
+		`CREATE TABLE secret_rotation_schedules (tenant_id TEXT NOT NULL, secret_id TEXT NOT NULL, interval_hours INTEGER NOT NULL,
+			enabled BOOLEAN NOT NULL DEFAULT TRUE, authorized_by TEXT NOT NULL DEFAULT '', paused_reason TEXT NOT NULL DEFAULT '',
+			next_run_at TIMESTAMP, last_run_at TIMESTAMP, last_result TEXT NOT NULL DEFAULT '', last_error TEXT NOT NULL DEFAULT '',
+			last_version INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, secret_id));`,
 		`CREATE TABLE secret_audit_log (
 			id TEXT NOT NULL,
 			tenant_id TEXT NOT NULL,

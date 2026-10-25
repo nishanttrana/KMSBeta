@@ -114,8 +114,18 @@ export const SUB_PANES: Record<string, SubPane[]> = {
   ],
   // Backups have one home, Backup & Restore (owner, 2026-10-20).
   backup: [
-    { id: "encrypted", label: "Encrypted Backups", hint: "Create, verify, restore and download encrypted backups", icon: DatabaseBackup, platformOnly: true },
-    { id: "schedules", label: "Schedules", hint: "Encrypted backups on a schedule, with retention", icon: RefreshCw, platformOnly: true }
+    { id: "encrypted", label: "Encrypted Backups", hint: "Create, verify, restore and download encrypted backups", icon: DatabaseBackup, platformOnly: true }
+  ],
+  // Every schedule in the platform has its home here (13.66.0-beta).
+  scheduling: [
+    { id: "overview", label: "Overview", hint: "Every schedule, what is due, paused or failing", icon: Activity },
+    { id: "keys", label: "Key rotation", hint: "Rotation policies and their runs", icon: RefreshCw },
+    { id: "integrity", label: "Key integrity", hint: "Scheduled checks of key material and KCVs", icon: ShieldCheck },
+    { id: "secrets", label: "Secret rotation", hint: "Generated secrets rotated on a schedule", icon: KeyRound },
+    { id: "reports", label: "Reports", hint: "Reports generated on a schedule", icon: FileText },
+    { id: "scans", label: "Scans & assessments", hint: "Crypto discovery scans and compliance assessments", icon: Search },
+    { id: "backups", label: "Backups", hint: "Encrypted backups on a schedule, with retention", icon: DatabaseBackup, platformOnly: true },
+    { id: "cryptoperiods", label: "Cryptoperiods", hint: "How long each kind of key may be used before rotation", icon: Layers }
   ],
   // Operations' views (they were a tab strip in the page until 13.65.0-beta).
   ops: [
@@ -205,4 +215,5 @@ export const DEFAULT_SUB: Record<string, string> = {
   backup: "encrypted",
   approvals: "requests",
   home: "overview",
+  scheduling: "overview",
 };

@@ -18,8 +18,13 @@ type RotationPolicy struct {
 	NextRotationAt   *time.Time `json:"next_rotation_at,omitempty"`
 	TotalRotations   int        `json:"total_rotations"`
 	LastError        string     `json:"last_error,omitempty"`
-	CreatedAt        time.Time  `json:"created_at"`
-	UpdatedAt        time.Time  `json:"updated_at"`
+	// AuthorizedBy is the person who last saved the policy: scheduled runs
+	// act as them, re-checked with auth first (13.66.0-beta). PausedReason
+	// is set when that authority was gone; saving the policy again resumes it.
+	AuthorizedBy string    `json:"authorized_by"`
+	PausedReason string    `json:"paused_reason,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type RotationRun struct {

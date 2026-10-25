@@ -49,10 +49,6 @@ func (h *Handler) keyOpsRouter(audit route.Emitter) *route.Router {
 	r.Handle("POST /enterprise/threat/signals", route.Spec{Action: "enterprise_threat_signal_upserted", Permission: "key.enterprise.write", Resource: "key"}, legacy(h.handleUpsertEnterpriseControlCategory(controlCategoryThreatSignal)))
 	// An orchestration run rotates the keys it names, so it needs key.rotate.
 	r.Handle("POST /enterprise/orchestration/runs", route.Spec{Action: "orchestration_run_requested", Permission: "key.rotate", Resource: "key", Severity: "warning"}, legacy(h.handleTriggerOrchestrationRun))
-	r.Handle("GET /scheduling/jobs", route.Spec{Action: "scheduling_jobs_listed", Permission: "key.scheduling.read", Resource: "key"}, legacy(h.handleListSchedulingJobs))
-	r.Handle("POST /scheduling/jobs", route.Spec{Action: "scheduling_job_created", Permission: "key.scheduling.write", Resource: "key"}, legacy(h.handleCreateSchedulingJob))
-	r.Handle("PATCH /scheduling/jobs/{id}", route.Spec{Action: "scheduling_job_updated", Permission: "key.scheduling.write", Resource: "key", TargetParam: "id"}, legacy(h.handleUpdateSchedulingJob))
-	r.Handle("DELETE /scheduling/jobs/{id}", route.Spec{Action: "scheduling_job_deleted", Permission: "key.scheduling.write", Resource: "key", TargetParam: "id", Severity: "warning"}, legacy(h.handleDeleteSchedulingJob))
 	r.Handle("POST /keys/{id}/attest", route.Spec{Action: "attest_requested", Permission: "key.attest", Resource: "key", TargetParam: "id"}, legacy(h.visibleKeyRoute(h.handleAttestKey)))
 	r.Handle("POST /keys/{id}/verify-material", route.Spec{Action: "verify_material_requested", Permission: "key.integrity.verify", Resource: "key", TargetParam: "id"}, legacy(h.visibleKeyRoute(h.handleVerifyKeyMaterial)))
 	r.Handle("POST /keys/{id}/destruction-check", route.Spec{Action: "destruction_checked", Permission: "key.integrity.verify", Resource: "key", TargetParam: "id"}, h.handleDestructionCheck)

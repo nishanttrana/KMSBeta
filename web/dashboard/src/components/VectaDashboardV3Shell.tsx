@@ -59,7 +59,7 @@ const ComplianceTab = lazy(() => import("./v3/tabs/ComplianceTab").then(m => ({ 
 const SBOMTab = lazy(() => import("./v3/tabs/SBOMTab").then(m => ({ default: m.SBOMTab })));
 const PostureTab = lazy(() => import("./v3/tabs/PostureTab").then(m => ({ default: m.PostureTab })));
 const AuditLogTab = lazy(() => import("./v3/tabs/AuditLogTab").then(m => ({ default: m.AuditLogTab })));
-const RotationSchedulingTab = lazy(() => import("./v3/tabs/RotationSchedulingTab").then(m => ({ default: m.RotationSchedulingTab })));
+const SchedulingModule = lazy(() => import("../modules/scheduling/SchedulingModule").then(m => ({ default: m.SchedulingModule })));
 const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
 const BackupTab = lazy(() => import("../modules/backup/BackupModule").then(m => ({ default: m.BackupModule })));
 const WorkloadIdentityTab = lazy(() => import("./v3/tabs/WorkloadIdentityTab").then(m => ({ default: m.WorkloadIdentityTab })));
@@ -155,7 +155,7 @@ const TABS: Record<string, any> = {
   sbom: SBOMTab,
   pkcs11: ClientSDKTab,
   admin: AdminTab,
-  rotation: RotationSchedulingTab,
+  scheduling: SchedulingModule,
   crypto_agility: CryptoAgilityTab,
   backup: BackupTab,
   playbooks: PlaybooksTab,
@@ -191,7 +191,7 @@ const TITLES: Record<string, string> = {
   sbom: "SBOM / CBOM",
   pkcs11: "Java SDK",
   admin: "Administration",
-  rotation: "Rotation & Scheduling",
+  scheduling: "Scheduling",
   crypto_agility: "Crypto Agility",
   backup: "Backup & Restore",
   playbooks: "Playbooks",

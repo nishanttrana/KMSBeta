@@ -68,6 +68,11 @@ routes included (`TestAccessRulesAreEnforcedOnEveryRoute` walks them all):
 - Service identities are subjects like any other: a restricted path refuses a
   platform service that no rule names. No platform service reads secret
   values today.
+- A scheduled rotation (13.66.0-beta, [SCHEDULING.md](../SCHEDULING.md))
+  writes as the person who saved the schedule: before each run the rules are
+  decided for that person (user ID, the role auth reports, their access
+  groups) and `write` on the secret's path. A rule that now denies them pauses
+  the schedule; group membership that can't be read postpones it.
 
 ## Who can change rules
 

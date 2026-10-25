@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import {
   RefreshCw, Clock, AlertTriangle, CheckCircle2, Plus, Trash2, Play, Edit2, CalendarClock
 } from "lucide-react";
-import { B, Btn, Card, FG, Inp, Modal, Row2, Section, Stat, Tabs } from "../legacyPrimitives";
+import { B, Btn, Card, FG, Inp, Modal, Row2, Section, Stat } from "../legacyPrimitives";
 import { C } from "../theme";
 import { errMsg } from "../runtimeUtils";
-import { CryptoperiodPanel } from "./CryptoperiodPanel";
+import { Authority } from "../../../modules/scheduling/parts";
 import {
   listPolicies,
   createPolicy,
@@ -20,9 +20,11 @@ import {
   type UpcomingRotation,
 } from "../../../lib/rotationScheduler";
 
-// Every row comes from keycore's /rotation routes; a policy run really
-// rotates the matching keys. When the routes can't be read the tab says so
-// with the error; it never substitutes sample data.
+// Scheduling → Key rotation. Every row comes from keycore's /rotation
+// routes; a policy run really rotates the matching keys, as the person who
+// last saved the policy (13.66.0-beta). When the routes can't be read the
+// view says so with the error; it never substitutes sample data. Upcoming
+// runs are on the Scheduling overview; cryptoperiods are their own view.
 
 /* ────── Helpers ────── */
 
@@ -70,7 +72,6 @@ function policyStatusColor(s: string) {
 /* ────── Main Component ────── */
 
 export const RotationSchedulerTab = ({ session }: { session: any; enabledFeatures?: any; keyCatalog?: any[] }) => {
-  const [section, setSection] = useState("policies");
   const [loading, setLoading] = useState(false);
   const [policies, setPolicies] = useState<RotationPolicy[]>([]);
   const [upcoming, setUpcoming] = useState<UpcomingRotation[]>([]);
@@ -116,7 +117,6 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
   const overdueCount = upcoming.filter((u) => u.overdue).length;
   const last24hRuns = runs.filter((r) => r.status === "success" && Date.now() - new Date(r.started_at).getTime() < 86400000).length;
   const policyById = new Map(policies.map((p) => [p.id, p]));
-  const daysOverdue = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000));
 
   const openCreateModal = () => {
     setEditingPolicy(null);
@@ -231,28 +231,18 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
         </div>
       )}
 
-      {/* ── Tab switcher + header actions ── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        <Tabs
-          tabs={["Policies", "Schedule", "History", "Cryptoperiods"]}
-          active={section === "policies" ? "Policies" : section === "schedule" ? "Schedule" : section === "cryptoperiods" ? "Cryptoperiods" : "History"}
-          onChange={(t) => setSection(t === "Policies" ? "policies" : t === "Schedule" ? "schedule" : t === "Cryptoperiods" ? "cryptoperiods" : "history")}
-        />
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          {section === "policies" && (
-            <Btn small primary onClick={openCreateModal}><Plus size={11} /> Create Policy</Btn>
-          )}
-          <Btn small onClick={() => void refresh()} disabled={loading}><RefreshCw size={11} /> {loading ? "Loading..." : "Refresh"}</Btn>
-        </div>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
+        <Btn small primary onClick={openCreateModal}><Plus size={11} /> Create Policy</Btn>
+        <Btn small onClick={() => void refresh()} disabled={loading}><RefreshCw size={11} /> {loading ? "Loading..." : "Refresh"}</Btn>
       </div>
 
       {/* ════════════ POLICIES SECTION ════════════ */}
-      {section === "policies" && (
+      {(
         <Section title="Rotation Policies">
           <Card style={{ padding: 0, overflow: "hidden" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1.8fr 0.8fr 1fr 0.8fr 0.9fr 0.7fr auto", padding: "9px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, background: C.surface }}>
               <div>Name</div>
-              <div>Target Type</div>
+              <div>On the authority of</div>
               <div>Filter</div>
               <div>Interval</div>
               <div>Auto Rotate</div>
@@ -281,11 +271,9 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
                 >
                   <div style={{ minWidth: 0 }}>
                     <div style={{ color: C.text, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
-                    <div style={{ fontSize: 10, color: C.dim }}>Next: {fmtDate(p.next_rotation_at)} · Last: {fmtDate(p.last_rotation_at)} · {p.total_rotations} keys rotated</div>
+                    <div style={{ fontSize: 10, color: C.dim }}>Next: {p.paused_reason ? "paused" : fmtDate(p.next_rotation_at)} · Last: {fmtDate(p.last_rotation_at)} · {p.total_rotations} keys rotated</div>
                   </div>
-                  <div>
-                    <B c="accent">{p.target_type}</B>
-                  </div>
+                  <div style={{ minWidth: 0, overflow: "hidden" }}><Authority by={p.authorized_by || ""} /></div>
                   <div style={{ color: C.dim, fontFamily: "var(--font-mono)", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {p.target_filter || "—"}
                   </div>
@@ -293,13 +281,13 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
                   <div>
                     <B c={p.auto_rotate ? "green" : "muted"}>{p.auto_rotate ? "Auto" : "Manual"}</B>
                   </div>
-                  <div title={p.last_error || undefined}><B c={policyStatusColor(p.status)}>{p.enabled ? p.status : "disabled"}</B></div>
+                  <div title={p.paused_reason || p.last_error || undefined}>{p.paused_reason ? <B c="amber">paused</B> : <B c={policyStatusColor(p.status)}>{p.enabled ? p.status : "disabled"}</B>}</div>
                   <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
                     <Btn small disabled={triggerBusy === p.id} onClick={() => void doTrigger(p.id, p.name)}>
                       <Play size={9} /> {triggerBusy === p.id ? "..." : "Run"}
                     </Btn>
-                    <Btn small onClick={() => openEditModal(p)}>
-                      <Edit2 size={9} />
+                    <Btn small onClick={() => openEditModal(p)} title={p.paused_reason ? `${p.paused_reason}. Saving makes you its authority and resumes it.` : "Edit"}>
+                      {p.paused_reason ? "Resume" : <Edit2 size={9} />}
                     </Btn>
                     <Btn small danger disabled={deleteBusy === p.id} onClick={() => void doDelete(p)}>
                       <Trash2 size={9} /> {deleteBusy === p.id ? "..." : ""}
@@ -312,66 +300,8 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
         </Section>
       )}
 
-      {/* ════════════ SCHEDULE SECTION ════════════ */}
-      {section === "schedule" && (
-        <Section title="Upcoming Rotations">
-          <Card style={{ padding: 0, overflow: "hidden" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1.5fr 0.7fr 1fr 0.8fr auto", padding: "9px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, background: C.surface }}>
-              <div>Policy</div>
-              <div>Target</div>
-              <div>Mode</div>
-              <div>Scheduled</div>
-              <div>Days Until</div>
-              <div style={{ textAlign: "right" }}>Action</div>
-            </div>
-            <div style={{ maxHeight: 420, overflowY: "auto" }}>
-              {loading && (
-                <div style={{ padding: 28, textAlign: "center", fontSize: 12, color: C.dim }}>
-                  <Clock size={20} color={C.muted} style={{ margin: "0 auto 8px", display: "block" }} />
-                  Loading...
-                </div>
-              )}
-              {!loading && upcoming.length === 0 && (
-                <div style={{ padding: 28, textAlign: "center", fontSize: 12, color: C.dim }}>
-                  <CheckCircle2 size={20} color={C.muted} style={{ margin: "0 auto 8px", display: "block" }} />
-                  No upcoming rotations scheduled.
-                </div>
-              )}
-              {!loading && upcoming.map((u, idx) => (
-                <div
-                  key={`${u.policy_id}-${idx}`}
-                  style={{ display: "grid", gridTemplateColumns: "1.5fr 1.5fr 0.7fr 1fr 0.8fr auto", padding: "10px 14px", borderBottom: `1px solid ${C.border}`, alignItems: "center", fontSize: 11, background: u.overdue ? C.redTint : "transparent", transition: "background 120ms" }}
-                  onMouseEnter={(e) => { if (!u.overdue) e.currentTarget.style.background = C.cardHover; }}
-                  onMouseLeave={(e) => { if (!u.overdue) e.currentTarget.style.background = "transparent"; }}
-                >
-                  <div style={{ color: C.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.policy_name}</div>
-                  <div style={{ color: C.dim, fontFamily: "var(--font-mono)", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>keys matching {policyById.get(u.policy_id)?.target_filter ?? "—"}</div>
-                  <div>
-                    <B c={policyById.get(u.policy_id)?.auto_rotate ? "green" : "muted"}>{policyById.get(u.policy_id)?.auto_rotate ? "auto" : "manual"}</B>
-                  </div>
-                  <div style={{ color: C.dim, fontSize: 10 }}>{fmtDateTime(u.scheduled_at)}</div>
-                  <div>
-                    {u.overdue
-                      ? <span style={{ color: C.redFg, fontWeight: 700, fontSize: 11 }}>{daysOverdue(u.scheduled_at)}d overdue</span>
-                      : <span style={{ color: u.days_until <= 3 ? C.amberFg : C.text, fontWeight: 600 }}>{u.days_until}d</span>
-                    }
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <Btn small disabled={triggerBusy === u.policy_id} onClick={() => void doTrigger(u.policy_id, u.policy_name)}>
-                      <Play size={9} /> {triggerBusy === u.policy_id ? "..." : "Trigger"}
-                    </Btn>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </Section>
-      )}
-
-      {section === "cryptoperiods" && <CryptoperiodPanel session={session} />}
-
       {/* ════════════ HISTORY SECTION ════════════ */}
-      {section === "history" && (
+      {(
         <Section title="Rotation History">
           <Card style={{ padding: 0, overflow: "hidden" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1.5fr 0.9fr 0.6fr 0.7fr 0.8fr", padding: "9px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, background: C.surface }}>

@@ -1,5 +1,6 @@
 import {
   Activity,
+  CalendarClock,
   ArrowLeftRight,
   Bell,
   Boxes,
@@ -16,7 +17,6 @@ import {
   LayoutDashboard,
   LockKeyhole,
   Network,
-  RefreshCw,
   ScanSearch,
   ScrollText,
   SlidersHorizontal,
@@ -38,7 +38,7 @@ export const NAV = [
   { g: "Keys & certificates", items: [
     { id: "keys", icon: KeyRound, label: "Key Management" },
     { id: "certs", icon: FileBadge, label: "Certificates / PKI" },
-    { id: "rotation", icon: RefreshCw, label: "Rotation & Scheduling" },
+    { id: "scheduling", icon: CalendarClock, label: "Scheduling" },
     { id: "crypto_agility", icon: ArrowLeftRight, label: "Crypto Agility" },
     { id: "discovery", icon: ScanSearch, label: "Crypto Discovery" },
   ]},
@@ -74,7 +74,8 @@ export const NAV = [
 // Operations Metrics and Analytics to Overview > Operations (7.24.0-beta).
 // Documentation was removed (7.35.0-beta); its ids open the Command Center.
 // Recommendations became Command Center's sub-option (13.23.0-beta).
-export const RETIRED_TABS: Record<string, string> = { health: "admin/health", ops_metrics: "ops", key_analytics: "ops", docs: "home", devsecops: "home", recommendations: "home/recommendations" };
+// Rotation & Scheduling became Scheduling (13.66.0-beta).
+export const RETIRED_TABS: Record<string, string> = { health: "admin/health", ops_metrics: "ops", key_analytics: "ops", docs: "home", devsecops: "home", recommendations: "home/recommendations", rotation: "scheduling/keys" };
 
 // The address names the module and its sub-option (#certs/cert-enrollment).
 // Each move adds a history entry, so Back returns to the previous view, and
@@ -82,7 +83,8 @@ export const RETIRED_TABS: Record<string, string> = { health: "admin/health", op
 // only read at load and overwritten in place.
 // Sub-options that moved to another module (13.26.0-beta: backups and
 // approval policies each have one home).
-export const RETIRED_SUBS: Record<string, string> = { "admin/backup": "backup/encrypted", "admin/approvals": "approvals/policies" };
+// 13.66.0-beta: backup schedules moved to Scheduling.
+export const RETIRED_SUBS: Record<string, string> = { "admin/backup": "backup/encrypted", "admin/approvals": "approvals/policies", "backup/schedules": "scheduling/backups" };
 
 export function parseNavHash(hash: string): { tab: string; sub: string } {
   const [rawTab = "", rawSub = ""] = decodeURIComponent(String(hash || "").replace(/^#/, "")).split("/");

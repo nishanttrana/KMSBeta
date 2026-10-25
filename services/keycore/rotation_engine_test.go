@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/authority"
 	"vecta-kms/pkg/route/routetest"
 )
 
@@ -147,19 +149,46 @@ func TestRotationPolicyValidation(t *testing.T) {
 	}
 }
 
-// The scheduler rotates due auto-rotate policies on the primary, under its
-// own service identity, and never runs on a cluster member.
+// stubAuthority answers as auth would for a policy's authorizing person.
+type stubAuthority struct {
+	answer authority.Answer
+	err    error
+	asked  []string
+}
+
+func (a *stubAuthority) Authority(_ context.Context, tenantID, userID string, perms []string) (authority.Answer, error) {
+	a.asked = append(a.asked, tenantID+"/"+userID+"/"+strings.Join(perms, ","))
+	if a.err != nil {
+		return authority.Answer{}, a.err
+	}
+	out := a.answer
+	missing := []string{}
+	for _, p := range perms {
+		for _, m := range a.answer.Missing {
+			if p == m {
+				missing = append(missing, p)
+			}
+		}
+	}
+	out.Missing = missing
+	return out, nil
+}
+
+var adminAuthority = authority.Answer{Active: true, Role: "admin", Missing: []string{}}
+
+// The scheduler rotates due auto-rotate policies on the primary, as the
+// person who saved the policy, and never runs on a cluster member.
 func TestRotationSchedulerRunsDuePoliciesOnPrimaryOnly(t *testing.T) {
 	_, svc := newHandlerForTest(t)
 	k := mustKey(t, svc, "nightly-1")
 	due := time.Now().UTC().Add(-time.Minute)
 	if _, err := svc.store.CreateRotationPolicy(context.Background(), RotationPolicy{
 		ID: "rp-due", TenantID: "t1", Name: "nightly", TargetType: "key", TargetFilter: "nightly-*",
-		IntervalDays: 1, AutoRotate: true, Enabled: true, Status: "active", NextRotationAt: &due,
+		IntervalDays: 1, AutoRotate: true, Enabled: true, Status: "active", NextRotationAt: &due, AuthorizedBy: "alice",
 	}); err != nil {
 		t.Fatal(err)
 	}
-	sched := NewRotationScheduler(svc, nil, log.Default())
+	sched := NewRotationScheduler(svc, nil, &stubAuthority{answer: adminAuthority}, log.Default())
 	audit := &routetest.Recorder{}
 	sched.audit = audit
 	sched.primary = func(context.Context) bool { return false }
@@ -182,7 +211,7 @@ func TestRotationSchedulerRunsDuePoliciesOnPrimaryOnly(t *testing.T) {
 		t.Fatalf("next rotation not advanced: %+v", p.NextRotationAt)
 	}
 	runs, _ := svc.store.ListRotationRuns(context.Background(), "t1", "rp-due")
-	if len(runs) != 1 || runs[0].TriggeredBy != "schedule" || runs[0].Status != "success" {
+	if len(runs) != 1 || runs[0].TriggeredBy != "schedule:alice" || runs[0].Status != "success" {
 		t.Fatalf("runs %+v", runs)
 	}
 	sched.Tick(context.Background()) // no longer due
@@ -195,4 +224,110 @@ func TestRotationRoutesRefusalsAudited(t *testing.T) {
 	h, _, _ := newActorTestHandler(t)
 	rec := &routetest.Recorder{}
 	routetest.RefusalsAudited(t, h.rotationRouter(rec), rec)
+}
+
+// A scheduled run acts only on the authority of the person who saved the
+// policy, asked of auth at the moment it runs (13.66.0-beta).
+func TestScheduledRotationNeedsTheSaversAuthorityNow(t *testing.T) {
+	ctx := context.Background()
+	due := time.Now().UTC().Add(-time.Minute)
+	policy := func(t *testing.T, svc *Service, by string) {
+		t.Helper()
+		if _, err := svc.store.CreateRotationPolicy(ctx, RotationPolicy{
+			ID: "rp-1", TenantID: "t1", Name: "nightly", TargetType: "key", TargetFilter: "nightly-*",
+			IntervalDays: 1, AutoRotate: true, Enabled: true, Status: "active", NextRotationAt: &due, AuthorizedBy: by,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	run := func(t *testing.T, svc *Service, auth authority.Checker) (*routetest.Recorder, RotationPolicy) {
+		t.Helper()
+		sched := NewRotationScheduler(svc, nil, auth, log.Default())
+		rec := &routetest.Recorder{}
+		sched.audit, sched.primary = rec, func(context.Context) bool { return true }
+		sched.Tick(ctx)
+		p, err := svc.store.GetRotationPolicy(ctx, "t1", "rp-1")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return rec, p
+	}
+
+	t.Run("revoked: paused, refused, nothing rotated, not due again", func(t *testing.T) {
+		_, svc := newHandlerForTest(t)
+		k := mustKey(t, svc, "nightly-1")
+		policy(t, svc, "alice")
+		auth := &stubAuthority{answer: authority.Answer{Active: true, Missing: []string{"key.rotate"}}}
+		rec, p := run(t, svc, auth)
+		if keyVersion(t, svc, k.ID) != 1 || p.PausedReason == "" || !strings.Contains(p.PausedReason, "key.rotate") {
+			t.Fatalf("revoked authority ran or did not pause: v%d %+v", keyVersion(t, svc, k.ID), p)
+		}
+		if ev := rec.Last(t); ev.Action != "rotation_policy_run" || ev.Event.Result != "refused" || ev.Event.Details["reason"] != authority.ReasonRevoked || ev.Event.Details["authorized_by"] != "alice" {
+			t.Fatalf("refusal audited as %+v", ev)
+		}
+		if len(auth.asked) != 1 || auth.asked[0] != "t1/alice/key.rotation.write,key.rotate" {
+			t.Fatalf("asked %v", auth.asked)
+		}
+		if due, _ := svc.store.ListDueRotationPolicies(ctx, time.Now().UTC().Add(time.Hour), 10); len(due) != 0 {
+			t.Fatal("a paused policy is still due")
+		}
+	})
+
+	t.Run("no one on record: paused", func(t *testing.T) {
+		_, svc := newHandlerForTest(t)
+		k := mustKey(t, svc, "nightly-1")
+		policy(t, svc, "")
+		auth := &stubAuthority{answer: adminAuthority}
+		rec, p := run(t, svc, auth)
+		if keyVersion(t, svc, k.ID) != 1 || p.PausedReason == "" || len(auth.asked) != 0 {
+			t.Fatalf("a policy with no authorizer ran: %+v asked %v", p, auth.asked)
+		}
+		if ev := rec.Last(t); ev.Event.Result != "refused" || ev.Event.Details["reason"] != authority.ReasonRevoked {
+			t.Fatalf("refusal audited as %+v", ev)
+		}
+	})
+
+	t.Run("auth unreachable: postponed, not paused", func(t *testing.T) {
+		_, svc := newHandlerForTest(t)
+		k := mustKey(t, svc, "nightly-1")
+		policy(t, svc, "alice")
+		rec, p := run(t, svc, &stubAuthority{err: errors.New("auth unreachable")})
+		if keyVersion(t, svc, k.ID) != 1 || p.PausedReason != "" || p.NextRotationAt == nil || !p.NextRotationAt.After(time.Now().UTC()) {
+			t.Fatalf("unknown authority: v%d %+v", keyVersion(t, svc, k.ID), p)
+		}
+		if ev := rec.Last(t); ev.Event.Result != "refused" || ev.Event.Details["reason"] != authority.ReasonUnknown {
+			t.Fatalf("refusal audited as %+v", ev)
+		}
+	})
+
+	t.Run("a person without access to the key: that rotation fails, the run is not a success", func(t *testing.T) {
+		_, svc := newHandlerForTest(t)
+		k := mustKey(t, svc, "nightly-1")
+		policy(t, svc, "bob")
+		bob := &stubAuthority{answer: authority.Answer{Active: true, Role: "operator", Missing: []string{permAccessAdmin}}}
+		rec, p := run(t, svc, bob)
+		if keyVersion(t, svc, k.ID) != 1 || p.Status != "error" {
+			t.Fatalf("bob rotated a key he has no grant on: v%d %+v", keyVersion(t, svc, k.ID), p)
+		}
+		if ev := rec.Last(t); ev.Event.Result != "failure" || ev.Event.Details["failed"] != 1 {
+			t.Fatalf("run audited as %+v", ev)
+		}
+	})
+
+	t.Run("saving the policy again makes the saver its authority and resumes it", func(t *testing.T) {
+		h, svc := newHandlerForTest(t)
+		mustKey(t, svc, "nightly-1")
+		policy(t, svc, "alice")
+		if err := svc.store.HoldRotationPolicy(ctx, "t1", "rp-1", due, "alice no longer holds key.rotate"); err != nil {
+			t.Fatal(err)
+		}
+		carol := &pkgauth.Claims{UserID: "carol", TenantID: "t1", Role: "admin", Permissions: []string{"*"}}
+		if rr, _ := rotationCall(t, h, carol, http.MethodPatch, "/rotation/policies/rp-1?tenant_id=t1", `{"enabled":true}`); rr.Code != http.StatusOK {
+			t.Fatalf("save: %d %s", rr.Code, rr.Body)
+		}
+		p, _ := svc.store.GetRotationPolicy(ctx, "t1", "rp-1")
+		if p.AuthorizedBy != "carol" || p.PausedReason != "" {
+			t.Fatalf("after save: %+v", p)
+		}
+	})
 }

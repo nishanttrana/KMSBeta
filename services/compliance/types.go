@@ -211,12 +211,21 @@ type AssessmentDelta struct {
 }
 
 type AssessmentSchedule struct {
-	TenantID  string    `json:"tenant_id"`
-	Enabled   bool      `json:"enabled"`
-	Frequency string    `json:"frequency"`
-	LastRunAt time.Time `json:"last_run_at"`
-	NextRunAt time.Time `json:"next_run_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	TenantID  string `json:"tenant_id"`
+	Enabled   bool   `json:"enabled"`
+	Frequency string `json:"frequency"`
+	// AuthorizedBy is the person who last saved the schedule; a run is
+	// re-checked with auth and pauses (PausedReason) when their authority
+	// is gone (13.66.0-beta). LastResult: assessed (LastAssessmentID),
+	// refused or failed.
+	AuthorizedBy     string    `json:"authorized_by"`
+	PausedReason     string    `json:"paused_reason,omitempty"`
+	LastResult       string    `json:"last_result,omitempty"`
+	LastError        string    `json:"last_error,omitempty"`
+	LastAssessmentID string    `json:"last_assessment_id,omitempty"`
+	LastRunAt        time.Time `json:"last_run_at"`
+	NextRunAt        time.Time `json:"next_run_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }
 
 type ComplianceTemplate struct {

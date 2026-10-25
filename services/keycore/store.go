@@ -128,6 +128,7 @@ type Store interface {
 	GetRotationPolicy(ctx context.Context, tenantID, id string) (RotationPolicy, error)
 	ListDueRotationPolicies(ctx context.Context, now time.Time, limit int) ([]RotationPolicy, error)
 	RecordRotationPolicyOutcome(ctx context.Context, tenantID, id string, ranAt, next time.Time, rotated int, status, lastErr string) error
+	HoldRotationPolicy(ctx context.Context, tenantID, id string, next time.Time, pausedReason string) error
 	ListUpcomingRotations(ctx context.Context, tenantID string) ([]UpcomingRotation, error)
 	RecordRotationMetric(ctx context.Context, metric RotationMetric) error
 	ListRotationMetrics(ctx context.Context, tenantID, keyID, status string, limit int) ([]RotationMetric, error)
@@ -159,11 +160,12 @@ type Store interface {
 	UpsertDSPMFinding(ctx context.Context, finding DSPMFinding) (DSPMFinding, error)
 	ListDSPMFindings(ctx context.Context, tenantID string, q DSPMFindingQuery) ([]DSPMFinding, error)
 
-	// Advanced Scheduling Jobs
-	ListSchedulingJobs(ctx context.Context, tenantID string) ([]KeySchedulingJob, error)
-	CreateSchedulingJob(ctx context.Context, j KeySchedulingJob) (KeySchedulingJob, error)
-	UpdateSchedulingJob(ctx context.Context, tenantID, id string, j KeySchedulingJob) (KeySchedulingJob, error)
-	DeleteSchedulingJob(ctx context.Context, tenantID, id string) error
+	// Key integrity schedules (integrity_schedule.go)
+	ListIntegritySchedules(ctx context.Context, tenantID string) ([]IntegritySchedule, error)
+	GetIntegritySchedule(ctx context.Context, tenantID, id string) (IntegritySchedule, error)
+	ListDueIntegritySchedules(ctx context.Context, now time.Time, limit int) ([]IntegritySchedule, error)
+	PutIntegritySchedule(ctx context.Context, sch IntegritySchedule) error
+	DeleteIntegritySchedule(ctx context.Context, tenantID, id string) error
 
 	// KDF Configurations
 

@@ -146,10 +146,19 @@ type ScheduledReport struct {
 	Filters    map[string]interface{} `json:"filters"`
 	Recipients []string               `json:"-"`
 	Enabled    bool                   `json:"enabled"`
-	LastRunAt  time.Time              `json:"last_run_at"`
-	NextRunAt  time.Time              `json:"next_run_at"`
-	CreatedAt  time.Time              `json:"created_at"`
-	UpdatedAt  time.Time              `json:"updated_at"`
+	// AuthorizedBy is the person who last saved the schedule: each run is
+	// requested on their authority, re-checked with auth first, and pauses
+	// (PausedReason) when it is gone (13.66.0-beta). LastResult is
+	// requested (a report job was queued: LastJobID), refused or failed.
+	AuthorizedBy string    `json:"authorized_by"`
+	PausedReason string    `json:"paused_reason,omitempty"`
+	LastResult   string    `json:"last_result,omitempty"`
+	LastError    string    `json:"last_error,omitempty"`
+	LastJobID    string    `json:"last_job_id,omitempty"`
+	LastRunAt    time.Time `json:"last_run_at"`
+	NextRunAt    time.Time `json:"next_run_at"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type ErrorTelemetryEvent struct {

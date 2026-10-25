@@ -40,10 +40,10 @@ func TestRotationSchedulerPostgres(t *testing.T) {
 	due := time.Now().UTC().Add(-time.Minute)
 	pid := newID("rp")
 	if _, err := svc.store.CreateRotationPolicy(ctx, RotationPolicy{ID: pid, TenantID: tenant, Name: "pg", TargetType: "key", TargetFilter: "tag:pci",
-		IntervalDays: 7, AutoRotate: true, Enabled: true, Status: "active", NextRotationAt: &due}); err != nil {
+		IntervalDays: 7, AutoRotate: true, Enabled: true, Status: "active", NextRotationAt: &due, AuthorizedBy: "alice"}); err != nil {
 		t.Fatal(err)
 	}
-	sched := NewRotationScheduler(svc, nil, log.Default())
+	sched := NewRotationScheduler(svc, nil, &stubAuthority{answer: adminAuthority}, log.Default())
 	sched.primary = func(context.Context) bool { return true }
 	sched.Tick(ctx)
 
@@ -56,7 +56,7 @@ func TestRotationSchedulerPostgres(t *testing.T) {
 		t.Fatalf("policy after run: %v %+v", err, p)
 	}
 	runs, err := svc.store.ListRotationRuns(ctx, tenant, pid)
-	if err != nil || len(runs) != 1 || runs[0].Status != "success" || runs[0].CompletedAt == nil || runs[0].TriggeredBy != "schedule" {
+	if err != nil || len(runs) != 1 || runs[0].Status != "success" || runs[0].CompletedAt == nil || runs[0].TriggeredBy != "schedule:alice" {
 		t.Fatalf("runs: %v %+v", err, runs)
 	}
 	stillDue, err := svc.store.ListDueRotationPolicies(ctx, time.Now().UTC(), 100)

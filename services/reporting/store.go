@@ -58,7 +58,9 @@ type Store interface {
 	CreateScheduledReport(ctx context.Context, item ScheduledReport) error
 	ListScheduledReports(ctx context.Context, tenantID string) ([]ScheduledReport, error)
 	ListDueScheduledReports(ctx context.Context, now time.Time, limit int) ([]ScheduledReport, error)
-	UpdateScheduledReportRun(ctx context.Context, tenantID string, id string, lastRun time.Time, nextRun time.Time) error
+	GetScheduledReport(ctx context.Context, tenantID, id string) (ScheduledReport, error)
+	SaveScheduledReport(ctx context.Context, item ScheduledReport) error
+	DeleteScheduledReport(ctx context.Context, tenantID, id string) error
 }
 
 type SQLStore struct {
@@ -841,19 +843,62 @@ func (s *SQLStore) CreateScheduledReport(ctx context.Context, item ScheduledRepo
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO reporting_scheduled_reports (
 	tenant_id, id, name, template_id, format, schedule, filters_json, recipients_json, enabled,
-	last_run_at, next_run_at, created_at, updated_at
+	last_run_at, next_run_at, authorized_by, paused_reason, last_result, last_error, last_job_id, created_at, updated_at
 ) VALUES (
-	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
+	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
 )
 `, item.TenantID, item.ID, item.Name, item.TemplateID, item.Format, item.Schedule, mustJSON(item.Filters, "{}"),
-		mustJSON(item.Recipients, "[]"), item.Enabled, nullableTime(item.LastRunAt), nullableTime(item.NextRunAt))
+		mustJSON(item.Recipients, "[]"), item.Enabled, nullableTime(item.LastRunAt), nullableTime(item.NextRunAt),
+		item.AuthorizedBy, item.PausedReason, item.LastResult, item.LastError, item.LastJobID)
 	return err
+}
+
+const scheduledReportColumns = `tenant_id, id, name, template_id, format, schedule, filters_json, recipients_json, enabled,
+	   last_run_at, next_run_at, authorized_by, paused_reason, last_result, last_error, last_job_id, created_at, updated_at`
+
+func (s *SQLStore) GetScheduledReport(ctx context.Context, tenantID, id string) (ScheduledReport, error) {
+	item, err := scanScheduledReport(s.db.SQL().QueryRowContext(ctx, `SELECT `+scheduledReportColumns+`
+FROM reporting_scheduled_reports WHERE tenant_id = $1 AND id = $2`, tenantID, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return ScheduledReport{}, errNotFound
+	}
+	return item, err
+}
+
+// SaveScheduledReport writes a schedule's settings, authority and last run.
+func (s *SQLStore) SaveScheduledReport(ctx context.Context, item ScheduledReport) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE reporting_scheduled_reports
+SET name = $1, template_id = $2, format = $3, schedule = $4, filters_json = $5, enabled = $6,
+	last_run_at = $7, next_run_at = $8, authorized_by = $9, paused_reason = $10, last_result = $11,
+	last_error = $12, last_job_id = $13, updated_at = CURRENT_TIMESTAMP
+WHERE tenant_id = $14 AND id = $15
+`, item.Name, item.TemplateID, item.Format, item.Schedule, mustJSON(item.Filters, "{}"), item.Enabled,
+		nullableTime(item.LastRunAt), nullableTime(item.NextRunAt), item.AuthorizedBy, item.PausedReason, item.LastResult,
+		item.LastError, item.LastJobID, item.TenantID, item.ID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errNotFound
+	}
+	return nil
+}
+
+func (s *SQLStore) DeleteScheduledReport(ctx context.Context, tenantID, id string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `DELETE FROM reporting_scheduled_reports WHERE tenant_id = $1 AND id = $2`, tenantID, id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errNotFound
+	}
+	return nil
 }
 
 func (s *SQLStore) ListScheduledReports(ctx context.Context, tenantID string) ([]ScheduledReport, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT tenant_id, id, name, template_id, format, schedule, filters_json, recipients_json, enabled,
-	   last_run_at, next_run_at, created_at, updated_at
+SELECT `+scheduledReportColumns+`
 FROM reporting_scheduled_reports
 WHERE tenant_id = $1
 ORDER BY created_at DESC
@@ -878,10 +923,9 @@ func (s *SQLStore) ListDueScheduledReports(ctx context.Context, now time.Time, l
 		limit = 100
 	}
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT tenant_id, id, name, template_id, format, schedule, filters_json, recipients_json, enabled,
-	   last_run_at, next_run_at, created_at, updated_at
+SELECT `+scheduledReportColumns+`
 FROM reporting_scheduled_reports
-WHERE enabled = TRUE
+WHERE enabled = TRUE AND paused_reason = ''
   AND (next_run_at IS NULL OR next_run_at <= $1)
 ORDER BY next_run_at ASC
 LIMIT $2
@@ -899,17 +943,6 @@ LIMIT $2
 		out = append(out, item)
 	}
 	return out, rows.Err()
-}
-
-func (s *SQLStore) UpdateScheduledReportRun(ctx context.Context, tenantID string, id string, lastRun time.Time, nextRun time.Time) error {
-	_, err := s.db.SQL().ExecContext(ctx, `
-UPDATE reporting_scheduled_reports
-SET last_run_at = $1,
-	next_run_at = $2,
-	updated_at = CURRENT_TIMESTAMP
-WHERE tenant_id = $3 AND id = $4
-`, nullableTime(lastRun), nullableTime(nextRun), tenantID, id)
-	return err
 }
 
 func scanAlert(scanner interface {
@@ -1037,7 +1070,8 @@ func scanScheduledReport(scanner interface {
 	)
 	err := scanner.Scan(
 		&item.TenantID, &item.ID, &item.Name, &item.TemplateID, &item.Format, &item.Schedule, &filtersJSON, &recipientsJS, &item.Enabled,
-		&lastRunRaw, &nextRunRaw, &createdRaw, &updatedRaw,
+		&lastRunRaw, &nextRunRaw, &item.AuthorizedBy, &item.PausedReason, &item.LastResult, &item.LastError, &item.LastJobID,
+		&createdRaw, &updatedRaw,
 	)
 	if err != nil {
 		return ScheduledReport{}, err

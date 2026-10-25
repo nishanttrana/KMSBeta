@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 	pkgaudit "vecta-kms/pkg/audit"
+	"vecta-kms/pkg/authority"
 	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/timebucket"
 
@@ -21,6 +22,7 @@ import (
 
 type Service struct {
 	store               Store
+	authority           authority.Checker // asked before each scheduled report (schedule.go)
 	audit               AuditClient
 	compliance          ComplianceClient
 	posture             PostureClient
@@ -1040,35 +1042,6 @@ func (s *Service) DeleteReportJob(ctx context.Context, tenantID string, id strin
 	return job, nil
 }
 
-// ScheduleReport schedules a report that the scheduler generates into the
-// report jobs list. Reports are not emailed: reporting has no mail delivery.
-func (s *Service) ScheduleReport(ctx context.Context, tenantID string, name string, templateID string, format string, schedule string, filters map[string]interface{}) (ScheduledReport, error) {
-	item := ScheduledReport{
-		ID:         newID("sched"),
-		TenantID:   tenantID,
-		Name:       defaultString(name, "scheduled-report"),
-		TemplateID: strings.ToLower(strings.TrimSpace(templateID)),
-		Format:     strings.ToLower(strings.TrimSpace(format)),
-		Schedule:   strings.ToLower(strings.TrimSpace(schedule)),
-		Filters:    filters,
-		Enabled:    true,
-		NextRunAt:  nextRunTime(time.Now().UTC(), schedule),
-	}
-	if item.TemplateID == "" {
-		item.TemplateID = "alert_summary"
-	}
-	if item.Format == "" {
-		item.Format = "pdf"
-	}
-	if item.Schedule == "" {
-		item.Schedule = "daily"
-	}
-	if err := s.store.CreateScheduledReport(ctx, item); err != nil {
-		return ScheduledReport{}, err
-	}
-	return item, nil
-}
-
 func (s *Service) ListScheduledReports(ctx context.Context, tenantID string) ([]ScheduledReport, error) {
 	return s.store.ListScheduledReports(ctx, tenantID)
 }
@@ -1129,24 +1102,6 @@ func (s *Service) PurgeErrorTelemetry(ctx context.Context) error {
 	cutoff := time.Now().UTC().Add(-s.telemetryRetention)
 	_, err := s.store.PurgeErrorTelemetryBefore(ctx, cutoff, s.telemetryPurgeBatch)
 	return err
-}
-
-func (s *Service) RunDueSchedules(ctx context.Context) error {
-	items, err := s.store.ListDueScheduledReports(ctx, time.Now().UTC(), 200)
-	if err != nil {
-		return err
-	}
-	for _, item := range items {
-		if job, err := s.GenerateReport(ctx, item.TenantID, item.TemplateID, item.Format, "scheduler", item.Filters); err == nil {
-			_ = s.publishAudit(ctx, "audit.reporting.report_requested", item.TenantID, map[string]interface{}{
-				"job_id": job.ID, "template_id": job.TemplateID, "format": job.Format, "schedule_id": item.ID, "trigger": "scheduled",
-			})
-		}
-		now := time.Now().UTC()
-		next := nextRunTime(now, item.Schedule)
-		_ = s.store.UpdateScheduledReportRun(ctx, item.TenantID, item.ID, now, next)
-	}
-	return nil
 }
 
 func nextRunTime(now time.Time, schedule string) time.Time {

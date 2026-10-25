@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	pkgauth "vecta-kms/pkg/auth"
 )
 
 func TestHandlerPostureAndFrameworkEndpoints(t *testing.T) {
@@ -175,15 +176,16 @@ func TestHandlerAssessmentRunAndSchedule(t *testing.T) {
 	putScheduleReq := httptest.NewRequest(http.MethodPut, "/compliance/assessment/schedule",
 		strings.NewReader(`{"tenant_id":"t4","enabled":true,"frequency":"daily"}`))
 	putScheduleReq.Header.Set("Content-Type", "application/json")
+	t4Admin := &pkgauth.Claims{UserID: "admin-t4", TenantID: "t4", Permissions: []string{"*"}}
 	putScheduleRR := httptest.NewRecorder()
-	h.ServeHTTP(putScheduleRR, putScheduleReq)
+	h.ServeHTTP(putScheduleRR, putScheduleReq.WithContext(pkgauth.ContextWithClaims(putScheduleReq.Context(), t4Admin)))
 	if putScheduleRR.Code != http.StatusOK {
 		t.Fatalf("put schedule status=%d body=%s", putScheduleRR.Code, putScheduleRR.Body.String())
 	}
 
 	getScheduleReq := httptest.NewRequest(http.MethodGet, "/compliance/assessment/schedule?tenant_id=t4", nil)
 	getScheduleRR := httptest.NewRecorder()
-	h.ServeHTTP(getScheduleRR, getScheduleReq)
+	h.ServeHTTP(getScheduleRR, getScheduleReq.WithContext(pkgauth.ContextWithClaims(getScheduleReq.Context(), t4Admin)))
 	if getScheduleRR.Code != http.StatusOK || !strings.Contains(getScheduleRR.Body.String(), "\"enabled\":true") {
 		t.Fatalf("get schedule status=%d body=%s", getScheduleRR.Code, getScheduleRR.Body.String())
 	}

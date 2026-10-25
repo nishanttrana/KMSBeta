@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"vecta-kms/pkg/authority"
 )
 
 // fakeAuthority answers as auth would for the schedule's administrator.
@@ -24,9 +25,9 @@ type fakeAuthority struct {
 	asked   []string
 }
 
-func (f *fakeAuthority) Authority(_ context.Context, tenantID, userID string, perms []string) (bool, []string, error) {
+func (f *fakeAuthority) Authority(_ context.Context, tenantID, userID string, perms []string) (authority.Answer, error) {
 	f.asked = append(f.asked, tenantID+"/"+userID+"/"+strings.Join(perms, ","))
-	return f.active, f.missing, f.err
+	return authority.Answer{Active: f.active, Missing: f.missing}, f.err
 }
 
 func recipientPair(t *testing.T, bits int) (*rsa.PrivateKey, string) {

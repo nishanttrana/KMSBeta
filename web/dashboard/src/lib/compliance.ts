@@ -80,10 +80,16 @@ export type AssessmentDelta = {
   compared_at?: string;
 };
 
+// Runs on the authority of the person who last saved it (13.66.0-beta).
 export type AssessmentSchedule = {
   tenant_id: string;
   enabled: boolean;
   frequency: "daily" | "hourly" | "weekly";
+  authorized_by?: string;
+  paused_reason?: string;
+  last_result?: string;
+  last_error?: string;
+  last_assessment_id?: string;
   last_run_at?: string;
   next_run_at?: string;
   updated_at?: string;
@@ -222,13 +228,14 @@ export async function getComplianceAssessmentDelta(session: AuthSession, templat
 
 export async function getComplianceAssessmentSchedule(session: AuthSession): Promise<AssessmentSchedule> {
   const out = await serviceRequest<{ schedule?: AssessmentSchedule }>(session, "compliance", `/compliance/assessment/schedule?${tenantQuery(session)}`);
-  return (
-    out?.schedule || {
-      tenant_id: session.tenantId,
-      enabled: false,
-      frequency: "daily"
-    }
-  );
+  if (!out?.schedule) throw new Error("compliance answered without its assessment schedule");
+  return out.schedule;
+}
+
+export async function runComplianceAssessmentSchedule(session: AuthSession): Promise<AssessmentSchedule> {
+  const out = await serviceRequest<{ schedule?: AssessmentSchedule }>(session, "compliance", `/compliance/assessment/schedule/run?${tenantQuery(session)}`, { method: "POST" });
+  if (!out?.schedule) throw new Error("compliance answered without its assessment schedule");
+  return out.schedule;
 }
 
 export async function listComplianceFrameworkCatalog(session: AuthSession): Promise<ComplianceFramework[]> {
@@ -270,21 +277,12 @@ export async function updateComplianceAssessmentSchedule(
   session: AuthSession,
   payload: Pick<AssessmentSchedule, "enabled" | "frequency">
 ): Promise<AssessmentSchedule> {
-  const out = await serviceRequest<{ schedule?: AssessmentSchedule }>(session, "compliance", "/compliance/assessment/schedule", {
+  const out = await serviceRequest<{ schedule?: AssessmentSchedule }>(session, "compliance", `/compliance/assessment/schedule?${tenantQuery(session)}`, {
     method: "PUT",
-    body: JSON.stringify({
-      tenant_id: session.tenantId,
-      enabled: Boolean(payload.enabled),
-      frequency: payload.frequency || "daily"
-    })
+    body: JSON.stringify({ enabled: Boolean(payload.enabled), frequency: payload.frequency })
   });
-  return (
-    out?.schedule || {
-      tenant_id: session.tenantId,
-      enabled: Boolean(payload.enabled),
-      frequency: (payload.frequency || "daily") as "daily" | "hourly" | "weekly"
-    }
-  );
+  if (!out?.schedule) throw new Error("compliance answered without its assessment schedule");
+  return out.schedule;
 }
 
 /* ── Posture Breakdown ── */

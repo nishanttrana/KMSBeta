@@ -17,6 +17,7 @@ import (
 	"time"
 
 	pkgaudit "vecta-kms/pkg/audit"
+	"vecta-kms/pkg/authority"
 	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/svctls"
 )
@@ -47,7 +48,7 @@ type Service struct {
 	// conns opens a private repository's git connection (compliance) and
 	// authority re-checks who authorized a schedule (auth).
 	conns     ConnectionResolver
-	authority AuthorityChecker
+	authority authority.Checker
 	// repoRoots trusts a test hosting server's certificate; nil in
 	// production (the system roots).
 	repoRoots *x509.CertPool

@@ -22,6 +22,7 @@ import (
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/authority"
 	"vecta-kms/pkg/clusterstate"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
@@ -100,7 +101,7 @@ func main() {
 		WithSNMPPublisher(snmpPublisher),
 		WithNotifyConnections(newComplianceConnections(envOr("COMPLIANCE_URL", "https://compliance:8110"))),
 		WithCredentials(credstore.FromEnv()),
-		WithBackupAuthority(newAuthAuthority(envOr("AUTH_URL", "https://auth:8001"))),
+		WithBackupAuthority(authority.New(envOr("AUTH_URL", "https://auth:8001"))),
 	)
 	// Scheduled backups, on the primary only (backup_schedule.go).
 	go svc.RunBackupSchedulesLoop(ctx, clusterstate.RunsPrimaryJobs, time.Minute)

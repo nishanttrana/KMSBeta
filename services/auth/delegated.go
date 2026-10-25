@@ -29,9 +29,12 @@ const delegatingService = "kms-compliance"
 // permissions (POST /auth/delegated/authority), which changes nothing. A
 // service that runs saved work unattended asks before each run
 // (docs/PLATFORM_CONTRACT.md): compliance for playbooks, discovery for scan
-// schedules (7.20.0-beta), governance for backup schedules (13.43.0-beta).
-// The operations that act on users, keys and clients stay compliance's alone.
-var authorityCallers = map[string]bool{delegatingService: true, "kms-discovery": true, "kms-governance": true}
+// schedules (7.20.0-beta), governance for backup schedules (13.43.0-beta),
+// keycore for key rotation policies, secrets for secret rotation schedules
+// and reporting for scheduled reports (13.66.0-beta). They ask through
+// pkg/authority. The operations that act on users, keys and clients stay
+// compliance's alone.
+var authorityCallers = map[string]bool{delegatingService: true, "kms-discovery": true, "kms-governance": true, "kms-keycore": true, "kms-secrets": true, "kms-reporting": true}
 
 // Refusal reasons for delegated operations.
 const (
@@ -143,12 +146,13 @@ func (h *Handler) decodeDelegation(c *route.Call) (delegation, bool) {
 	return d, true
 }
 
-// delegatedAuthority reports whether a user is active and which of the
-// given permissions they no longer hold. Playbooks ask before every
-// automatic run, so a person who lost a permission stops their playbooks.
+// delegatedAuthority reports whether a user is active, which of the given
+// permissions they no longer hold, and their role now (the vault's access
+// rules can name a role). Playbooks and schedules ask before every
+// automatic run, so a person who lost a permission stops their work.
 func (h *Handler) delegatedAuthority(c *route.Call) {
 	if !tenantcheck.IsServicePrincipal(c.Claims) || !authorityCallers[c.Claims.ClientID] {
-		c.Refuse(http.StatusForbidden, reasonServiceIdentityRequired, "only the compliance, discovery and governance services may check a person's authority")
+		c.Refuse(http.StatusForbidden, reasonServiceIdentityRequired, "only a platform service that runs saved work may check a person's authority")
 		return
 	}
 	var in struct {
@@ -160,7 +164,10 @@ func (h *Handler) delegatedAuthority(c *route.Call) {
 		return
 	}
 	c.Target(in.UserID)
-	out := map[string]interface{}{"active": false, "missing": in.Permissions}
+	if in.Permissions == nil {
+		in.Permissions = []string{}
+	}
+	out := map[string]interface{}{"active": false, "missing": in.Permissions, "role": ""}
 	user, err := h.store.GetUserByID(c.R.Context(), c.Tenant, strings.TrimSpace(in.UserID))
 	if err == nil && normalizeUserStatus(user.Status) == "active" {
 		perms, err := h.resolveEffectivePermissions(c.R.Context(), c.Tenant, user.ID, user.Role)
@@ -175,7 +182,7 @@ func (h *Handler) delegatedAuthority(c *route.Call) {
 				missing = append(missing, p)
 			}
 		}
-		out["active"], out["missing"] = true, missing
+		out["active"], out["missing"], out["role"] = true, missing, user.Role
 	} else if err != nil && !errors.Is(err, errNotFound) {
 		c.Error(http.StatusInternalServerError, "internal_error", "read user failed")
 		return

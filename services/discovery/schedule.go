@@ -135,7 +135,7 @@ func (s *Service) runSchedule(ctx context.Context, sch Schedule) bool {
 		emit(route.ResultRefused, "authority_unknown", "")
 		return false
 	}
-	active, missing, err := s.authority.Authority(ctx, sch.TenantID, sch.AuthorizedBy, []string{schedulePermission})
+	a, err := s.authority.Authority(ctx, sch.TenantID, sch.AuthorizedBy, []string{schedulePermission})
 	switch {
 	case err != nil:
 		// Auth didn't answer: neither run on unverified authority nor
@@ -144,7 +144,7 @@ func (s *Service) runSchedule(ctx context.Context, sch Schedule) bool {
 		postpone()
 		emit(route.ResultRefused, "authority_unknown", "")
 		return false
-	case !active || len(missing) > 0:
+	case !a.Active || len(a.Missing) > 0:
 		sch.PausedReason = "the user who saved this schedule is no longer active or no longer holds " + schedulePermission + "; save it again to resume"
 		_ = s.store.PutSchedule(ctx, sch)
 		emit(route.ResultRefused, "authority_revoked", "")

@@ -22,6 +22,9 @@ flowchart LR
   UI --> tab_certs
   tab_certs --> svc_certs
   tab_certs --> svc_keycore
+  tab_scheduling["Scheduling"]
+  UI --> tab_scheduling
+  tab_scheduling --> svc_auth_edge
   tab_crypto_agility["Crypto Agility"]
   UI --> tab_crypto_agility
   tab_crypto_agility --> svc_keycore
@@ -111,19 +114,19 @@ flowchart LR
   svc_certs["certs (78 routes)"]
   svc_cloud["cloud (28 routes)"]
   svc_cluster_manager["cluster-manager (28 routes)"]
-  svc_compliance["compliance (60 routes)"]
+  svc_compliance["compliance (61 routes)"]
   svc_confidential["confidential (7 routes)"]
   svc_discovery["discovery (28 routes)"]
   svc_ekm["ekm (68 routes)"]
   svc_governance["governance (40 routes)"]
   svc_hyok["hyok (25 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (193 routes)"]
+  svc_keycore["keycore (194 routes)"]
   svc_posture["posture (13 routes)"]
   svc_pqc["pqc (14 routes)"]
-  svc_reporting["reporting (34 routes)"]
+  svc_reporting["reporting (37 routes)"]
   svc_sbom["sbom (14 routes)"]
-  svc_secrets["secrets (49 routes)"]
+  svc_secrets["secrets (53 routes)"]
   svc_signing["signing (11 routes)"]
   svc_tfe["tfe"]
   svc_workload["workload (20 routes)"]

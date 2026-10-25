@@ -248,6 +248,11 @@ func createComplianceSchemaForTest(conn *pkgdb.DB) error {
 			frequency TEXT NOT NULL DEFAULT 'daily',
 			last_run_at TIMESTAMP,
 			next_run_at TIMESTAMP,
+			authorized_by TEXT NOT NULL DEFAULT '',
+			paused_reason TEXT NOT NULL DEFAULT '',
+			last_result TEXT NOT NULL DEFAULT '',
+			last_error TEXT NOT NULL DEFAULT '',
+			last_assessment_id TEXT NOT NULL DEFAULT '',
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		);`,
 		`CREATE TABLE compliance_templates (

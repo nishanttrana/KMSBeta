@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"vecta-kms/pkg/authority"
 	"vecta-kms/pkg/credstore"
 	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgfips "vecta-kms/pkg/fips"
@@ -52,7 +53,7 @@ type Service struct {
 	// authority asks auth whether a backup schedule's administrator still
 	// holds its permission (backup_schedule.go); now is the clock, set by
 	// tests.
-	authority backupAuthority
+	authority authority.Checker
 	now       func() time.Time
 }
 
@@ -129,7 +130,7 @@ func detectRuntimeCryptoLibrary() (string, bool) {
 type ServiceOption func(*Service)
 
 // WithBackupAuthority sets how a backup schedule's authority is checked.
-func WithBackupAuthority(a backupAuthority) ServiceOption {
+func WithBackupAuthority(a authority.Checker) ServiceOption {
 	return func(s *Service) { s.authority = a }
 }
 

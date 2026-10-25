@@ -20,6 +20,10 @@ export interface RotationPolicy {
   total_rotations: number;
   status: "active" | "error";
   last_error?: string;
+  // Who last saved the policy: scheduled runs act as them, re-checked with
+  // auth; paused_reason says why runs stopped (save again to resume).
+  authorized_by?: string;
+  paused_reason?: string;
 }
 
 export interface RotationRun {

@@ -21,6 +21,7 @@ import (
 
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauditmw "vecta-kms/pkg/auditmw"
+	"vecta-kms/pkg/authority"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgdb "vecta-kms/pkg/db"
@@ -89,6 +90,8 @@ func main() {
 		audit,
 	)
 	svc.SetTenantLister(NewHTTPAuthTenantClient(envOr("AUTH_URL", "https://auth:8001"), 5*time.Second))
+	// Scheduled reports run on the authority of the person who saved them.
+	svc.authority = authority.New(envOr("AUTH_URL", "https://auth:8001"))
 	svc.ConfigureTelemetryRetention(
 		time.Duration(envOrInt("REPORTING_TELEMETRY_RETENTION_DAYS", 30))*24*time.Hour,
 		envOrInt("REPORTING_TELEMETRY_PURGE_BATCH", 10000),

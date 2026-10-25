@@ -20,7 +20,7 @@ export function setupSteps(snapshot: PlatformSnapshot | null, checks: ControlChe
     { id: "first-key", label: "Create your first key", status: !snapshot?.keys ? "unknown" : snapshot.keys.length ? "done" : "todo", action: { tab: "keys", label: "Create key" } },
     { id: "quorum", label: "Require approval to destroy or export keys", status: fromCheck(checks, "quorum"), action: { tab: "approvals/policies", label: "Approvals" } },
     { id: "backup", label: "Take an encrypted backup", status: fromCheck(checks, "backup"), action: { tab: "backup/encrypted", label: "Backup" } },
-    { id: "rotation", label: "Turn on automatic key rotation", status: fromCheck(checks, "rotation-policy"), action: { tab: "rotation", label: "Rotation" } },
+    { id: "rotation", label: "Turn on automatic key rotation", status: fromCheck(checks, "rotation-policy"), action: { tab: "scheduling/keys", label: "Rotation" } },
   ];
 }
 

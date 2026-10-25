@@ -91,8 +91,13 @@ person themselves. Playbooks are the reference: `ActionSpec.Permission`,
 `services/compliance` (2.4.0-beta, re-checks since 2.5.0-beta). Discovery's
 scan schedule follows the same rule (`services/discovery/schedule.go`,
 7.20.0-beta), and so do governance's backup schedules
-(`services/governance/backup_schedule.go`, 13.43.0-beta). Auth admits only
-the services in `authorityCallers` to that route.
+(`services/governance/backup_schedule.go`, 13.43.0-beta), and since
+13.66.0-beta keycore's rotation policies and key integrity schedules,
+secrets' rotation schedules, reporting's scheduled reports and the
+compliance assessment schedule (docs/SCHEDULING.md). Every one asks through
+`pkg/authority`, the single client of that route; a scheduled key rotation
+then runs as that person, so their key grants apply. Auth admits only the
+services in `authorityCallers` to that route.
 
 Rules the conformance check enforces:
 

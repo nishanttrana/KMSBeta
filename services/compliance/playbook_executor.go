@@ -19,6 +19,7 @@ import (
 	"time"
 
 	pkgaudit "vecta-kms/pkg/audit"
+	"vecta-kms/pkg/authority"
 	pkgcrypto "vecta-kms/pkg/crypto"
 	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/siem"
@@ -421,16 +422,11 @@ func (e *PlaybookExecutor) checkAuthority(ctx context.Context, tenantID, user st
 	if e.authority == nil {
 		return reasonAuthorityUnknown, "auth is not wired"
 	}
-	a, err := e.authority.Authority(ctx, tenantID, user, perms)
-	switch {
-	case err != nil:
-		return reasonAuthorityUnknown, err.Error()
-	case !a.Active:
-		return reasonAuthorityRevoked, user + " is no longer an active user"
-	case len(a.Missing) > 0:
-		return reasonAuthorityRevoked, user + " no longer holds " + strings.Join(a.Missing, ", ")
+	_, reason, msg := authority.Check(ctx, e.authority, tenantID, user, perms)
+	if reason == authority.ReasonUnknown {
+		reason = reasonAuthorityUnknown // playbooks record authority_unverified
 	}
-	return "", ""
+	return reason, msg
 }
 
 // Cancel stops a run: a running one at its next step, a paused one at once

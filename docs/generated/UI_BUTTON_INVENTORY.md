@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-24T23:12:15Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-25T18:38:30Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -24,7 +24,7 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/VectaDashboardV3Shell.tsx | 842 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
 | web/dashboard/src/components/VectaDashboardV3Shell.tsx | 877 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
 | web/dashboard/src/components/v3/SidebarSearch.tsx | 60 | - | button | onOpen(src.tab, h.label)} title= style={ }> |  |
-| web/dashboard/src/components/v3/SidebarSubNav.tsx | 160 | - | button | onSelect(item.id)} style={ } > |  |
+| web/dashboard/src/components/v3/SidebarSubNav.tsx | 170 | - | button | onSelect(item.id)} style={ } > |  |
 | web/dashboard/src/components/v3/chartDrill.tsx | 133 | - | Btn | Clear | onClear |
 | web/dashboard/src/components/v3/chartDrill.tsx | 141 | - | Btn | (icon or dynamic label) | onMore} disabled={loading |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 56 | - | button | Close | onClose} aria-label="Close" style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", pa... |
@@ -156,24 +156,24 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 388 | home | button | setSev("all")}>All ( ) |  |
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 390 | home | button | setSev(s)}> ( ) |  |
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 397 | home | button | Show snoozed | unsnoozeAll |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 520 | compliance | Btn | setView("assessment")} style={ }>Assessment |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 521 | compliance | Btn | setView("reporting")} style={ }>Reports |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 524 | compliance | Btn | void loadReporting()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 544 | compliance | Btn | void triggerReportNow()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 570 | compliance | Btn | void createScheduleReport()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 590 | compliance | Btn | void downloadJob(job)} disabled= >Download |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 591 | compliance | Btn | void deleteJob(job)}>Delete |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 625 | compliance | Btn | setView("assessment")} style={ }>Assessment |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 626 | compliance | Btn | setView("reporting")} style={ }>Reports |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 637 | compliance | Btn | void createTemplate()} disabled= >+ Template |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 638 | compliance | Btn | void saveTemplate()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 639 | compliance | Btn | void removeTemplate()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 640 | compliance | Btn | void loadAssessment( )} disabled= >Refresh |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 641 | compliance | Btn | void exportEvidencePack("pdf")} disabled= >Evidence Pack |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 642 | compliance | Btn | void runNow()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 648 | compliance | Btn | void saveSchedule()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 666 | compliance | Btn | void runNow()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1145 | compliance | Btn | { setEvidenceBusy(true); try { await downloadEvidenceReport(session, ); onToa... |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 493 | compliance | Btn | setView("assessment")} style={ }>Assessment |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 494 | compliance | Btn | setView("reporting")} style={ }>Reports |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 497 | compliance | Btn | void loadReporting()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 517 | compliance | Btn | void triggerReportNow()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 527 | compliance | Btn | onNavigate?.("scheduling/reports")}>Open in Scheduling |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 546 | compliance | Btn | void downloadJob(job)} disabled= >Download |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 547 | compliance | Btn | void deleteJob(job)}>Delete |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 565 | compliance | Btn | setView("assessment")} style={ }>Assessment |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 566 | compliance | Btn | setView("reporting")} style={ }>Reports |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 577 | compliance | Btn | void createTemplate()} disabled= >+ Template |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 578 | compliance | Btn | void saveTemplate()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 579 | compliance | Btn | void removeTemplate()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 580 | compliance | Btn | void loadAssessment( )} disabled= >Refresh |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 581 | compliance | Btn | void exportEvidencePack("pdf")} disabled= >Evidence Pack |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 582 | compliance | Btn | void runNow()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 584 | compliance | Btn | onNavigate?.("scheduling/scans")} title={schedule?.paused_reason \|\| (schedule... |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 604 | compliance | Btn | void runNow()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1083 | compliance | Btn | { setEvidenceBusy(true); try { await downloadEvidenceReport(session, ); onToa... |  |
 | web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 291 | confidential | Btn | void refresh(false)}>Refresh |  |
 | web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 324 | confidential | Btn | void refresh(false)}>Reload |  |
 | web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 325 | confidential | Btn | void savePolicy()} disabled= > |  |
@@ -201,8 +201,8 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 164 | - | Btn | void submitHomeApprovalVote?.(item, "denied")} disabled= >Deny |  |
 | web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 184 | - | button | onUnpinTab?.(id)} title={`Unpin $ `} aria-label={`Unpin $ `} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 189 | - | Btn | onNavigate?.(id)}>Open |  |
-| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 213 | discovery | Btn | void load()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 214 | discovery | Btn | setScheduleOpen(true)} title={schedule?.paused_reason \|\| (schedule?.enabled ?... |  |
+| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 212 | discovery | Btn | void load()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 214 | discovery | Btn | onNavigate?.("scheduling/scans")} title={schedule?.paused_reason \|\| (schedule... |  |
 | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 218 | discovery | Btn | void runScan(scanAllTypes)} disabled= title={scanAllTypes.length ? `Scan $ `... |  |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 449 | ekm | Btn | Register Database | openDbRegister} disabled={!agents.length |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 450 | ekm | Btn | setModal("setup-guide")}>Setup Guide |  |
@@ -319,13 +319,6 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/KeyDerivationPanel.tsx | 81 | - | Btn | void run(k.key_id, "re-protect vault tokens", () => kdfReprotectVault(session... |  |
 | web/dashboard/src/components/v3/tabs/KeyDerivationPanel.tsx | 83 | - | Btn | void run(k.key_id, "abort", () => kdfTransition(session, k.key_id, "abort"))}... |  |
 | web/dashboard/src/components/v3/tabs/KeyInventoryPanel.tsx | 58 | - | Btn | void load()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 17 | - | button | (icon or dynamic label) | disabled ? undefined : onClick} disabled={disabled |
-| web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 84 | - | Btn | setShowForm(!showForm)} small> New Job |  |
-| web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 85 | - | Btn | (icon or dynamic label) | load |
-| web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 111 | - | Btn | (icon or dynamic label) | handleCreate} disabled={saving \|\| !form.key_id |
-| web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 112 | - | Btn | setShowForm(false)} variant="ghost">Cancel |  |
-| web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 131 | - | Btn | handleToggle(j)}>{j.enabled ? : } |  |
-| web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 134 | - | Btn | handleDelete(j.id)}> |  |
 | web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1747 | keys | Btn | void refreshKeyInventory()} style={{height:40,padding:"0 16px",borderRadius:4... |  |
 | web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1750 | keys | Btn | setModal("metadata-profiles")} style={{height:40,padding:"0 16px",borderRadiu... |  |
 | web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1751 | keys | Btn | setModal("binding-policies")} style={{height:40,padding:"0 16px",borderRadius... |  |
@@ -432,15 +425,13 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/RestClientLifecycle.tsx | 106 | - | Btn | (icon or dynamic label) | revoke} disabled={Boolean(busy) |
 | web/dashboard/src/components/v3/tabs/RestClientRole.tsx | 50 | - | Btn | void save()}>Save role |  |
 | web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 204 | - | Btn | void refresh()}> Retry |  |
-| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 243 | - | Btn | Create Policy | openCreateModal |
-| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 245 | - | Btn | void refresh()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 298 | - | Btn | void doTrigger(p.id, p.name)}> |  |
-| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 301 | - | Btn | openEditModal(p)}> |  |
-| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 304 | - | Btn | void doDelete(p)}> |  |
-| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 360 | - | Btn | void doTrigger(u.policy_id, u.policy_name)}> |  |
-| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 453 | - | Btn | setPolicyModal(false)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 454 | - | Btn | (icon or dynamic label) | savePolicy} disabled={pSaving \|\| !pName.trim() \|\| !pFilter.trim() |
-| web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | 22 | rotation | button | setView(id)} style={{ display: "inline-flex", alignItems: "center", gap: 6, p... |  |
+| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 235 | - | Btn | Create Policy | openCreateModal |
+| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 236 | - | Btn | void refresh()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 286 | - | Btn | void doTrigger(p.id, p.name)}> |  |
+| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 289 | - | Btn | openEditModal(p)} title={p.paused_reason ? `$ . Saving makes you its authorit... |  |
+| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 292 | - | Btn | void doDelete(p)}> |  |
+| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 383 | - | Btn | setPolicyModal(false)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 384 | - | Btn | (icon or dynamic label) | savePolicy} disabled={pSaving \|\| !pName.trim() \|\| !pFilter.trim() |
 | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 380 | sbom | Btn | void loadData( )} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 467 | sbom | Btn | void exportSBOMFile("cyclonedx")} disabled= style={ }> |  |
 | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 470 | sbom | Btn | void exportSBOMFile("spdx")} disabled= style={ }> |  |
@@ -800,3 +791,30 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/modules/keys/ExportKeyDialog.tsx | 103 | - | Btn | void run()} disabled= > |  |
 | web/dashboard/src/modules/keys/KeyDescription.tsx | 45 | - | Btn | void save()}> |  |
 | web/dashboard/src/modules/keys/KeyHistoryPanel.tsx | 76 | - | Btn | void verify()} disabled= > |  |
+| web/dashboard/src/modules/scheduling/KeyIntegrityView.tsx | 37 | - | Btn | }>New integrity check |  |
+| web/dashboard/src/modules/scheduling/KeyIntegrityView.tsx | 54 | - | Btn | void act(`run:$ `, async () => { const r = await runIntegritySchedule(session... |  |
+| web/dashboard/src/modules/scheduling/KeyIntegrityView.tsx | 56 | - | Btn | { setEditing(s.id); setForm( ); }}> |  |
+| web/dashboard/src/modules/scheduling/KeyIntegrityView.tsx | 57 | - | Btn | { if (window.confirm(`Delete the schedule "$ "?`)) void act(`del:$ `, async (... |  |
+| web/dashboard/src/modules/scheduling/KeyIntegrityView.tsx | 80 | - | Btn | setForm(null)}>Cancel |  |
+| web/dashboard/src/modules/scheduling/KeyIntegrityView.tsx | 81 | - | Btn | void save()}> |  |
+| web/dashboard/src/modules/scheduling/ReportsView.tsx | 56 | - | Btn | open()} disabled= >Schedule a report |  |
+| web/dashboard/src/modules/scheduling/ReportsView.tsx | 57 | - | Btn | onNavigate?.("compliance")}>Generated reports |  |
+| web/dashboard/src/modules/scheduling/ReportsView.tsx | 75 | - | Btn | void act(`run:$ `, async () => { const out = await runReportingScheduledRepor... |  |
+| web/dashboard/src/modules/scheduling/ReportsView.tsx | 77 | - | Btn | open(r)}> |  |
+| web/dashboard/src/modules/scheduling/ReportsView.tsx | 78 | - | Btn | { if (window.confirm(`Delete the schedule "$ "?`)) void act(`del:$ `, async (... |  |
+| web/dashboard/src/modules/scheduling/ReportsView.tsx | 110 | - | Btn | setForm(null)}>Cancel |  |
+| web/dashboard/src/modules/scheduling/ReportsView.tsx | 111 | - | Btn | void save()}> |  |
+| web/dashboard/src/modules/scheduling/ScansView.tsx | 54 | - | Btn | setScanOpen(true)} disabled= > |  |
+| web/dashboard/src/modules/scheduling/ScansView.tsx | 70 | - | Btn | void act("run", async () => { const out = await runComplianceAssessmentSchedu... |  |
+| web/dashboard/src/modules/scheduling/ScansView.tsx | 80 | - | Btn | void act("save", async () => )}>Save |  |
+| web/dashboard/src/modules/scheduling/SchedulingOverview.tsx | 59 | - | Btn | void load()} disabled= > |  |
+| web/dashboard/src/modules/scheduling/SchedulingOverview.tsx | 79 | - | button | setFilter(on ? null : f)} style={{ all: "unset", display: "flex", cursor: "po... |  |
+| web/dashboard/src/modules/scheduling/SchedulingOverview.tsx | 104 | - | Btn | setFilter(null)}>{`Clear $ `} |  |
+| web/dashboard/src/modules/scheduling/SecretRotationView.tsx | 47 | - | Btn | { setForm( ); setQ(""); setFound(null); }}>Schedule a rotation |  |
+| web/dashboard/src/modules/scheduling/SecretRotationView.tsx | 64 | - | Btn | { if (window.confirm(`Write new material to $ now? Readers of the latest vers... |  |
+| web/dashboard/src/modules/scheduling/SecretRotationView.tsx | 66 | - | Btn | setForm( )}> |  |
+| web/dashboard/src/modules/scheduling/SecretRotationView.tsx | 67 | - | Btn | { if (window.confirm("Stop rotating this secret on a schedule?")) void act(`d... |  |
+| web/dashboard/src/modules/scheduling/SecretRotationView.tsx | 83 | - | Btn | void search()} disabled= >Find |  |
+| web/dashboard/src/modules/scheduling/SecretRotationView.tsx | 89 | - | button | setForm( )} style={{ all: "unset", cursor: "pointer", padding: "6px 8px", bor... |  |
+| web/dashboard/src/modules/scheduling/SecretRotationView.tsx | 105 | - | Btn | setForm(null)}>Cancel |  |
+| web/dashboard/src/modules/scheduling/SecretRotationView.tsx | 106 | - | Btn | void save()}> |  |

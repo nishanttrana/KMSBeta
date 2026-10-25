@@ -3,6 +3,47 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-10-26
+
+### Scheduling: a fake job store, rotation past key access, and nobody's authority (13.66.0-beta)
+- **Keycore's "scheduled jobs" were a stored list nothing ran.** The table,
+  four routes and a dashboard tab existed since migration 012; no ticker
+  read them. The tab read `jobs` where keycore answered `items` (always an
+  empty list) and posted `key_id`/`action` where keycore required
+  `name`/`job_type` (every create refused, and the tab ignored the status).
+  **How it slipped through:** each piece had a test of its own shape (the
+  store round-tripped, the routes were audited), and nothing asked which
+  code runs a job. The rule "before a doc row or UI names a capability, find
+  its caller in a running path" was there; this feature predated it and was
+  never re-read. Fix: removed with a test that the routes are gone; the
+  real "verify" is a key integrity schedule that runs `VerifyKeyIntegrity`.
+- **Scheduled key rotation ran as keycore's own service identity.** Key
+  access trusts a service principal for every key, so anyone who could save
+  a policy with a wide filter could rotate keys they had no grant on.
+  Scheduled reports and the compliance assessment ran on nobody's
+  authority at all. Discovery, backups and playbooks had already done this
+  right, each with its own copy of the auth client. Fix: one client
+  (`pkg/authority`), every scheduler asks before each run and acts as the
+  person; tests drive a revoked, an unknown and a missing authority for each.
+- **"Failed to decrypt" was the answer for every HSM-held key.** The
+  integrity check called `decryptMaterial`, which refuses (correctly) for
+  HSM-resident material, and reported the refusal as corruption. A check
+  that cannot read what it checks says "not assessed". Found by building the
+  scheduled check, which would have raised a critical alarm on every HSM key
+  every day.
+- **A body field named the tenant on a legacy route.** Compliance's
+  assessment schedule save read `tenant_id` from the body; the legacy mux
+  checked the token, not the tenant. Moving the routes to the kernel fixed
+  it; `TestAssessmentScheduleIsTheCallersTenantOnly` keeps it fixed. Every
+  handler in the files on `scripts/route-kernel-burndown.txt` was then read
+  for the same shape: the compliance template save had it too (fixed,
+  `TestComplianceTemplateIsTheCallersTenantOnly`); EKM's handlers check the
+  tenant with `tenantFromRequest` and `bitLockerTenantFromRequest`,
+  governance's backup routes require a root administrator and its approval
+  routes check the tenant (`approvalCaller`),
+  cluster-manager is root-administrators only by design, and auth's login is
+  public by design.
+
 ## 2026-10-25
 
 ### Operations → Key inventory showed only dashes since 7.24.0-beta (13.65.0-beta)

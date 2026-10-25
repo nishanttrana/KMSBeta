@@ -263,7 +263,7 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
         why: "Long-lived single-version keys increase the blast radius of any compromise.",
         fix: "Rotate now and cover them with an automatic rotation policy.",
         affected: stale.length, evidence: sample(stale.map((k) => k.name)),
-        action: { tab: "rotation", label: "Open Rotation & Scheduling" },
+        action: { tab: "scheduling/keys", label: "Open Key rotation" },
       });
     }
 
@@ -308,7 +308,7 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
         why: "Rotation that depends on people remembering is the most common cause of expired cryptoperiods in audits.",
         fix: "Create a rotation policy per key class (tag selector) with auto-rotate and a notification lead time.",
         affected: 0, evidence: [],
-        action: { tab: "rotation", label: "Create rotation policy" },
+        action: { tab: "scheduling/keys", label: "Create rotation policy" },
       });
     }
   } else check("rotation-policy", "Automatic key rotation is configured", "Key lifecycle", false, false);

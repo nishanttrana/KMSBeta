@@ -70,6 +70,13 @@ type Store interface {
 	SetDBLeaseExpiry(ctx context.Context, tenantID, id string, expires time.Time) error
 	EndDBLease(ctx context.Context, tenantID, id, state, lastError string, endedAt *time.Time) error
 	DueDBLeases(ctx context.Context, now time.Time, limit int) ([]DBLease, error)
+
+	// Rotation schedules of generated secrets (rotation_schedule.go).
+	ListRotationSchedules(ctx context.Context, tenantID string) ([]SecretRotationSchedule, error)
+	GetRotationSchedule(ctx context.Context, tenantID, secretID string) (SecretRotationSchedule, error)
+	ListDueRotationSchedules(ctx context.Context, now time.Time, limit int) ([]SecretRotationSchedule, error)
+	PutRotationSchedule(ctx context.Context, r SecretRotationSchedule) error
+	DeleteRotationSchedule(ctx context.Context, tenantID, secretID string) error
 }
 
 type SQLStore struct {
@@ -355,6 +362,9 @@ func (s *SQLStore) DestroySecret(ctx context.Context, tenantID string, secretID 
 		return errNotFound
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM secret_values WHERE tenant_id = $1 AND secret_id = $2`, tenantID, secretID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM secret_rotation_schedules WHERE tenant_id = $1 AND secret_id = $2`, tenantID, secretID); err != nil {
 		return err
 	}
 	logChange(ctx, tx, tenantID, secretID, "destroyed", actor, "Secret and all its versions destroyed")

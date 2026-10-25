@@ -38,7 +38,7 @@ import { DistrustedCAs } from "./discovery/DistrustedCAs";
 import { RunningBanner, ScansView } from "./discovery/Scans";
 import { RepositoriesModal } from "./discovery/Repositories";
 import { BucketsModal } from "./discovery/Buckets";
-import { ScheduleModal, scheduleLabel } from "./discovery/Schedule";
+import { scheduleLabel } from "./discovery/Schedule";
 
 
 export const DiscoveryTab = ({ session, onToast, onNavigate }: any) => {
@@ -64,7 +64,6 @@ export const DiscoveryTab = ({ session, onToast, onNavigate }: any) => {
   const [bucketsError, setBucketsError] = useState("");
   const [bucketsOpen, setBucketsOpen] = useState(false);
   const [schedule, setSchedule] = useState<DiscoverySchedule | null>(null);
-  const [scheduleOpen, setScheduleOpen] = useState(false);
   const [targetsOpen, setTargetsOpen] = useState(false);
   const [codeOpen, setCodeOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -211,7 +210,8 @@ export const DiscoveryTab = ({ session, onToast, onNavigate }: any) => {
         title={<><Radar size={16} color={C.accentFg} />Crypto Discovery</>}
         actions={<>
           <Btn small onClick={() => void load()} disabled={loading}><RefreshCw size={12} />{loading ? "Refreshing" : "Refresh"}</Btn>
-          <Btn small onClick={() => setScheduleOpen(true)} title={schedule?.paused_reason || (schedule?.enabled ? `Next run ${absTime(schedule.next_run_at)}` : "Scan on a schedule")}
+          {/* The schedule's home is Scheduling → Scans & assessments (13.66.0-beta). */}
+          <Btn small onClick={() => onNavigate?.("scheduling/scans")} title={schedule?.paused_reason || (schedule?.enabled ? `Next run ${absTime(schedule.next_run_at)}` : "Scan on a schedule")}
             style={schedule?.paused_reason ? { borderColor: C.amberFg, color: C.amberFg } : schedule?.enabled ? { borderColor: C.accentFg, color: C.accentFg } : {}}>
             <CalendarClock size={12} />{scheduleLabel(schedule)}
           </Btn>
@@ -313,8 +313,6 @@ export const DiscoveryTab = ({ session, onToast, onNavigate }: any) => {
         onChanged={() => void load()} onToast={onToast} onNavigate={onNavigate} />
       <BucketsModal open={bucketsOpen} onClose={() => setBucketsOpen(false)} session={session} buckets={buckets} error={bucketsError}
         onChanged={() => void load()} onToast={onToast} onNavigate={onNavigate} />
-      <ScheduleModal open={scheduleOpen} onClose={() => setScheduleOpen(false)} session={session} schedule={schedule} sources={sources}
-        onSaved={setSchedule} onToast={onToast} />
       <input ref={fileRef} type="file" multiple hidden onChange={(e) => { void upload(Array.from(e.target.files || [])); e.target.value = ""; }} />
       <CodeSetupModal open={codeOpen} onClose={() => setCodeOpen(false)} configured={!!sources.find((s) => s.id === "code")?.configured} />
     </div>

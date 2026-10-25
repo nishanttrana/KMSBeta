@@ -312,7 +312,7 @@ as `audit.key.request_refused` (`reason: unauthenticated`).
 | crypto operations | any verified identity | the per-key decision (section 3) |
 | `GET /keys` and per-key reads | any verified identity | the key must be visible (section 8) |
 | tenant-wide inventory and analytics views | `key.inventory.read` | |
-| ceremonies, compromise, enterprise controls, scheduling, inventory/analytics writes, attestation, integrity checks, FIPS self-test (5.0.0-beta) | `key.ceremony.*`, `key.compromise`, `key.enterprise.*`, `key.scheduling.*`, `key.inventory.write`, `key.analytics.write`, `key.health.write`, `key.rotation.write`, `key.usage.meter`, `key.attest`, `key.integrity.verify`, `key.fips.selftest`; orchestration runs `key.rotate` | per-key routes: the key must be visible |
+| ceremonies, compromise, enterprise controls, inventory/analytics writes, attestation, integrity checks, FIPS self-test (5.0.0-beta) | `key.ceremony.*`, `key.compromise`, `key.enterprise.*`, `key.inventory.write`, `key.analytics.write`, `key.health.write`, `key.rotation.write`, `key.usage.meter`, `key.attest`, `key.integrity.verify`, `key.fips.selftest`; orchestration runs `key.rotate` | per-key routes: the key must be visible |
 
 Built-in `admin` / `tenant-admin` hold `*`. Other roles get these permissions
 explicitly. A "tenant admin" in the rules above is whoever holds

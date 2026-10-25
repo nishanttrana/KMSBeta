@@ -9,17 +9,20 @@ import (
 
 // KeyIntegrityResult is the outcome of a real key-integrity check.
 type KeyIntegrityResult struct {
-	KeyID            string    `json:"key_id"`
-	Version          int       `json:"version"`
-	Algorithm        string    `json:"algorithm"`
-	Status           string    `json:"status"`
-	MaterialDecrypts bool      `json:"material_decrypts"`
-	KCVAlgorithm     string    `json:"kcv_algorithm,omitempty"`
-	KCVChecked       bool      `json:"kcv_checked"`
-	KCVMatch         bool      `json:"kcv_match"`
-	Verified         bool      `json:"verified"`
-	Detail           string    `json:"detail"`
-	CheckedAt        time.Time `json:"checked_at"`
+	KeyID            string `json:"key_id"`
+	Version          int    `json:"version"`
+	Algorithm        string `json:"algorithm"`
+	Status           string `json:"status"`
+	MaterialDecrypts bool   `json:"material_decrypts"`
+	KCVAlgorithm     string `json:"kcv_algorithm,omitempty"`
+	KCVChecked       bool   `json:"kcv_checked"`
+	KCVMatch         bool   `json:"kcv_match"`
+	Verified         bool   `json:"verified"`
+	// NotAssessed: keycore cannot read this version's material (it lives in
+	// an HSM), so nothing was checked; Verified is false and is no finding.
+	NotAssessed bool      `json:"not_assessed"`
+	Detail      string    `json:"detail"`
+	CheckedAt   time.Time `json:"checked_at"`
 }
 
 // VerifyKeyIntegrity proves the integrity of a key's current version. It
@@ -50,6 +53,15 @@ func (s *Service) VerifyKeyIntegrity(ctx context.Context, tenantID, keyID string
 		return res, nil
 	}
 
+	if ver.Protection == protectionHSMResident {
+		// The material never leaves the HSM: reading it would be refused, and
+		// a refusal is not corruption (until 13.66.0-beta it was reported as
+		// "failed to decrypt/authenticate").
+		res.NotAssessed = true
+		res.Detail = "not assessed: the key material is held in the HSM and keycore cannot read it"
+		s.auditIntegrity(ctx, tenantID, res)
+		return res, nil
+	}
 	raw, err := s.decryptMaterial(ver)
 	if err != nil {
 		res.Detail = "key material failed to decrypt/authenticate under the master key — corruption, tampering, or wrong MEK"
@@ -93,12 +105,20 @@ func (s *Service) VerifyKeyIntegrity(ctx context.Context, tenantID, keyID string
 }
 
 func (s *Service) auditIntegrity(ctx context.Context, tenantID string, r KeyIntegrityResult) {
-	_ = s.publishAudit(ctx, "audit.key.integrity_verified", tenantID, map[string]any{
+	details := map[string]any{
 		"key_id":            r.KeyID,
 		"version":           r.Version,
 		"verified":          r.Verified,
 		"kcv_checked":       r.KCVChecked,
 		"kcv_match":         r.KCVMatch,
 		"material_decrypts": r.MaterialDecrypts,
-	})
+		"result":            "success",
+	}
+	switch {
+	case r.NotAssessed:
+		details["result"], details["reason"] = "refused", "material_in_hsm"
+	case !r.Verified:
+		details["result"], details["severity"], details["description"] = "failure", "critical", r.Detail
+	}
+	_ = s.publishAudit(ctx, "audit.key.integrity_verified", tenantID, details)
 }

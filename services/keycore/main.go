@@ -33,6 +33,7 @@ import (
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
 	pkgheartbeat "vecta-kms/pkg/heartbeat"
+	"vecta-kms/pkg/authority"
 	"vecta-kms/pkg/clusterstate"
 	"vecta-kms/pkg/hsm"
 	"vecta-kms/pkg/metering"
@@ -206,8 +207,11 @@ func main() {
 	handler := NewHandler(svc)
 	handler.SetAuditClient(auditClient)
 
-	// Rotation policies: due auto-rotate policies run on the primary.
-	go NewRotationScheduler(svc, auditClient, logger).Run(ctx)
+	// Rotation policies and integrity schedules: due ones run on the primary.
+	// Integrity schedules run on the same tick (integrity_schedule.go).
+	scheduler := NewRotationScheduler(svc, auditClient, authority.New(envOr("AUTH_URL", "https://auth:8001")), logger)
+	handler.scheduler = scheduler
+	go scheduler.Run(ctx)
 
 	// Key federation: links whose key changed are pushed to their peer, and
 	// every link is verified hourly (federation.go). Primary only.

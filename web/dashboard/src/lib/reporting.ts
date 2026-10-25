@@ -107,6 +107,9 @@ export type ReportJob = {
   completed_at?: string;
 };
 
+// A schedule runs on the authority of the person who last saved it
+// (authorized_by), re-checked before each run; paused_reason says why it
+// stopped. last_result: requested (last_job_id), refused or failed.
 export type ScheduledReport = {
   id: string;
   tenant_id: string;
@@ -115,6 +118,11 @@ export type ScheduledReport = {
   format: string;
   schedule: string;
   enabled: boolean;
+  authorized_by: string;
+  paused_reason?: string;
+  last_result?: string;
+  last_error?: string;
+  last_job_id?: string;
   last_run_at?: string;
   next_run_at?: string;
   created_at?: string;
@@ -376,7 +384,8 @@ export async function getReportingTopSources(session: AuthSession, window?: Stat
 
 export async function listReportingReportTemplates(session: AuthSession): Promise<ReportTemplate[]> {
   const out = await serviceRequest<TemplatesResponse>(session, "reporting", "/reports/templates");
-  return Array.isArray(out?.items) ? out.items : [];
+  if (!Array.isArray(out?.items)) throw new Error("reporting answered without its report templates");
+  return out.items;
 }
 
 export async function generateReportingReport(
@@ -456,31 +465,33 @@ export async function deleteReportingReportJob(session: AuthSession, jobID: stri
 
 export async function listReportingScheduledReports(session: AuthSession): Promise<ScheduledReport[]> {
   const out = await serviceRequest<ScheduledResponse>(session, "reporting", `/reports/scheduled?${tenantQuery(session)}`);
-  return Array.isArray(out?.items) ? out.items : [];
+  if (!Array.isArray(out?.items)) throw new Error("reporting answered without its scheduled reports");
+  return out.items;
 }
 
-export async function createReportingScheduledReport(
-  session: AuthSession,
-  input: {
-    name: string;
-    template_id: string;
-    format: string;
-    schedule: "hourly" | "daily" | "weekly";
-    filters?: Record<string, unknown>;
-  }
-): Promise<ScheduledReport> {
-  const out = await serviceRequest<ScheduledResponse>(session, "reporting", `/reports/scheduled?${tenantQuery(session)}`, {
-    method: "POST",
-    body: JSON.stringify({
-      name: String(input?.name || "").trim() || "scheduled-report",
-      template_id: String(input?.template_id || "").trim(),
-      format: String(input?.format || "pdf").trim().toLowerCase(),
-      schedule: String(input?.schedule || "daily").trim().toLowerCase(),
-      filters: input?.filters && typeof input.filters === "object" ? input.filters : {}
-    })
-  });
-  if (!out?.item) {
-    throw new Error("Scheduled report was not returned by reporting service.");
-  }
+export type ScheduledReportInput = { name: string; template_id: string; format: string; schedule: "hourly" | "daily" | "weekly"; enabled?: boolean };
+
+function scheduledItem(out: ScheduledResponse): ScheduledReport {
+  if (!out?.item) throw new Error("reporting answered without the scheduled report");
   return out.item;
+}
+
+export async function createReportingScheduledReport(session: AuthSession, input: ScheduledReportInput): Promise<ScheduledReport> {
+  return scheduledItem(await serviceRequest<ScheduledResponse>(session, "reporting", `/reports/scheduled?${tenantQuery(session)}`, {
+    method: "POST", body: JSON.stringify(input),
+  }));
+}
+
+export async function updateReportingScheduledReport(session: AuthSession, id: string, input: Partial<ScheduledReportInput>): Promise<ScheduledReport> {
+  return scheduledItem(await serviceRequest<ScheduledResponse>(session, "reporting", `/reports/scheduled/${encodeURIComponent(id)}?${tenantQuery(session)}`, {
+    method: "PATCH", body: JSON.stringify(input),
+  }));
+}
+
+export async function deleteReportingScheduledReport(session: AuthSession, id: string): Promise<void> {
+  await serviceRequest(session, "reporting", `/reports/scheduled/${encodeURIComponent(id)}?${tenantQuery(session)}`, { method: "DELETE" });
+}
+
+export async function runReportingScheduledReport(session: AuthSession, id: string): Promise<ScheduledReport> {
+  return scheduledItem(await serviceRequest<ScheduledResponse>(session, "reporting", `/reports/scheduled/${encodeURIComponent(id)}/run?${tenantQuery(session)}`, { method: "POST" }));
 }

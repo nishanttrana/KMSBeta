@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"vecta-kms/pkg/authority"
 	"vecta-kms/pkg/credstore"
 
 	pkgauth "vecta-kms/pkg/auth"
@@ -32,6 +33,8 @@ type Handler struct {
 	groups GroupResolver
 	// directory says whether a rule's subject exists; nil refuses new rules.
 	directory SubjectDirectory
+	// authority is asked before each scheduled rotation (rotation_schedule.go).
+	authority authority.Checker
 
 	// Background pruning to changed version caps (retention.go).
 	ctx     context.Context // the service's lifetime; nil in tests
@@ -61,6 +64,7 @@ var vaultTenantHeaders = []string{"X-Vault-Namespace", "X-Namespace"}
 func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger, keyring *mek.Keyring) *Handler {
 	h := &Handler{svc: svc, router: route.New("secrets", audit, logger), keyring: keyring, audit: audit, logger: logger}
 	h.routes()
+	h.rotationScheduleRoutes()
 	h.databaseRoutes()
 	if keyring != nil {
 		keyring.Routes(h.router, "secrets") // exposure register, backup re-wrap

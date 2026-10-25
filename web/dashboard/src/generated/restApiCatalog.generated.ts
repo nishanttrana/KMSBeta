@@ -6359,6 +6359,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "compliance-post-compliance-assessment-schedule-run",
+    "group": "Compliance (compliance)",
+    "title": "POST /compliance/assessment/schedule/run",
+    "service": "compliance",
+    "method": "POST",
+    "pathTemplate": "/compliance/assessment/schedule/run?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "POST /svc/compliance/compliance/assessment/schedule/run?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "compliance-post-compliance-connections-id-resolve",
     "group": "Compliance (compliance)",
     "title": "POST /compliance/connections/{id}/resolve",
@@ -15795,6 +15823,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "keycore-delete-integrity-schedules-id",
+    "group": "Key Management (keycore)",
+    "title": "DELETE /integrity/schedules/{id}",
+    "service": "keycore",
+    "method": "DELETE",
+    "pathTemplate": "/integrity/schedules/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "DELETE /svc/keycore/integrity/schedules/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "keycore-delete-keys-id-versions-ver",
     "group": "Key Management (keycore)",
     "title": "DELETE /keys/{id}/versions/{ver}",
@@ -15888,34 +15944,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "DELETE /svc/keycore/rotation/policies/{id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-delete-scheduling-jobs-id",
-    "group": "Key Management (keycore)",
-    "title": "DELETE /scheduling/jobs/{id}",
-    "service": "keycore",
-    "method": "DELETE",
-    "pathTemplate": "/scheduling/jobs/{id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "DELETE /svc/keycore/scheduling/jobs/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -17083,6 +17111,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "keycore-get-integrity-schedules",
+    "group": "Key Management (keycore)",
+    "title": "GET /integrity/schedules",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/integrity/schedules?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/integrity/schedules?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "keycore-get-inventory-dependencies",
     "group": "Key Management (keycore)",
     "title": "GET /inventory/dependencies",
@@ -17951,15 +18007,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "keycore-get-scheduling-jobs",
+    "id": "keycore-get-tags",
     "group": "Key Management (keycore)",
-    "title": "GET /scheduling/jobs",
+    "title": "GET /tags",
     "service": "keycore",
     "method": "GET",
-    "pathTemplate": "/scheduling/jobs?tenant_id={{tenant_id}}",
+    "pathTemplate": "/tags?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
     "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "GET /svc/keycore/scheduling/jobs?tenant_id={{tenant_id}}",
+    "requestExample": "GET /svc/keycore/tags?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -17979,15 +18035,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "keycore-get-tags",
+    "id": "keycore-patch-integrity-schedules-id",
     "group": "Key Management (keycore)",
-    "title": "GET /tags",
+    "title": "PATCH /integrity/schedules/{id}",
     "service": "keycore",
-    "method": "GET",
-    "pathTemplate": "/tags?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
+    "method": "PATCH",
+    "pathTemplate": "/integrity/schedules/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "GET /svc/keycore/tags?tenant_id={{tenant_id}}",
+    "requestExample": "PATCH /svc/keycore/integrity/schedules/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -18044,34 +18100,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "PATCH /svc/keycore/rotation/policies/{id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-patch-scheduling-jobs-id",
-    "group": "Key Management (keycore)",
-    "title": "PATCH /scheduling/jobs/{id}",
-    "service": "keycore",
-    "method": "PATCH",
-    "pathTemplate": "/scheduling/jobs/{id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "PATCH /svc/keycore/scheduling/jobs/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -19164,6 +19192,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "POST /svc/keycore/fips/self-test?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-integrity-schedules",
+    "group": "Key Management (keycore)",
+    "title": "POST /integrity/schedules",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/integrity/schedules?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/integrity/schedules?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-integrity-schedules-id-run",
+    "group": "Key Management (keycore)",
+    "title": "POST /integrity/schedules/{id}/run",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/integrity/schedules/{id}/run?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/integrity/schedules/{id}/run?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -20312,34 +20396,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "POST /svc/keycore/rotation/policies/{id}/trigger?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-post-scheduling-jobs",
-    "group": "Key Management (keycore)",
-    "title": "POST /scheduling/jobs",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/scheduling/jobs?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/scheduling/jobs?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -22011,6 +22067,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "reporting-delete-reports-scheduled-id",
+    "group": "Reporting (reporting)",
+    "title": "DELETE /reports/scheduled/{id}",
+    "service": "reporting",
+    "method": "DELETE",
+    "pathTemplate": "/reports/scheduled/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Reporting service.",
+    "requestExample": "DELETE /svc/reporting/reports/scheduled/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "reporting-get-alerts",
     "group": "Reporting (reporting)",
     "title": "GET /alerts",
@@ -22543,6 +22627,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "reporting-patch-reports-scheduled-id",
+    "group": "Reporting (reporting)",
+    "title": "PATCH /reports/scheduled/{id}",
+    "service": "reporting",
+    "method": "PATCH",
+    "pathTemplate": "/reports/scheduled/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Reporting service.",
+    "requestExample": "PATCH /svc/reporting/reports/scheduled/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "reporting-post-alerts-bulk-acknowledge",
     "group": "Reporting (reporting)",
     "title": "POST /alerts/bulk/acknowledge",
@@ -22692,6 +22804,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Reporting service.",
     "requestExample": "POST /svc/reporting/reports/scheduled?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "reporting-post-reports-scheduled-id-run",
+    "group": "Reporting (reporting)",
+    "title": "POST /reports/scheduled/{id}/run",
+    "service": "reporting",
+    "method": "POST",
+    "pathTemplate": "/reports/scheduled/{id}/run?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Reporting service.",
+    "requestExample": "POST /svc/reporting/reports/scheduled/{id}/run?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -23411,6 +23551,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "secrets-delete-secrets-rotation-schedules-id",
+    "group": "Secret Vault (secrets)",
+    "title": "DELETE /secrets/rotation-schedules/{id}",
+    "service": "secrets",
+    "method": "DELETE",
+    "pathTemplate": "/secrets/rotation-schedules/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Secrets service.",
+    "requestExample": "DELETE /svc/secrets/secrets/rotation-schedules/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "secrets-delete-secrets-version-caps-cap-id",
     "group": "Secret Vault (secrets)",
     "title": "DELETE /secrets/version-caps/{cap_id}",
@@ -23784,6 +23952,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Secrets service.",
     "requestExample": "GET /svc/secrets/secrets/database/roles?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "secrets-get-secrets-rotation-schedules",
+    "group": "Secret Vault (secrets)",
+    "title": "GET /secrets/rotation-schedules",
+    "service": "secrets",
+    "method": "GET",
+    "pathTemplate": "/secrets/rotation-schedules?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Secrets service.",
+    "requestExample": "GET /svc/secrets/secrets/rotation-schedules?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -24391,6 +24587,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "secrets-post-secrets-rotation-schedules-id-run",
+    "group": "Secret Vault (secrets)",
+    "title": "POST /secrets/rotation-schedules/{id}/run",
+    "service": "secrets",
+    "method": "POST",
+    "pathTemplate": "/secrets/rotation-schedules/{id}/run?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Secrets service.",
+    "requestExample": "POST /svc/secrets/secrets/rotation-schedules/{id}/run?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "secrets-post-v1-mount-path",
     "group": "Secret Vault (secrets)",
     "title": "POST /v1/{mount}/{path...}",
@@ -24512,6 +24736,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Secrets service.",
     "requestExample": "PUT /svc/secrets/secrets/database/roles/{name}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "secrets-put-secrets-rotation-schedules-id",
+    "group": "Secret Vault (secrets)",
+    "title": "PUT /secrets/rotation-schedules/{id}",
+    "service": "secrets",
+    "method": "PUT",
+    "pathTemplate": "/secrets/rotation-schedules/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Secrets service.",
+    "requestExample": "PUT /svc/secrets/secrets/rotation-schedules/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

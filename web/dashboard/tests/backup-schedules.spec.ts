@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Request } from "@playwright/test";
 
-// Backup & Restore → Schedules (13.43.0-beta): real scheduled backups, and
+// Scheduling → Backups (13.43.0-beta; moved from Backup & Restore →
+// Schedules in 13.66.0-beta, whose address redirects): real scheduled backups, and
 // restoring one whose key is sealed to the administrator's public key, with
 // the private key used only in the browser.
 
@@ -42,6 +43,7 @@ async function stub(page: Page, onRestore?: (r: Request) => void): Promise<Reque
 test("schedules show their state, run now, and save exactly the fields the route takes", async ({ page }) => {
   const writes = await stub(page);
   await page.goto("/#backup/schedules");
+  await expect(page).toHaveURL(/#scheduling\/backups$/);
   await expect(page.getByText("nightly", { exact: true })).toBeVisible();
   await expect(page.getByText(PAUSED.paused_reason)).toBeVisible();
   const runs = page.getByRole("button", { name: "Run now", exact: true });

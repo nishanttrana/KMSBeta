@@ -7,6 +7,36 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-26 — Scheduling is the one home of every schedule, and every schedule runs on a person's authority (13.66.0-beta)
+
+- **Decision:** a Scheduling module (`#scheduling`, sub-options Overview, Key
+  rotation, Key integrity, Secret rotation, Reports, Scans & assessments,
+  Backups, Cryptoperiods) replaces Rotation & Scheduling and takes the
+  schedules that lived in Backup & Restore, Compliance and Crypto Discovery.
+  Each service keeps storing and running its own schedules; the module reads
+  and edits them, and its Overview lists all of them. Every scheduler asks
+  auth before each run, through one client (`pkg/authority`), whether the
+  person who saved the schedule is still active and holds the permission,
+  and pauses the schedule when not. A scheduled key rotation runs as that
+  person. The keycore "scheduled jobs" are removed; a scheduled key
+  integrity check and scheduled rotation of generated secrets are the real
+  work that replaces them.
+- **Why:** owner, 2026-10-25: "all the scheduling for keys, backup,
+  reporting etc anything in the scheduling and secrets schedule should be
+  under scheduling, build new but not fake". The scheduled jobs stored work
+  nothing ran; key rotation ran as keycore's own service identity, past key
+  access; reports and the assessment ran on nobody's authority.
+- **Rejected:** a central scheduler service that runs everyone's work. The
+  work belongs to the service that does it (its permission checks, audit,
+  primary-only writes); a second engine for one job is a rule we remove.
+  Scheduled rotation of secrets whose value comes from outside: the KMS
+  cannot make the new value, so it would be a reminder posing as a rotation.
+- **Consequence:** schedules saved before 13.66.0-beta have no one on record
+  and pause until saved again (docs/OPERATIONS_GUIDE.md).
+- **Enforced by:** `tests/scheduling.spec.ts`, the authority tests of each
+  service, `TestAuthorityClientAgainstTheHandler`,
+  `TestScheduledJobRoutesAreRemoved`.
+
 ## 2026-10-25 — Operations' views are sidebar sub-options, and every number on them is counted by its service (13.65.0-beta)
 
 - **Decision:** Operations has three sub-options, Status, Operation metrics

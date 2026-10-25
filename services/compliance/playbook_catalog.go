@@ -49,6 +49,9 @@ var playbookTriggers = []TriggerSpec{
 	{Type: "threat_finding_raised", Label: "Posture threat finding raised", Group: "Incident response", Subjects: []string{"audit.posture.threat_finding_raised"}},
 	{Type: "sustained_risk_detected", Label: "Sustained high-risk activity on a target", Group: "Incident response", Subjects: []string{"audit.security.sustained_risk_detected"}},
 	{Type: "key_compromised", Label: "Key compromise reported", Group: "Incident response", Subjects: []string{"audit.key.compromise_detected"}},
+	// A scheduled check found material that no longer decrypts or matches
+	// its KCV, or could not finish (13.66.0-beta).
+	{Type: "key_integrity_failed", Label: "Key integrity check failed", Group: "Incident response", Subjects: []string{"audit.key.integrity_check_run"}, FailureOnly: true},
 	{Type: "audit_chain_broken", Label: "Audit trail tampering detected", Group: "Incident response", Subjects: []string{"audit.audit.chain_broken"}},
 	{Type: "audit_timestamp_failed", Label: "Audit checkpoint could not be timestamped", Group: "Incident response", Subjects: []string{"audit.audit.checkpoint_timestamp_failed"}},
 	{Type: "secret_exposed", Label: "Exposed secret discovered (code, repository, bucket or upload)", Group: "Incident response", Subjects: []string{"audit.discovery.secret_exposed"}},
@@ -68,6 +71,7 @@ var playbookTriggers = []TriggerSpec{
 	{Type: "byok_rotation_due", Label: "Cloud key rotation due (BYOK automation)", Group: "Key lifecycle", Subjects: []string{"audit.cloud.byok_rotation_due"}},
 	{Type: "byok_operation_failed", Label: "Cloud BYOK operation failed", Group: "Incident response", Subjects: []string{"audit.cloud.byok_created", "audit.cloud.byok_rotated", "audit.cloud.byok_reimported", "audit.cloud.byok_restored", "audit.cloud.byok_verified"}, FailureOnly: true},
 	{Type: "key_access_refused", Label: "Key access refused", Group: "Key lifecycle", Subjects: []string{"audit.key.access_refused"}},
+	{Type: "scheduled_rotation_failed", Label: "Scheduled rotation failed", Group: "Key lifecycle", Subjects: []string{"audit.key.rotation_policy_run", "audit.secrets.rotation_schedule_run"}, FailureOnly: true},
 	{Type: "key_request_replay_detected", Label: "Key request replay detected", Group: "Key lifecycle", Subjects: []string{"audit.key.request_replay_detected"}},
 	{Type: "key_hsm_refused", Label: "HSM refused a key operation", Group: "Key lifecycle", Subjects: []string{"audit.key.hsm_refused"}},
 	{Type: "crypto_policy_refused", Label: "Key operation refused by migration policy", Group: "Key lifecycle", Subjects: []string{"audit.key.crypto_policy_refused"}},

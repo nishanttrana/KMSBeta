@@ -40,6 +40,7 @@ func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger, vault *co
 	h := &Handler{svc: svc, connVault: vault, dispatch: func(f func()) { go f() }}
 	h.router = route.New("compliance", audit, logger)
 	h.playbookRoutes(h.router)
+	h.assessmentScheduleRoutes(h.router) // assessment_schedule.go
 	h.mux = h.routes()
 	h.router.MountOn(h.mux)
 	return h
@@ -63,8 +64,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /compliance/assessment/delta", h.handleAssessmentDelta)
 	mux.HandleFunc("POST /compliance/assessment/run", h.handleRunAssessment)
 	mux.HandleFunc("GET /compliance/assessment/history", h.handleAssessmentHistory)
-	mux.HandleFunc("GET /compliance/assessment/schedule", h.handleAssessmentSchedule)
-	mux.HandleFunc("PUT /compliance/assessment/schedule", h.handleUpsertAssessmentSchedule)
 	mux.HandleFunc("GET /compliance/templates", h.handleListComplianceTemplates)
 	mux.HandleFunc("POST /compliance/templates", h.handleUpsertComplianceTemplate)
 	mux.HandleFunc("GET /compliance/templates/{id}", h.handleGetComplianceTemplate)
@@ -257,6 +256,12 @@ func (h *Handler) handleUpsertComplianceTemplate(w http.ResponseWriter, r *http.
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required", reqID, "")
 		return
 	}
+	// The body named the tenant without a check until 13.66.0-beta: any
+	// caller could write another tenant's template.
+	if err := tenantcheck.Enforce(r, body.TenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, body.TenantID)
+		return
+	}
 	item, err := h.svc.UpsertComplianceTemplate(r.Context(), body)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, body.TenantID)
@@ -276,48 +281,6 @@ func (h *Handler) handleDeleteComplianceTemplate(w http.ResponseWriter, r *http.
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"ok": true, "request_id": reqID})
-}
-
-func (h *Handler) handleAssessmentSchedule(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	item, err := h.svc.GetAssessmentSchedule(r.Context(), tenantID)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"schedule": item, "request_id": reqID})
-}
-
-func (h *Handler) handleUpsertAssessmentSchedule(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	var body struct {
-		TenantID  string `json:"tenant_id"`
-		Enabled   bool   `json:"enabled"`
-		Frequency string `json:"frequency"`
-	}
-	if err := decodeJSON(r, &body); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
-		return
-	}
-	body.TenantID = firstNonEmpty(body.TenantID, strings.TrimSpace(r.Header.Get("X-Tenant-ID")))
-	if strings.TrimSpace(body.TenantID) == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required", reqID, "")
-		return
-	}
-	item, err := h.svc.UpsertAssessmentSchedule(r.Context(), AssessmentSchedule{
-		TenantID:  body.TenantID,
-		Enabled:   body.Enabled,
-		Frequency: body.Frequency,
-	})
-	if err != nil {
-		h.writeServiceError(w, err, reqID, body.TenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"schedule": item, "request_id": reqID})
 }
 
 func (h *Handler) handleFrameworks(w http.ResponseWriter, r *http.Request) {

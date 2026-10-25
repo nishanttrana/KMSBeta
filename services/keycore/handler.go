@@ -42,6 +42,8 @@ type Handler struct {
 	tokenless   *http.ServeMux
 	parseToken  func(string) (*pkgauth.Claims, error)
 	kernelAudit route.Emitter
+	// scheduler runs integrity schedules for "run now"; set by main.
+	scheduler *RotationScheduler
 }
 
 func NewHandler(svc *Service) *Handler {
@@ -251,6 +253,7 @@ func (h *Handler) routes() *http.ServeMux {
 
 	// Rotation routes
 	h.rotationRouter(kernelEmitter{h}).MountOn(mux)
+	h.integrityScheduleRouter(kernelEmitter{h}).MountOn(mux)
 	h.inventoryRouter(kernelEmitter{h}).MountOn(mux)
 	mux.HandleFunc("GET /keys/{id}/rotation-metrics", h.visibleKeyRoute(h.handleListKeyRotationMetrics))
 
